@@ -31,7 +31,7 @@ async def main():
         dir_before = await box.evaluate("e => getComputedStyle(e).direction")
 
         # 1. Text without punctuation still settles and shows the action buttons.
-        await box.fill("Guten Morgen")
+        await box.click(); await box.press_sequentially("Guten Morgen", delay=60)
         await page.wait_for_timeout(3500)
         check(await page.get_by_text("صباح الخير").count() > 0, "translation appears")
         copy = page.get_by_role("button", name="نسخ").or_(page.get_by_role("button", name="Copy")).or_(page.get_by_role("button", name="Kopieren")).first
@@ -54,7 +54,11 @@ async def main():
             check(opened, f"sheet '{name}' opens and stays open")
             if opened:
                 check(not await overlaps_text(page, dlg), f"sheet '{name}': X does not cover text")
-            await page.keyboard.press("Escape"); await page.wait_for_timeout(600)
+            await page.keyboard.press("Escape"); await page.wait_for_timeout(500)
+            if await page.get_by_role("dialog").count():
+                await page.get_by_role("dialog").first.locator("button[aria-label]").first.click(force=True)
+                await page.wait_for_timeout(600)
+            check(await page.get_by_role("dialog").count() == 0, f"sheet '{name}' closes")
 
         check(not errors, "zero page errors" + (f": {errors[:3]}" if errors else ""))
         await page.screenshot(path="/tmp/smoke.png")
