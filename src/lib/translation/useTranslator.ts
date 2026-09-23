@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { translate } from "./translate.functions";
+import { repairTranslation, translate } from "./translate.functions";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
-import { streamTranslate } from "./stream";
+import { streamTranslate, warmTranslation } from "./stream";
 
 export type ErrorKind =
   "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
@@ -93,6 +93,7 @@ export function useTranslator(opts: {
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const styleKey = dialect === "auto" ? style : `${style}~${dialect}`;
   const call = useServerFn(translate);
+  const callRepair = useServerFn(repairTranslation);
 
   const [phase, setPhase] = useState<Phase>("EMPTY");
   const [result, setResult] = useState<TranslationResult | null>(null);
@@ -222,6 +223,18 @@ export function useTranslator(opts: {
           if (cache.current.size > CACHE_LIMIT)
             cache.current.delete(cache.current.keys().next().value as string);
           commit(key, res.result, prov, norm);
+          if ("needsRepair" in res && res.needsRepair) {
+            // Shown already; improve it quietly and swap only if still on screen.
+            void callRepair({ data: { request: data, previous: res.result } })
+              .then((r) => {
+                if (!r?.result || committedKey.current !== key) return;
+                const c = cache.current.get(key);
+                if (c) c.result = r.result;
+                setResult(r.result);
+                successRef.current?.(r.result, norm, prov);
+              })
+              .catch(() => {});
+          }
         } else {
           fail(res.kind);
         }
@@ -244,8 +257,16 @@ export function useTranslator(opts: {
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
       }
     },
-    [call, commit, source, target, style, dialect],
+    [call, callRepair, commit, source, target, style, dialect],
   );
+
+  // Warm the path to the translation service on the first keystroke, once per visit.
+  const warmed = useRef(false);
+  useEffect(() => {
+    if (warmed.current || !text.trim()) return;
+    warmed.current = true;
+    warmTranslation();
+  }, [text]);
 
   // The scheduler: react to every change, but only spend a request when it is worthwhile.
   useEffect(() => {

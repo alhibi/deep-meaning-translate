@@ -3,10 +3,14 @@ import { act, renderHook } from "@testing-library/react";
 import type { TranslationResult } from "./types";
 
 const call = vi.fn();
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => call }));
-vi.mock("./translate.functions", () => ({ translate: {} }));
+const repairCall = vi.fn();
+vi.mock("@tanstack/react-start", () => ({
+  useServerFn: (fn: { kind?: string }) => (fn.kind === "repair" ? repairCall : call),
+}));
+vi.mock("./translate.functions", () => ({ translate: {}, repairTranslation: { kind: "repair" } }));
 // Live (partial) requests stream; route them through the same mock so behaviour stays testable.
 vi.mock("./stream", () => ({
+  warmTranslation: () => {},
   streamTranslate: async (data: unknown, signal: AbortSignal, onText: (t: string) => void) => {
     const r = await call({ data, signal });
     if (!r.ok) return r;
@@ -38,6 +42,7 @@ const flush = async (ms: number) => {
 beforeEach(() => {
   vi.useFakeTimers();
   call.mockReset();
+  repairCall.mockReset();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -102,5 +107,20 @@ describe("useTranslator", () => {
     await flush(1000);
     expect(h.current.result?.translation).toBe("مرحبا يا");
     expect(h.current.result?.alternativeTranslations).toEqual([]);
+  });
+
+  it("shows the first translation at once and swaps in a quiet repair", async () => {
+    call.mockResolvedValue({ ok: true, result: result("أولى"), needsRepair: true });
+    let finish: (v: unknown) => void = () => {};
+    repairCall.mockImplementation(() => new Promise((r) => (finish = r)));
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ich habe 3 Katzen."),
+    });
+    await flush(500);
+    expect(h.current.result?.translation).toBe("أولى");
+    expect(repairCall).toHaveBeenCalledTimes(1);
+    finish({ ok: true, result: result("مصححة 3") });
+    await flush(50);
+    expect(h.current.result?.translation).toBe("مصححة 3");
   });
 });

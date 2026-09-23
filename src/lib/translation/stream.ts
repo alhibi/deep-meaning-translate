@@ -30,3 +30,9 @@ export async function streamTranslate(
   text = (text + dec.decode()).trim();
   return text ? { ok: true, text } : { ok: false, kind: "provider" };
 }
+
+/** Fire-and-forget: opens the connection chain to the translation service before the first request. */
+export function warmTranslation(): void {
+  if (typeof fetch === "undefined") return;
+  void fetch("/api/translate-stream", { method: "GET", cache: "no-store" }).catch(() => {});
+}

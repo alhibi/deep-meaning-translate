@@ -11,17 +11,32 @@ function resolveProvider(): TranslationProvider {
   return createOpenCodeLunaProvider(apiKey);
 }
 
-export async function runTranslation(req: TranslationRequest): Promise<TranslationResult> {
+/**
+ * First pass only. Returned issues let the client show the translation immediately
+ * and run the repair in the background instead of making the user wait for it.
+ */
+export async function runTranslation(
+  req: TranslationRequest,
+): Promise<{ result: TranslationResult; issues: string[] }> {
   const provider = resolveProvider();
-  const first = await provider.translate(req);
-  const issues = verifyTranslation(req, first);
+  const result = await provider.translate(req);
   // Provisional (still-typing) text: speed wins; the final sentence gets the full check.
-  if (issues.length === 0 || req.partial) return first;
+  const issues = req.partial ? [] : verifyTranslation(req, result);
+  return { result, issues };
+}
 
+/** Background repair: returns an improved translation, or null when it is not better. */
+export async function runRepair(
+  req: TranslationRequest,
+  previous: TranslationResult,
+): Promise<TranslationResult | null> {
+  const issues = verifyTranslation(req, previous);
+  if (issues.length === 0) return null;
+  const provider = resolveProvider();
   try {
-    const repaired = await provider.repair(req, first, issues);
-    return verifyTranslation(req, repaired).length <= issues.length ? repaired : first;
+    const repaired = await provider.repair(req, previous, issues);
+    return verifyTranslation(req, repaired).length < issues.length ? repaired : null;
   } catch {
-    return first;
+    return null;
   }
 }
