@@ -35,8 +35,9 @@ export const translate = createServerFn({ method: "POST" })
       const result = await runTranslation(data);
       return { ok: true, result };
     } catch (err) {
-      if (err instanceof TranslationError) return { ok: false, kind: err.kind };
       console.error("translation failed", err);
+      if (err instanceof TranslationError) return { ok: false, kind: err.kind };
       return { ok: false, kind: "provider" };
     }
+
   });
