@@ -12,6 +12,7 @@ const MODEL = "gpt-5.6-luna";
 const SESSION = "lingua-translator";
 
 function extractText(payload: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped provider JSON, narrowed below
   const p = payload as Record<string, any>;
   if (typeof p?.["output_text"] === "string" && p["output_text"].trim()) return p["output_text"];
   const out = p?.["output"];

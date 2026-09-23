@@ -42,7 +42,8 @@ export default defineConfig({
             },
             {
               // Hashed build assets are immutable: cache once, serve instantly (incl. offline).
-              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
+              urlPattern: ({ url, sameOrigin }) =>
+                sameOrigin && url.pathname.startsWith("/assets/"),
               handler: "CacheFirst",
               options: { cacheName: "lingua-assets", expiration: { maxEntries: 80 } },
             },
