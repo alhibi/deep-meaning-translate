@@ -1,13 +1,6 @@
 export type StyleOverride = "natural" | "formal" | "casual";
 
 export type Dialect = "auto" | "msa" | "levant" | "egypt" | "gulf" | "iraq" | "maghreb";
-export type ModelId = "gpt-5.6-luna" | "gpt-6-luna" | "glm-5.3-flash";
-export const MODELS: readonly ModelId[] = ["gpt-5.6-luna", "gpt-6-luna", "glm-5.3-flash"];
-export const MODEL_LABEL: Record<ModelId, string> = {
-  "gpt-5.6-luna": "Luna 5.6",
-  "gpt-6-luna": "Luna 6",
-  "glm-5.3-flash": "GLM Flash · beta",
-};
 export type Situation = "chat" | "work" | "official" | "general";
 
 export interface TranslationRequest {
@@ -18,8 +11,6 @@ export interface TranslationRequest {
   style: StyleOverride;
   /** Arabic variety for Arabic output; "auto" follows the source. */
   dialect?: Dialect;
-  /** Which model translates; defaults to gpt-5.6-luna. */
-  model?: ModelId;
   /** Text still being typed: translate provisionally, skip the repair pass. */
   partial?: boolean;
 }

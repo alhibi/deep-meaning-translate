@@ -5,12 +5,12 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
 } from "../prompt";
-import type { ModelId, TranslationProvider, TranslationRequest, TranslationResult } from "../types";
+import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 
 const BASE = "https://opencode.ai/zen/go/v1";
-const DEFAULT_MODEL: ModelId = "gpt-5.6-luna";
+const DEFAULT_MODEL = "gpt-6-luna";
 const SESSION = "lingua-translator";
 
 function extractText(payload: unknown): string {
@@ -41,36 +41,23 @@ async function send(
   user: string,
   signal: AbortSignal | undefined,
   stream: boolean,
-  model: ModelId = DEFAULT_MODEL,
 ): Promise<Response> {
-  // GPT models run on the Responses endpoint; GLM only on Chat Completions (thinking off).
-  const chat = model.startsWith("glm");
-  const body = chat
-    ? {
-        model,
-        stream,
-        thinking: { type: "disabled" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }
-    : {
-        model,
-        stream,
-        // Speed: no hidden thinking, terse output, reuse the cached system prompt.
-        reasoning: { effort: "none" },
-        text: { verbosity: "low" },
-        prompt_cache_key: SESSION,
-        store: false,
-        input: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      };
+  // Luna runs on the Responses endpoint: no hidden thinking, terse output, cached system prompt.
+  const body = {
+    model: DEFAULT_MODEL,
+    stream,
+    reasoning: { effort: "none" },
+    text: { verbosity: "low" },
+    prompt_cache_key: SESSION,
+    store: false,
+    input: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  };
   let res: Response;
   try {
-    res = await fetch(`${BASE}/${chat ? "chat/completions" : "responses"}`, {
+    res = await fetch(`${BASE}/responses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -108,9 +95,8 @@ async function call(
   system: string,
   user: string,
   signal: AbortSignal | undefined,
-  model?: ModelId,
 ): Promise<string> {
-  const res = await send(apiKey, system, user, signal, false, model);
+  const res = await send(apiKey, system, user, signal, false);
   return extractText(await res.json());
 }
 
@@ -155,7 +141,7 @@ export async function streamLiveTranslation(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true, req.model);
+  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }
@@ -164,7 +150,7 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
   return {
     id: "opencode",
     async translate(req, signal) {
-      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, req.model);
+      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal);
       return parseResult(raw, req);
     },
     async repair(req, previous, issues, signal) {
@@ -173,7 +159,6 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
         buildSystemPrompt(),
         buildRepairPrompt(req, previous, issues),
         signal,
-        req.model,
       );
       return parseResult(raw, req);
     },
@@ -186,7 +171,7 @@ export async function streamFullTranslation(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true, req.model);
+  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }

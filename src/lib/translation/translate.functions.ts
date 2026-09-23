@@ -14,7 +14,6 @@ export const InputSchema = z.object({
     .enum(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"])
     .optional()
     .default("auto"),
-  model: z.enum(["gpt-5.6-luna", "gpt-6-luna", "glm-5.3-flash"]).optional().default("gpt-5.6-luna"),
   partial: z.boolean().optional().default(false),
 });
 
