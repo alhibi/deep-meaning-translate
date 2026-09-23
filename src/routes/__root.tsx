@@ -1,3 +1,4 @@
+import { THEME_BOOT } from "@/lib/theme";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -85,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { title: "today" },
       { name: "description", content: "Meaning-first translation." },
-      { name: "theme-color", content: "#12100F", media: "(prefers-color-scheme: light)" },
+      { name: "theme-color", content: "#F7F3EC", media: "(prefers-color-scheme: light)" },
       { name: "theme-color", content: "#12100F", media: "(prefers-color-scheme: dark)" },
       { name: "color-scheme", content: "light dark" },
       { name: "mobile-web-app-capable", content: "yes" },
@@ -121,8 +122,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <HeadContent />
       </head>
       <body>

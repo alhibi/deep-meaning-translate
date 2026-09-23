@@ -89,6 +89,56 @@
   color-scheme: dark;
 }
 
+/* Light: warm paper, same hierarchy and contrast ratios as dark (text ≥ 4.5:1). */
+html.light {
+  --background: #f7f3ec;
+  --foreground: #1c1815;
+  --surface: #f0ebe2;
+  --card: #fffdf9;
+  --card-foreground: #1c1815;
+  --popover: #fffdf9;
+  --popover-foreground: #1c1815;
+  --primary: #1c1815;
+  --primary-foreground: #f7f3ec;
+  --secondary: #efe9df;
+  --secondary-foreground: #1c1815;
+  --muted: #efe9df;
+  --muted-foreground: #5c554e;
+  --faint: #857d75;
+  --signal: #b0603c;
+  --signal-text: #9c4f2d;
+  --signal-foreground: #fff8f2;
+  --signal-soft: rgb(176 96 60 / 13%);
+  --success: #2c8660;
+  --warning: #9a6519;
+  --destructive: #b54444;
+  --destructive-foreground: #fff8f2;
+  --border: rgb(28 24 21 / 9%);
+  --border-strong: rgb(28 24 21 / 17%);
+  --input: rgb(28 24 21 / 12%);
+  --shimmer: rgb(28 24 21 / 5%);
+  --focus-surface: #fbf8f3;
+  --elev-1: 0 1px 2px rgb(28 24 21 / 6%);
+  color-scheme: light;
+}
+
+/* Theme switch: circular spread (View Transitions) or soft cross-fade fallback. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.theme-fade,
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition:
+    background-color 450ms ease,
+    color 450ms ease,
+    border-color 450ms ease,
+    fill 450ms ease !important;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

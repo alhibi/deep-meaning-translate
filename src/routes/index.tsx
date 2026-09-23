@@ -1,3 +1,4 @@
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -477,6 +478,7 @@ function Translator() {
                 {t("install")}
               </button>
             ) : null}
+            <ThemeToggle label={t("theme")} />
             <button
               type="button"
               onClick={() => setSavedOpen(true)}
