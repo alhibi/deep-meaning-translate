@@ -497,18 +497,30 @@ function Translator() {
                     onClick={toggleMic}
                     aria-label={speech.listening ? t("micStop") : t("mic")}
                     aria-pressed={speech.listening}
-                    className={`press -ms-2 grid size-10 place-items-center rounded-full transition-colors duration-200 ${
-                      speech.listening ? "bg-signal/15 text-signal-text" : "text-muted-foreground hover:text-foreground"
+                    aria-busy={speech.starting}
+                    data-live={speech.listening || undefined}
+                    className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
+                      speech.listening ? "text-signal-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Mic className={`size-[18px] ${speech.listening ? "animate-[breathe_1.4s_ease-in-out_infinite]" : ""}`} strokeWidth={1.7} />
+                    <span aria-hidden className="mic-halo" />
+                    <span aria-hidden className="mic-halo mic-halo-2" />
+                    <span aria-hidden className="mic-core" />
+                    <Mic className="relative size-[18px]" strokeWidth={1.7} />
                   </button>
                 ) : null}
                 {speech.listening ? (
-                  <span className="animate-fade text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
-                ) : speech.error === "denied" || speech.error === "nospeech" ? (
-                  <span className="animate-fade truncate text-[12px] text-muted-foreground" aria-live="polite">
-                    {t(speech.error === "denied" ? "micDenied" : "micNoSpeech")}
+                  <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
+                ) : speech.error ? (
+                  <span className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground" aria-live="polite">
+                    <span className="truncate">
+                      {t(speech.error === "denied" ? "micDenied" : speech.error === "nospeech" ? "micNoSpeech" : speech.error === "nomic" ? "micNoDevice" : "micFailed")}
+                    </span>
+                    {speech.error !== "denied" ? (
+                      <button type="button" onClick={retryMic} className="press-soft shrink-0 rounded-full px-2 py-1 text-signal-text">
+                        {t("micRetry")}
+                      </button>
+                    ) : null}
                   </span>
                 ) : null}
               </div>
