@@ -95,6 +95,10 @@ const en = {
   micRetry: "Try again",
   micWriting: "Writing…",
   micListening: "Listening…",
+  introLabel: "Welcome to today",
+  introTitle: "Say it as you mean it.",
+  introCopy: "Translation that keeps your meaning, tone and natural voice.",
+  introEnter: "Start translating",
 };
 export type Key = keyof typeof en;
 
@@ -187,6 +191,10 @@ const ar: Record<Key, string> = {
   micRetry: "أعد المحاولة",
   micWriting: "أكتب ما قلته…",
   micListening: "أستمع…",
+  introLabel: "مرحباً بك في today",
+  introTitle: "قُلها كما تقصدها.",
+  introCopy: "ترجمة تحفظ المعنى والنبرة وطبيعة كلامك.",
+  introEnter: "ابدأ الترجمة",
 };
 
 const de: Record<Key, string> = {
@@ -280,6 +288,10 @@ const de: Record<Key, string> = {
   micRetry: "Erneut versuchen",
   micWriting: "Schreibe…",
   micListening: "Ich höre zu…",
+  introLabel: "Willkommen bei today",
+  introTitle: "Sag es, wie du es meinst.",
+  introCopy: "Übersetzungen, die Bedeutung, Ton und deine natürliche Stimme bewahren.",
+  introEnter: "Übersetzen",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };

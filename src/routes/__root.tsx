@@ -83,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
       },
-      { title: "Lingua" },
+      { title: "today" },
       { name: "description", content: "Meaning-first translation." },
       { name: "theme-color", content: "#12100F", media: "(prefers-color-scheme: light)" },
       { name: "theme-color", content: "#12100F", media: "(prefers-color-scheme: dark)" },
@@ -92,7 +92,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "format-detection", content: "telephone=no" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { name: "apple-mobile-web-app-title", content: "Lingua" },
+      { name: "apple-mobile-web-app-title", content: "today" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

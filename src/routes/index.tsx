@@ -18,6 +18,7 @@ import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
+import { Intro } from "@/components/Intro";
 import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { joinSpeech } from "@/lib/speech";
@@ -27,19 +28,20 @@ import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
+import { shouldShowIntro } from "@/lib/intro";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
   head: () => ({
     meta: [
-      { title: "Lingua — meaning-first translation" },
+      { title: "today — meaning-first translation" },
       {
         name: "description",
         content:
           "A quiet, fast translator that carries meaning, tone and nuance across languages — built for Arabic and German.",
       },
-      { property: "og:title", content: "Lingua — meaning-first translation" },
+      { property: "og:title", content: "today — meaning-first translation" },
       {
         property: "og:description",
         content:
@@ -64,6 +66,7 @@ function Translator() {
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
+  const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
   const closeDialect = useCallback(() => setDialectOpen(false), []);
   const selectDialect = useCallback((c: string) => setDialect(c as Dialect), []);
@@ -134,6 +137,8 @@ function Translator() {
           prime(session.text, session.source, session.target, session.style, session.result);
         submitNext();
         setText(session.text);
+      } else if (shouldShowIntro()) {
+        setIntroOpen(true);
       }
     }
     setRestored(true);
@@ -374,7 +379,9 @@ function Translator() {
   const today = restored && !hasText ? (savedList.length ? saved.ofTheDay() : null) : null;
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
+    <>
+      {introOpen ? <Intro onComplete={() => setIntroOpen(false)} /> : null}
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
       <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
         <button
           type="button"
@@ -742,7 +749,8 @@ function Translator() {
           onForgetAll={forgetAll}
         />
       </SafeArea>
-    </main>
+      </main>
+    </>
   );
 }
 
