@@ -2,6 +2,7 @@ import { memo, useCallback, useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import { LANGUAGES, TARGET_LANGUAGES, languageLabel } from "@/lib/translation/languages";
 import { tick } from "@/lib/haptics";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   source: string;
@@ -26,21 +27,22 @@ function Picker({
   align: "start" | "end";
 }) {
   const end = align === "end";
+  const { t } = useI18n();
   return (
     <label
       className={`press-soft relative flex min-h-12 flex-1 flex-col justify-center overflow-hidden rounded-xl px-2 ${
-        end ? "items-end text-right" : "items-start text-left"
+        end ? "items-end text-end" : "items-start text-start"
       }`}
     >
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        aria-label={end ? "Target language" : "Source language"}
+        aria-label={end ? t("targetLang") : t("sourceLang")}
         className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
       >
         {options.map((o) => (
           <option key={o.code} value={o.code}>
-            {o.native}
+            {o.code === "auto" ? t("detect") : o.native}
           </option>
         ))}
       </select>
@@ -51,7 +53,7 @@ function Picker({
           end ? "animate-from-start" : "animate-from-end"
         }`}
       >
-        {languageLabel(value)}
+        {value === "auto" ? t("detect") : languageLabel(value)}
       </span>
       <span
         className={`pointer-events-none block h-4 truncate text-[11px] text-muted-foreground transition-opacity duration-200 ${
@@ -72,6 +74,7 @@ export const LanguageBar = memo(function LanguageBar({
   onTarget,
   onSwap,
 }: Props) {
+  const { t } = useI18n();
   const [nudge, setNudge] = useState(0);
   const swap = useCallback(() => {
     setNudge((n) => n + 1);
@@ -86,12 +89,12 @@ export const LanguageBar = memo(function LanguageBar({
         options={LANGUAGES}
         onChange={onSource}
         align="start"
-        hint={source === "auto" ? (detected ? languageLabel(detected) : "Auto") : undefined}
+        hint={source === "auto" ? (detected ? languageLabel(detected) : t("auto")) : undefined}
       />
       <button
         type="button"
         onClick={swap}
-        aria-label="Swap languages"
+        aria-label={t("swap")}
         className="press grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-foreground"
       >
         <ArrowLeftRight
