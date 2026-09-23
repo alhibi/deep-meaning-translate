@@ -21,7 +21,6 @@ function Side({
   onChange,
   caption,
   end,
-  swapped,
   detected,
 }: {
   value: string;
@@ -29,14 +28,11 @@ function Side({
   onChange: (v: string) => void;
   caption: string;
   end?: boolean;
-  swapped: number;
   detected?: string | undefined;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
-  const label =
-    value === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(value);
   const streamItems = options.map((item) =>
     item.code === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(item.code),
   );
@@ -121,7 +117,6 @@ export const LanguageBar = memo(function LanguageBar({
         options={LANGUAGES}
         onChange={onSource}
         caption={sourceCaption}
-        swapped={swapped}
         detected={detected}
       />
       <button
@@ -142,7 +137,6 @@ export const LanguageBar = memo(function LanguageBar({
         onChange={onTarget}
         caption={t("to")}
         end
-        swapped={swapped}
       />
     </div>
   );
