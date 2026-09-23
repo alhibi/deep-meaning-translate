@@ -556,6 +556,7 @@ function Translator() {
         open={dialectOpen}
         title={t("dialect")}
         searchable={false}
+        plain
         items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map((d) => ({
           code: d,
           native: t(`d_${d}`),
