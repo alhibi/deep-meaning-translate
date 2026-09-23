@@ -13,7 +13,7 @@ import { SafeArea } from "@/components/SafeArea";
 import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { joinSpeech } from "@/lib/speech";
-import { useVoice } from "@/lib/voice";
+import { useSpeech, speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
@@ -260,8 +260,8 @@ function Translator() {
 
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
   const speechBase = useRef("");
-  const speech = useVoice({
-    lang: source, // "auto" lets the transcriber detect the spoken language
+  const speech = useSpeech({
+    lang: speechLang(source, target, locale, dialect), // listening follows the source language and dialect
     onText: (spoken, final) => {
       if (final) submitNext(); // a finished phrase translates right away
       setText(joinSpeech(speechBase.current, spoken).slice(0, MAX_CHARS));
@@ -477,9 +477,9 @@ function Translator() {
               aria-label={t("inputLabel")}
               className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
                 rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
-              } ${speech.listening || speech.transcribing ? "text-transparent caret-transparent" : ""}`}
+              } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
             />
-            {speech.listening || speech.transcribing ? (
+            {speech.listening ? (
               /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
               <div
                 aria-hidden
@@ -517,9 +517,7 @@ function Translator() {
                     onClick={toggleMic}
                     aria-label={speech.listening ? t("micStop") : t("mic")}
                     aria-pressed={speech.listening}
-                    aria-busy={speech.starting || speech.transcribing}
-                    disabled={speech.transcribing}
-                    ref={(el) => { speech.levelEl.current = el; }}
+                    aria-busy={speech.starting}
                     data-live={speech.listening || undefined}
                     className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
                       speech.listening ? "text-signal-foreground" : "text-muted-foreground hover:text-foreground"
@@ -531,9 +529,7 @@ function Translator() {
                     <Mic className="relative size-[18px]" strokeWidth={1.7} />
                   </button>
                 ) : null}
-                {speech.transcribing ? (
-                  <span className="mic-wave text-[12px] text-muted-foreground" aria-live="polite">{t("micWriting")}</span>
-                ) : speech.listening ? (
+                {speech.listening ? (
                   <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
                 ) : speech.error ? (
                   <span className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground" aria-live="polite">
