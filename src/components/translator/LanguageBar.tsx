@@ -3,6 +3,7 @@ import { ArrowLeftRight } from "lucide-react";
 import { LANGUAGES, TARGET_LANGUAGES, isRtl, languageLabel } from "@/lib/translation/languages";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
+import { LanguageSheet, pushRecent, readRecent, type PickerItem } from "./LanguageSheet";
 
 interface Props {
   source: string;
@@ -23,7 +24,7 @@ function Side({
   detected,
 }: {
   value: string;
-  options: { code: string; native: string }[];
+  options: PickerItem[];
   onChange: (v: string) => void;
   caption: string;
   end?: boolean;
@@ -31,21 +32,29 @@ function Side({
   detected?: string | undefined;
 }) {
   const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
   const label = value === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(value);
+  const close = useCallback(() => setOpen(false), []);
+  const select = useCallback(
+    (code: string) => {
+      pushRecent(code);
+      if (code !== value) onChange(code);
+    },
+    [onChange, value],
+  );
   return (
-    <label className={`press-soft relative flex min-w-0 flex-1 flex-col py-2 ${end ? "items-end text-end" : "items-start text-start"}`}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={end ? t("targetLang") : t("sourceLang")}
-        className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
-      >
-        {options.map((o) => (
-          <option key={o.code} value={o.code}>
-            {o.code === "auto" ? t("detect") : o.native}
-          </option>
-        ))}
-      </select>
+    <>
+    <button
+      type="button"
+      onClick={() => {
+        setRecent(readRecent());
+        setOpen(true);
+      }}
+      aria-haspopup="dialog"
+      aria-label={end ? t("targetLang") : t("sourceLang")}
+      className={`press-soft relative flex min-w-0 flex-1 cursor-pointer flex-col py-2 ${end ? "items-end text-end" : "items-start text-start"}`}
+    >
       <span className="pointer-events-none text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{caption}</span>
       <span
         key={`${value}-${swapped}`}
@@ -56,7 +65,17 @@ function Side({
         {label}
       </span>
       <span aria-hidden className={`pointer-events-none mt-1.5 h-[2px] w-5 rounded-full ${end ? "bg-signal" : "bg-transparent"}`} />
-    </label>
+    </button>
+    <LanguageSheet
+      open={open}
+      title={end ? t("targetLang") : t("sourceLang")}
+      items={options}
+      value={value}
+      recent={recent}
+      onSelect={select}
+      onClose={close}
+    />
+    </>
   );
 }
 
