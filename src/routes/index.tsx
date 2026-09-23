@@ -301,7 +301,7 @@ function Translator() {
             <button
               type="button"
               onClick={() => void pasteClipboard()}
-              className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-[12px] text-muted-foreground"
+              className="press-soft animate-fade inline-flex h-9 shrink-0 whitespace-nowrap items-center gap-1.5 rounded-full px-2 text-[12px] text-muted-foreground"
             >
               <ClipboardPaste className="size-3.5" strokeWidth={1.75} />
               {t("pasteCopied")}
