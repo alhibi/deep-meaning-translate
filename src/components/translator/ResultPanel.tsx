@@ -10,10 +10,26 @@ const ERROR_COPY: Record<ErrorKind, string> = {
   quota: "The translation account is out of credit.",
   rate: "A lot of requests at once. Give it a moment.",
   network: "The connection dropped before the translation finished.",
+  timeout: "That took too long. Your text is still here.",
   offline: "You're offline. Your text is safe — translation resumes when you're back.",
   provider: "Something interrupted the translation.",
   input: "That text couldn't be translated as written.",
 };
+
+const LOCALE: Record<string, string> = { ar: "ar-SA", de: "de-DE", en: "en-US", fr: "fr-FR", es: "es-ES", tr: "tr-TR" };
+
+/** Prefer a local, high-quality voice for the exact language; fall back gracefully. */
+function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
+  const voices = window.speechSynthesis.getVoices();
+  const matches = voices.filter((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+  const preferred = LOCALE[lang]?.toLowerCase();
+  return (
+    matches.find((v) => v.lang.toLowerCase() === preferred && v.localService) ??
+    matches.find((v) => v.lang.toLowerCase() === preferred) ??
+    matches.find((v) => v.localService) ??
+    matches[0]
+  );
+}
 
 /** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
 function sizeFor(len: number, rtl: boolean) {
@@ -58,12 +74,14 @@ function Skeleton() {
 export const ResultPanel = memo(function ResultPanel({
   result,
   pending,
+  provisional,
   error,
   target,
   onRetry,
 }: {
   result: TranslationResult | null;
   pending: boolean;
+  provisional: boolean;
   error: ErrorKind | null;
   target: string;
   onRetry: () => void;
@@ -71,6 +89,8 @@ export const ResultPanel = memo(function ResultPanel({
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
+  const [noVoice, setNoVoice] = useState(false);
+  const [announce, setAnnounce] = useState("");
   const text = result?.translation ?? "";
   const textRef = useRef(text);
   textRef.current = text;
@@ -81,6 +101,16 @@ export const ResultPanel = memo(function ResultPanel({
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     setSpeaking(false);
   }, [text]);
+
+  // Screen readers hear settled results only — never every realtime refinement.
+  useEffect(() => {
+    if (!text || provisional || pending) return;
+    const id = setTimeout(() => setAnnounce("Translation ready"), 1200);
+    return () => {
+      clearTimeout(id);
+      setAnnounce("");
+    };
+  }, [text, provisional, pending]);
 
   useEffect(() => {
     if (!copied) return;
@@ -108,8 +138,15 @@ export const ResultPanel = memo(function ResultPanel({
       setSpeaking(false);
       return;
     }
+    const voice = pickVoice(lang);
+    if (!voice && synth.getVoices().length > 0) {
+      setNoVoice(true);
+      setTimeout(() => setNoVoice(false), 2200);
+      return;
+    }
     const u = new SpeechSynthesisUtterance(textRef.current);
-    u.lang = lang;
+    u.lang = voice?.lang ?? LOCALE[lang] ?? lang;
+    if (voice) u.voice = voice;
     u.rate = 0.95;
     u.onend = u.onerror = () => setSpeaking(false);
     synth.speak(u);
@@ -126,13 +163,13 @@ export const ResultPanel = memo(function ResultPanel({
   let body: React.ReactNode;
   if (result) {
     body = (
-      <div key={text} className="animate-reveal">
+      <div key="result" className="animate-reveal">
         <p
           dir={rtl ? "rtl" : "ltr"}
           lang={lang}
           className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${
             rtl ? "font-arabic" : "font-display tracking-[-0.01em]"
-          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-45" : "opacity-100"}`}
+          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-55" : provisional ? "opacity-80" : "opacity-100"}`}
         >
           {text}
         </p>
@@ -192,8 +229,8 @@ export const ResultPanel = memo(function ResultPanel({
           </Action>
           <span
             aria-live="polite"
-            className={`ms-1 text-[12px] text-accent transition-[opacity,transform] duration-200 ${
-              copied ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
+            className={`ms-1 text-[12px] ${noVoice ? "text-muted-foreground" : "text-accent"} transition-[opacity,transform] duration-200 ${
+              copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
             {copied ? "Copied" : ""}
@@ -246,7 +283,7 @@ export const ResultPanel = memo(function ResultPanel({
       />
       {body}
       <span className="sr-only" aria-live="polite">
-        {pending ? "Translating" : ""}
+        {announce}
       </span>
     </div>
   );
