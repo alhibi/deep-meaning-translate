@@ -79,6 +79,11 @@ async function call(
       body: JSON.stringify({
         model: MODEL,
         stream: false,
+        // Speed: no hidden thinking, terse output, reuse the cached system prompt.
+        reasoning: { effort: "none" },
+        text: { verbosity: "low" },
+        prompt_cache_key: SESSION,
+        store: false,
         input: [
           { role: "system", content: system },
           { role: "user", content: user },

@@ -66,13 +66,13 @@ export function delayFor(opts: {
   const avg = intervals.length ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 400;
 
   let d: number;
-  if (SENTENCE_END.test(normalized) || /\n$/.test(raw)) d = 200;
-  else if (SOFT_BOUNDARY.test(raw)) d = 380;
-  else if (/\s$/.test(raw)) d = 460;
-  else d = 720; // mid-word: most likely still typing
+  if (SENTENCE_END.test(normalized) || /\n$/.test(raw)) d = 120;
+  else if (SOFT_BOUNDARY.test(raw)) d = 240;
+  else if (/\s$/.test(raw)) d = 300;
+  else d = 520; // mid-word: most likely still typing
 
-  if (avg < 160) d += 180; // fast typist — wait for the real pause
-  if (!hasResult && wordCount(normalized) < 2 && !SENTENCE_END.test(normalized)) d = Math.max(d, 900);
+  if (avg < 160) d += 120; // fast typist — wait for the real pause
+  if (!hasResult && wordCount(normalized) < 2 && !SENTENCE_END.test(normalized)) d = Math.max(d, 650);
   if (normalized.length > 600) d += 180;
   if (typeof navigator !== "undefined" && slowConnection()) d += 250;
   return d;
