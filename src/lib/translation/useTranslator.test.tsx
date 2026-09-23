@@ -156,4 +156,17 @@ describe("useTranslator", () => {
     await flush(600);
     expect(signals[1]!.aborted).toBe(true);
   });
+
+  it("translates word by word during non-stop fast typing", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const { rerender } = renderHook((p) => useTranslator(p), { initialProps: opts("I") });
+    const words = "Ich wollte dir heute nur kurz sagen dass ".split("");
+    let typed = "";
+    for (const ch of words) {
+      typed += ch;
+      rerender(opts(typed));
+      await flush(90);
+    }
+    expect(call.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
 });

@@ -48,6 +48,8 @@ const PENDING_DELAY_MS = 260;
 /** Generous safety net for a hung connection — not a cap on normal model thinking. */
 const REQUEST_TIMEOUT_MS = 60_000;
 const CACHE_LIMIT = 60;
+/** Longest the screen goes without a fresh request while someone types non-stop. */
+const MAX_WAIT_MS = 650;
 const CACHE_TTL_MS = 30 * 60_000;
 
 interface Cached {
@@ -128,6 +130,7 @@ export function useTranslator(opts: {
   const deliberate = useRef(false);
   const lastRaw = useRef("");
   const lastKeyAt = useRef(0);
+  const lastSentAt = useRef(0);
   const intervals = useRef<number[]>([]);
   const lastParams = useRef("");
   const current = useRef({ norm: "", key: "", provisional: false });
@@ -205,6 +208,7 @@ export function useTranslator(opts: {
       setStreaming(false);
       setPhase(attempt > 0 ? "RETRYING" : hasResult.current ? "UPDATING" : "TRANSLATING");
       metrics.request();
+      lastSentAt.current = Date.now();
       const started = performance.now();
 
       const fail = (kind: ErrorKind) => {
@@ -360,8 +364,11 @@ export function useTranslator(opts: {
       return; // already on screen, or already on its way
     }
 
+    // Continuous typing never pauses long enough for the debounce, so after
+    // MAX_WAIT_MS without a request, each finished word goes out immediately.
+    const starved = now - lastSentAt.current > MAX_WAIT_MS && /\s$/.test(text);
     const delay =
-      isDeliberate || paramsChanged
+      isDeliberate || paramsChanged || starved
         ? 0
         : delayFor({
             normalized: norm,
