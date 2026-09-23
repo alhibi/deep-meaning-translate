@@ -323,3 +323,14 @@
 ::selection { background: var(--signal-soft); }
 :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: 6px; }
 textarea:focus-visible { outline: none; }
+
+@keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheet-out { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes sheet-scrim-out { from { opacity: 1; } to { opacity: 0; } }
+@utility animate-sheet-in { animation: sheet-in 260ms var(--ease-out) both; }
+@utility animate-sheet-out { animation: sheet-out 180ms var(--ease-soft) both; }
+@utility animate-sheet-scrim { animation: fade 200ms var(--ease-soft) both; }
+@utility animate-sheet-scrim-out { animation: sheet-scrim-out 180ms var(--ease-soft) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-in, .animate-sheet-out { animation-duration: 1ms !important; }
+}
