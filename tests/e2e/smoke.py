@@ -48,8 +48,11 @@ async def main():
         # 2. Swapping languages keeps text and writing-box direction.
         swap = page.locator("button.animate-exchange, button[aria-label*='swap' i], button[aria-label*='تبديل'], button[aria-label*='tausch' i]").first
         if await swap.count():
+            source_before = await page.locator(".text-stream-window").first.inner_text()
             dir_before = await box.evaluate("e => getComputedStyle(e).direction")
             await swap.click(); await page.wait_for_timeout(600)
+            source_after = await page.locator(".text-stream-window").first.inner_text()
+            check(source_after != source_before, "language names stream when swapped")
             check(await box.input_value() != "", "text kept after swap")
             # Swap moves the translation into the box; the box follows the text's own script, not the language pair.
             val = await box.input_value()
