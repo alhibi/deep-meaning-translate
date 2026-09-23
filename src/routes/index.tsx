@@ -257,6 +257,7 @@ function Translator() {
         </div>
       </header>
 
+      <div className="flex flex-1 flex-col justify-center pb-[8dvh]">
       <LanguageBar
         source={source}
         target={target}
@@ -328,7 +329,8 @@ function Translator() {
         />
       </div>
 
-      <div className="flex-1 pad-safe-bottom" />
+      </div>
+      <div className="pad-safe-bottom" />
 
       <HistorySheet
         open={historyOpen}

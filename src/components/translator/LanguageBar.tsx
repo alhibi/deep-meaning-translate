@@ -1,5 +1,4 @@
 import { memo, useCallback, useState } from "react";
-import { ArrowLeftRight } from "lucide-react";
 import { LANGUAGES, TARGET_LANGUAGES, languageLabel } from "@/lib/translation/languages";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
@@ -51,10 +50,10 @@ function Picker({
       {/* Keyed so a change of language re-settles the label in from its new side. */}
       <span
         key={value}
-        className={`pointer-events-none block truncate text-[15px] font-medium tracking-tight ${
+        className={`pointer-events-none block truncate text-[17px] font-medium tracking-tight ${
           active ? "text-signal" : "text-foreground"
         } ${
-          end ? "animate-from-start" : "animate-from-end"
+          end ? "animate-cross-from-start" : "animate-cross-from-end"
         }`}
       >
         {value === "auto" ? t("detect") : languageLabel(value)}
@@ -88,7 +87,7 @@ export const LanguageBar = memo(function LanguageBar({
 
   return (
     <div className="px-4 pb-3 pt-1">
-    <div className="flex items-center rounded-2xl border border-border bg-surface p-0.5 shadow-[var(--elev-1)]">
+    <div className="flex items-center rounded-full border border-border bg-surface px-1.5 py-1">
       <Picker
         value={source}
         options={LANGUAGES}
@@ -96,16 +95,23 @@ export const LanguageBar = memo(function LanguageBar({
         align="start"
         hint={source === "auto" ? (detected ? languageLabel(detected) : t("auto")) : undefined}
       />
+      {/* The hinge: a thread with a bead that always rests beside the target.
+          Tapping it sends the bead across and the two languages trade places. */}
       <button
         type="button"
         onClick={swap}
         aria-label={t("swap")}
-        className="press grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-signal"
+        className="press group relative h-11 w-16 shrink-0"
       >
-        <ArrowLeftRight
+        <span aria-hidden className="absolute inset-x-2 top-1/2 h-px -translate-y-1/2 bg-border-strong transition-colors group-hover:bg-signal/50" />
+        <span aria-hidden className="absolute start-2 top-1/2 size-1 -translate-y-1/2 rounded-full bg-border-strong" />
+        <span
           key={nudge}
-          className={`size-[18px] ${nudge ? "animate-exchange" : ""}`}
-          strokeWidth={1.75}
+          aria-hidden
+          className={`absolute top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-signal ring-4 ring-background ${
+            nudge ? "animate-bead" : ""
+          }`}
+          style={{ insetInlineStart: "calc(100% - 0.5rem - 0.625rem)" }}
         />
       </button>
       <Picker value={target} options={TARGET_LANGUAGES} onChange={onTarget} align="end" active />

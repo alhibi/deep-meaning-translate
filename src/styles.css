@@ -47,30 +47,30 @@
 
 /*
  * Lingua visual system.
- * Ink on paper, one signal colour. Indigo means "the app is helping you" —
+ * Ink on paper, one signal colour. Clay means "the app is helping you" —
  * focus, active language, live activity, the key action. Nothing else.
  * Semantic colours appear only for their meaning: success, caution, failure.
  */
 :root {
   --radius: 0.75rem;
   /* Foundation */
-  --background: oklch(0.975 0.002 106);   /* Paper   #F7F7F5 */
-  --foreground: oklch(0.2 0.008 275);     /* Ink     #17181C */
-  --surface: oklch(1 0 0);                /* Surface #FFFFFF */
+  --background: oklch(0.968 0.011 80);    /* warm paper */
+  --foreground: oklch(0.24 0.014 55);     /* warm ink */
+  --surface: oklch(0.99 0.006 80);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.008 275);
+  --card-foreground: oklch(0.2 0.008 55);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.008 275);
-  --primary: oklch(0.2 0.008 275);
-  --primary-foreground: oklch(0.975 0.002 106);
-  --secondary: oklch(0.945 0.003 106);
-  --secondary-foreground: oklch(0.2 0.008 275);
-  --muted: oklch(0.945 0.003 106);
-  --muted-foreground: oklch(0.5 0.01 275); /* ≥4.5:1 on paper and surface */
-  /* Signal — Indigo #4F46E5 */
-  --signal: oklch(0.511 0.23 277);
+  --popover-foreground: oklch(0.2 0.008 55);
+  --primary: oklch(0.2 0.008 55);
+  --primary-foreground: oklch(0.975 0.002 80);
+  --secondary: oklch(0.945 0.003 80);
+  --secondary-foreground: oklch(0.2 0.008 55);
+  --muted: oklch(0.945 0.003 80);
+  --muted-foreground: oklch(0.5 0.01 55); /* ≥4.5:1 on paper and surface */
+  /* Signal — warm clay */
+  --signal: oklch(0.56 0.105 45);          /* clay / terracotta */
   --signal-foreground: oklch(0.99 0 0);
-  --signal-soft: oklch(0.511 0.23 277 / 9%);
+  --signal-soft: oklch(0.56 0.105 45 / 14%);
   --accent: var(--signal);
   --accent-foreground: var(--signal-foreground);
   /* Semantic */
@@ -79,44 +79,44 @@
   --destructive: oklch(0.6 0.13 22);      /* #C95C5C */
   --destructive-foreground: oklch(0.99 0 0);
   /* Lines */
-  --border: oklch(0.2 0.008 275 / 8%);
-  --border-strong: oklch(0.2 0.008 275 / 16%);
-  --input: oklch(0.2 0.008 275 / 10%);
+  --border: oklch(0.2 0.008 55 / 8%);
+  --border-strong: oklch(0.2 0.008 55 / 16%);
+  --input: oklch(0.2 0.008 55 / 10%);
   --ring: var(--signal);
-  --shimmer: oklch(0.2 0.008 275 / 5%);
+  --shimmer: oklch(0.2 0.008 55 / 5%);
   --focus-surface: oklch(1 0 0);
-  --elev-1: 0 1px 2px oklch(0.2 0.008 275 / 4%);
+  --elev-1: 0 1px 2px oklch(0.2 0.008 55 / 4%);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
 :root {
   color-scheme: dark;
-  --background: oklch(0.155 0.005 275);   /* Deep Ink #0F1013 */
-  --foreground: oklch(0.94 0.004 275);
-  --surface: oklch(0.205 0.008 265);      /* #17191E */
-  --card: oklch(0.232 0.01 265);          /* #1D2026 */
-  --card-foreground: oklch(0.94 0.004 275);
-  --popover: oklch(0.232 0.01 265);
-  --popover-foreground: oklch(0.94 0.004 275);
-  --primary: oklch(0.94 0.004 275);
-  --primary-foreground: oklch(0.155 0.005 275);
-  --secondary: oklch(0.26 0.01 265);
-  --secondary-foreground: oklch(0.94 0.004 275);
-  --muted: oklch(0.24 0.009 265);
-  --muted-foreground: oklch(0.7 0.01 275);
-  --signal: oklch(0.7 0.14 277);          /* lifted for contrast, not neon */
-  --signal-foreground: oklch(0.16 0.01 275);
-  --signal-soft: oklch(0.7 0.14 277 / 12%);
+  --background: oklch(0.17 0.008 60);
+  --foreground: oklch(0.94 0.004 55);
+  --surface: oklch(0.215 0.01 60);
+  --card: oklch(0.24 0.011 60);
+  --card-foreground: oklch(0.94 0.004 55);
+  --popover: oklch(0.232 0.01 60);
+  --popover-foreground: oklch(0.94 0.004 55);
+  --primary: oklch(0.94 0.004 55);
+  --primary-foreground: oklch(0.155 0.005 55);
+  --secondary: oklch(0.26 0.01 60);
+  --secondary-foreground: oklch(0.94 0.004 55);
+  --muted: oklch(0.24 0.009 60);
+  --muted-foreground: oklch(0.7 0.01 55);
+  --signal: oklch(0.74 0.09 58);          /* warm sand-clay */
+  --signal-foreground: oklch(0.16 0.01 55);
+  --signal-soft: oklch(0.74 0.09 58 / 16%);
   --success: oklch(0.72 0.1 163);
   --warning: oklch(0.76 0.12 70);
   --destructive: oklch(0.7 0.12 22);
-  --destructive-foreground: oklch(0.16 0.01 275);
+  --destructive-foreground: oklch(0.16 0.01 55);
   --border: oklch(1 0 0 / 8%);
   --border-strong: oklch(1 0 0 / 16%);
   --input: oklch(1 0 0 / 12%);
   --shimmer: oklch(1 0 0 / 6%);
-  --focus-surface: oklch(0.205 0.008 265);
+  --focus-surface: oklch(0.215 0.01 60);
   --elev-1: 0 1px 0 oklch(1 0 0 / 3%);
 }
 }
@@ -194,6 +194,19 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes cross-from-start {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cross-from-end {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes bead {
+  0% { inset-inline-start: 0.5rem; transform: translateY(-50%) scale(0.6); }
+  60% { transform: translateY(-50%) scale(1.1); }
+  100% { inset-inline-start: calc(100% - 1.125rem); transform: translateY(-50%) scale(1); }
+}
 @keyframes from-start {
   from { opacity: 0; transform: translateX(-8px); }
   to { opacity: 1; transform: none; }
@@ -225,6 +238,9 @@
 @utility animate-fade { animation: fade 200ms var(--ease-soft) both; }
 @utility animate-from-start { animation: from-start 240ms var(--ease-out) both; }
 @utility animate-from-end { animation: from-end 240ms var(--ease-out) both; }
+@utility animate-cross-from-start { animation: cross-from-start 320ms var(--ease-out) both; }
+@utility animate-cross-from-end { animation: cross-from-end 320ms var(--ease-out) both; }
+@utility animate-bead { animation: bead 380ms var(--ease-out) both; }
 @utility animate-exchange { animation: exchange 300ms var(--ease-out); }
 @utility animate-breathe { animation: breathe 1.4s ease-in-out infinite; }
 
@@ -323,10 +339,10 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
   }
-  .animate-reveal, .animate-rise, .animate-from-start, .animate-from-end {
+  .animate-reveal, .animate-rise, .animate-from-start, .animate-from-end, .animate-cross-from-start, .animate-cross-from-end {
     animation-name: fade !important;
   }
-  .animate-exchange, .shimmer::after, .progress-line::after { animation: none !important; }
+  .animate-exchange, .animate-bead, .shimmer::after, .progress-line::after { animation: none !important; }
   .progress-line::after { transform: none; opacity: 0.5; }
   .press:active { transform: none; }
 }
