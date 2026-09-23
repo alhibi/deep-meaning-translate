@@ -71,6 +71,13 @@ function Translator() {
 
   const detected = result?.sourceLanguage;
 
+  // Auto-detected source equals target: flip to the Arabic↔German partner.
+  useEffect(() => {
+    if (source === "auto" && detected && detected === target) {
+      setTarget(detected === "ar" ? "de" : detected === "de" ? "ar" : target === "de" ? "ar" : "de");
+    }
+  }, [source, detected, target]);
+
   const swap = useCallback(() => {
     const nextSource = target;
     const nextTarget = source === "auto" ? (detected ?? "en") : source;
