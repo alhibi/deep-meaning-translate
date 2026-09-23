@@ -34,9 +34,10 @@ export interface TranslationProvider {
 
 export class TranslationError extends Error {
   constructor(
-    public readonly kind: "auth" | "rate" | "network" | "provider" | "input",
+    public readonly kind: "auth" | "quota" | "rate" | "network" | "provider" | "input",
     message: string,
   ) {
+
     super(message);
   }
 }
