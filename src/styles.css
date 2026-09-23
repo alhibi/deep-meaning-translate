@@ -146,7 +146,18 @@ html.theme-fade *::after {
   width: 0;
   height: 0;
   pointer-events: none;
-  contain: strict;
+  /* Own live layer above the theme spread snapshot so it stays visible */
+  view-transition-name: heat-shimmer;
+}
+::view-transition-group(heat-shimmer) {
+  z-index: 100;
+  overflow: visible;
+}
+::view-transition-old(heat-shimmer) {
+  display: none;
+}
+::view-transition-new(heat-shimmer) {
+  animation: none;
 }
 .heat-shimmer::before,
 .heat-shimmer::after {
