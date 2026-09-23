@@ -241,10 +241,11 @@ function Translator() {
   const { t, locale, rtl: uiRtl } = useI18n();
   const [tagline, setTagline] = useState(false);
   const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (taglineTimer.current) clearTimeout(taglineTimer.current); }, []);
   const toggleTagline = useCallback(() => {
     if (taglineTimer.current) clearTimeout(taglineTimer.current);
     setTagline((v) => {
-      if (!v) taglineTimer.current = setTimeout(() => setTagline(false), 4200);
+      if (!v) taglineTimer.current = setTimeout(() => setTagline(false), 1500);
       return !v;
     });
   }, []);
@@ -305,16 +306,6 @@ function Translator() {
         </div>
       </header>
 
-      {/* Tagline: revealed only when the name is pressed; a reserved line, so nothing shifts. */}
-      <div className="flex h-9 items-center justify-center px-6" aria-hidden={!tagline}>
-        <span
-          className={`font-literary text-[20px] italic leading-none text-muted-foreground transition-opacity duration-500 ${
-            tagline ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Say it naturally.
-        </span>
-      </div>
 
       <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
         <LanguageBar
