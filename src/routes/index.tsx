@@ -85,6 +85,7 @@ function Translator() {
   useEffect(() => {
     setEntries(history.list());
     initServiceWorker();
+    initLocale();
     const prefs = persist.prefs();
     if (prefs) {
       setSource(prefs.source);
