@@ -24,9 +24,9 @@ function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
 
 /** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
 function sizeFor(len: number, rtl: boolean) {
-  if (len < 70) return rtl ? "text-[27px] leading-[1.7]" : "text-[30px] leading-[1.25]";
-  if (len < 220) return rtl ? "text-[22px] leading-[1.75]" : "text-[24px] leading-[1.32]";
-  return rtl ? "text-[18px] leading-[1.85]" : "text-[20px] leading-[1.45]";
+  if (len < 60) return rtl ? "text-[32px] leading-[1.6]" : "text-[30px] leading-[1.25] tracking-[-0.02em]";
+  if (len < 220) return rtl ? "text-[26px] leading-[1.7]" : "text-[24px] leading-[1.35] tracking-[-0.015em]";
+  return rtl ? "text-[21px] leading-[1.8]" : "text-[19px] leading-[1.5]";
 }
 
 function Action({
@@ -171,8 +171,8 @@ export const ResultPanel = memo(function ResultPanel({
           dir={rtl ? "rtl" : "ltr"}
           lang={lang}
           className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${
-            rtl ? "font-arabic" : "font-display tracking-[-0.01em]"
-          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-55" : provisional ? "opacity-80" : "opacity-100"}`}
+            rtl ? "font-arabic font-medium" : "font-medium"
+          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
         >
           {text}
         </p>
@@ -208,22 +208,28 @@ export const ResultPanel = memo(function ResultPanel({
           <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
         ) : null}
 
-        <div className="animate-reveal-late -ms-3 mt-3 flex items-center">
-          <Action label={copied ? t("copied") : t("copy")} onClick={copy}>
-            <Copy
-              className={`swap-icon size-[18px] text-signal ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
-              strokeWidth={1.75}
-            />
-            <Check
-              className={`swap-icon absolute size-[18px] text-success ${
-                copied ? "opacity-100" : "scale-75 opacity-0"
-              }`}
-              strokeWidth={2}
-            />
-          </Action>
+        <div
+          className={`-ms-0.5 mt-5 flex items-center transition-[opacity,transform] duration-300 ${
+            provisional || pending ? "pointer-events-none translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={copy}
+            aria-label={copied ? t("copied") : t("copy")}
+            className={`press me-2 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
+              copied ? "bg-card text-success" : "bg-signal text-signal-foreground"
+            }`}
+          >
+            <span className="relative grid size-4 place-items-center">
+              <Copy className={`swap-icon size-4 ${copied ? "scale-75 opacity-0" : "opacity-100"}`} strokeWidth={1.8} />
+              <Check className={`swap-icon absolute size-4 ${copied ? "opacity-100" : "scale-75 opacity-0"}`} strokeWidth={2.2} />
+            </span>
+            {copied ? t("copied") : t("copyShort")}
+          </button>
           <Action label={speaking ? t("stop") : t("listen")} onClick={speak} active={speaking}>
             <Volume2
-              className={`size-[18px] ${speaking ? "animate-breathe text-signal" : ""}`}
+              className={`size-[18px] ${speaking ? "animate-breathe text-signal-text" : ""}`}
               strokeWidth={1.75}
             />
           </Action>
@@ -236,7 +242,7 @@ export const ResultPanel = memo(function ResultPanel({
               copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
-            {copied ? t("copied") : ""}
+            {noVoice ? "" : ""}
           </span>
           {error ? (
             <button
@@ -273,26 +279,14 @@ export const ResultPanel = memo(function ResultPanel({
     body = <Skeleton key="pending" />;
   } else {
     body = (
-      <p key="idle" className="animate-fade text-[15px] text-muted-foreground/70">
+      <p key="idle" className="animate-fade text-[15px] text-faint">
         {t("idle")}
       </p>
     );
   }
 
   return (
-    <div className="relative min-h-[176px] px-5 pb-4 pt-5" aria-busy={pending}>
-      <div
-        aria-hidden
-        className={`progress-line absolute inset-x-0 top-0 transition-opacity duration-300 ${
-          pending ? "opacity-100" : "opacity-0"
-        }`}
-      />
-      <span
-        aria-hidden
-        className={`absolute end-5 top-6 size-1.5 rounded-full bg-signal transition-opacity duration-300 ${
-          provisional && !pending && result ? "animate-breathe opacity-100" : "opacity-0"
-        }`}
-      />
+    <div className="relative min-h-[200px] px-5 pb-5 pt-5" aria-busy={pending}>
       {body}
       <span className="sr-only" aria-live="polite">
         {announce}

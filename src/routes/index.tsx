@@ -237,14 +237,14 @@ function Translator() {
     closeHistory();
   }, [submitNext, closeHistory]);
 
-  const rtlInput = text.trim() ? startsRtl(text) : isRtl(source === "auto" ? "" : source);
+  const { t, locale, rtl: uiRtl } = useI18n();
+  const rtlInput = text.trim() ? startsRtl(text) : source === "auto" ? uiRtl : isRtl(source);
   const hasText = text.length > 0;
-  const { t, locale } = useI18n();
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
       <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
-        <span className="font-display text-[20px] tracking-tight">Lingua</span>
+        <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold tracking-[-0.01em]"><span aria-hidden className="size-1.5 rounded-full bg-signal" />Lingua</span>
         <div className="flex items-center gap-1">
           <label className="press-soft relative grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground">
             <select
@@ -282,80 +282,93 @@ function Translator() {
         </div>
       </header>
 
-      <div className="flex-1 pt-[max(1rem,14dvh)]">
-      <LanguageBar
-        source={source}
-        target={target}
-        detected={detected}
-        onSource={chooseSource}
-        onTarget={chooseTarget}
-        onSwap={swap}
-      />
-
-      <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pb-3 pt-4">
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={onInput}
-          onPaste={onPaste}
-          dir={rtlInput ? "rtl" : "ltr"}
-          rows={3}
-          autoCapitalize="sentences"
-          autoComplete="off"
-          enterKeyHint="done"
-          spellCheck
-          placeholder={t("placeholder")}
-          aria-label={t("inputLabel")}
-          className={`autogrow block w-full resize-none bg-transparent pe-9 text-[20px] tracking-tight outline-none placeholder:text-muted-foreground/60 ${
-            rtlInput ? "leading-[1.75]" : "leading-[1.5]"
-          }`}
+      <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
+        <LanguageBar
+          source={source}
+          target={target}
+          detected={detected}
+          onSource={chooseSource}
+          onTarget={chooseTarget}
+          onSwap={swap}
         />
-        <button
-          type="button"
-          onClick={clear}
-          aria-label={t("clearText")}
-          tabIndex={hasText ? 0 : -1}
-          className={`press absolute end-2 top-3 grid size-10 place-items-center rounded-full text-muted-foreground transition-[opacity,transform] duration-200 ${
-            hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
-          }`}
-        >
-          <X className="size-4" strokeWidth={1.75} />
-        </button>
-        <div className="mt-2 flex h-9 items-center justify-between">
-          <StyleToggle value={style} onChange={setStyle} />
-          {!hasText && canReadClipboard ? (
+
+        {/* One canvas: source writing surface, a live seam, then the result. */}
+        <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
+          <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
+            <textarea
+              ref={inputRef}
+              value={text}
+              onChange={onInput}
+              onPaste={onPaste}
+              dir={rtlInput ? "rtl" : "ltr"}
+              rows={2}
+              autoCapitalize="sentences"
+              autoComplete="off"
+              enterKeyHint="done"
+              spellCheck
+              placeholder={t("placeholder")}
+              aria-label={t("inputLabel")}
+              className={`autogrow block w-full resize-none bg-transparent pe-10 outline-none ${
+                rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+              }`}
+            />
             <button
               type="button"
-              onClick={() => void pasteClipboard()}
-              className="press-soft animate-fade inline-flex h-9 shrink-0 whitespace-nowrap items-center gap-1.5 rounded-full px-2 text-[12px] text-muted-foreground"
+              onClick={clear}
+              aria-label={t("clearText")}
+              tabIndex={hasText ? 0 : -1}
+              className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${
+                hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
+              }`}
             >
-              <ClipboardPaste className="size-3.5" strokeWidth={1.75} />
-              {t("pasteCopied")}
+              <X className="size-[18px]" strokeWidth={1.6} />
             </button>
-          ) : null}
-          <span
-            className={`text-[11px] tabular-nums text-muted-foreground transition-opacity duration-300 ${
-              text.length > MAX_CHARS * 0.7 ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            {text.length}/{MAX_CHARS}
-          </span>
+            <div className="flex h-10 items-center justify-end gap-3">
+              {!hasText && canReadClipboard ? (
+                <button
+                  type="button"
+                  onClick={() => void pasteClipboard()}
+                  className="press-soft animate-fade inline-flex h-9 items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  <ClipboardPaste className="size-4" strokeWidth={1.6} />
+                  {t("paste")}
+                </button>
+              ) : null}
+              {text.length > MAX_CHARS * 0.7 ? (
+                <span className="animate-fade text-[11px] tabular-nums text-faint">
+                  {text.length}/{MAX_CHARS}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          <div className="flex items-center justify-between px-3">
+            <StyleToggle value={style} onChange={setStyle} />
+            <span
+              className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
+                pending || provisional ? "opacity-100" : "opacity-0"
+              }`}
+              aria-hidden
+            >
+              <span className="size-1.5 animate-breathe rounded-full bg-signal" />
+              {t("live")}
+            </span>
+          </div>
+          <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
+
+          <div>
+            <ResultPanel
+              result={result}
+              pending={pending}
+              provisional={provisional}
+              error={error}
+              target={target}
+              onRetry={retry}
+            />
+          </div>
         </div>
-      </section>
-
-      <div className="border-t border-border">
-        <ResultPanel
-          result={result}
-          pending={pending}
-          provisional={provisional}
-          error={error}
-          target={target}
-          onRetry={retry}
-        />
       </div>
-
-      </div>
-      <div className="pad-safe-bottom" />
+      <div className="h-3 pad-safe-bottom" />
 
       <HistorySheet
         open={historyOpen}
