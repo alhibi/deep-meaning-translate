@@ -259,7 +259,7 @@ export const ResultPanel = memo(function ResultPanel({
             />
           </Action>
           {onSave ? (
-            <Action label={isSaved ? t("unsave") : t("save")} onClick={() => { onSave(); tick(); }} active={isSaved}>
+            <Action label={isSaved ? t("unsave") : t("save")} onClick={() => { onSave(); tick(); }} active={!!isSaved}>
               <Bookmark
                 className={`size-[18px] transition-transform duration-200 ${isSaved ? "scale-110 fill-signal text-signal" : ""}`}
                 strokeWidth={1.75}
