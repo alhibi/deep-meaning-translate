@@ -172,6 +172,39 @@ function Translator() {
   const result = rerouting || staleTarget ? null : raw;
   const pending = rawPending || rerouting || (staleTarget && !!text.trim());
 
+  // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
+  // lifts above the on-screen keyboard instead of hiding behind it.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const kbOpen = useRef(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const apply = () => {
+      document.documentElement.style.setProperty("--vvh", `${vv.height}px`);
+      const open = vv.height < window.innerHeight - 150;
+      if (open && !kbOpen.current)
+        requestAnimationFrame(() => {
+          const el = scrollRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      kbOpen.current = open;
+    };
+    apply();
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      vv.removeEventListener("scroll", apply);
+      document.documentElement.style.removeProperty("--vvh");
+    };
+  }, []);
+  // While the keyboard is up, keep the newest translation pinned in view.
+  useEffect(() => {
+    if (!kbOpen.current) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [result, provisional]);
+
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
     if (source === "auto" && detected && detected === target) {
@@ -384,7 +417,7 @@ function Translator() {
   return (
     <>
       {introOpen ? <Intro onComplete={() => setIntroOpen(false)} /> : null}
-      <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
+      <main className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background">
         <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
           <button
             type="button"
@@ -498,7 +531,10 @@ function Translator() {
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
+        <div
+          ref={scrollRef}
+          className="flex flex-1 flex-col justify-center overflow-y-auto overscroll-contain pb-[6dvh]"
+        >
           <LanguageBar
             source={source}
             target={target}
