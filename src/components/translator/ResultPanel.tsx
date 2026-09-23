@@ -4,17 +4,8 @@ import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
+import { useI18n } from "@/lib/i18n";
 
-const ERROR_COPY: Record<ErrorKind, string> = {
-  auth: "Translation isn't connected yet.",
-  quota: "The translation account is out of credit.",
-  rate: "A lot of requests at once. Give it a moment.",
-  network: "The connection dropped before the translation finished.",
-  timeout: "That took too long. Your text is still here.",
-  offline: "You're offline. Your text is safe — translation resumes when you're back.",
-  provider: "Something interrupted the translation.",
-  input: "That text couldn't be translated as written.",
-};
 
 const LOCALE: Record<string, string> = { ar: "ar-SA", de: "de-DE", en: "en-US", fr: "fr-FR", es: "es-ES", tr: "tr-TR" };
 
@@ -87,6 +78,7 @@ export const ResultPanel = memo(function ResultPanel({
   onRetry: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useI18n();
   const [speaking, setSpeaking] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
   const [noVoice, setNoVoice] = useState(false);
@@ -105,7 +97,7 @@ export const ResultPanel = memo(function ResultPanel({
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {
     if (!text || provisional || pending) return;
-    const id = setTimeout(() => setAnnounce("Translation ready"), 1200);
+    const id = setTimeout(() => setAnnounce(t("ready")), 1200);
     return () => {
       clearTimeout(id);
       setAnnounce("");
@@ -193,7 +185,7 @@ export const ResultPanel = memo(function ResultPanel({
               aria-expanded={showAlt}
               className="press-soft text-[12px] text-muted-foreground underline decoration-border-strong underline-offset-4"
             >
-              {showAlt ? "Hide other reading" : "This could also mean…"}
+              {showAlt ? t("hideAlt") : t("showAlt")}
             </button>
             {showAlt ? (
               <ul className="animate-rise mt-2 space-y-2 border-s border-border ps-3">
@@ -217,7 +209,7 @@ export const ResultPanel = memo(function ResultPanel({
         ) : null}
 
         <div className="animate-reveal-late -ms-3 mt-3 flex items-center">
-          <Action label={copied ? "Copied" : "Copy translation"} onClick={copy}>
+          <Action label={copied ? t("copied") : t("copy")} onClick={copy}>
             <Copy
               className={`swap-icon size-[18px] ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
               strokeWidth={1.75}
@@ -229,13 +221,13 @@ export const ResultPanel = memo(function ResultPanel({
               strokeWidth={2}
             />
           </Action>
-          <Action label={speaking ? "Stop" : "Listen"} onClick={speak} active={speaking}>
+          <Action label={speaking ? t("stop") : t("listen")} onClick={speak} active={speaking}>
             <Volume2
               className={`size-[18px] ${speaking ? "animate-breathe text-accent" : ""}`}
               strokeWidth={1.75}
             />
           </Action>
-          <Action label="Share" onClick={share}>
+          <Action label={t("share")} onClick={share}>
             <Share2 className="size-[18px]" strokeWidth={1.75} />
           </Action>
           <span
@@ -244,16 +236,16 @@ export const ResultPanel = memo(function ResultPanel({
               copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
-            {copied ? "Copied" : ""}
+            {copied ? t("copied") : ""}
           </span>
           {error ? (
             <button
               type="button"
               onClick={onRetry}
-              title={error === "offline" ? ERROR_COPY.offline : undefined} className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
+              title={error === "offline" ? t("err_offline") : undefined} className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
             >
               <RotateCw className="size-3" strokeWidth={1.75} />
-              {error === "offline" ? "Offline" : "Retry"}
+              {error === "offline" ? t("offline") : t("retry")}
             </button>
           ) : null}
         </div>
@@ -262,14 +254,14 @@ export const ResultPanel = memo(function ResultPanel({
   } else if (error) {
     body = (
       <div key="error" className="animate-rise">
-        <p className="text-[15px] leading-relaxed text-muted-foreground">{ERROR_COPY[error]}</p>
+        <p className="text-[15px] leading-relaxed text-muted-foreground">{t(`err_${error}`)}</p>
         {error !== "auth" ? (
           <button
             type="button"
             onClick={onRetry}
             className="press mt-3 inline-flex items-center gap-2 rounded-full border border-border-strong px-4 py-2 text-[13px]"
           >
-            <RotateCw className="size-3.5" strokeWidth={1.75} /> Try again
+            <RotateCw className="size-3.5" strokeWidth={1.75} /> {t("tryAgain")}
           </button>
         ) : null}
       </div>
@@ -279,7 +271,7 @@ export const ResultPanel = memo(function ResultPanel({
   } else {
     body = (
       <p key="idle" className="animate-fade text-[15px] text-muted-foreground/70">
-        Translation appears here.
+        {t("idle")}
       </p>
     );
   }

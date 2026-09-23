@@ -12,6 +12,7 @@ import type { StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
+import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -212,12 +213,28 @@ function Translator() {
 
   const rtlInput = text.trim() ? startsRtl(text) : isRtl(source === "auto" ? "" : source);
   const hasText = text.length > 0;
+  const { t, locale } = useI18n();
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
       <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
         <span className="font-display text-[20px] tracking-tight">Lingua</span>
         <div className="flex items-center gap-1">
+          <label className="press-soft relative grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground">
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as typeof locale)}
+              aria-label={t("uiLanguage")}
+              className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+            >
+              {LOCALES.map((l) => (
+                <option key={l} value={l}>
+                  {LOCALE_NAME[l]}
+                </option>
+              ))}
+            </select>
+            <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>{LOCALE_SHORT[locale]}</span>
+          </label>
           {canInstall ? (
             <button
               type="button"
@@ -225,13 +242,13 @@ function Translator() {
               className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] text-muted-foreground"
             >
               <ArrowDownToLine className="size-3.5" strokeWidth={1.75} />
-              Install
+              {t("install")}
             </button>
           ) : null}
           <button
             type="button"
             onClick={openHistory}
-            aria-label="Recent translations"
+            aria-label={t("recent")}
             className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
           >
             <Clock3 className="size-[18px]" strokeWidth={1.75} />
@@ -260,8 +277,8 @@ function Translator() {
           autoComplete="off"
           enterKeyHint="done"
           spellCheck
-          placeholder="Write or paste anything"
-          aria-label="Text to translate"
+          placeholder={t("placeholder")}
+          aria-label={t("inputLabel")}
           className={`autogrow block w-full resize-none bg-transparent pe-9 text-[20px] tracking-tight outline-none placeholder:text-muted-foreground/60 ${
             rtlInput ? "leading-[1.75]" : "leading-[1.5]"
           }`}
@@ -269,7 +286,7 @@ function Translator() {
         <button
           type="button"
           onClick={clear}
-          aria-label="Clear text"
+          aria-label={t("clearText")}
           tabIndex={hasText ? 0 : -1}
           className={`press absolute end-2 top-3 grid size-10 place-items-center rounded-full text-muted-foreground transition-[opacity,transform] duration-200 ${
             hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
@@ -286,7 +303,7 @@ function Translator() {
               className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-[12px] text-muted-foreground"
             >
               <ClipboardPaste className="size-3.5" strokeWidth={1.75} />
-              Translate copied text
+              {t("pasteCopied")}
             </button>
           ) : null}
           <span

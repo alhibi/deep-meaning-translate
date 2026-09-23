@@ -2,6 +2,7 @@ import { memo } from "react";
 import { X } from "lucide-react";
 import type { HistoryEntry } from "@/lib/history";
 import { isRtl, languageLabel } from "@/lib/translation/languages";
+import { useI18n } from "@/lib/i18n";
 
 export const HistorySheet = memo(function HistorySheet({
   open,
@@ -18,19 +19,20 @@ export const HistorySheet = memo(function HistorySheet({
   onClear: () => void;
   onForgetAll: () => void;
 }) {
+  const { t } = useI18n();
   if (!open) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Recent translations" className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
+    <div role="dialog" aria-modal="true" aria-label={t("recent")} className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
       <button
         type="button"
-        aria-label="Close recent translations"
+        aria-label={t("closeRecent")}
         className="flex-1"
         onClick={onClose}
       />
       <div className="animate-rise max-h-[72vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-5 py-3">
-          <span className="text-[13px] tracking-tight text-muted-foreground">Recent</span>
+          <span className="text-[13px] tracking-tight text-muted-foreground">{t("recentShort")}</span>
           <div className="flex items-center gap-2">
             {entries.length > 0 ? (
               <button
@@ -38,13 +40,13 @@ export const HistorySheet = memo(function HistorySheet({
                 onClick={onClear}
                 className="text-[12px] text-muted-foreground underline underline-offset-4"
               >
-                Clear
+                {t("clear")}
               </button>
             ) : null}
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("close")}
               className="grid size-9 place-items-center rounded-full text-muted-foreground active:bg-muted"
             >
               <X className="size-[18px]" strokeWidth={1.75} />
@@ -53,7 +55,7 @@ export const HistorySheet = memo(function HistorySheet({
         </div>
 
         {entries.length === 0 ? (
-          <p className="px-5 py-8 text-[14px] text-muted-foreground">Nothing here yet.</p>
+          <p className="px-5 py-8 text-[14px] text-muted-foreground">{t("empty")}</p>
         ) : (
           <ul>
             {entries.map((e) => (
@@ -61,9 +63,9 @@ export const HistorySheet = memo(function HistorySheet({
                 <button
                   type="button"
                   onClick={() => onPick(e)}
-                  className="w-full border-b border-border px-5 py-4 text-left transition-colors active:bg-muted"
+                  className="w-full border-b border-border px-5 py-4 text-start transition-colors active:bg-muted"
                 >
-                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <span dir="ltr" className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground">
                     {languageLabel(e.source)} → {languageLabel(e.target)}
                   </span>
                   <span
@@ -83,16 +85,13 @@ export const HistorySheet = memo(function HistorySheet({
         )}
 
         <div className="px-5 py-5 text-[12px] leading-relaxed text-muted-foreground">
-          <p>
-            Recent translations, your draft and language choice are kept only on this device. Text is
-            sent for translation and not stored on our side.
-          </p>
+          <p>{t("privacy")}</p>
           <button
             type="button"
             onClick={onForgetAll}
             className="press-soft mt-2 underline decoration-border-strong underline-offset-4"
           >
-            Delete everything on this device
+            {t("forgetAll")}
           </button>
         </div>
       </div>
