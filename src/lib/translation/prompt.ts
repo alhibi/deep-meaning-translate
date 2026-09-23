@@ -17,6 +17,22 @@ Reply ONLY minified JSON, translation first:
 ${SCHEMA_SHAPE}`;
 }
 
+/** Live typing: plain text only — no JSON, no metadata, so the first words arrive fast. */
+export function buildLiveSystemPrompt(): string {
+  return `Expert native-level translator. Carry meaning, intent, tone, register and cultural nuance, never literal words; read as a fluent native wrote it.
+Never add, drop, explain or soften; keep politeness (du/Sie, أنت/حضرتك), negation, names, numbers, URLs, emojis, line breaks. Understand every Arabic dialect.
+The writer is still typing: translate only what is written, never complete the thought or add a final period.
+Reply with the translation text ONLY — no quotes, labels, JSON or commentary.`;
+}
+
+export function buildLiveUserPrompt(req: TranslationRequest): string {
+  const src = req.source === "auto" ? "auto" : req.source;
+  return `${src}→${req.target}; style: ${STYLE_GUIDANCE[req.style]}.${dialectClause(req)}
+<text>
+${req.text}
+</text>`;
+}
+
 const PARTIAL_GUIDANCE = `\nStill typing: translate only what is written; never complete the thought or add a final period. Keep alternatives and notes empty.`;
 
 const DIALECT: Record<Exclude<Dialect, "auto">, string> = {

@@ -26,6 +26,7 @@ async def main():
         page = await (await browser.new_context(viewport={"width": 390, "height": 844})).new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", headers={"x-tss-serialized": "true"}, body=FAKE))
+        await page.route("**/api/translate-stream", lambda r: r.fulfill(status=200, content_type="text/plain; charset=utf-8", body="صباح الخير"))
         await page.goto(URL)
         intro = page.get_by_test_id("first-intro")
         await intro.wait_for(state="visible")
