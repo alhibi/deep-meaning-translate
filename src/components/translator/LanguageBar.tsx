@@ -1,5 +1,6 @@
 import { memo, useCallback, useState } from "react";
-import { LANGUAGES, TARGET_LANGUAGES, languageLabel } from "@/lib/translation/languages";
+import { ArrowLeftRight } from "lucide-react";
+import { LANGUAGES, TARGET_LANGUAGES, isRtl, languageLabel } from "@/lib/translation/languages";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 
@@ -12,29 +13,25 @@ interface Props {
   onSwap: () => void;
 }
 
-function Picker({
+function Side({
   value,
   options,
   onChange,
-  hint,
-  align,
-  active,
+  caption,
+  end,
+  swapped,
 }: {
   value: string;
-  options: { code: string; native: string; name: string }[];
+  options: { code: string; native: string }[];
   onChange: (v: string) => void;
-  hint?: string | undefined;
-  align: "start" | "end";
-  active?: boolean;
+  caption: string;
+  end?: boolean;
+  swapped: number;
 }) {
-  const end = align === "end";
   const { t } = useI18n();
+  const label = value === "auto" ? t("detect") : languageLabel(value);
   return (
-    <label
-      className={`press-soft relative flex min-h-12 flex-1 flex-col justify-center overflow-hidden rounded-xl px-3 ${
-        end ? "items-end text-end" : "items-start text-start"
-      }`}
-    >
+    <label className={`press-soft relative flex min-w-0 flex-1 flex-col py-2 ${end ? "items-end text-end" : "items-start text-start"}`}>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -47,75 +44,43 @@ function Picker({
           </option>
         ))}
       </select>
-      {/* Keyed so a change of language re-settles the label in from its new side. */}
+      <span className="pointer-events-none text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{caption}</span>
       <span
-        key={value}
-        className={`pointer-events-none block truncate text-[17px] font-medium tracking-tight ${
-          active ? "text-signal" : "text-foreground"
-        } ${
-          end ? "animate-cross-from-start" : "animate-cross-from-end"
-        }`}
+        key={`${value}-${swapped}`}
+        className={`pointer-events-none mt-1 block max-w-full truncate font-semibold ${
+          isRtl(value) ? "font-arabic text-[24px] leading-[1.25]" : "text-[22px] leading-[1.25] tracking-[-0.02em]"
+        } ${end ? "text-foreground" : "text-foreground/90"} ${swapped ? (end ? "animate-cross-from-start" : "animate-cross-from-end") : ""}`}
       >
-        {value === "auto" ? t("detect") : languageLabel(value)}
+        {label}
       </span>
-      <span
-        className={`pointer-events-none block h-4 truncate text-[11px] text-muted-foreground transition-opacity duration-200 ${
-          hint ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        {hint ?? "\u00a0"}
-      </span>
+      <span aria-hidden className={`pointer-events-none mt-1.5 h-[2px] w-5 rounded-full ${end ? "bg-signal" : "bg-transparent"}`} />
     </label>
   );
 }
 
-export const LanguageBar = memo(function LanguageBar({
-  source,
-  target,
-  detected,
-  onSource,
-  onTarget,
-  onSwap,
-}: Props) {
+export const LanguageBar = memo(function LanguageBar({ source, target, detected, onSource, onTarget, onSwap }: Props) {
   const { t } = useI18n();
-  const [nudge, setNudge] = useState(0);
+  const [swapped, setSwapped] = useState(0);
   const swap = useCallback(() => {
-    setNudge((n) => n + 1);
+    setSwapped((n) => n + 1);
     tick();
     onSwap();
   }, [onSwap]);
 
+  const sourceCaption = source === "auto" ? (detected ? `${t("auto")} · ${languageLabel(detected)}` : t("auto")) : t("from");
+
   return (
-    <div className="px-4 pb-3 pt-1">
-    <div className="flex items-center rounded-full border border-border bg-surface px-1.5 py-1">
-      <Picker
-        value={source}
-        options={LANGUAGES}
-        onChange={onSource}
-        align="start"
-        hint={source === "auto" ? (detected ? languageLabel(detected) : t("auto")) : undefined}
-      />
-      {/* The hinge: a thread with a bead that always rests beside the target.
-          Tapping it sends the bead across and the two languages trade places. */}
+    <div className="flex items-center gap-3 px-6 pb-4 pt-2">
+      <Side value={source} options={LANGUAGES} onChange={onSource} caption={sourceCaption} swapped={swapped} />
       <button
         type="button"
         onClick={swap}
         aria-label={t("swap")}
-        className="press group relative h-11 w-16 shrink-0"
+        className="press grid size-12 shrink-0 place-items-center rounded-full border border-border-strong text-muted-foreground transition-colors hover:text-foreground active:border-signal active:text-signal"
       >
-        <span aria-hidden className="absolute inset-x-2 top-1/2 h-px -translate-y-1/2 bg-border-strong transition-colors group-hover:bg-signal/50" />
-        <span aria-hidden className="absolute start-2 top-1/2 size-1 -translate-y-1/2 rounded-full bg-border-strong" />
-        <span
-          key={nudge}
-          aria-hidden
-          className={`absolute top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-signal ring-4 ring-background ${
-            nudge ? "animate-bead" : ""
-          }`}
-          style={{ insetInlineStart: "calc(100% - 0.5rem - 0.625rem)" }}
-        />
+        <ArrowLeftRight key={swapped} className={`size-[18px] ${swapped ? "animate-exchange" : ""}`} strokeWidth={1.6} />
       </button>
-      <Picker value={target} options={TARGET_LANGUAGES} onChange={onTarget} align="end" active />
-    </div>
+      <Side value={target} options={TARGET_LANGUAGES} onChange={onTarget} caption={t("to")} end swapped={swapped} />
     </div>
   );
 });
