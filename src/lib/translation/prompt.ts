@@ -55,12 +55,14 @@ Reply with ONE JSON object and nothing else. No markdown fences. Shape:
 ${SCHEMA_SHAPE}`;
 }
 
+const PARTIAL_GUIDANCE = `\nThe writer is STILL TYPING: the text may stop mid-sentence. Translate only what is already expressed. Do not complete, guess or close the thought — no invented ending, and no final period if the source has none. Prefer a stable rendering that will not need restructuring when the sentence continues. Keep alternativeTranslations empty and notes empty; isAmbiguous only if the existing words are genuinely ambiguous.`;
+
 export function buildUserPrompt(req: TranslationRequest): string {
   const source =
     req.source === "auto" ? "auto-detect the source language" : `source language: ${req.source}`;
   return `Task: translate into ${req.target}. ${source}.
 Style directive: ${STYLE_GUIDANCE[req.style]}
-Infer the situational context (messaging, work, academic, romantic, travel, technical, social media, ...) from the text itself and translate accordingly.
+Infer the situational context (messaging, work, academic, romantic, travel, technical, social media, ...) from the text itself and translate accordingly.${req.partial ? PARTIAL_GUIDANCE : ""}
 
 <text>
 ${req.text}

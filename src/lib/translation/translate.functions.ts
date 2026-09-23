@@ -8,6 +8,7 @@ const InputSchema = z.object({
   source: z.string().regex(/^[a-z]{2}$|^auto$/),
   target: z.string().regex(/^[a-z]{2}$/),
   style: z.enum(["natural", "formal", "casual"]),
+  partial: z.boolean().optional().default(false),
 });
 
 /** Coarse in-process throttle; keeps a runaway client from hammering the provider. */
@@ -31,13 +32,20 @@ export const translate = createServerFn({ method: "POST" })
     if (!takeToken()) return { ok: false, kind: "rate" };
     const { runTranslation } = await import("./engine.server");
     const { TranslationError } = await import("./types");
+    const started = Date.now();
+    // Privacy: metrics only — never the text, never the translation.
+    const log = (outcome: string) =>
+      console.info(
+        JSON.stringify({ event: "translate", outcome, ms: Date.now() - started, chars: data.text.length, partial: data.partial }),
+      );
     try {
       const result = await runTranslation(data);
+      log("ok");
       return { ok: true, result };
     } catch (err) {
-      console.error("translation failed", err);
-      if (err instanceof TranslationError) return { ok: false, kind: err.kind };
-      return { ok: false, kind: "provider" };
+      const kind = err instanceof TranslationError ? err.kind : "provider";
+      log(kind);
+      return { ok: false, kind };
     }
 
   });

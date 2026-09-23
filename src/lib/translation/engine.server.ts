@@ -15,7 +15,8 @@ export async function runTranslation(req: TranslationRequest): Promise<Translati
   const provider = resolveProvider();
   const first = await provider.translate(req);
   const issues = verifyTranslation(req, first);
-  if (issues.length === 0) return first;
+  // Provisional (still-typing) text: speed wins; the final sentence gets the full check.
+  if (issues.length === 0 || req.partial) return first;
 
   try {
     const repaired = await provider.repair(req, first, issues);
