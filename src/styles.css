@@ -262,7 +262,7 @@
 /* Grows with content, then scrolls — no JS measurement where supported. */
 @utility autogrow {
   field-sizing: content;
-  min-height: calc(3lh);
+  min-height: calc(2lh);
   max-height: min(38dvh, 340px);
   overflow-y: auto;
   scrollbar-width: thin;

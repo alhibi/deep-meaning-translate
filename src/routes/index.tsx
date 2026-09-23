@@ -282,7 +282,7 @@ function Translator() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
         <LanguageBar
           source={source}
           target={target}
@@ -301,7 +301,7 @@ function Translator() {
               onChange={onInput}
               onPaste={onPaste}
               dir={rtlInput ? "rtl" : "ltr"}
-              rows={3}
+              rows={2}
               autoCapitalize="sentences"
               autoComplete="off"
               enterKeyHint="done"
