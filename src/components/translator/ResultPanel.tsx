@@ -202,10 +202,10 @@ export const ResultPanel = memo(function ResultPanel({
             <button
               type="button"
               onClick={onRetry}
-              className="press-soft animate-fade ms-auto inline-flex items-center gap-1.5 text-[12px] text-muted-foreground"
+              title={error === "offline" ? ERROR_COPY.offline : undefined} className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
             >
               <RotateCw className="size-3" strokeWidth={1.75} />
-              {error === "offline" ? "Offline — resumes when you're back" : "Retry"}
+              {error === "offline" ? "Offline" : "Retry"}
             </button>
           ) : null}
         </div>
