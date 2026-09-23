@@ -12,7 +12,7 @@ import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
 import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
-import { speechLang, useSpeech } from "@/lib/speech";
+import { joinSpeech, speechLang, useSpeech } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
@@ -260,11 +260,10 @@ function Translator() {
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
   const speechBase = useRef("");
   const speech = useSpeech({
-    lang: speechLang(source, target, locale),
+    lang: speechLang(source, target, locale, dialect),
     onText: (spoken, final) => {
       if (final) submitNext(); // a finished phrase translates right away
-      const base = speechBase.current;
-      setText((base ? `${base} ${spoken}` : spoken).slice(0, MAX_CHARS));
+      setText(joinSpeech(speechBase.current, spoken).slice(0, MAX_CHARS));
     },
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
@@ -272,6 +271,10 @@ function Translator() {
     if (!speech.listening) speechBase.current = inputRef.current?.value.trim() ?? "";
     tick();
     speech.toggle();
+  }, [speech]);
+  const retryMic = useCallback(() => {
+    tick();
+    speech.retry(); // keeps both the typed text and what was already heard
   }, [speech]);
   const [tagline, setTagline] = useState(false);
   const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
