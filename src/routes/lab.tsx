@@ -13,7 +13,20 @@ export const Route = createFileRoute("/lab")({
   beforeLoad: () => {
     if (!import.meta.env.DEV) throw notFound();
   },
-  head: () => ({ meta: [{ title: "Lingua lab" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Translation quality lab — today" },
+      { name: "description", content: "Development-only translation quality checks for today." },
+      { property: "og:title", content: "Translation quality lab — today" },
+      {
+        property: "og:description",
+        content: "Development-only translation quality checks for today.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: Lab,
 });
 

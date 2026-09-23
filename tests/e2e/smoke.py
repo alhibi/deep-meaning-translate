@@ -26,7 +26,15 @@ async def main():
         page = await (await browser.new_context(viewport={"width": 390, "height": 844})).new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", headers={"x-tss-serialized": "true"}, body=FAKE))
-        await page.goto(URL); await page.wait_for_timeout(1500)
+        await page.goto(URL)
+        intro = page.get_by_test_id("first-intro")
+        await intro.wait_for(state="visible")
+        check(await intro.count() == 1, "first-arrival introduction appears")
+        await page.get_by_test_id("intro-enter").click()
+        await page.wait_for_timeout(1000)
+        check(await intro.count() == 0, "introduction opens the translator")
+        await page.reload(); await page.wait_for_timeout(500)
+        check(await page.get_by_test_id("first-intro").count() == 0, "introduction appears only once")
         box = page.locator("textarea").first
         dir_before = await box.evaluate("e => getComputedStyle(e).direction")
 

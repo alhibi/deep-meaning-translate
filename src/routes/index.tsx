@@ -18,6 +18,7 @@ import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
+import { Intro } from "@/components/Intro";
 import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { joinSpeech } from "@/lib/speech";
@@ -27,27 +28,30 @@ import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
+import { shouldShowIntro } from "@/lib/intro";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
   head: () => ({
     meta: [
-      { title: "Lingua — meaning-first translation" },
+      { title: "today — meaning-first translation" },
       {
         name: "description",
         content:
           "A quiet, fast translator that carries meaning, tone and nuance across languages — built for Arabic and German.",
       },
-      { property: "og:title", content: "Lingua — meaning-first translation" },
+      { property: "og:title", content: "today — meaning-first translation" },
       {
         property: "og:description",
         content:
           "Translate what you actually mean. Tone, idioms and cultural nuance preserved, Arabic ⇄ German first.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://fluently.today/" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://fluently.today/" }],
   }),
   component: Translator,
 });
@@ -64,6 +68,7 @@ function Translator() {
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
+  const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
   const closeDialect = useCallback(() => setDialectOpen(false), []);
   const selectDialect = useCallback((c: string) => setDialect(c as Dialect), []);
@@ -134,6 +139,8 @@ function Translator() {
           prime(session.text, session.source, session.target, session.style, session.result);
         submitNext();
         setText(session.text);
+      } else if (shouldShowIntro()) {
+        setIntroOpen(true);
       }
     }
     setRestored(true);
@@ -374,375 +381,378 @@ function Translator() {
   const today = restored && !hasText ? (savedList.length ? saved.ofTheDay() : null) : null;
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
-      <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
-        <button
-          type="button"
-          onClick={toggleTagline}
-          aria-expanded={tagline}
-          className="press-soft -ms-2 inline-flex items-center gap-2 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
-        >
-          {/* Signature mark: a small clay diamond that spins into the gust. */}
-          <span
-            aria-hidden
-            className="grid size-2 shrink-0 place-items-center transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
-            style={{
-              transform: tagline ? "rotate(225deg) scale(0.7)" : "rotate(0deg) scale(1)",
-              opacity: tagline ? 0.55 : 1,
-            }}
+    <>
+      {introOpen ? <Intro onComplete={() => setIntroOpen(false)} /> : null}
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
+        <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
+          <button
+            type="button"
+            onClick={toggleTagline}
+            aria-expanded={tagline}
+            className="press-soft -ms-2 inline-flex items-center gap-2 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
           >
-            <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
-          </span>
-          {/* Storm swap: the outgoing word is swept away (blur + skew + stretch) while the incoming one condenses out of the blur — overlapped, never a pause. */}
-          <span className="relative block h-[19px]">
+            {/* Signature mark: a small clay diamond that spins into the gust. */}
             <span
               aria-hidden
-              className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]"
-            >
-              say it naturally.
-            </span>
-            <span
-              aria-hidden={tagline}
-              className="block origin-left whitespace-nowrap text-start leading-[19px] will-change-[transform,filter,opacity] rtl:origin-right"
+              className="grid size-2 shrink-0 place-items-center transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
               style={{
-                transition: tagline
-                  ? "transform 480ms cubic-bezier(0.7,0,0.84,0), filter 420ms cubic-bezier(0.5,0,0.75,0), opacity 460ms cubic-bezier(0.5,0,0.75,0), letter-spacing 480ms cubic-bezier(0.7,0,0.84,0)"
-                  : "transform 760ms cubic-bezier(0.16,1,0.3,1) 140ms, filter 700ms cubic-bezier(0.16,1,0.3,1) 140ms, opacity 520ms ease-out 140ms, letter-spacing 760ms cubic-bezier(0.16,1,0.3,1) 140ms",
-                transform: tagline ? "translateX(55%) skewX(-24deg) scaleX(1.35)" : "none",
-                filter: tagline ? "blur(9px)" : "blur(0)",
-                opacity: tagline ? 0 : 1,
-                letterSpacing: tagline ? "0.45em" : "-0.01em",
+                transform: tagline ? "rotate(225deg) scale(0.7)" : "rotate(0deg) scale(1)",
+                opacity: tagline ? 0.55 : 1,
               }}
             >
-              today
+              <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
             </span>
-            <span
-              aria-hidden={!tagline}
-              className="font-literary absolute inset-0 block origin-left whitespace-nowrap text-start text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground will-change-[transform,filter,opacity] rtl:origin-right"
-              style={{
-                transition: tagline
-                  ? "transform 820ms cubic-bezier(0.16,1,0.3,1) 120ms, filter 760ms cubic-bezier(0.16,1,0.3,1) 120ms, opacity 560ms ease-out 120ms"
-                  : "transform 460ms cubic-bezier(0.7,0,0.84,0), filter 400ms cubic-bezier(0.5,0,0.75,0), opacity 440ms cubic-bezier(0.5,0,0.75,0)",
-                transform: tagline ? "none" : "translateX(-18%) skewX(16deg) scaleX(1.2)",
-                filter: tagline ? "blur(0)" : "blur(10px)",
-                opacity: tagline ? 1 : 0,
-              }}
-            >
-              say it naturally.
-            </span>
-          </span>
-        </button>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setLocaleOpen(true)}
-            aria-haspopup="dialog"
-            aria-label={t("uiLanguage")}
-            className="press-soft grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground"
-          >
-            <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>
-              {LOCALE_SHORT[locale]}
+            {/* Storm swap: the outgoing word is swept away (blur + skew + stretch) while the incoming one condenses out of the blur — overlapped, never a pause. */}
+            <span className="relative block h-[19px]">
+              <span
+                aria-hidden
+                className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]"
+              >
+                say it naturally.
+              </span>
+              <span
+                aria-hidden={tagline}
+                className="block origin-left whitespace-nowrap text-start leading-[19px] will-change-[transform,filter,opacity] rtl:origin-right"
+                style={{
+                  transition: tagline
+                    ? "transform 480ms cubic-bezier(0.7,0,0.84,0), filter 420ms cubic-bezier(0.5,0,0.75,0), opacity 460ms cubic-bezier(0.5,0,0.75,0), letter-spacing 480ms cubic-bezier(0.7,0,0.84,0)"
+                    : "transform 760ms cubic-bezier(0.16,1,0.3,1) 140ms, filter 700ms cubic-bezier(0.16,1,0.3,1) 140ms, opacity 520ms ease-out 140ms, letter-spacing 760ms cubic-bezier(0.16,1,0.3,1) 140ms",
+                  transform: tagline ? "translateX(55%) skewX(-24deg) scaleX(1.35)" : "none",
+                  filter: tagline ? "blur(9px)" : "blur(0)",
+                  opacity: tagline ? 0 : 1,
+                  letterSpacing: tagline ? "0.45em" : "-0.01em",
+                }}
+              >
+                today
+              </span>
+              <span
+                aria-hidden={!tagline}
+                className="font-literary absolute inset-0 block origin-left whitespace-nowrap text-start text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground will-change-[transform,filter,opacity] rtl:origin-right"
+                style={{
+                  transition: tagline
+                    ? "transform 820ms cubic-bezier(0.16,1,0.3,1) 120ms, filter 760ms cubic-bezier(0.16,1,0.3,1) 120ms, opacity 560ms ease-out 120ms"
+                    : "transform 460ms cubic-bezier(0.7,0,0.84,0), filter 400ms cubic-bezier(0.5,0,0.75,0), opacity 440ms cubic-bezier(0.5,0,0.75,0)",
+                  transform: tagline ? "none" : "translateX(-18%) skewX(16deg) scaleX(1.2)",
+                  filter: tagline ? "blur(0)" : "blur(10px)",
+                  opacity: tagline ? 1 : 0,
+                }}
+              >
+                say it naturally.
+              </span>
             </span>
           </button>
-          <LanguageSheet
-            open={localeOpen}
-            title={t("uiLanguage")}
-            searchable={false}
-            items={LOCALES.map((l) => ({
-              code: l,
-              native: LOCALE_NAME[l],
-              name: LOCALE_NAME[l],
-              rtl: l === "ar",
-            }))}
-            value={locale}
-            onSelect={(c) => setLocale(c as typeof locale)}
-            onClose={closeLocale}
-          />
-          {canInstall ? (
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => void install()}
-              className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] text-muted-foreground"
+              onClick={() => setLocaleOpen(true)}
+              aria-haspopup="dialog"
+              aria-label={t("uiLanguage")}
+              className="press-soft grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground"
             >
-              <ArrowDownToLine className="size-3.5" strokeWidth={1.75} />
-              {t("install")}
+              <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>
+                {LOCALE_SHORT[locale]}
+              </span>
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setSavedOpen(true)}
-            aria-label={t("savedTitle")}
-            className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-          >
-            <Bookmark className="size-[18px]" strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            onClick={openHistory}
-            aria-label={t("recent")}
-            className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-          >
-            <Clock3 className="size-[18px]" strokeWidth={1.75} />
-          </button>
-        </div>
-      </header>
-
-      <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
-        <LanguageBar
-          source={source}
-          target={target}
-          detected={detected}
-          onSource={chooseSource}
-          onTarget={chooseTarget}
-          onSwap={swap}
-        />
-
-        {/* One canvas: source writing surface, a live seam, then the result. */}
-        <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
-          <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
-            <textarea
-              ref={inputRef}
-              value={text}
-              onChange={onInput}
-              onPaste={onPaste}
-              dir={rtlInput ? "rtl" : "ltr"}
-              rows={2}
-              autoCapitalize="sentences"
-              autoComplete="off"
-              enterKeyHint="done"
-              spellCheck
-              placeholder={t("placeholder")}
-              aria-label={t("inputLabel")}
-              className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
-                rtlInput
-                  ? "font-arabic text-[24px] leading-[1.7]"
-                  : "text-[22px] leading-[1.45] tracking-[-0.015em]"
-              } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
+            <LanguageSheet
+              open={localeOpen}
+              title={t("uiLanguage")}
+              searchable={false}
+              items={LOCALES.map((l) => ({
+                code: l,
+                native: LOCALE_NAME[l],
+                name: LOCALE_NAME[l],
+                rtl: l === "ar",
+              }))}
+              value={locale}
+              onSelect={(c) => setLocale(c as typeof locale)}
+              onClose={closeLocale}
             />
-            {speech.listening ? (
-              /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
-              <div
-                aria-hidden
-                dir={rtlInput ? "rtl" : "ltr"}
-                className={`pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
-                  rtlInput
-                    ? "font-arabic text-[24px] leading-[1.7]"
-                    : "text-[22px] leading-[1.45] tracking-[-0.015em]"
-                }`}
+            {canInstall ? (
+              <button
+                type="button"
+                onClick={() => void install()}
+                className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] text-muted-foreground"
               >
-                {(() => {
-                  const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
-                  return text
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .map((w, i) => (
-                      <span key={i} className={i < baseLen ? undefined : "speech-word"}>
-                        {w}{" "}
-                      </span>
-                    ));
-                })()}
-              </div>
+                <ArrowDownToLine className="size-3.5" strokeWidth={1.75} />
+                {t("install")}
+              </button>
             ) : null}
             <button
               type="button"
-              onClick={clear}
-              aria-label={t("clearText")}
-              tabIndex={hasText ? 0 : -1}
-              className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${
-                hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
-              }`}
+              onClick={() => setSavedOpen(true)}
+              aria-label={t("savedTitle")}
+              className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
             >
-              <X className="size-[18px]" strokeWidth={1.6} />
+              <Bookmark className="size-[18px]" strokeWidth={1.75} />
             </button>
-            <div className="flex h-10 items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {speech.supported ? (
-                  <button
-                    type="button"
-                    onClick={toggleMic}
-                    aria-label={speech.listening ? t("micStop") : t("mic")}
-                    aria-pressed={speech.listening}
-                    aria-busy={speech.starting}
-                    data-live={speech.listening || undefined}
-                    className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
-                      speech.listening
-                        ? "text-signal-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <span aria-hidden className="mic-halo" />
-                    <span aria-hidden className="mic-halo mic-halo-2" />
-                    <span aria-hidden className="mic-core" />
-                    <Mic className="relative size-[18px]" strokeWidth={1.7} />
-                  </button>
-                ) : null}
-                {speech.listening ? (
-                  <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">
-                    {t("micListening")}
-                  </span>
-                ) : speech.error ? (
-                  <span
-                    className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground"
-                    aria-live="polite"
-                  >
-                    <span className="truncate">
-                      {t(
-                        speech.error === "denied"
-                          ? "micDenied"
-                          : speech.error === "nospeech"
-                            ? "micNoSpeech"
-                            : speech.error === "nomic"
-                              ? "micNoDevice"
-                              : "micFailed",
-                      )}
-                    </span>
-                    {speech.error !== "denied" ? (
-                      <button
-                        type="button"
-                        onClick={retryMic}
-                        className="press-soft shrink-0 rounded-full px-2 py-1 text-signal-text"
-                      >
-                        {t("micRetry")}
-                      </button>
-                    ) : null}
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-3">
-                {!hasText && canReadClipboard && hasClip && !speech.listening ? (
-                  <button
-                    type="button"
-                    onClick={() => void pasteClipboard()}
-                    className="press-soft animate-fade inline-flex h-9 items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
-                  >
-                    <ClipboardPaste className="size-4" strokeWidth={1.6} />
-                    {t("paste")}
-                  </button>
-                ) : null}
-                {text.length > MAX_CHARS * 0.7 ? (
-                  <span className="animate-fade text-[11px] tabular-nums text-faint">
-                    {text.length}/{MAX_CHARS}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </section>
-
-          <div className="flex items-center justify-between px-3">
-            <div className="flex min-w-0 items-center">
-              <StyleToggle value={style} onChange={setStyle} />
-              {target === "ar" ? (
-                <button
-                  type="button"
-                  onClick={() => setDialectOpen(true)}
-                  aria-haspopup="dialog"
-                  aria-label={t("dialect")}
-                  className="press-soft animate-fade ms-1 inline-flex h-9 items-center gap-1 border-s border-border ps-3 font-arabic text-[13px] text-muted-foreground hover:text-foreground"
-                >
-                  {t(`d_${dialect}`)}
-                  <ChevronDown className="size-3.5 text-faint" strokeWidth={1.75} />
-                </button>
-              ) : null}
-            </div>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
-                pending || provisional ? "opacity-100" : "opacity-0"
-              }`}
-              aria-hidden
+            <button
+              type="button"
+              onClick={openHistory}
+              aria-label={t("recent")}
+              className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
             >
-              <span className="size-1.5 animate-breathe rounded-full bg-signal" />
-              {t("live")}
-            </span>
+              <Clock3 className="size-[18px]" strokeWidth={1.75} />
+            </button>
           </div>
-          <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
+        </header>
 
-          <div>
-            <SafeArea>
-              <ResultPanel
-                result={result}
-                pending={pending}
-                provisional={provisional}
-                error={error}
-                target={target}
-                onRetry={retry}
-                isSaved={isSaved}
-                onSave={toggleSave}
-                suggestion={
-                  suggestion
-                    ? {
-                        label: suggestion.label,
-                        onApply: () => setStyle(suggestion.next),
-                        onDismiss: () => setDismissedFor(suggestKey),
-                      }
-                    : null
-                }
-                idle={
-                  today ? (
+        <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
+          <LanguageBar
+            source={source}
+            target={target}
+            detected={detected}
+            onSource={chooseSource}
+            onTarget={chooseTarget}
+            onSwap={swap}
+          />
+
+          {/* One canvas: source writing surface, a live seam, then the result. */}
+          <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
+            <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
+              <textarea
+                ref={inputRef}
+                value={text}
+                onChange={onInput}
+                onPaste={onPaste}
+                dir={rtlInput ? "rtl" : "ltr"}
+                rows={2}
+                autoCapitalize="sentences"
+                autoComplete="off"
+                enterKeyHint="done"
+                spellCheck
+                placeholder={t("placeholder")}
+                aria-label={t("inputLabel")}
+                className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
+                  rtlInput
+                    ? "font-arabic text-[24px] leading-[1.7]"
+                    : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
+              />
+              {speech.listening ? (
+                /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
+                <div
+                  aria-hidden
+                  dir={rtlInput ? "rtl" : "ltr"}
+                  className={`pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
+                    rtlInput
+                      ? "font-arabic text-[24px] leading-[1.7]"
+                      : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                  }`}
+                >
+                  {(() => {
+                    const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
+                    return text
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .map((w, i) => (
+                        <span key={i} className={i < baseLen ? undefined : "speech-word"}>
+                          {w}{" "}
+                        </span>
+                      ));
+                  })()}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={clear}
+                aria-label={t("clearText")}
+                tabIndex={hasText ? 0 : -1}
+                className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${
+                  hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
+                }`}
+              >
+                <X className="size-[18px]" strokeWidth={1.6} />
+              </button>
+              <div className="flex h-10 items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  {speech.supported ? (
                     <button
                       type="button"
-                      onClick={() => pickSaved(today)}
-                      className="press-soft block w-full text-start"
+                      onClick={toggleMic}
+                      aria-label={speech.listening ? t("micStop") : t("mic")}
+                      aria-pressed={speech.listening}
+                      aria-busy={speech.starting}
+                      data-live={speech.listening || undefined}
+                      className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
+                        speech.listening
+                          ? "text-signal-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
                     >
-                      <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
-                        <span aria-hidden className="size-1 rotate-45 bg-signal" />
-                        {t("phraseOfDay")}
-                      </span>
-                      <span
-                        dir="auto"
-                        className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}
-                      >
-                        {today.translated}
-                      </span>
-                      <span
-                        dir="auto"
-                        className="mt-1 block text-start text-[14px] text-muted-foreground"
-                      >
-                        {today.original}
-                      </span>
+                      <span aria-hidden className="mic-halo" />
+                      <span aria-hidden className="mic-halo mic-halo-2" />
+                      <span aria-hidden className="mic-core" />
+                      <Mic className="relative size-[18px]" strokeWidth={1.7} />
                     </button>
-                  ) : undefined
-                }
-              />
-            </SafeArea>
+                  ) : null}
+                  {speech.listening ? (
+                    <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">
+                      {t("micListening")}
+                    </span>
+                  ) : speech.error ? (
+                    <span
+                      className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground"
+                      aria-live="polite"
+                    >
+                      <span className="truncate">
+                        {t(
+                          speech.error === "denied"
+                            ? "micDenied"
+                            : speech.error === "nospeech"
+                              ? "micNoSpeech"
+                              : speech.error === "nomic"
+                                ? "micNoDevice"
+                                : "micFailed",
+                        )}
+                      </span>
+                      {speech.error !== "denied" ? (
+                        <button
+                          type="button"
+                          onClick={retryMic}
+                          className="press-soft shrink-0 rounded-full px-2 py-1 text-signal-text"
+                        >
+                          {t("micRetry")}
+                        </button>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-3">
+                  {!hasText && canReadClipboard && hasClip && !speech.listening ? (
+                    <button
+                      type="button"
+                      onClick={() => void pasteClipboard()}
+                      className="press-soft animate-fade inline-flex h-9 items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
+                    >
+                      <ClipboardPaste className="size-4" strokeWidth={1.6} />
+                      {t("paste")}
+                    </button>
+                  ) : null}
+                  {text.length > MAX_CHARS * 0.7 ? (
+                    <span className="animate-fade text-[11px] tabular-nums text-faint">
+                      {text.length}/{MAX_CHARS}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+
+            <div className="flex items-center justify-between px-3">
+              <div className="flex min-w-0 items-center">
+                <StyleToggle value={style} onChange={setStyle} />
+                {target === "ar" ? (
+                  <button
+                    type="button"
+                    onClick={() => setDialectOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-label={t("dialect")}
+                    className="press-soft animate-fade ms-1 inline-flex h-9 items-center gap-1 border-s border-border ps-3 font-arabic text-[13px] text-muted-foreground hover:text-foreground"
+                  >
+                    {t(`d_${dialect}`)}
+                    <ChevronDown className="size-3.5 text-faint" strokeWidth={1.75} />
+                  </button>
+                ) : null}
+              </div>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
+                  pending || provisional ? "opacity-100" : "opacity-0"
+                }`}
+                aria-hidden
+              >
+                <span className="size-1.5 animate-breathe rounded-full bg-signal" />
+                {t("live")}
+              </span>
+            </div>
+            <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
+
+            <div>
+              <SafeArea>
+                <ResultPanel
+                  result={result}
+                  pending={pending}
+                  provisional={provisional}
+                  error={error}
+                  target={target}
+                  onRetry={retry}
+                  isSaved={isSaved}
+                  onSave={toggleSave}
+                  suggestion={
+                    suggestion
+                      ? {
+                          label: suggestion.label,
+                          onApply: () => setStyle(suggestion.next),
+                          onDismiss: () => setDismissedFor(suggestKey),
+                        }
+                      : null
+                  }
+                  idle={
+                    today ? (
+                      <button
+                        type="button"
+                        onClick={() => pickSaved(today)}
+                        className="press-soft block w-full text-start"
+                      >
+                        <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
+                          <span aria-hidden className="size-1 rotate-45 bg-signal" />
+                          {t("phraseOfDay")}
+                        </span>
+                        <span
+                          dir="auto"
+                          className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}
+                        >
+                          {today.translated}
+                        </span>
+                        <span
+                          dir="auto"
+                          className="mt-1 block text-start text-[14px] text-muted-foreground"
+                        >
+                          {today.original}
+                        </span>
+                      </button>
+                    ) : undefined
+                  }
+                />
+              </SafeArea>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="h-3 pad-safe-bottom" />
+        <div className="h-3 pad-safe-bottom" />
 
-      <SafeArea silent>
-        <LanguageSheet
-          open={dialectOpen}
-          title={t("dialect")}
-          searchable={false}
-          plain
-          items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map(
-            (d) => ({
-              code: d,
-              native: t(`d_${d}`),
-              name: t(`d_${d}`),
-              rtl: true,
-            }),
-          )}
-          value={dialect}
-          onSelect={selectDialect}
-          onClose={closeDialect}
-        />
-        <SavedSheet
-          open={savedOpen}
-          entries={savedList}
-          onClose={() => setSavedOpen(false)}
-          onPick={pickSaved}
-        />
-        <HistorySheet
-          open={historyOpen}
-          entries={entries}
-          onClose={closeHistory}
-          onPick={pickHistory}
-          onClear={clearHistory}
-          onForgetAll={forgetAll}
-        />
-      </SafeArea>
-    </main>
+        <SafeArea silent>
+          <LanguageSheet
+            open={dialectOpen}
+            title={t("dialect")}
+            searchable={false}
+            plain
+            items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map(
+              (d) => ({
+                code: d,
+                native: t(`d_${d}`),
+                name: t(`d_${d}`),
+                rtl: true,
+              }),
+            )}
+            value={dialect}
+            onSelect={selectDialect}
+            onClose={closeDialect}
+          />
+          <SavedSheet
+            open={savedOpen}
+            entries={savedList}
+            onClose={() => setSavedOpen(false)}
+            onPick={pickSaved}
+          />
+          <HistorySheet
+            open={historyOpen}
+            entries={entries}
+            onClose={closeHistory}
+            onPick={pickHistory}
+            onClear={clearHistory}
+            onForgetAll={forgetAll}
+          />
+        </SafeArea>
+      </main>
+    </>
   );
 }
 
