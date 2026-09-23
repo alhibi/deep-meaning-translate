@@ -373,3 +373,7 @@ textarea:focus-visible { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .speech-word, .mic-orb[data-live] .mic-halo, .mic-orb[data-live] .mic-core, .mic-wave { animation: none; }
 }
+/* Voice level from the microphone gently swells the orb. */
+.mic-orb { --lvl: 0; }
+.mic-orb[data-live] .mic-core { transform: scale(calc(1 + var(--lvl) * 0.28)); transition: transform 90ms linear, opacity 280ms var(--ease-soft); animation: none; }
+.mic-orb[aria-busy="true"]:not([data-live]) .mic-core { opacity: 0.25; transform: scale(0.9); animation: core-breathe 1.2s ease-in-out infinite; }

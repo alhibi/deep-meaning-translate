@@ -92,6 +92,7 @@ const en = {
   micNoDevice: "No microphone found.",
   micFailed: "Recording stopped — your text is safe.",
   micRetry: "Try again",
+  micWriting: "Writing…",
   micListening: "Listening…",
 };
 export type Key = keyof typeof en;
@@ -183,6 +184,7 @@ const ar: Record<Key, string> = {
   micNoDevice: "لم يُعثر على ميكروفون.",
   micFailed: "توقف التسجيل — نصك محفوظ.",
   micRetry: "أعد المحاولة",
+  micWriting: "أكتب ما قلته…",
   micListening: "أستمع…",
 };
 
@@ -273,6 +275,7 @@ const de: Record<Key, string> = {
   micNoDevice: "Kein Mikrofon gefunden.",
   micFailed: "Aufnahme unterbrochen – dein Text bleibt.",
   micRetry: "Erneut versuchen",
+  micWriting: "Schreibe…",
   micListening: "Ich höre zu…",
 };
 
