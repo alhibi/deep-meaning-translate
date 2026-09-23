@@ -97,9 +97,9 @@ export const LanguageBar = memo(function LanguageBar({ source, target, detected,
         type="button"
         onClick={swap}
         aria-label={t("swap")}
-        className="press grid size-12 shrink-0 place-items-center rounded-full border border-border-strong text-muted-foreground transition-colors hover:text-foreground active:border-signal active:text-signal"
+        className="press-soft grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:border-border-strong hover:text-foreground active:border-border-strong active:bg-[#25221F] active:text-foreground"
       >
-        <ArrowLeftRight key={swapped} className={`size-[18px] ${swapped ? "animate-exchange" : ""}`} strokeWidth={1.6} />
+        <ArrowLeftRight key={swapped} className={`size-4 ${swapped ? "animate-exchange" : ""}`} strokeWidth={1.8} />
       </button>
       <Side value={target} options={TARGET_LANGUAGES} onChange={onTarget} caption={t("to")} end swapped={swapped} />
     </div>
