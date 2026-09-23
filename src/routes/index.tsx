@@ -449,7 +449,7 @@ function Translator() {
               spellCheck
               placeholder={t("placeholder")}
               aria-label={t("inputLabel")}
-              className={`autogrow block w-full resize-none bg-transparent pe-10 outline-none ${
+              className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
                 rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
               }`}
             />
