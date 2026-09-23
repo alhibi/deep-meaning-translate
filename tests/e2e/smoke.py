@@ -43,7 +43,10 @@ async def main():
             dir_before = await box.evaluate("e => getComputedStyle(e).direction")
             await swap.click(); await page.wait_for_timeout(600)
             check(await box.input_value() != "", "text kept after swap")
-            check(await box.evaluate("e => getComputedStyle(e).direction") == dir_before, "box direction unchanged by swap")
+            # Swap moves the translation into the box; the box follows the text's own script, not the language pair.
+            val = await box.input_value()
+            want = "rtl" if any("\u0600" <= c <= "\u06ff" for c in val[:1]) else "ltr"
+            check(await box.evaluate("e => getComputedStyle(e).direction") == want, "box direction follows the text after swap")
 
         # 3. Sheets open, stay open, close, and X never covers text.
         for name in ["العبارات", "Saved", "Gespeichert", "الأخيرة", "Recent", "Verlauf"]:
