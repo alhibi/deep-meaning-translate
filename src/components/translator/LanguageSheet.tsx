@@ -42,7 +42,15 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
     } catch {
       dn = null;
     }
-    return (code: string) => (dn && code !== "auto" ? dn.of(code) ?? "" : "");
+    // Non-language codes (e.g. dialect ids like "levant") make Intl throw — fall back to nothing.
+    return (code: string) => {
+      if (!dn || code === "auto") return "";
+      try {
+        return dn.of(code) ?? "";
+      } catch {
+        return "";
+      }
+    };
   }, [locale]);
 
   // Mount / unmount with exit animation
