@@ -55,6 +55,13 @@ async function send(
       { role: "user", content: user },
     ],
   };
+  const cancelled = () => Object.assign(new Error("cancelled"), { name: "AbortError" });
+  if (signal?.aborted) throw cancelled();
+  // Own controller: a caller disconnect aborts the upstream fetch without letting
+  // undici's internal AbortError escape as an unhandled runtime error.
+  const ctrl = new AbortController();
+  const onAbort = () => ctrl.abort();
+  signal?.addEventListener("abort", onAbort, { once: true });
   let res: Response;
   try {
     res = await fetch(`${BASE}/responses`, {
@@ -64,11 +71,12 @@ async function send(
         Authorization: `Bearer ${apiKey}`,
         "x-opencode-session": SESSION,
       },
-      signal: signal ?? null,
+      signal: ctrl.signal,
       body: JSON.stringify(body),
     });
   } catch (err) {
-    if ((err as Error)?.name === "AbortError") throw err;
+    signal?.removeEventListener("abort", onAbort);
+    if (ctrl.signal.aborted || (err as Error)?.name === "AbortError") throw cancelled();
     throw new TranslationError("network", "Could not reach the translation provider.");
   }
 
