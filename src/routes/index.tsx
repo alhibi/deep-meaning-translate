@@ -241,14 +241,42 @@ function Translator() {
   const { t, locale, rtl: uiRtl } = useI18n();
   const [tagline, setTagline] = useState(false);
   const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (taglineTimer.current) clearTimeout(taglineTimer.current); }, []);
-  const toggleTagline = useCallback(() => {
-    if (taglineTimer.current) clearTimeout(taglineTimer.current);
-    setTagline((v) => {
-      if (!v) taglineTimer.current = setTimeout(() => setTagline(false), 1500);
-      return !v;
-    });
+  const taglinePlayed = useRef(false);
+  const clearTaglineTimer = useCallback(() => {
+    if (taglineTimer.current) {
+      clearTimeout(taglineTimer.current);
+      taglineTimer.current = null;
+    }
   }, []);
+  useEffect(() => clearTaglineTimer, [clearTaglineTimer]);
+  // Play one full gust: the storm sweep in, hold, then hand the name back.
+  const playTagline = useCallback(() => {
+    clearTaglineTimer();
+    setTagline(true);
+    taglineTimer.current = setTimeout(() => setTagline(false), 1500);
+  }, [clearTaglineTimer]);
+  const toggleTagline = useCallback(() => {
+    setTagline((v) => {
+      if (v) {
+        clearTaglineTimer();
+        return false;
+      }
+      playTagline();
+      return true;
+    });
+  }, [clearTaglineTimer, playTagline]);
+  // The name introduces itself on its own: once 4s after arrival, then a quiet
+  // 16s rhythm — but only while the page rests (nothing written, no sheet open).
+  useEffect(() => {
+    if (tagline || hasText || historyOpen || localeOpen) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const delay = taglinePlayed.current ? 16000 : 4000;
+    const id = setTimeout(() => {
+      taglinePlayed.current = true;
+      playTagline();
+    }, delay);
+    return () => clearTimeout(id);
+  }, [tagline, hasText, historyOpen, localeOpen, playTagline]);
   const [localeOpen, setLocaleOpen] = useState(false);
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
   const rtlInput = text.trim() ? startsRtl(text) : uiRtl;
