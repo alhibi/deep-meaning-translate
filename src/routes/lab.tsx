@@ -53,7 +53,7 @@ function Lab() {
     );
     const ms = Math.round(performance.now() - t0);
     const entry: Run = res.ok
-      ? { result: res.result, ms, issues: verifyTranslation(c.text, res.result.translation).issues ?? [] }
+      ? { result: res.result, ms, issues: verifyTranslation({ text: c.text, source: c.source, target: c.target, style: "natural" }, res.result) }
       : { error: res.kind, ms, issues: [] };
     setRuns((r) => ({ ...r, [c.id]: [entry, ...(r[c.id] ?? [])].slice(0, 3) }));
     setBusy(null);
