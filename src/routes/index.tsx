@@ -10,7 +10,6 @@ import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { StyleOverride, TranslationResult } from "@/lib/translation/types";
-import { isRtl } from "@/lib/translation/languages";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
