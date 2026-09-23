@@ -3,7 +3,6 @@ import { ArrowLeftRight } from "lucide-react";
 import { LANGUAGES, TARGET_LANGUAGES, isRtl, languageLabel } from "@/lib/translation/languages";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
-import { TextStream } from "@/components/block/text-stream";
 import { LanguageSheet, pushRecent, readRecent, type PickerItem } from "./LanguageSheet";
 
 interface Props {
@@ -21,6 +20,7 @@ function Side({
   onChange,
   caption,
   end,
+  swapped,
   detected,
 }: {
   value: string;
@@ -28,18 +28,14 @@ function Side({
   onChange: (v: string) => void;
   caption: string;
   end?: boolean;
+  swapped: number;
   detected?: string | undefined;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
-  const streamItems = options.map((item) =>
-    item.code === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(item.code),
-  );
-  const selectedIndex = Math.max(
-    0,
-    options.findIndex((item) => item.code === value),
-  );
+  const label =
+    value === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(value);
   const close = useCallback(() => setOpen(false), []);
   const select = useCallback(
     (code: string) => {
@@ -63,17 +59,16 @@ function Side({
         <span className="pointer-events-none text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
           {caption}
         </span>
-        <TextStream
-          items={streamItems}
-          activeIndex={selectedIndex}
-          align={end ? "end" : "start"}
-          dir={isRtl(value === "auto" ? (detected ?? "") : value) ? "rtl" : "ltr"}
-          className={`pointer-events-none mt-1 max-w-full font-semibold ${
+        <span
+          key={`${value}-${swapped}`}
+          className={`pointer-events-none mt-1 block max-w-full truncate font-semibold ${
             isRtl(value === "auto" ? (detected ?? "") : value)
               ? "font-arabic text-[24px] leading-[1.25]"
               : "text-[22px] leading-[1.25] tracking-[-0.02em]"
-          } ${end ? "text-foreground" : "text-foreground/90"}`}
-        />
+          } ${end ? "text-foreground" : "text-foreground/90"} ${swapped ? (end ? "animate-cross-from-start" : "animate-cross-from-end") : ""}`}
+        >
+          {label}
+        </span>
         <span
           aria-hidden
           className={`pointer-events-none mt-1.5 h-[2px] w-5 rounded-full ${end ? "bg-signal" : "bg-transparent"}`}
@@ -117,6 +112,7 @@ export const LanguageBar = memo(function LanguageBar({
         options={LANGUAGES}
         onChange={onSource}
         caption={sourceCaption}
+        swapped={swapped}
         detected={detected}
       />
       <button
@@ -137,6 +133,7 @@ export const LanguageBar = memo(function LanguageBar({
         onChange={onTarget}
         caption={t("to")}
         end
+        swapped={swapped}
       />
     </div>
   );

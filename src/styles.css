@@ -296,30 +296,6 @@ html.theme-fade *::after {
     transform: none;
   }
 }
-@keyframes text-stream-in {
-  from {
-    opacity: 0;
-    filter: blur(7px);
-    transform: translateY(72%);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0);
-  }
-}
-@keyframes text-stream-out {
-  from {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    filter: blur(7px);
-    transform: translateY(-72%);
-  }
-}
 @keyframes breathe {
   50% {
     opacity: 0.45;
@@ -374,43 +350,6 @@ html.theme-fade *::after {
 }
 @utility animate-breathe {
   animation: breathe 1.4s ease-in-out infinite;
-}
-
-.text-stream {
-  display: inline-flex;
-  min-width: 0;
-  align-items: baseline;
-}
-.text-stream-start {
-  justify-content: flex-start;
-}
-.text-stream-end {
-  justify-content: flex-end;
-}
-.text-stream-prefix {
-  flex: none;
-  margin-inline-end: 0.3em;
-}
-.text-stream-window {
-  position: relative;
-  display: grid;
-  min-width: 0;
-  overflow: hidden;
-}
-.text-stream-item {
-  grid-area: 1 / 1;
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  will-change: transform, opacity, filter;
-}
-.text-stream-item-in {
-  animation: text-stream-in 500ms var(--ease-out) both;
-}
-.text-stream-item-out {
-  animation: text-stream-out 420ms var(--ease-out) both;
 }
 
 /* Tactile press: tiny, immediate on touch, soft release. */
@@ -555,12 +494,6 @@ html.theme-fade *::after {
   .animate-cross-from-start,
   .animate-cross-from-end {
     animation-name: fade !important;
-  }
-  .text-stream-item-in,
-  .text-stream-item-out {
-    animation-name: fade !important;
-    filter: none !important;
-    transform: none !important;
   }
   .animate-exchange,
   .animate-bead,
