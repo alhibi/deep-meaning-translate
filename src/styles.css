@@ -139,16 +139,6 @@ html.theme-fade *::after {
     fill 450ms ease !important;
 }
 
-/* Transparent heat refraction: the incoming page snapshot itself bends.
-   There is no tint or painted overlay; detail is visible only as it crosses
-   the spreading edge. The SVG displacement map lives in ThemeToggle. */
-html.theme-refraction::view-transition-new(root) {
-  filter: url("#theme-heat-refraction");
-}
-html.theme-refraction::view-transition-group(root) {
-  overflow: visible;
-}
-
 @layer base {
   * {
     border-color: var(--color-border);

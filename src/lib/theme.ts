@@ -51,9 +51,7 @@ export function useTheme() {
       setTheme(next);
     };
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const doc = document as Document & {
-      startViewTransition?: (cb: () => void) => { ready: Promise<void>; finished: Promise<void> };
-    };
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
     if (!doc.startViewTransition || reduce) {
       document.documentElement.classList.add("theme-fade");
       run();
@@ -61,25 +59,13 @@ export function useTheme() {
       return;
     }
     const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-    document.documentElement.classList.add("theme-refraction");
     const vt = doc.startViewTransition(run);
     void vt.ready.then(() => {
       document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${r * 0.22}px at ${x}px ${y}px)`,
-            `circle(${r}px at ${x}px ${y}px)`,
-          ],
-        },
-        {
-          duration: 880,
-          easing: "cubic-bezier(0.65, 0, 0.35, 1)",
-          pseudoElement: "::view-transition-new(root)",
-        },
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+        { duration: 720, easing: "cubic-bezier(0.65, 0, 0.35, 1)", pseudoElement: "::view-transition-new(root)" },
       );
     });
-    void vt.finished.finally(() => document.documentElement.classList.remove("theme-refraction"));
   }, []);
 
   return { theme, toggle };
