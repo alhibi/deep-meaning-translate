@@ -99,6 +99,7 @@ const en = {
   introTitle: "Say it as you mean it.",
   introCopy: "Translation that keeps your meaning, tone and natural voice.",
   introEnter: "Start translating",
+  theme: "Light or dark",
 };
 export type Key = keyof typeof en;
 
@@ -195,6 +196,7 @@ const ar: Record<Key, string> = {
   introTitle: "قُلها كما تقصدها.",
   introCopy: "ترجمة تحفظ المعنى والنبرة وطبيعة كلامك.",
   introEnter: "ابدأ الترجمة",
+  theme: "الوضع الفاتح أو الداكن",
 };
 
 const de: Record<Key, string> = {
@@ -292,6 +294,7 @@ const de: Record<Key, string> = {
   introTitle: "Sag es, wie du es meinst.",
   introCopy: "Übersetzungen, die Bedeutung, Ton und deine natürliche Stimme bewahren.",
   introEnter: "Übersetzen",
+  theme: "Hell oder dunkel",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
