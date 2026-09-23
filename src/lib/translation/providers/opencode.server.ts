@@ -95,9 +95,8 @@ async function call(
   system: string,
   user: string,
   signal: AbortSignal | undefined,
-  model?: ModelId,
 ): Promise<string> {
-  const res = await send(apiKey, system, user, signal, false, model);
+  const res = await send(apiKey, system, user, signal, false);
   return extractText(await res.json());
 }
 
@@ -142,7 +141,7 @@ export async function streamLiveTranslation(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true, req.model);
+  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }
@@ -151,7 +150,7 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
   return {
     id: "opencode",
     async translate(req, signal) {
-      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, req.model);
+      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal);
       return parseResult(raw, req);
     },
     async repair(req, previous, issues, signal) {
@@ -160,7 +159,6 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
         buildSystemPrompt(),
         buildRepairPrompt(req, previous, issues),
         signal,
-        req.model,
       );
       return parseResult(raw, req);
     },
@@ -173,7 +171,7 @@ export async function streamFullTranslation(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true, req.model);
+  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }
