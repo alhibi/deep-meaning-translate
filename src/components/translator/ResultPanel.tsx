@@ -124,9 +124,20 @@ export const ResultPanel = memo(function ResultPanel({
       setCopied(true);
       tick();
     };
+    const fallback = () => {
+      // Plain-text fallback: exact characters and line breaks, no formatting.
+      const ta = document.createElement("textarea");
+      ta.value = value;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;opacity:0;top:0";
+      document.body.appendChild(ta);
+      ta.select();
+      if (document.execCommand("copy")) done();
+      ta.remove();
+    };
     if (navigator.clipboard?.writeText) {
-      void navigator.clipboard.writeText(value).then(done, () => undefined);
-    }
+      void navigator.clipboard.writeText(value).then(done, fallback);
+    } else fallback();
   }, []);
 
   const lang = result?.targetLanguage || target;
