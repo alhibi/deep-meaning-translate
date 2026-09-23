@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDownToLine, Bookmark, ChevronDown, ClipboardPaste, Clock3, X } from "lucide-react";
+import { ArrowDownToLine, Bookmark, ChevronDown, ClipboardPaste, Clock3, Mic, X } from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { LanguageBar } from "@/components/translator/LanguageBar";
@@ -10,6 +10,8 @@ import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
+import { useClipboardHint } from "@/lib/clipboardHint";
+import { speechLang, useSpeech } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
@@ -252,6 +254,27 @@ function Translator() {
   }, [submitNext, closeHistory]);
 
   const { t, locale, rtl: uiRtl } = useI18n();
+  const hasClip = useClipboardHint();
+
+  // Voice input: speech joins whatever is already written, and translates the moment you stop.
+  const speechBase = useRef("");
+  const speech = useSpeech({
+    lang: speechLang(source, target, locale),
+    onText: (spoken) => {
+      const base = speechBase.current;
+      setText((base ? `${base} ${spoken}` : spoken).slice(0, MAX_CHARS));
+    },
+    onDone: () => {
+      submitNext();
+      setText((v) => v.trimEnd() + " "); // nudge a deliberate, final translation
+      setTimeout(() => setText((v) => v.trimEnd()), 0);
+    },
+  });
+  const toggleMic = useCallback(() => {
+    if (!speech.listening) speechBase.current = inputRef.current?.value.trim() ?? "";
+    tick();
+    speech.toggle();
+  }, [speech]);
   const [tagline, setTagline] = useState(false);
   const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taglinePlayed = useRef(false);
@@ -465,8 +488,31 @@ function Translator() {
             >
               <X className="size-[18px]" strokeWidth={1.6} />
             </button>
-            <div className="flex h-10 items-center justify-end gap-3">
-              {!hasText && canReadClipboard ? (
+            <div className="flex h-10 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                {speech.supported ? (
+                  <button
+                    type="button"
+                    onClick={toggleMic}
+                    aria-label={speech.listening ? t("micStop") : t("mic")}
+                    aria-pressed={speech.listening}
+                    className={`press -ms-2 grid size-10 place-items-center rounded-full transition-colors duration-200 ${
+                      speech.listening ? "bg-signal/15 text-signal-text" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Mic className={`size-[18px] ${speech.listening ? "animate-[breathe_1.4s_ease-in-out_infinite]" : ""}`} strokeWidth={1.7} />
+                  </button>
+                ) : null}
+                {speech.listening ? (
+                  <span className="animate-fade text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
+                ) : speech.error === "denied" || speech.error === "nospeech" ? (
+                  <span className="animate-fade truncate text-[12px] text-muted-foreground" aria-live="polite">
+                    {t(speech.error === "denied" ? "micDenied" : "micNoSpeech")}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-3">
+              {!hasText && canReadClipboard && hasClip && !speech.listening ? (
                 <button
                   type="button"
                   onClick={() => void pasteClipboard()}
@@ -481,6 +527,7 @@ function Translator() {
                   {text.length}/{MAX_CHARS}
                 </span>
               ) : null}
+              </div>
             </div>
           </section>
 
