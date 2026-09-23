@@ -19,18 +19,20 @@ function Picker({
   onChange,
   hint,
   align,
+  active,
 }: {
   value: string;
   options: { code: string; native: string; name: string }[];
   onChange: (v: string) => void;
   hint?: string | undefined;
   align: "start" | "end";
+  active?: boolean;
 }) {
   const end = align === "end";
   const { t } = useI18n();
   return (
     <label
-      className={`press-soft relative flex min-h-12 flex-1 flex-col justify-center overflow-hidden rounded-xl px-2 ${
+      className={`press-soft relative flex min-h-12 flex-1 flex-col justify-center overflow-hidden rounded-xl px-3 ${
         end ? "items-end text-end" : "items-start text-start"
       }`}
     >
@@ -50,6 +52,8 @@ function Picker({
       <span
         key={value}
         className={`pointer-events-none block truncate text-[15px] font-medium tracking-tight ${
+          active ? "text-signal" : "text-foreground"
+        } ${
           end ? "animate-from-start" : "animate-from-end"
         }`}
       >
@@ -83,7 +87,8 @@ export const LanguageBar = memo(function LanguageBar({
   }, [onSwap]);
 
   return (
-    <div className="flex items-center gap-1 border-b border-border px-3 py-1.5">
+    <div className="px-4 pb-3 pt-1">
+    <div className="flex items-center rounded-2xl border border-border bg-surface p-0.5 shadow-[var(--elev-1)]">
       <Picker
         value={source}
         options={LANGUAGES}
@@ -95,7 +100,7 @@ export const LanguageBar = memo(function LanguageBar({
         type="button"
         onClick={swap}
         aria-label={t("swap")}
-        className="press grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-foreground"
+        className="press grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-signal"
       >
         <ArrowLeftRight
           key={nudge}
@@ -103,7 +108,8 @@ export const LanguageBar = memo(function LanguageBar({
           strokeWidth={1.75}
         />
       </button>
-      <Picker value={target} options={TARGET_LANGUAGES} onChange={onTarget} align="end" />
+      <Picker value={target} options={TARGET_LANGUAGES} onChange={onTarget} align="end" active />
+    </div>
     </div>
   );
 });
