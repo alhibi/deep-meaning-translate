@@ -43,7 +43,10 @@ export function Intro({ onComplete }: { onComplete: () => void }) {
 
       <div className="intro-center relative flex flex-1 flex-col items-center justify-center text-center">
         <div className="intro-icon-wrap relative grid size-40 place-items-center sm:size-44">
-          <span aria-hidden className="intro-ring absolute inset-0 rounded-full border border-border-strong" />
+          <span
+            aria-hidden
+            className="intro-ring absolute inset-0 rounded-full border border-border-strong"
+          />
           <img
             src="/icon-monochrome-512.png"
             alt=""
