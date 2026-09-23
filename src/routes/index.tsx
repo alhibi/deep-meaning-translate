@@ -176,6 +176,7 @@ function Translator() {
   // lifts above the on-screen keyboard instead of hiding behind it.
   const scrollRef = useRef<HTMLDivElement>(null);
   const kbOpen = useRef(false);
+  const [kbUp, setKbUp] = useState(false);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
@@ -188,6 +189,7 @@ function Translator() {
           if (el) el.scrollTop = el.scrollHeight;
         });
       kbOpen.current = open;
+      setKbUp(open);
     };
     apply();
     vv.addEventListener("resize", apply);
@@ -533,7 +535,9 @@ function Translator() {
 
         <div
           ref={scrollRef}
-          className="flex flex-1 flex-col justify-center overflow-y-auto overscroll-contain pb-[6dvh]"
+          className={`flex flex-1 flex-col overflow-y-auto overscroll-contain ${
+            kbUp ? "justify-start pb-3 pt-1" : "justify-center pb-[6dvh]"
+          }`}
         >
           <LanguageBar
             source={source}
