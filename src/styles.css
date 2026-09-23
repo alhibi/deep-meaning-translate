@@ -139,7 +139,8 @@ html.theme-fade *::after {
     fill 450ms ease !important;
 }
 
-/* Heat-haze shimmer: a warm mirage glow that wobbles and dissolves from the tap point. */
+/* Heat-haze shimmer: fully transparent — visible only by refracting what it
+   passes over, like hot air rising above sun-baked ground. No color at all. */
 .heat-shimmer {
   position: fixed;
   z-index: 90;
@@ -169,40 +170,56 @@ html.theme-fade *::after {
   border-radius: 50%;
   translate: -50% -50%;
 }
-/* Warm bloom core */
+/* Expanding refraction ring: backdrop blur warps the content beneath it */
 .heat-shimmer::before {
-  width: 46vmax;
-  height: 46vmax;
-  background: radial-gradient(
+  width: 60vmax;
+  height: 60vmax;
+  background: transparent;
+  backdrop-filter: blur(3px) saturate(1.15);
+  -webkit-backdrop-filter: blur(3px) saturate(1.15);
+  mask-image: radial-gradient(
     circle,
-    rgb(236 160 110 / 70%) 0%,
-    rgb(201 122 90 / 30%) 34%,
-    rgb(201 122 90 / 12%) 58%,
-    transparent 74%
+    transparent 30%,
+    black 44%,
+    black 56%,
+    transparent 70%
   );
-  filter: blur(18px);
-  animation: heat-bloom 1.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  -webkit-mask-image: radial-gradient(
+    circle,
+    transparent 30%,
+    black 44%,
+    black 56%,
+    transparent 70%
+  );
+  animation: heat-bloom 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-/* Wavering haze ring, like air shimmering above hot ground */
+/* Inner wavering haze: a second, softer distortion that drifts upward */
 .heat-shimmer::after {
-  width: 30vmax;
-  height: 30vmax;
-  background: radial-gradient(
+  width: 34vmax;
+  height: 34vmax;
+  background: transparent;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  mask-image: radial-gradient(
     circle,
-    transparent 42%,
-    rgb(255 236 210 / 40%) 52%,
-    rgb(221 145 105 / 30%) 60%,
-    transparent 72%
+    transparent 36%,
+    black 50%,
+    transparent 66%
   );
-  filter: blur(6px);
-  animation: heat-haze 1.3s ease-out forwards;
+  -webkit-mask-image: radial-gradient(
+    circle,
+    transparent 36%,
+    black 50%,
+    transparent 66%
+  );
+  animation: heat-haze 1.2s ease-out forwards;
 }
 @keyframes heat-bloom {
   0% {
-    scale: 0.08;
+    scale: 0.06;
     opacity: 0;
   }
-  18% {
+  15% {
     opacity: 1;
   }
   100% {
