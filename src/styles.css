@@ -129,6 +129,10 @@
   .font-arabic {
     font-family: var(--font-arabic);
   }
+  /* Literary serif, reserved for the tagline only. */
+  .font-literary {
+    font-family: "Instrument Serif", "Geist", serif;
+  }
 
   textarea,
   input,

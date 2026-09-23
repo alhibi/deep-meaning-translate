@@ -239,6 +239,15 @@ function Translator() {
   }, [submitNext, closeHistory]);
 
   const { t, locale, rtl: uiRtl } = useI18n();
+  const [tagline, setTagline] = useState(false);
+  const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toggleTagline = useCallback(() => {
+    if (taglineTimer.current) clearTimeout(taglineTimer.current);
+    setTagline((v) => {
+      if (!v) taglineTimer.current = setTimeout(() => setTagline(false), 4200);
+      return !v;
+    });
+  }, []);
   const [localeOpen, setLocaleOpen] = useState(false);
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
   const rtlInput = text.trim() ? startsRtl(text) : source === "auto" ? uiRtl : isRtl(source);
@@ -247,7 +256,15 @@ function Translator() {
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
       <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
-        <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold tracking-[-0.01em]"><span aria-hidden className="size-1.5 rounded-full bg-signal" />Lingua</span>
+        <button
+          type="button"
+          onClick={toggleTagline}
+          aria-expanded={tagline}
+          className="press-soft -ms-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
+        >
+          <span aria-hidden className="size-1.5 rounded-full bg-signal" />
+          today
+        </button>
         <div className="flex items-center gap-1">
           <button
             type="button"
