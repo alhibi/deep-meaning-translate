@@ -48,8 +48,10 @@ export const Route = createFileRoute("/")({
           "Translate what you actually mean. Tone, idioms and cultural nuance preserved, Arabic ⇄ German first.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://fluently.today/" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://fluently.today/" }],
   }),
   component: Translator,
 });

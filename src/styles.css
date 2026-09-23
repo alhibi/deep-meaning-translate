@@ -511,6 +511,7 @@
   animation: intro-ring 1.1s var(--ease-out) 200ms both;
 }
 .intro-cat {
+  filter: invert(0.92);
   animation: intro-drift 4.5s ease-in-out 1.1s infinite;
 }
 .intro-title {
