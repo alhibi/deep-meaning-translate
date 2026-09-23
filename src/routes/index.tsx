@@ -9,6 +9,7 @@ import { ResultPanel } from "@/components/translator/ResultPanel";
 import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
+import { SafeArea } from "@/components/SafeArea";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
@@ -512,6 +513,7 @@ function Translator() {
           <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
 
           <div>
+            <SafeArea>
             <ResultPanel
               result={result}
               pending={pending}
@@ -547,11 +549,13 @@ function Translator() {
                 ) : undefined
               }
             />
+            </SafeArea>
           </div>
         </div>
       </div>
       <div className="h-3 pad-safe-bottom" />
 
+      <SafeArea silent>
       <LanguageSheet
         open={dialectOpen}
         title={t("dialect")}
@@ -576,6 +580,7 @@ function Translator() {
         onClear={clearHistory}
         onForgetAll={forgetAll}
       />
+      </SafeArea>
     </main>
   );
 }
