@@ -139,122 +139,14 @@ html.theme-fade *::after {
     fill 450ms ease !important;
 }
 
-/* Heat-haze shimmer: fully transparent — visible only by refracting what it
-   passes over, like hot air rising above sun-baked ground. No color at all. */
-.heat-shimmer {
-  position: fixed;
-  z-index: 90;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  /* Own live layer above the theme spread snapshot so it stays visible */
-  view-transition-name: heat-shimmer;
+/* Transparent heat refraction: the incoming page snapshot itself bends.
+   There is no tint or painted overlay; detail is visible only as it crosses
+   the spreading edge. The SVG displacement map lives in ThemeToggle. */
+html.theme-refraction::view-transition-new(root) {
+  filter: url("#theme-heat-refraction");
 }
-::view-transition-group(heat-shimmer) {
-  animation: none;
-  z-index: 100;
+html.theme-refraction::view-transition-group(root) {
   overflow: visible;
-}
-::view-transition-old(heat-shimmer) {
-  display: none;
-}
-::view-transition-new(heat-shimmer) {
-  animation: none;
-}
-.heat-shimmer::before,
-.heat-shimmer::after {
-  content: "";
-  position: absolute;
-  left: var(--x, 50%);
-  top: var(--y, 50%);
-  border-radius: 50%;
-  translate: -50% -50%;
-}
-/* Expanding refraction ring: backdrop blur warps the content beneath it */
-.heat-shimmer::before {
-  width: 60vmax;
-  height: 60vmax;
-  background: transparent;
-  backdrop-filter: blur(3px) saturate(1.15);
-  -webkit-backdrop-filter: blur(3px) saturate(1.15);
-  mask-image: radial-gradient(
-    circle,
-    transparent 30%,
-    black 44%,
-    black 56%,
-    transparent 70%
-  );
-  -webkit-mask-image: radial-gradient(
-    circle,
-    transparent 30%,
-    black 44%,
-    black 56%,
-    transparent 70%
-  );
-  animation: heat-bloom 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-/* Inner wavering haze: a second, softer distortion that drifts upward */
-.heat-shimmer::after {
-  width: 34vmax;
-  height: 34vmax;
-  background: transparent;
-  backdrop-filter: blur(1.5px);
-  -webkit-backdrop-filter: blur(1.5px);
-  mask-image: radial-gradient(
-    circle,
-    transparent 36%,
-    black 50%,
-    transparent 66%
-  );
-  -webkit-mask-image: radial-gradient(
-    circle,
-    transparent 36%,
-    black 50%,
-    transparent 66%
-  );
-  animation: heat-haze 1.2s ease-out forwards;
-}
-@keyframes heat-bloom {
-  0% {
-    scale: 0.06;
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    scale: 1;
-    opacity: 0;
-  }
-}
-@keyframes heat-haze {
-  0% {
-    scale: 0.1;
-    opacity: 0;
-    transform: translate(0, 0) skewX(0deg);
-  }
-  15% {
-    opacity: 1;
-  }
-  30% {
-    transform: translate(0.6vmax, -0.9vmax) skewX(3deg);
-  }
-  50% {
-    transform: translate(-0.7vmax, -1.8vmax) skewX(-3deg);
-  }
-  70% {
-    transform: translate(0.5vmax, -2.6vmax) skewX(2deg);
-  }
-  100% {
-    scale: 1.15;
-    opacity: 0;
-    transform: translate(0, -3.4vmax) skewX(0deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .heat-shimmer {
-    display: none;
-  }
 }
 
 @layer base {

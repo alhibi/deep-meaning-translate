@@ -35,6 +35,19 @@ async def main():
         check(await intro.count() == 0, "introduction opens the translator")
         await page.reload(); await page.wait_for_timeout(500)
         check(await page.get_by_test_id("first-intro").count() == 0, "introduction appears only once")
+
+        # Theme spread uses a real transparent displacement map, not a tinted overlay.
+        theme = page.get_by_test_id("theme-toggle")
+        before_theme = await page.locator("html").get_attribute("class") or ""
+        await theme.click(position={"x": 22, "y": 22})
+        await page.wait_for_timeout(100)
+        during_theme = await page.locator("html").get_attribute("class") or ""
+        check("theme-refraction" in during_theme, "theme spread activates transparent refraction")
+        check(await page.locator("#theme-heat-refraction feDisplacementMap").count() == 1, "theme refraction has a displacement map")
+        await page.wait_for_timeout(1000)
+        after_theme = await page.locator("html").get_attribute("class") or ""
+        check(("light" in before_theme) != ("light" in after_theme), "theme spread changes the theme")
+        check("theme-refraction" not in after_theme, "theme refraction clears after the spread")
         box = page.locator("textarea").first
         dir_before = await box.evaluate("e => getComputedStyle(e).direction")
 
