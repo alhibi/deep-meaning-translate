@@ -36,13 +36,15 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-signal: var(--signal);
+  --color-signal-text: var(--signal-text);
+  --color-faint: var(--faint);
   --color-signal-foreground: var(--signal-foreground);
   --color-signal-soft: var(--signal-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
-  --font-arabic: "IBM Plex Sans Arabic", "Work Sans", sans-serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "IBM Plex Sans Arabic", "Geist", sans-serif;
 }
 
 /*
@@ -53,72 +55,39 @@
  */
 :root {
   --radius: 0.75rem;
-  /* Foundation */
-  --background: oklch(0.968 0.011 80);    /* warm paper */
-  --foreground: oklch(0.24 0.014 55);     /* warm ink */
-  --surface: oklch(0.99 0.006 80);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.008 55);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.008 55);
-  --primary: oklch(0.2 0.008 55);
-  --primary-foreground: oklch(0.975 0.002 80);
-  --secondary: oklch(0.945 0.003 80);
-  --secondary-foreground: oklch(0.2 0.008 55);
-  --muted: oklch(0.945 0.003 80);
-  --muted-foreground: oklch(0.5 0.01 55); /* ≥4.5:1 on paper and surface */
-  /* Signal — warm clay */
-  --signal: oklch(0.56 0.105 45);          /* clay / terracotta */
-  --signal-foreground: oklch(0.99 0 0);
-  --signal-soft: oklch(0.56 0.105 45 / 14%);
+  --background: #12100f;
+  --foreground: #f3efe8;
+  --surface: #181614;
+  --card: #1e1b18;
+  --card-foreground: #f3efe8;
+  --popover: #1e1b18;
+  --popover-foreground: #f3efe8;
+  --primary: #f3efe8;
+  --primary-foreground: #12100f;
+  --secondary: #1e1b18;
+  --secondary-foreground: #f3efe8;
+  --muted: #1e1b18;
+  --muted-foreground: #a7a19a;
+  --faint: #6f6a64;
+  /* Signal: appears only where attention is required. */
+  --signal: #6d5ef4;
+  --signal-text: #9b90ff; /* signal used as text/lines on dark: 4.5:1+ */
+  --signal-foreground: #ffffff;
+  --signal-soft: rgb(109 94 244 / 16%);
   --accent: var(--signal);
   --accent-foreground: var(--signal-foreground);
-  /* Semantic */
-  --success: oklch(0.57 0.1 163);         /* #2F8F6B */
-  --warning: oklch(0.65 0.13 65);         /* #C9822B */
-  --destructive: oklch(0.6 0.13 22);      /* #C95C5C */
-  --destructive-foreground: oklch(0.99 0 0);
-  /* Lines */
-  --border: oklch(0.2 0.008 55 / 8%);
-  --border-strong: oklch(0.2 0.008 55 / 16%);
-  --input: oklch(0.2 0.008 55 / 10%);
+  --success: #5fbf97;
+  --warning: #d9a45a;
+  --destructive: #d97a7a;
+  --destructive-foreground: #12100f;
+  --border: rgb(243 239 232 / 7%);
+  --border-strong: rgb(243 239 232 / 14%);
+  --input: rgb(243 239 232 / 10%);
   --ring: var(--signal);
-  --shimmer: oklch(0.2 0.008 55 / 5%);
-  --focus-surface: oklch(1 0 0);
-  --elev-1: 0 1px 2px oklch(0.2 0.008 55 / 4%);
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-:root {
+  --shimmer: rgb(243 239 232 / 6%);
+  --focus-surface: #1b1916;
+  --elev-1: 0 1px 0 rgb(255 255 255 / 3%);
   color-scheme: dark;
-  --background: oklch(0.17 0.008 60);
-  --foreground: oklch(0.94 0.004 55);
-  --surface: oklch(0.215 0.01 60);
-  --card: oklch(0.24 0.011 60);
-  --card-foreground: oklch(0.94 0.004 55);
-  --popover: oklch(0.232 0.01 60);
-  --popover-foreground: oklch(0.94 0.004 55);
-  --primary: oklch(0.94 0.004 55);
-  --primary-foreground: oklch(0.155 0.005 55);
-  --secondary: oklch(0.26 0.01 60);
-  --secondary-foreground: oklch(0.94 0.004 55);
-  --muted: oklch(0.24 0.009 60);
-  --muted-foreground: oklch(0.7 0.01 55);
-  --signal: oklch(0.74 0.09 58);          /* warm sand-clay */
-  --signal-foreground: oklch(0.16 0.01 55);
-  --signal-soft: oklch(0.74 0.09 58 / 16%);
-  --success: oklch(0.72 0.1 163);
-  --warning: oklch(0.76 0.12 70);
-  --destructive: oklch(0.7 0.12 22);
-  --destructive-foreground: oklch(0.16 0.01 55);
-  --border: oklch(1 0 0 / 8%);
-  --border-strong: oklch(1 0 0 / 16%);
-  --input: oklch(1 0 0 / 12%);
-  --shimmer: oklch(1 0 0 / 6%);
-  --focus-surface: oklch(0.215 0.01 60);
-  --elev-1: 0 1px 0 oklch(1 0 0 / 3%);
-}
 }
 
 @layer base {
@@ -265,25 +234,29 @@
 /* Input becomes the active centre: surface lifts from paper to white,
  * and a hairline of signal draws in from the reading edge. No glow. */
 @utility input-shell {
-  background-color: transparent;
-  transition: background-color 200ms var(--ease-soft);
+  transition: background-color 220ms var(--ease-soft);
+  &:focus-within { background-color: var(--focus-surface); }
+  & textarea { caret-color: var(--signal-text); }
+  & textarea::placeholder { color: var(--faint); transition: opacity 180ms var(--ease-soft); }
+  &:focus-within textarea::placeholder { opacity: 0.6; }
+}
+
+/* A hairline that carries the live state between source and result. */
+@utility live-line {
+  position: relative;
+  height: 1px;
+  background: var(--border);
+  overflow: hidden;
   &::after {
     content: "";
     position: absolute;
-    inset-inline: 0;
-    bottom: -1px;
-    height: 1.5px;
-    background: var(--signal);
-    transform: scaleX(0);
-    transform-origin: var(--line-origin, left);
-    transition: transform 280ms var(--ease-out);
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--signal), transparent);
+    transform: translateX(-100%);
+    opacity: 0;
+    transition: opacity 240ms var(--ease-soft);
   }
-  &:dir(rtl)::after { --line-origin: right; }
-  &:focus-within { background-color: var(--focus-surface); }
-  &:focus-within::after { transform: scaleX(1); }
-  & textarea { caret-color: var(--signal); }
-  & textarea::placeholder { transition: opacity 180ms var(--ease-soft); }
-  &:focus-within textarea::placeholder { opacity: 0.55; }
+  &[data-live="true"]::after { opacity: 1; animation: progress 1.3s var(--ease-soft) infinite; }
 }
 
 /* Grows with content, then scrolls — no JS measurement where supported. */
@@ -342,7 +315,7 @@
   .animate-reveal, .animate-rise, .animate-from-start, .animate-from-end, .animate-cross-from-start, .animate-cross-from-end {
     animation-name: fade !important;
   }
-  .animate-exchange, .animate-bead, .shimmer::after, .progress-line::after { animation: none !important; }
+  .animate-exchange, .animate-bead, .live-line::after, .shimmer::after, .progress-line::after { animation: none !important; }
   .progress-line::after { transform: none; opacity: 0.5; }
   .press:active { transform: none; }
 }
