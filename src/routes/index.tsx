@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDownToLine, ClipboardPaste, Clock3, X } from "lucide-react";
+import { ArrowDownToLine, Bookmark, ChevronDown, ClipboardPaste, Clock3, X } from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { LanguageBar } from "@/components/translator/LanguageBar";
@@ -8,8 +8,10 @@ import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
 import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
+import { SavedSheet } from "@/components/translator/SavedSheet";
+import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
-import type { StyleOverride, TranslationResult } from "@/lib/translation/types";
+import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
@@ -46,6 +48,11 @@ function Translator() {
   const [style, setStyle] = useState<StyleOverride>("natural");
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [dialect, setDialect] = useState<Dialect>("auto");
+  const [dialectOpen, setDialectOpen] = useState(false);
+  const [savedOpen, setSavedOpen] = useState(false);
+  const savedList = useSaved();
+  const [dismissedFor, setDismissedFor] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { canInstall, install } = useInstallPrompt();
 
@@ -78,6 +85,7 @@ function Translator() {
     source,
     target,
     style,
+    dialect,
     onSuccess: handleSuccess,
   });
 
@@ -92,6 +100,7 @@ function Translator() {
       setSource(prefs.source);
       setTarget(prefs.target);
       setStyle(prefs.style);
+      if (prefs.dialect) setDialect(prefs.dialect);
     }
     const params = new URLSearchParams(window.location.search);
     const shared = [params.get("title"), params.get("text"), params.get("url")]
@@ -114,8 +123,8 @@ function Translator() {
   }, [submitNext, prime]);
 
   useEffect(() => {
-    if (restored) persist.savePrefs({ source, target, style });
-  }, [restored, source, target, style]);
+    if (restored) persist.savePrefs({ source, target, style, dialect });
+  }, [restored, source, target, style, dialect]);
 
   useEffect(() => {
     if (!restored) return;
@@ -282,6 +291,33 @@ function Translator() {
     return () => clearTimeout(id);
   }, [tagline, hasText, historyOpen, localeOpen, playTagline]);
 
+  const isSaved = !!result && !!savedList && !!saved.find(text, target);
+  const toggleSave = useCallback(() => {
+    if (!result) return;
+    saved.toggle({ source: result.sourceLanguage || source, target, original: text, translated: result.translation });
+  }, [result, source, target, text]);
+  const pickSaved = useCallback((p: SavedPhrase) => {
+    setSavedOpen(false);
+    setSource(p.source === "auto" ? "auto" : p.source);
+    setTarget(p.target);
+    submitNext();
+    setText(p.original);
+  }, [submitNext]);
+
+  // Situation detection → one quiet suggestion, only when it disagrees with the chosen style.
+  const sit = result?.situation;
+  const suggestKey = `${text.trim()}|${style}`;
+  const suggestion =
+    result && dismissedFor !== suggestKey
+      ? (sit === "official" || sit === "work") && style !== "formal"
+        ? { label: t(sit === "official" ? "sit_official" : "sit_work"), next: "formal" as const }
+        : sit === "chat" && style === "formal"
+          ? { label: t("sit_chat"), next: "casual" as const }
+          : null
+      : null;
+
+  const today = restored && !hasText ? (savedList.length ? saved.ofTheDay() : null) : null;
+
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
       <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
@@ -366,6 +402,14 @@ function Translator() {
           ) : null}
           <button
             type="button"
+            onClick={() => setSavedOpen(true)}
+            aria-label={t("savedTitle")}
+            className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
+          >
+            <Bookmark className="size-[18px]" strokeWidth={1.75} />
+          </button>
+          <button
+            type="button"
             onClick={openHistory}
             aria-label={t("recent")}
             className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
@@ -437,7 +481,21 @@ function Translator() {
           </section>
 
           <div className="flex items-center justify-between px-3">
-            <StyleToggle value={style} onChange={setStyle} />
+            <div className="flex min-w-0 items-center">
+              <StyleToggle value={style} onChange={setStyle} />
+              {target === "ar" ? (
+                <button
+                  type="button"
+                  onClick={() => setDialectOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-label={t("dialect")}
+                  className="press-soft animate-fade ms-1 inline-flex h-9 items-center gap-1 border-s border-border ps-3 font-arabic text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  {t(`d_${dialect}`)}
+                  <ChevronDown className="size-3.5 text-faint" strokeWidth={1.75} />
+                </button>
+              ) : null}
+            </div>
             <span
               className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
                 pending || provisional ? "opacity-100" : "opacity-0"
@@ -458,12 +516,54 @@ function Translator() {
               error={error}
               target={target}
               onRetry={retry}
+              isSaved={isSaved}
+              onSave={toggleSave}
+              suggestion={
+                suggestion
+                  ? {
+                      label: suggestion.label,
+                      onApply: () => setStyle(suggestion.next),
+                      onDismiss: () => setDismissedFor(suggestKey),
+                    }
+                  : null
+              }
+              idle={
+                today ? (
+                  <button type="button" onClick={() => pickSaved(today)} className="press-soft block w-full text-start">
+                    <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
+                      <span aria-hidden className="size-1 rotate-45 bg-signal" />
+                      {t("phraseOfDay")}
+                    </span>
+                    <span dir="auto" className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}>
+                      {today.translated}
+                    </span>
+                    <span dir="auto" className="mt-1 block text-start text-[14px] text-muted-foreground">
+                      {today.original}
+                    </span>
+                  </button>
+                ) : undefined
+              }
             />
           </div>
         </div>
       </div>
       <div className="h-3 pad-safe-bottom" />
 
+      <LanguageSheet
+        open={dialectOpen}
+        title={t("dialect")}
+        searchable={false}
+        items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map((d) => ({
+          code: d,
+          native: t(`d_${d}`),
+          name: t(`d_${d}`),
+          rtl: true,
+        }))}
+        value={dialect}
+        onSelect={(c) => setDialect(c as Dialect)}
+        onClose={() => setDialectOpen(false)}
+      />
+      <SavedSheet open={savedOpen} entries={savedList} onClose={() => setSavedOpen(false)} onPick={pickSaved} />
       <HistorySheet
         open={historyOpen}
         entries={entries}

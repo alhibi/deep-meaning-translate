@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
+import { Bookmark, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
@@ -69,6 +69,10 @@ export const ResultPanel = memo(function ResultPanel({
   error,
   target,
   onRetry,
+  isSaved,
+  onSave,
+  suggestion,
+  idle,
 }: {
   result: TranslationResult | null;
   pending: boolean;
@@ -76,6 +80,12 @@ export const ResultPanel = memo(function ResultPanel({
   error: ErrorKind | null;
   target: string;
   onRetry: () => void;
+  isSaved?: boolean;
+  onSave?: () => void;
+  /** Quiet one-tap style suggestion from the detected situation. */
+  suggestion?: { label: string; onApply: () => void; onDismiss: () => void } | null;
+  /** Shown in place of the idle hint (e.g. phrase of the day). */
+  idle?: React.ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
   const { t } = useI18n();
@@ -204,6 +214,21 @@ export const ResultPanel = memo(function ResultPanel({
           </div>
         ) : null}
 
+        {suggestion && !provisional && !pending ? (
+          <div className="animate-fade mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <span aria-hidden className="size-1 rotate-45 bg-signal" />
+              {suggestion.label}
+            </span>
+            <button type="button" onClick={suggestion.onApply} className="press-soft font-medium text-signal-text underline decoration-signal/40 underline-offset-4">
+              {t("sit_apply")}
+            </button>
+            <button type="button" onClick={suggestion.onDismiss} className="press-soft text-faint">
+              {t("sit_dismiss")}
+            </button>
+          </div>
+        ) : null}
+
         {result.notes && result.confidence < 0.75 ? (
           <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
         ) : null}
@@ -233,6 +258,14 @@ export const ResultPanel = memo(function ResultPanel({
               strokeWidth={1.75}
             />
           </Action>
+          {onSave ? (
+            <Action label={isSaved ? t("unsave") : t("save")} onClick={() => { onSave(); tick(); }} active={isSaved}>
+              <Bookmark
+                className={`size-[18px] transition-transform duration-200 ${isSaved ? "scale-110 fill-signal text-signal" : ""}`}
+                strokeWidth={1.75}
+              />
+            </Action>
+          ) : null}
           <Action label={t("share")} onClick={share}>
             <Share2 className="size-[18px]" strokeWidth={1.75} />
           </Action>
@@ -278,7 +311,9 @@ export const ResultPanel = memo(function ResultPanel({
   } else if (pending) {
     body = <Skeleton key="pending" />;
   } else {
-    body = (
+    body = idle ? (
+      <div key="idle-extra" className="animate-fade">{idle}</div>
+    ) : (
       <p key="idle" className="animate-fade text-[15px] text-faint">
         {t("idle")}
       </p>
