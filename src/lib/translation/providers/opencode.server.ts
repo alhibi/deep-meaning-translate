@@ -92,8 +92,11 @@ async function call(
     const body = await res.text().catch(() => "");
     if (res.status === 401 || res.status === 403)
       throw new TranslationError("auth", "The translation provider rejected the credentials.");
+    if (res.status === 402)
+      throw new TranslationError("quota", "The provider account has no remaining funds.");
     if (res.status === 429)
       throw new TranslationError("rate", "The translation provider is rate limiting requests.");
+
     throw new TranslationError(
       "provider",
       `Provider responded ${res.status}${body ? `: ${body.slice(0, 200)}` : ""}`,

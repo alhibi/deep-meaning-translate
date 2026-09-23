@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { translate } from "./translate.functions";
 import type { StyleOverride, TranslationResult } from "./types";
 
-export type ErrorKind = "auth" | "rate" | "network" | "provider" | "input";
+export type ErrorKind = "auth" | "quota" | "rate" | "network" | "provider" | "input";
 
 interface State {
   result: TranslationResult | null;
