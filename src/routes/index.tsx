@@ -281,7 +281,7 @@ function Translator() {
   // The name introduces itself on its own: once 4s after arrival, then a quiet
   // 16s rhythm — but only while the page rests (nothing written, no sheet open).
   useEffect(() => {
-    if (tagline || hasText || historyOpen || localeOpen) return;
+    if (tagline || hasText || historyOpen || localeOpen || savedOpen || dialectOpen) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const delay = taglinePlayed.current ? 16000 : 4000;
     const id = setTimeout(() => {
@@ -289,7 +289,7 @@ function Translator() {
       playTagline();
     }, delay);
     return () => clearTimeout(id);
-  }, [tagline, hasText, historyOpen, localeOpen, playTagline]);
+  }, [tagline, hasText, historyOpen, localeOpen, savedOpen, dialectOpen, playTagline]);
 
   const isSaved = !!result && !!savedList && !!saved.find(text, target);
   const toggleSave = useCallback(() => {
