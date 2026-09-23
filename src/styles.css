@@ -622,6 +622,16 @@
   .intro-action {
     animation: none !important;
   }
+  .intro-screen[data-leaving] .intro-brand,
+  .intro-screen[data-leaving] .intro-icon-wrap,
+  .intro-screen[data-leaving] .intro-ring,
+  .intro-screen[data-leaving] .intro-cat,
+  .intro-screen[data-leaving] .intro-title,
+  .intro-screen[data-leaving] .intro-copy,
+  .intro-screen[data-leaving] .intro-action,
+  .intro-screen[data-leaving] .intro-bloom {
+    animation: none !important;
+  }
   .intro-screen {
     transition-duration: 1ms;
   }
