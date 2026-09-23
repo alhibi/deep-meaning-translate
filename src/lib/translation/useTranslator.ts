@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { translate } from "./translate.functions";
-import type { StyleOverride, TranslationResult } from "./types";
+import type { Dialect, StyleOverride, TranslationResult } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
 
@@ -70,9 +70,13 @@ export function useTranslator(opts: {
   source: string;
   target: string;
   style: StyleOverride;
+  dialect?: Dialect;
   onSuccess?: (result: TranslationResult, text: string, provisional: boolean) => void;
 }) {
-  const { text, source, target, style, onSuccess } = opts;
+  const { text, source, target, onSuccess } = opts;
+  const style = opts.style;
+  const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
+  const styleKey = dialect === "auto" ? style : `${style}~${dialect}`;
   const call = useServerFn(translate);
 
   const [phase, setPhase] = useState<Phase>("EMPTY");
@@ -175,7 +179,7 @@ export function useTranslator(opts: {
 
       try {
         const res = await call({
-          data: { text: norm, source, target, style, partial: prov },
+          data: { text: norm, source, target, style, dialect, partial: prov },
           signal: ctrl.signal,
         });
         if (token !== latest.current) return; // superseded — never commit
@@ -207,7 +211,7 @@ export function useTranslator(opts: {
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
       }
     },
-    [call, commit, source, target, style],
+    [call, commit, source, target, style, dialect],
   );
 
   // The scheduler: react to every change, but only spend a request when it is worthwhile.
@@ -239,14 +243,14 @@ export function useTranslator(opts: {
       return;
     }
 
-    const params = `${source}|${target}|${style}`;
+    const params = `${source}|${target}|${styleKey}`;
     const paramsChanged = params !== lastParams.current;
     lastParams.current = params;
 
     const isDeliberate = deliberate.current;
     deliberate.current = false;
     const prov = isProvisional(norm, text, isDeliberate);
-    const key = keyOf(norm, source, target, style);
+    const key = keyOf(norm, source, target, styleKey);
     current.current = { norm, key, provisional: prov };
 
     if (key === committedKey.current || key === inflight.current?.key) {
@@ -261,7 +265,7 @@ export function useTranslator(opts: {
     setPhase(delay === 0 ? "READY" : "SCHEDULED");
     const id = setTimeout(() => void run(norm, key, prov), delay);
     return () => clearTimeout(id);
-  }, [text, source, target, style, run]);
+  }, [text, source, target, styleKey, run]);
 
   const busy = phase === "TRANSLATING" || phase === "UPDATING" || phase === "RETRYING";
   useEffect(() => {

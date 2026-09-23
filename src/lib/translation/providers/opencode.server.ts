@@ -27,6 +27,8 @@ function extractText(payload: unknown): string {
   throw new TranslationError("provider", "Unrecognised provider response shape.");
 }
 
+const SITUATIONS: Situation[] = ["chat", "work", "official", "general"];
+
 function parseResult(raw: string, req: TranslationRequest): TranslationResult {
   const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   const start = cleaned.indexOf("{");
@@ -57,6 +59,7 @@ function parseResult(raw: string, req: TranslationRequest): TranslationResult {
     isAmbiguous: data["isAmbiguous"] === true,
     alternativeTranslations: alts,
     notes: typeof data["notes"] === "string" ? data["notes"].slice(0, 240) : "",
+    situation: SITUATIONS.includes(data["situation"] as Situation) ? (data["situation"] as Situation) : "general",
   };
 }
 

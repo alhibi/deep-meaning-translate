@@ -8,6 +8,7 @@ const InputSchema = z.object({
   source: z.string().regex(/^[a-z]{2}$|^auto$/),
   target: z.string().regex(/^[a-z]{2}$/),
   style: z.enum(["natural", "formal", "casual"]),
+  dialect: z.enum(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"]).optional().default("auto"),
   partial: z.boolean().optional().default(false),
 });
 
