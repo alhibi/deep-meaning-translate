@@ -273,19 +273,19 @@ function Translator() {
           {/* One masked window: the name exits upward while the tagline rises in from below — a single continuous motion. */}
           <span className="relative block h-[19px] overflow-hidden">
             {/* Invisible sizer: keeps the window as wide as the longer text so nothing clips and nothing shifts. */}
-            <span aria-hidden className="font-literary block h-0 overflow-hidden whitespace-nowrap text-[16px] italic lowercase leading-[19px]">
+            <span aria-hidden className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]">
               say it naturally.
             </span>
             <span
               aria-hidden={tagline}
-              className={`block whitespace-nowrap leading-[19px] transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`block whitespace-nowrap text-start leading-[19px] transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
                 tagline ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
               }`}
             >
               today
             </span>
             <span
-              className={`font-literary absolute inset-0 block whitespace-nowrap text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`font-literary absolute inset-0 block whitespace-nowrap text-start text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
                 tagline ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
               }`}
             >
