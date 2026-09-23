@@ -90,12 +90,14 @@ export function useTranslator(opts: {
   target: string;
   style: StyleOverride;
   dialect?: Dialect;
+  model?: ModelId;
   onSuccess?: (result: TranslationResult, text: string, provisional: boolean) => void;
 }) {
   const { text, source, target, onSuccess } = opts;
   const style = opts.style;
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
-  const styleKey = dialect === "auto" ? style : `${style}~${dialect}`;
+  const model: ModelId = opts.model ?? "gpt-5.6-luna";
+  const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${model}`;
   const callRepair = useServerFn(repairTranslation);
 
   const [phase, setPhase] = useState<Phase>("EMPTY");
@@ -233,7 +235,7 @@ export function useTranslator(opts: {
       };
 
       try {
-        const data = { text: norm, source, target, style, dialect, partial: prov };
+        const data = { text: norm, source, target, style, dialect, model, partial: prov };
         // Live typing streams plain text so words appear as they are generated;
         // a finished sentence gets the full structured, verified translation.
         const onText = (partialText: string) => {
@@ -313,7 +315,7 @@ export function useTranslator(opts: {
         if (lingering.current === ctrl) lingering.current = null;
       }
     },
-    [callRepair, commit, source, target, style, dialect],
+    [callRepair, commit, source, target, style, dialect, model],
   );
 
   // Warm the path to the translation service on the first keystroke, once per visit.
