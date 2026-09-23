@@ -60,6 +60,7 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
       }, 180);
       return () => window.clearTimeout(id);
     }
+    return undefined;
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Back button closes the sheet
