@@ -287,6 +287,12 @@ export const ResultPanel = memo(function ResultPanel({
           pending ? "opacity-100" : "opacity-0"
         }`}
       />
+      <span
+        aria-hidden
+        className={`absolute end-5 top-6 size-1.5 rounded-full bg-signal transition-opacity duration-300 ${
+          provisional && !pending && result ? "animate-breathe opacity-100" : "opacity-0"
+        }`}
+      />
       {body}
       <span className="sr-only" aria-live="polite">
         {announce}
