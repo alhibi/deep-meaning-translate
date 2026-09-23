@@ -2,8 +2,9 @@ import { buildRepairPrompt, buildSystemPrompt, buildUserPrompt } from "../prompt
 import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 
-const ENDPOINT = "https://opencode.ai/zen/v1/responses";
-const MODEL = "gpt-6-luna";
+const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
+const MODEL = "gpt-5.6-luna";
+const SESSION = `lingua-${crypto.randomUUID()}`;
 
 function extractText(payload: unknown): string {
   const p = payload as Record<string, any>;
@@ -72,6 +73,7 @@ async function call(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
+        "x-opencode-session": SESSION,
       },
       signal: signal ?? null,
       body: JSON.stringify({
@@ -108,7 +110,7 @@ async function call(
 
 export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider {
   return {
-    id: "opencode:gpt-6-luna",
+    id: "opencode:gpt-5.6-luna",
     async translate(req, signal) {
       const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal);
       return parseResult(raw, req);
