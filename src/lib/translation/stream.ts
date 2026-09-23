@@ -1,4 +1,5 @@
 import type { ErrorKind } from "./useTranslator";
+import { partialTranslation } from "./parse";
 
 export type StreamResponse = { ok: true; text: string } | { ok: false; kind: ErrorKind };
 
@@ -7,11 +8,12 @@ export async function streamTranslate(
   data: Record<string, unknown>,
   signal: AbortSignal,
   onText: (text: string) => void,
+  mode: "live" | "full" = "live",
 ): Promise<StreamResponse> {
   const res = await fetch("/api/translate-stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, mode }),
     signal,
   });
   if (!res.ok || !res.body) {
@@ -25,7 +27,8 @@ export async function streamTranslate(
     const { done, value } = await reader.read();
     if (done) break;
     text += dec.decode(value, { stream: true });
-    if (text.trim()) onText(text.trim());
+    const visible = mode === "full" ? partialTranslation(text) : text;
+    if (visible.trim()) onText(visible.trim());
   }
   text = (text + dec.decode()).trim();
   return text ? { ok: true, text } : { ok: false, kind: "provider" };
