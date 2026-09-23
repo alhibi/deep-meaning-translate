@@ -1,0 +1,12 @@
+{
+  "name": "Lingua",
+  "short_name": "Lingua",
+  "description": "Meaning-first translation.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf9f6",
+  "theme_color": "#faf9f6",
+  "orientation": "portrait",
+  "icons": [{ "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }]
+}
