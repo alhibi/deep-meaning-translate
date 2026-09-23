@@ -6,11 +6,13 @@ import type { ErrorKind } from "@/lib/translation/useTranslator";
 
 const ERROR_COPY: Record<ErrorKind, string> = {
   auth: "Translation isn't connected yet.",
+  quota: "The translation account is out of credit. Top it up and try again.",
   rate: "Too many translations at once. Give it a moment.",
   network: "The connection dropped before the translation finished.",
   provider: "Something interrupted the translation.",
   input: "That text couldn't be translated as written.",
 };
+
 
 function Action({
   label,
