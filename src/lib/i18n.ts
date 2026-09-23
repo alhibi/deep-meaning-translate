@@ -85,6 +85,11 @@ const en = {
   sit_apply: "Switch",
   sit_dismiss: "Dismiss",
   crashed: "Something went wrong here. Tap to try again.",
+  mic: "Speak",
+  micStop: "Stop listening",
+  micDenied: "Allow microphone access in your browser settings.",
+  micNoSpeech: "Didn’t catch that — try again.",
+  micListening: "Listening…",
 };
 export type Key = keyof typeof en;
 
@@ -168,6 +173,11 @@ const ar: Record<Key, string> = {
   sit_apply: "غيّر",
   sit_dismiss: "تجاهل",
   crashed: "حدث خلل هنا. اضغط للمحاولة مرة أخرى.",
+  mic: "تحدّث",
+  micStop: "إيقاف الاستماع",
+  micDenied: "اسمح باستخدام الميكروفون من إعدادات المتصفح.",
+  micNoSpeech: "لم أسمع شيئاً — حاول مرة أخرى.",
+  micListening: "أستمع…",
 };
 
 const de: Record<Key, string> = {
@@ -250,6 +260,11 @@ const de: Record<Key, string> = {
   sit_apply: "Wechseln",
   sit_dismiss: "Schließen",
   crashed: "Hier ist etwas schiefgelaufen. Tippen, um es erneut zu versuchen.",
+  mic: "Sprechen",
+  micStop: "Zuhören beenden",
+  micDenied: "Erlaube den Mikrofonzugriff in den Browser-Einstellungen.",
+  micNoSpeech: "Nichts verstanden – bitte noch einmal.",
+  micListening: "Ich höre zu…",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };

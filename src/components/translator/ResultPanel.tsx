@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { notifyCopied } from "@/lib/clipboardHint";
 import { Bookmark, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
@@ -124,6 +125,7 @@ export const ResultPanel = memo(function ResultPanel({
     const value = textRef.current;
     const done = () => {
       setCopied(true);
+      notifyCopied();
       tick();
     };
     const fallback = () => {
