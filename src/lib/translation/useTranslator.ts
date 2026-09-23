@@ -212,22 +212,31 @@ export function useTranslator(opts: {
           setResult((r) => liveResult(r, partialText, source, target));
           setProvisional(true);
         };
-        const res: { ok: true; result: TranslationResult; needsRepair: boolean } | { ok: false; kind: ErrorKind } =
-          prov
-            ? await streamTranslate(data, ctrl.signal, onText, "live").then((r) =>
-                r.ok
-                  ? { ok: true as const, result: liveResult(resultRef.current, r.text, source, target), needsRepair: false }
-                  : r,
-              )
-            : await streamTranslate(data, ctrl.signal, onText, "full").then((r) => {
-                if (!r.ok) return r;
-                try {
-                  const parsed = parseResult(r.text, data);
-                  return { ok: true as const, result: parsed, needsRepair: verifyTranslation(data, parsed).length > 0 };
-                } catch {
-                  return { ok: false as const, kind: "provider" as const };
-                }
-              });
+        const res:
+          | { ok: true; result: TranslationResult; needsRepair: boolean }
+          | { ok: false; kind: ErrorKind } = prov
+          ? await streamTranslate(data, ctrl.signal, onText, "live").then((r) =>
+              r.ok
+                ? {
+                    ok: true as const,
+                    result: liveResult(resultRef.current, r.text, source, target),
+                    needsRepair: false,
+                  }
+                : r,
+            )
+          : await streamTranslate(data, ctrl.signal, onText, "full").then((r) => {
+              if (!r.ok) return r;
+              try {
+                const parsed = parseResult(r.text, data);
+                return {
+                  ok: true as const,
+                  result: parsed,
+                  needsRepair: verifyTranslation(data, parsed).length > 0,
+                };
+              } catch {
+                return { ok: false as const, kind: "provider" as const };
+              }
+            });
         if (token !== latest.current) return; // superseded — never commit
         metrics.latency(performance.now() - started);
         if (res.ok) {

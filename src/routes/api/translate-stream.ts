@@ -3,7 +3,9 @@ import { InputSchema } from "@/lib/translation/translate.functions";
 import { takeToken } from "@/lib/translation/throttle";
 import { z } from "zod";
 
-const StreamInput = InputSchema.extend({ mode: z.enum(["live", "full"]).optional().default("live") });
+const StreamInput = InputSchema.extend({
+  mode: z.enum(["live", "full"]).optional().default("live"),
+});
 
 /** Live translation while typing: plain-text stream so words appear as they are generated. */
 export const Route = createFileRoute("/api/translate-stream")({

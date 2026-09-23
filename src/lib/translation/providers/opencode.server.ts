@@ -5,11 +5,7 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
 } from "../prompt";
-import type {
-  TranslationProvider,
-  TranslationRequest,
-  TranslationResult,
-} from "../types";
+import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 

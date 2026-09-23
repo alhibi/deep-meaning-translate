@@ -27,8 +27,10 @@ export function parseResult(raw: string, req: TranslationRequest): TranslationRe
         .slice(0, 2)
     : [];
   return {
-    sourceLanguage: typeof data["sourceLanguage"] === "string" ? data["sourceLanguage"] : req.source,
-    targetLanguage: typeof data["targetLanguage"] === "string" ? data["targetLanguage"] : req.target,
+    sourceLanguage:
+      typeof data["sourceLanguage"] === "string" ? data["sourceLanguage"] : req.source,
+    targetLanguage:
+      typeof data["targetLanguage"] === "string" ? data["targetLanguage"] : req.target,
     translation,
     tone: typeof data["tone"] === "string" ? data["tone"] : "",
     formality: typeof data["formality"] === "string" ? data["formality"] : "",
@@ -42,7 +44,16 @@ export function parseResult(raw: string, req: TranslationRequest): TranslationRe
   };
 }
 
-const ESC: Record<string, string> = { n: "\n", t: "\t", r: "", '"': '"', "\\": "\\", "/": "/", b: "", f: "" };
+const ESC: Record<string, string> = {
+  n: "\n",
+  t: "\t",
+  r: "",
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "",
+  f: "",
+};
 
 /**
  * Reads the "translation" string out of a JSON reply that is still arriving,
