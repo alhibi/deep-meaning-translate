@@ -23,7 +23,7 @@ function takeToken(): boolean {
 
 export type TranslateResponse =
   | { ok: true; result: import("./types").TranslationResult }
-  | { ok: false; kind: "auth" | "rate" | "network" | "provider" | "input" };
+  | { ok: false; kind: "auth" | "quota" | "rate" | "network" | "provider" | "input" };
 
 export const translate = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
@@ -35,8 +35,9 @@ export const translate = createServerFn({ method: "POST" })
       const result = await runTranslation(data);
       return { ok: true, result };
     } catch (err) {
-      if (err instanceof TranslationError) return { ok: false, kind: err.kind };
       console.error("translation failed", err);
+      if (err instanceof TranslationError) return { ok: false, kind: err.kind };
       return { ok: false, kind: "provider" };
     }
+
   });
