@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDownToLine, Clock3, X } from "lucide-react";
+import { ArrowDownToLine, ClipboardPaste, Clock3, X } from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { LanguageBar } from "@/components/translator/LanguageBar";
@@ -11,6 +11,7 @@ import { useTranslator } from "@/lib/translation/useTranslator";
 import type { StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import { history, type HistoryEntry } from "@/lib/history";
+import { persist } from "@/lib/persist";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,13 +47,9 @@ function Translator() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { canInstall, install } = useInstallPrompt();
 
-  useEffect(() => {
-    setEntries(history.list());
-    initServiceWorker();
-  }, []);
-
   const handleSuccess = useCallback(
-    (result: TranslationResult, original: string) => {
+    (result: TranslationResult, original: string, provisional: boolean) => {
+      if (provisional) return; // only settled thoughts become history
       if (lang2(result.sourceLanguage) === lang2(target)) return; // about to re-route
       setEntries(
         history.add({
@@ -66,13 +63,65 @@ function Translator() {
     [source, target],
   );
 
-  const { result: raw, pending: rawPending, error, retry } = useTranslator({
+  const {
+    result: raw,
+    pending: rawPending,
+    provisional,
+    error,
+    retry,
+    submitNext,
+    prime,
+  } = useTranslator({
     text,
     source,
     target,
     style,
     onSuccess: handleSuccess,
   });
+
+  // Boot: restore the device-local session, or open around text shared into the app.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    setEntries(history.list());
+    initServiceWorker();
+    const prefs = persist.prefs();
+    if (prefs) {
+      setSource(prefs.source);
+      setTarget(prefs.target);
+      setStyle(prefs.style);
+    }
+    const params = new URLSearchParams(window.location.search);
+    const shared = [params.get("title"), params.get("text"), params.get("url")]
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+    if (shared) {
+      window.history.replaceState(null, "", "/");
+      submitNext();
+      setText(shared.slice(0, MAX_CHARS));
+    } else {
+      const session = persist.session();
+      if (session?.text) {
+        if (session.result) prime(session.text, session.source, session.target, session.style, session.result);
+        submitNext();
+        setText(session.text);
+      }
+    }
+    setRestored(true);
+  }, [submitNext, prime]);
+
+  useEffect(() => {
+    if (restored) persist.savePrefs({ source, target, style });
+  }, [restored, source, target, style]);
+
+  useEffect(() => {
+    if (!restored) return;
+    const id = setTimeout(
+      () => persist.saveSession({ text, result: provisional ? null : raw, source, target, style }),
+      400,
+    );
+    return () => clearTimeout(id);
+  }, [restored, text, raw, provisional, source, target, style]);
 
   const detected = raw?.sourceLanguage;
   // Same-language result (auto-detect hit the target): hold it back while we re-route.
@@ -95,8 +144,11 @@ function Translator() {
     const nextTarget = source === "auto" ? (detected ?? "en") : source;
     setSource(nextSource);
     setTarget(nextTarget === nextSource ? (nextSource === "de" ? "ar" : "de") : nextTarget);
-    if (result?.translation) setText(result.translation);
-  }, [source, target, detected, result]);
+    if (result?.translation) {
+      submitNext();
+      setText(result.translation);
+    }
+  }, [source, target, detected, result, submitNext]);
 
   // Fallback autosize only for browsers without CSS field-sizing.
   useLayoutEffectSafe(() => {
@@ -110,20 +162,53 @@ function Translator() {
     setText(e.target.value.slice(0, MAX_CHARS));
   }, []);
 
+  // A paste is a deliberate submission: translate the whole thing right away.
+  const onPaste = useCallback(() => submitNext(), [submitNext]);
+  const canReadClipboard = restored && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
+  const pasteClipboard = useCallback(async () => {
+    try {
+      const value = (await navigator.clipboard.readText()).trim();
+      if (!value) return;
+      submitNext();
+      setText(value.slice(0, MAX_CHARS));
+    } catch {
+      inputRef.current?.focus(); // permission declined — let the user paste normally
+    }
+  }, [submitNext]);
+
   const clear = useCallback(() => {
     setText("");
     inputRef.current?.focus();
   }, []);
 
-  const openHistory = useCallback(() => setHistoryOpen(true), []);
-  const closeHistory = useCallback(() => setHistoryOpen(false), []);
+  // Android back closes the sheet instead of leaving the app; the translator stays home.
+  const openHistory = useCallback(() => {
+    window.history.pushState({ sheet: "history" }, "");
+    setHistoryOpen(true);
+  }, []);
+  const closeHistory = useCallback(() => {
+    if (window.history.state?.sheet === "history") window.history.back();
+    else setHistoryOpen(false);
+  }, []);
+  useEffect(() => {
+    const onPop = () => setHistoryOpen(false);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const forgetAll = useCallback(() => {
+    persist.clearAll();
+    setEntries([]);
+    setText("");
+    closeHistory();
+  }, [closeHistory]);
   const clearHistory = useCallback(() => setEntries(history.clear()), []);
   const pickHistory = useCallback((e: HistoryEntry) => {
     setText(e.original);
     setSource(e.source);
     setTarget(e.target);
-    setHistoryOpen(false);
-  }, []);
+    submitNext();
+    closeHistory();
+  }, [submitNext, closeHistory]);
 
   const rtlInput = text.trim() ? startsRtl(text) : isRtl(source === "auto" ? "" : source);
   const hasText = text.length > 0;
@@ -168,6 +253,7 @@ function Translator() {
           ref={inputRef}
           value={text}
           onChange={onInput}
+          onPaste={onPaste}
           dir={rtlInput ? "rtl" : "ltr"}
           rows={3}
           autoCapitalize="sentences"
@@ -193,6 +279,16 @@ function Translator() {
         </button>
         <div className="mt-2 flex h-9 items-center justify-between">
           <StyleToggle value={style} onChange={setStyle} />
+          {!hasText && canReadClipboard ? (
+            <button
+              type="button"
+              onClick={() => void pasteClipboard()}
+              className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-[12px] text-muted-foreground"
+            >
+              <ClipboardPaste className="size-3.5" strokeWidth={1.75} />
+              Translate copied text
+            </button>
+          ) : null}
           <span
             className={`text-[11px] tabular-nums text-muted-foreground transition-opacity duration-300 ${
               text.length > MAX_CHARS * 0.7 ? "opacity-100" : "opacity-0"
@@ -207,6 +303,7 @@ function Translator() {
         <ResultPanel
           result={result}
           pending={pending}
+          provisional={provisional}
           error={error}
           target={target}
           onRetry={retry}
@@ -221,6 +318,7 @@ function Translator() {
         onClose={closeHistory}
         onPick={pickHistory}
         onClear={clearHistory}
+        onForgetAll={forgetAll}
       />
     </main>
   );
