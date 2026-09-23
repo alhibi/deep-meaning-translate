@@ -23,7 +23,7 @@ async def overlaps_text(page, dialog):
 async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await (await browser.new_context(viewport={"width": 390, "height": 844})).new_page()
+        page = await (await browser.new_context(viewport={"width": 390, "height": 844}, service_workers="block")).new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", headers={"x-tss-serialized": "true"}, body=FAKE))
         await page.goto(URL)
@@ -48,8 +48,11 @@ async def main():
         # 2. Swapping languages keeps text and writing-box direction.
         swap = page.locator("button.animate-exchange, button[aria-label*='swap' i], button[aria-label*='تبديل'], button[aria-label*='tausch' i]").first
         if await swap.count():
+            source_before = await page.locator(".text-stream-window").first.inner_text()
             dir_before = await box.evaluate("e => getComputedStyle(e).direction")
             await swap.click(); await page.wait_for_timeout(600)
+            source_after = await page.locator(".text-stream-window").first.inner_text()
+            check(source_after != source_before, "language names stream when swapped")
             check(await box.input_value() != "", "text kept after swap")
             # Swap moves the translation into the box; the box follows the text's own script, not the language pair.
             val = await box.input_value()
