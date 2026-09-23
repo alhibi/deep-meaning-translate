@@ -4,7 +4,7 @@ import { TranslationError } from "../types";
 
 const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
 const MODEL = "gpt-5.6-luna";
-const SESSION = `lingua-${crypto.randomUUID()}`;
+const SESSION = "lingua-translator";
 
 function extractText(payload: unknown): string {
   const p = payload as Record<string, any>;
