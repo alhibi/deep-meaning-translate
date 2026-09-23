@@ -5,6 +5,7 @@ const MAX_FILE = 13 * 1024 * 1024; // Gemini caps audio at 14 MB; keep headroom
 const LANG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 
 export const Route = createFileRoute("/api/transcribe")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {
