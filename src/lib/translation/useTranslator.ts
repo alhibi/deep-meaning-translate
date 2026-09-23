@@ -151,7 +151,6 @@ export function useTranslator(opts: {
   const commit = useCallback(
     (key: string, value: TranslationResult, prov: boolean, norm: string) => {
       committedKey.current = key;
-      shown.current = latest.current;
       shownLen.current = value.translation.length;
       setResult(value);
       setProvisional(prov);
@@ -277,6 +276,7 @@ export function useTranslator(opts: {
           cache.current.set(key, { result: res.result, at: Date.now(), provisional: prov });
           if (cache.current.size > CACHE_LIMIT)
             cache.current.delete(cache.current.keys().next().value as string);
+          shown.current = token;
           commit(key, res.result, prov, norm);
           if (res.needsRepair) {
             // Shown already; improve it quietly and swap only if still on screen.
