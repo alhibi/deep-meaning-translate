@@ -150,6 +150,7 @@ html.theme-fade *::after {
   view-transition-name: heat-shimmer;
 }
 ::view-transition-group(heat-shimmer) {
+  animation: none;
   z-index: 100;
   overflow: visible;
 }
