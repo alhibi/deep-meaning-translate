@@ -17,7 +17,7 @@ const m = {
 function pct(values: number[], p: number) {
   if (!values.length) return 0;
   const s = [...values].sort((a, b) => a - b);
-  return Math.round(s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))]);
+  return Math.round(s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))] ?? 0);
 }
 
 export const metrics = {
