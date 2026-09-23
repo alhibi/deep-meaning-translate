@@ -25,7 +25,7 @@ async def main():
         browser = await p.chromium.launch(headless=True)
         page = await (await browser.new_context(viewport={"width": 390, "height": 844})).new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
-        await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", body=FAKE))
+        await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", headers={"x-tss-serialized": "true"}, body=FAKE))
         await page.goto(URL); await page.wait_for_timeout(1500)
         box = page.locator("textarea").first
         dir_before = await box.evaluate("e => getComputedStyle(e).direction")
