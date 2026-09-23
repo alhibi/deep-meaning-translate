@@ -5,12 +5,12 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
 } from "../prompt";
-import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
+import type { ModelId, TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 
-const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
-const MODEL = "gpt-5.6-luna";
+const BASE = "https://opencode.ai/zen/go/v1";
+const DEFAULT_MODEL: ModelId = "gpt-5.6-luna";
 const SESSION = "lingua-translator";
 
 function extractText(payload: unknown): string {
@@ -41,19 +41,22 @@ async function send(
   user: string,
   signal: AbortSignal | undefined,
   stream: boolean,
+  model: ModelId = DEFAULT_MODEL,
 ): Promise<Response> {
-  let res: Response;
-  try {
-    res = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "x-opencode-session": SESSION,
-      },
-      signal: signal ?? null,
-      body: JSON.stringify({
-        model: MODEL,
+  // GPT models run on the Responses endpoint; GLM only on Chat Completions (thinking off).
+  const chat = model.startsWith("glm");
+  const body = chat
+    ? {
+        model,
+        stream,
+        thinking: { type: "disabled" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }
+    : {
+        model,
         stream,
         // Speed: no hidden thinking, terse output, reuse the cached system prompt.
         reasoning: { effort: "none" },
@@ -64,7 +67,18 @@ async function send(
           { role: "system", content: system },
           { role: "user", content: user },
         ],
-      }),
+      };
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/${chat ? "chat/completions" : "responses"}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "x-opencode-session": SESSION,
+      },
+      signal: signal ?? null,
+      body: JSON.stringify(body),
     });
   } catch (err) {
     if ((err as Error)?.name === "AbortError") throw err;
@@ -94,8 +108,9 @@ async function call(
   system: string,
   user: string,
   signal: AbortSignal | undefined,
+  model?: ModelId,
 ): Promise<string> {
-  const res = await send(apiKey, system, user, signal, false);
+  const res = await send(apiKey, system, user, signal, false, model);
   return extractText(await res.json());
 }
 
@@ -140,16 +155,16 @@ export async function streamLiveTranslation(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true);
+  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true, req.model);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }
 
 export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider {
   return {
-    id: "opencode:gpt-5.6-luna",
+    id: "opencode",
     async translate(req, signal) {
-      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal);
+      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, req.model);
       return parseResult(raw, req);
     },
     async repair(req, previous, issues, signal) {
@@ -158,6 +173,7 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
         buildSystemPrompt(),
         buildRepairPrompt(req, previous, issues),
         signal,
+        req.model,
       );
       return parseResult(raw, req);
     },
@@ -170,7 +186,7 @@ export async function streamFullTranslation(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true);
+  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true, req.model);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }
