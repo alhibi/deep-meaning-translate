@@ -40,6 +40,7 @@ async def main():
         # 2. Swapping languages keeps text and writing-box direction.
         swap = page.locator("button.animate-exchange, button[aria-label*='swap' i], button[aria-label*='تبديل'], button[aria-label*='tausch' i]").first
         if await swap.count():
+            dir_before = await box.evaluate("e => getComputedStyle(e).direction")
             await swap.click(); await page.wait_for_timeout(600)
             check(await box.input_value() != "", "text kept after swap")
             check(await box.evaluate("e => getComputedStyle(e).direction") == dir_before, "box direction unchanged by swap")
