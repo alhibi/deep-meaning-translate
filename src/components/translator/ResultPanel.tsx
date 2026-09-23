@@ -208,22 +208,28 @@ export const ResultPanel = memo(function ResultPanel({
           <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
         ) : null}
 
-        <div className="animate-reveal-late -ms-3 mt-3 flex items-center">
-          <Action label={copied ? t("copied") : t("copy")} onClick={copy}>
-            <Copy
-              className={`swap-icon size-[18px] text-signal ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
-              strokeWidth={1.75}
-            />
-            <Check
-              className={`swap-icon absolute size-[18px] text-success ${
-                copied ? "opacity-100" : "scale-75 opacity-0"
-              }`}
-              strokeWidth={2}
-            />
-          </Action>
+        <div
+          className={`-ms-0.5 mt-5 flex items-center transition-[opacity,transform] duration-300 ${
+            provisional || pending ? "pointer-events-none translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={copy}
+            aria-label={copied ? t("copied") : t("copy")}
+            className={`press me-2 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
+              copied ? "bg-card text-success" : "bg-signal text-signal-foreground"
+            }`}
+          >
+            <span className="relative grid size-4 place-items-center">
+              <Copy className={`swap-icon size-4 ${copied ? "scale-75 opacity-0" : "opacity-100"}`} strokeWidth={1.8} />
+              <Check className={`swap-icon absolute size-4 ${copied ? "opacity-100" : "scale-75 opacity-0"}`} strokeWidth={2.2} />
+            </span>
+            {copied ? t("copied") : t("copyShort")}
+          </button>
           <Action label={speaking ? t("stop") : t("listen")} onClick={speak} active={speaking}>
             <Volume2
-              className={`size-[18px] ${speaking ? "animate-breathe text-signal" : ""}`}
+              className={`size-[18px] ${speaking ? "animate-breathe text-signal-text" : ""}`}
               strokeWidth={1.75}
             />
           </Action>
@@ -236,7 +242,7 @@ export const ResultPanel = memo(function ResultPanel({
               copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
-            {copied ? t("copied") : ""}
+            {noVoice ? "" : ""}
           </span>
           {error ? (
             <button
@@ -281,18 +287,6 @@ export const ResultPanel = memo(function ResultPanel({
 
   return (
     <div className="relative min-h-[200px] px-5 pb-5 pt-5" aria-busy={pending}>
-      <div
-        aria-hidden
-        className={`progress-line absolute inset-x-0 top-0 transition-opacity duration-300 ${
-          pending ? "opacity-100" : "opacity-0"
-        }`}
-      />
-      <span
-        aria-hidden
-        className={`absolute end-5 top-6 size-1.5 rounded-full bg-signal transition-opacity duration-300 ${
-          provisional && !pending && result ? "animate-breathe opacity-100" : "opacity-0"
-        }`}
-      />
       {body}
       <span className="sr-only" aria-live="polite">
         {announce}
