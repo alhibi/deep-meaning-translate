@@ -261,28 +261,35 @@ function Translator() {
           type="button"
           onClick={toggleTagline}
           aria-expanded={tagline}
-          className="press-soft -ms-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
+          className="press-soft -ms-2 inline-flex items-center gap-2 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
         >
+          {/* Signature mark: a small clay diamond, distinct from the type. */}
           <span
             aria-hidden
-            className={`size-1.5 shrink-0 rounded-full bg-signal transition-opacity duration-500 ${tagline ? "opacity-0" : "opacity-100"}`}
-          />
-          {/* The name and the tagline occupy the same spot: one crossfades out with a soft blur, the other resolves in. */}
-          <span className="relative grid items-center">
+            className={`grid size-2 shrink-0 place-items-center transition-opacity duration-500 ${tagline ? "opacity-0" : "opacity-100"}`}
+          >
+            <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
+          </span>
+          {/* One masked window: the name exits upward while the tagline rises in from below — a single continuous motion. */}
+          <span className="relative block h-[19px] overflow-hidden">
+            {/* Invisible sizer: keeps the window as wide as the longer text so nothing clips and nothing shifts. */}
+            <span aria-hidden className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]">
+              say it naturally.
+            </span>
             <span
               aria-hidden={tagline}
-              className={`col-start-1 row-start-1 leading-none transition-[opacity,filter,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                tagline ? "scale-[0.97] opacity-0 blur-[3px]" : "scale-100 opacity-100 blur-0"
+              className={`block whitespace-nowrap text-start leading-[19px] transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                tagline ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
               }`}
             >
               today
             </span>
             <span
-              className={`font-literary col-start-1 row-start-1 whitespace-nowrap text-[17px] font-normal italic leading-none text-muted-foreground transition-[opacity,filter,transform,letter-spacing] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                tagline ? "scale-100 opacity-100 blur-0 tracking-normal" : "scale-[1.03] opacity-0 blur-[3px] tracking-[0.02em]"
+              className={`font-literary absolute inset-0 block whitespace-nowrap text-start text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                tagline ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
               }`}
             >
-              Say it naturally.
+              say it naturally.
             </span>
           </span>
         </button>
