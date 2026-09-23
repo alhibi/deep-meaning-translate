@@ -68,6 +68,8 @@ function Translator() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
+  const [model, setModel] = useState<ModelId>("gpt-5.6-luna");
+  const [modelOpen, setModelOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
@@ -108,6 +110,7 @@ function Translator() {
     target,
     style,
     dialect,
+    model,
     onSuccess: handleSuccess,
   });
 
@@ -123,6 +126,7 @@ function Translator() {
       setTarget(prefs.target);
       setStyle(prefs.style);
       if (prefs.dialect) setDialect(prefs.dialect);
+      if (prefs.model && MODELS.includes(prefs.model)) setModel(prefs.model);
     }
     const params = new URLSearchParams(window.location.search);
     const shared = [params.get("title"), params.get("text"), params.get("url")]
@@ -148,8 +152,8 @@ function Translator() {
   }, [submitNext, prime]);
 
   useEffect(() => {
-    if (restored) persist.savePrefs({ source, target, style, dialect });
-  }, [restored, source, target, style, dialect]);
+    if (restored) persist.savePrefs({ source, target, style, dialect, model });
+  }, [restored, source, target, style, dialect, model]);
 
   useEffect(() => {
     if (!restored) return;
@@ -336,7 +340,7 @@ function Translator() {
   // The name introduces itself on its own: once 4s after arrival, then a quiet
   // 16s rhythm — but only while the page rests (nothing written, no sheet open).
   useEffect(() => {
-    if (tagline || hasText || historyOpen || localeOpen || savedOpen || dialectOpen) return;
+    if (tagline || hasText || historyOpen || localeOpen || savedOpen || dialectOpen || modelOpen) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const delay = taglinePlayed.current ? 16000 : 4000;
     const id = setTimeout(() => {
@@ -344,7 +348,7 @@ function Translator() {
       playTagline();
     }, delay);
     return () => clearTimeout(id);
-  }, [tagline, hasText, historyOpen, localeOpen, savedOpen, dialectOpen, playTagline]);
+  }, [tagline, hasText, historyOpen, localeOpen, savedOpen, dialectOpen, modelOpen, playTagline]);
 
   const isSaved = !!result && !!savedList && !!saved.find(text, target);
   const toggleSave = useCallback(() => {
@@ -654,6 +658,16 @@ function Translator() {
                     <ChevronDown className="size-3.5 text-faint" strokeWidth={1.75} />
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => setModelOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-label={t("model")}
+                  className="press-soft ms-1 inline-flex h-9 items-center gap-1 border-s border-border ps-3 text-[12px] text-muted-foreground hover:text-foreground"
+                >
+                  {MODEL_LABEL[model]}
+                  <ChevronDown className="size-3.5 text-faint" strokeWidth={1.75} />
+                </button>
               </div>
               <span
                 className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
@@ -737,6 +751,19 @@ function Translator() {
             value={dialect}
             onSelect={selectDialect}
             onClose={closeDialect}
+          />
+          <LanguageSheet
+            open={modelOpen}
+            title={t("model")}
+            searchable={false}
+            plain
+            items={MODELS.map((m) => ({ code: m, native: MODEL_LABEL[m], name: m, rtl: false }))}
+            value={model}
+            onSelect={(m) => {
+              setModel(m as ModelId);
+              setModelOpen(false);
+            }}
+            onClose={() => setModelOpen(false)}
           />
           <SavedSheet
             open={savedOpen}
