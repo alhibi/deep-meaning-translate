@@ -139,7 +139,7 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
         >
           <span className="flex min-w-0 flex-1 flex-col">
             <span
-              style={{ unicodeBidi: "isolate" }}
+              style={{ textAlign: rtl ? "right" : "left" }}
               className={`truncate ${active ? "text-foreground" : "text-foreground/90"} ${
                 it.rtl ? "font-arabic text-[19px] leading-[1.35]" : "text-[17px] leading-[1.35] tracking-[-0.01em]"
               } ${active ? "font-semibold" : "font-medium"}`}
