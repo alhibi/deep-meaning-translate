@@ -1,4 +1,10 @@
-import { buildRepairPrompt, buildSystemPrompt, buildUserPrompt } from "../prompt";
+import {
+  buildLiveSystemPrompt,
+  buildLiveUserPrompt,
+  buildRepairPrompt,
+  buildSystemPrompt,
+  buildUserPrompt,
+} from "../prompt";
 import type {
   Situation,
   TranslationProvider,
@@ -75,12 +81,13 @@ function parseResult(raw: string, req: TranslationRequest): TranslationResult {
   };
 }
 
-async function call(
+async function send(
   apiKey: string,
   system: string,
   user: string,
   signal: AbortSignal | undefined,
-): Promise<string> {
+  stream: boolean,
+): Promise<Response> {
   let res: Response;
   try {
     res = await fetch(ENDPOINT, {
@@ -93,7 +100,7 @@ async function call(
       signal: signal ?? null,
       body: JSON.stringify({
         model: MODEL,
-        stream: false,
+        stream,
         // Speed: no hidden thinking, terse output, reuse the cached system prompt.
         reasoning: { effort: "none" },
         text: { verbosity: "low" },
@@ -125,7 +132,63 @@ async function call(
     );
   }
 
+  return res;
+}
+
+async function call(
+  apiKey: string,
+  system: string,
+  user: string,
+  signal: AbortSignal | undefined,
+): Promise<string> {
+  const res = await send(apiKey, system, user, signal, false);
   return extractText(await res.json());
+}
+
+/** Reads the provider's SSE stream and yields only the answer-text deltas. */
+export async function* textDeltas(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) !== -1) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const evt = JSON.parse(data);
+          if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string")
+            yield evt.delta;
+          else if (typeof evt?.choices?.[0]?.delta?.content === "string")
+            yield evt.choices[0].delta.content;
+          else if (evt?.type === "response.failed" || evt?.type === "error")
+            throw new TranslationError("provider", "The provider stream failed.");
+        } catch (err) {
+          if (err instanceof TranslationError) throw err;
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Live (still-typing) translation as a plain-text stream. */
+export async function streamLiveTranslation(
+  apiKey: string,
+  req: TranslationRequest,
+  signal?: AbortSignal,
+): Promise<AsyncGenerator<string>> {
+  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true);
+  if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
+  return textDeltas(res.body);
 }
 
 export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider {

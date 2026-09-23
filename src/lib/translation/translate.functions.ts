@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { takeToken } from "./throttle";
+
 const MAX_CHARS = 5000;
 
-const InputSchema = z.object({
+export const InputSchema = z.object({
   text: z.string().trim().min(1).max(MAX_CHARS),
   source: z.string().regex(/^[a-z]{2}$|^auto$/),
   target: z.string().regex(/^[a-z]{2}$/),
@@ -14,17 +16,6 @@ const InputSchema = z.object({
     .default("auto"),
   partial: z.boolean().optional().default(false),
 });
-
-/** Coarse in-process throttle; keeps a runaway client from hammering the provider. */
-const bucket = { tokens: 30, updated: Date.now() };
-function takeToken(): boolean {
-  const now = Date.now();
-  bucket.tokens = Math.min(30, bucket.tokens + ((now - bucket.updated) / 1000) * 0.8);
-  bucket.updated = now;
-  if (bucket.tokens < 1) return false;
-  bucket.tokens -= 1;
-  return true;
-}
 
 export type TranslateResponse =
   | { ok: true; result: import("./types").TranslationResult }
