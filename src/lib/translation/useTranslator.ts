@@ -120,6 +120,8 @@ export function useTranslator(opts: {
   const lingering = useRef<AbortController | null>(null);
   /** Request token of the text currently on screen; older streams never overwrite it. */
   const shown = useRef(0);
+  /** Length of the text on screen: a newer stream takes over only once it catches up (no shrinking flicker). */
+  const shownLen = useRef(0);
   const dropLingering = () => {
     lingering.current?.abort();
     lingering.current = null;
@@ -150,6 +152,7 @@ export function useTranslator(opts: {
     (key: string, value: TranslationResult, prov: boolean, norm: string) => {
       committedKey.current = key;
       shown.current = latest.current;
+      shownLen.current = value.translation.length;
       setResult(value);
       setProvisional(prov);
       setError(null);
@@ -236,7 +239,9 @@ export function useTranslator(opts: {
         // a finished sentence gets the full structured, verified translation.
         const onText = (partialText: string) => {
           if (token < shown.current || ctrl.signal.aborted) return;
+          if (token > shown.current && partialText.length < shownLen.current) return;
           shown.current = token;
+          shownLen.current = partialText.length;
           setStreaming(true);
           setResult((r) => liveResult(r, partialText, source, target));
           setProvisional(true);
@@ -332,6 +337,7 @@ export function useTranslator(opts: {
     const norm = normalize(text);
     if (!norm) {
       shown.current = ++latest.current;
+      shownLen.current = 0;
       dropLingering();
       clearRetry();
       inflight.current?.ctrl.abort();
