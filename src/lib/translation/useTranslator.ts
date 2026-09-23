@@ -267,6 +267,20 @@ export function useTranslator(opts: {
     return () => clearTimeout(id);
   }, [text, source, target, styleKey, run]);
 
+  // A live result for text without final punctuation settles once the writer pauses,
+  // so Copy/Listen/Save appear instead of waiting for a period that may never come.
+  useEffect(() => {
+    if (!provisional || phase !== "COMPLETE" || !result) return;
+    const id = setTimeout(() => {
+      if (committedKey.current !== current.current.key) return;
+      const c = cache.current.get(committedKey.current);
+      if (c) c.provisional = false;
+      setProvisional(false);
+      successRef.current?.(result, current.current.norm, false);
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [provisional, phase, result, text]);
+
   const busy = phase === "TRANSLATING" || phase === "UPDATING" || phase === "RETRYING";
   useEffect(() => {
     if (!busy) {
