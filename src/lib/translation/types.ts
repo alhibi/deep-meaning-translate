@@ -6,6 +6,8 @@ export interface TranslationRequest {
   source: string;
   target: string;
   style: StyleOverride;
+  /** Text still being typed: translate provisionally, skip the repair pass. */
+  partial?: boolean;
 }
 
 export interface TranslationResult {

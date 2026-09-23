@@ -32,8 +32,16 @@ function write(entries: HistoryEntry[]) {
 export const history = {
   list: read,
   add(entry: Omit<HistoryEntry, "id" | "createdAt">): HistoryEntry[] {
+    const now = Date.now();
+    // One entry per thought: a sentence that grew while typing replaces its earlier versions.
     const existing = read().filter(
-      (e) => !(e.original === entry.original && e.target === entry.target),
+      (e) =>
+        !(
+          e.target === entry.target &&
+          (e.original === entry.original ||
+            (now - e.createdAt < 3 * 60_000 &&
+              (entry.original.startsWith(e.original) || e.original.startsWith(entry.original))))
+        ),
     );
     const next = [
       { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, createdAt: Date.now() },
