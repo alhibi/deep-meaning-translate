@@ -269,6 +269,18 @@ function Translator() {
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
   const rtlInput = text.trim() ? startsRtl(text) : uiRtl;
   const hasText = text.length > 0;
+  // The name introduces itself on its own: once 4s after arrival, then a quiet
+  // 16s rhythm — but only while the page rests (nothing written, no sheet open).
+  useEffect(() => {
+    if (tagline || hasText || historyOpen || localeOpen) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const delay = taglinePlayed.current ? 16000 : 4000;
+    const id = setTimeout(() => {
+      taglinePlayed.current = true;
+      playTagline();
+    }, delay);
+    return () => clearTimeout(id);
+  }, [tagline, hasText, historyOpen, localeOpen, playTagline]);
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
