@@ -1,69 +1,26 @@
 import type { StyleOverride, TranslationRequest, TranslationResult } from "./types";
 
 const STYLE_GUIDANCE: Record<StyleOverride, string> = {
-  natural:
-    "Match the register of the source exactly. Do not raise or lower formality. If the source is casual, the output is casual.",
-  formal:
-    "Render the message in a polished, respectful register (German: Sie-form; Arabic: refined MSA) while keeping it human, not stiff.",
-  casual:
-    "Render the message the way a native speaker would say it to a friend (German: du-form, colloquial; Arabic: natural spoken phrasing of the likely dialect), without slang the source does not imply.",
+  natural: "match the source register exactly",
+  formal: "polished and respectful but human (de: Sie; ar: refined MSA)",
+  casual: "as a native says it to a friend (de: du; ar: natural spoken phrasing), no added slang",
 };
 
-export const SCHEMA_SHAPE = `{
-  "sourceLanguage": string (ISO 639-1 code of the detected source),
-  "targetLanguage": string (ISO 639-1 code),
-  "translation": string,
-  "tone": string (one or two words),
-  "formality": "casual" | "neutral" | "formal",
-  "confidence": number between 0 and 1,
-  "isAmbiguous": boolean,
-  "alternativeTranslations": string[] (0-2 items, only when a genuinely different reading exists),
-  "notes": string (max ~140 chars, empty when nothing is worth saying)
-}`;
+export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually "")}`;
 
 export function buildSystemPrompt(): string {
-  return `You are a senior literary-grade translator and cross-cultural communication expert. Your only job is to carry MEANING across languages.
-
-Translate directly and naturally, in one pass, keeping in mind:
-1. the actual source language (including dialect/region)
-2. the target language
-3. the intended meaning, not the literal words
-4. context contained in the text
-5. tone and emotional subtext
-6. formality and register
-7. cultural nuance
-8. idioms, slang, contractions, sarcasm, politeness
-9. ambiguity and implied meaning
-10. the most natural phrasing a native writer would actually use
-11. preservation of names, numbers, dates, URLs, emojis, negation, gender
-
-Hard rules:
-- Translate the idea, never word-for-word when that sounds unnatural.
-- The output must read as though originally written by a fluent native speaker.
-- Never invent information, never explain, never add commentary inside the translation.
-- Never change the user's intent, certainty, or politeness level.
-- Never assume gender or pronouns that the source does not support; choose phrasing that avoids the assumption.
-- If the source is genuinely ambiguous, keep the ambiguity and set isAmbiguous, optionally offering one alternative reading.
-- Preserve formatting, line breaks, emojis, numbers, names, URLs exactly.
-
-Language-pair excellence (Arabic <-> German is first class):
-- Arabic -> German: restructure sentences to German syntax and cases, use idiomatic compounds and conversational particles (mal, doch, halt) only where natural. Do not produce artificially formal German for a casual Arabic message.
-- German -> Arabic: do not flatten conversational German into rigid Modern Standard Arabic; use natural spoken phrasing when the source is conversational, and correct gender agreement throughout.
-- Respect politeness levels (du/Sie, حضرتك/أنت) as expressed in the source.
-
-Reply with ONE compact JSON object (no whitespace, no markdown fences), "translation" first; keep tone/notes very short or empty. Shape:
+  return `Expert native-level translator. Carry meaning, intent, tone, register and cultural nuance, never literal words; output must read as written by a fluent native.
+Rules: never add, drop, explain or soften anything; keep certainty, politeness (du/Sie, أنت/حضرتك), negation and humor/sarcasm; render idioms idiomatically; don't assume unstated gender; keep genuine ambiguity (isAmbiguous); preserve names, numbers, dates, URLs, emojis, line breaks exactly.
+ar→de: German syntax and cases, particles (mal/doch/halt) only when natural, not over-formal for casual text. de→ar: conversational German → natural spoken-leaning Arabic, not rigid MSA; correct gender agreement.
+Reply ONLY minified JSON, translation first:
 ${SCHEMA_SHAPE}`;
 }
 
-const PARTIAL_GUIDANCE = `\nThe writer is STILL TYPING: the text may stop mid-sentence. Translate only what is already expressed. Do not complete, guess or close the thought — no invented ending, and no final period if the source has none. Prefer a stable rendering that will not need restructuring when the sentence continues. Keep alternativeTranslations empty and notes empty; isAmbiguous only if the existing words are genuinely ambiguous.`;
+const PARTIAL_GUIDANCE = `\nStill typing: translate only what is written; never complete the thought or add a final period. Keep alternatives and notes empty.`;
 
 export function buildUserPrompt(req: TranslationRequest): string {
-  const source =
-    req.source === "auto" ? "auto-detect the source language" : `source language: ${req.source}`;
-  return `Task: translate into ${req.target}. ${source}.
-Style directive: ${STYLE_GUIDANCE[req.style]}
-Infer the situational context (messaging, work, academic, romantic, travel, technical, social media, ...) from the text itself and translate accordingly.${req.partial ? PARTIAL_GUIDANCE : ""}
-
+  const src = req.source === "auto" ? "auto" : req.source;
+  return `${src}→${req.target}; style: ${STYLE_GUIDANCE[req.style]}.${req.partial ? PARTIAL_GUIDANCE : ""}
 <text>
 ${req.text}
 </text>`;
@@ -74,8 +31,7 @@ export function buildRepairPrompt(
   previous: TranslationResult,
   issues: string[],
 ): string {
-  return `A previous translation failed internal verification.
-
+  return `Fix this translation.
 Source (${req.source}):
 <text>
 ${req.text}
@@ -86,9 +42,9 @@ Previous translation (${req.target}):
 ${previous.translation}
 </text>
 
-Detected problems:
+Problems:
 - ${issues.join("\n- ")}
 
-Produce a corrected translation that fixes every problem while keeping the meaning, tone and register of the source. Reply with one JSON object only, same schema:
+Return the corrected translation, same meaning, tone and register, as minified JSON:
 ${SCHEMA_SHAPE}`;
 }
