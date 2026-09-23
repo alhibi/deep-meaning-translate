@@ -1,5 +1,5 @@
 import { buildRepairPrompt, buildSystemPrompt, buildUserPrompt } from "../prompt";
-import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
+import type { Situation, TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 
 const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
@@ -26,6 +26,8 @@ function extractText(payload: unknown): string {
   if (typeof choice === "string") return choice;
   throw new TranslationError("provider", "Unrecognised provider response shape.");
 }
+
+const SITUATIONS: Situation[] = ["chat", "work", "official", "general"];
 
 function parseResult(raw: string, req: TranslationRequest): TranslationResult {
   const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
@@ -57,6 +59,7 @@ function parseResult(raw: string, req: TranslationRequest): TranslationResult {
     isAmbiguous: data["isAmbiguous"] === true,
     alternativeTranslations: alts,
     notes: typeof data["notes"] === "string" ? data["notes"].slice(0, 240) : "",
+    situation: SITUATIONS.includes(data["situation"] as Situation) ? (data["situation"] as Situation) : "general",
   };
 }
 

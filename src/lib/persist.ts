@@ -1,4 +1,4 @@
-import type { StyleOverride, TranslationResult } from "./translation/types";
+import type { Dialect, StyleOverride, TranslationResult } from "./translation/types";
 
 /**
  * Intentional, device-only persistence. Nothing here leaves the device.
@@ -12,6 +12,7 @@ export interface Prefs {
   source: string;
   target: string;
   style: StyleOverride;
+  dialect?: Dialect;
 }
 export interface Session {
   text: string;

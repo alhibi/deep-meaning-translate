@@ -1,11 +1,16 @@
 export type StyleOverride = "natural" | "formal" | "casual";
 
+export type Dialect = "auto" | "msa" | "levant" | "egypt" | "gulf" | "iraq" | "maghreb";
+export type Situation = "chat" | "work" | "official" | "general";
+
 export interface TranslationRequest {
   text: string;
   /** BCP-ish short code, or "auto" for detection */
   source: string;
   target: string;
   style: StyleOverride;
+  /** Arabic variety for Arabic output; "auto" follows the source. */
+  dialect?: Dialect;
   /** Text still being typed: translate provisionally, skip the repair pass. */
   partial?: boolean;
 }
@@ -20,6 +25,8 @@ export interface TranslationResult {
   isAmbiguous: boolean;
   alternativeTranslations: string[];
   notes: string;
+  /** What kind of text this is — drives the quiet style suggestion. */
+  situation?: Situation;
 }
 
 export interface TranslationProvider {
