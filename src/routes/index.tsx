@@ -10,7 +10,6 @@ import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { StyleOverride, TranslationResult } from "@/lib/translation/types";
-import { isRtl } from "@/lib/translation/languages";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
@@ -251,7 +250,7 @@ function Translator() {
   }, []);
   const [localeOpen, setLocaleOpen] = useState(false);
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
-  const rtlInput = text.trim() ? startsRtl(text) : source === "auto" ? uiRtl : isRtl(source);
+  const rtlInput = text.trim() ? startsRtl(text) : uiRtl;
   const hasText = text.length > 0;
 
   return (
@@ -339,7 +338,7 @@ function Translator() {
 
         {/* One canvas: source writing surface, a live seam, then the result. */}
         <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
-          <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
+          <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
             <textarea
               ref={inputRef}
               value={text}
