@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useCallback, useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import { LANGUAGES, TARGET_LANGUAGES, languageLabel } from "@/lib/translation/languages";
+import { tick } from "@/lib/haptics";
 
 interface Props {
   source: string;
@@ -24,13 +25,18 @@ function Picker({
   hint?: string | undefined;
   align: "start" | "end";
 }) {
+  const end = align === "end";
   return (
-    <div className={`relative flex-1 ${align === "end" ? "text-right" : "text-left"}`}>
+    <label
+      className={`press-soft relative flex min-h-12 flex-1 flex-col justify-center overflow-hidden rounded-xl px-2 ${
+        end ? "items-end text-right" : "items-start text-left"
+      }`}
+    >
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        aria-label={align === "start" ? "Source language" : "Target language"}
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        aria-label={end ? "Target language" : "Source language"}
+        className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
       >
         {options.map((o) => (
           <option key={o.code} value={o.code}>
@@ -38,15 +44,23 @@ function Picker({
           </option>
         ))}
       </select>
-      <div className="pointer-events-none px-1 py-2">
-        <div className="truncate text-[15px] font-medium tracking-tight">
-          {languageLabel(value)}
-        </div>
-        {hint ? (
-          <div className="truncate text-[11px] text-muted-foreground">{hint}</div>
-        ) : null}
-      </div>
-    </div>
+      {/* Keyed so a change of language re-settles the label in from its new side. */}
+      <span
+        key={value}
+        className={`pointer-events-none block truncate text-[15px] font-medium tracking-tight ${
+          end ? "animate-from-start" : "animate-from-end"
+        }`}
+      >
+        {languageLabel(value)}
+      </span>
+      <span
+        className={`pointer-events-none block h-4 truncate text-[11px] text-muted-foreground transition-opacity duration-200 ${
+          hint ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {hint ?? "\u00a0"}
+      </span>
+    </label>
   );
 }
 
@@ -58,22 +72,33 @@ export const LanguageBar = memo(function LanguageBar({
   onTarget,
   onSwap,
 }: Props) {
+  const [nudge, setNudge] = useState(0);
+  const swap = useCallback(() => {
+    setNudge((n) => n + 1);
+    tick();
+    onSwap();
+  }, [onSwap]);
+
   return (
-    <div className="flex items-center gap-1 border-b border-border px-4 py-1">
+    <div className="flex items-center gap-1 border-b border-border px-3 py-1.5">
       <Picker
         value={source}
         options={LANGUAGES}
         onChange={onSource}
         align="start"
-        hint={source === "auto" && detected ? languageLabel(detected) : undefined}
+        hint={source === "auto" ? (detected ? languageLabel(detected) : "Auto") : undefined}
       />
       <button
         type="button"
-        onClick={onSwap}
+        onClick={swap}
         aria-label="Swap languages"
-        className="grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+        className="press grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeftRight className="size-[18px]" strokeWidth={1.75} />
+        <ArrowLeftRight
+          key={nudge}
+          className={`size-[18px] ${nudge ? "animate-exchange" : ""}`}
+          strokeWidth={1.75}
+        />
       </button>
       <Picker value={target} options={TARGET_LANGUAGES} onChange={onTarget} align="end" />
     </div>

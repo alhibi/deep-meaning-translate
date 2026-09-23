@@ -5,11 +5,58 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+  },
+  vite: {
+    plugins: [
+      VitePWA({
+        strategies: "generateSW",
+        registerType: "autoUpdate",
+        injectRegister: null, // src/lib/pwa.ts is the only registrar
+        manifest: false, // served from public/manifest.webmanifest
+        filename: "sw.js",
+        devOptions: { enabled: false },
+        workbox: {
+          globPatterns: ["**/*.{js,css,woff2,png,svg,ico,webmanifest}"],
+          navigateFallback: null,
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          runtimeCaching: [
+            {
+              // App shell HTML: always try the network, fall back to last good copy offline.
+              urlPattern: ({ request, url }) =>
+                request.mode === "navigate" && !url.pathname.startsWith("/~oauth"),
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "lingua-shell",
+                networkTimeoutSeconds: 3,
+                expiration: { maxEntries: 4 },
+              },
+            },
+            {
+              // Hashed build assets are immutable: cache once, serve instantly (incl. offline).
+              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
+              handler: "CacheFirst",
+              options: { cacheName: "lingua-assets", expiration: { maxEntries: 80 } },
+            },
+            {
+              urlPattern: ({ url }) =>
+                url.origin === "https://fonts.googleapis.com" ||
+                url.origin === "https://fonts.gstatic.com",
+              handler: "StaleWhileRevalidate",
+              options: { cacheName: "lingua-fonts", expiration: { maxEntries: 12 } },
+            },
+            // Translation requests (/_serverFn) are never cached.
+          ],
+        },
+      }),
+    ],
   },
 });

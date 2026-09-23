@@ -1,26 +1,36 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
+import { tick } from "@/lib/haptics";
 
 const ERROR_COPY: Record<ErrorKind, string> = {
   auth: "Translation isn't connected yet.",
-  quota: "The translation account is out of credit. Top it up and try again.",
-  rate: "Too many translations at once. Give it a moment.",
+  quota: "The translation account is out of credit.",
+  rate: "A lot of requests at once. Give it a moment.",
   network: "The connection dropped before the translation finished.",
+  offline: "You're offline. Your text is safe — translation resumes when you're back.",
   provider: "Something interrupted the translation.",
   input: "That text couldn't be translated as written.",
 };
 
+/** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
+function sizeFor(len: number, rtl: boolean) {
+  if (len < 70) return rtl ? "text-[27px] leading-[1.7]" : "text-[30px] leading-[1.25]";
+  if (len < 220) return rtl ? "text-[22px] leading-[1.75]" : "text-[24px] leading-[1.32]";
+  return rtl ? "text-[18px] leading-[1.85]" : "text-[20px] leading-[1.45]";
+}
 
 function Action({
   label,
   onClick,
+  active,
   children,
 }: {
   label: string;
   onClick: () => void;
+  active?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -28,10 +38,20 @@ function Action({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+      aria-pressed={active}
+      className="press relative grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
     >
       {children}
     </button>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div aria-hidden className="animate-fade space-y-3 pt-2">
+      <div className="shimmer h-[18px] w-[78%] rounded-full" />
+      <div className="shimmer h-[18px] w-[52%] rounded-full" />
+    </div>
   );
 }
 
@@ -49,123 +69,185 @@ export const ResultPanel = memo(function ResultPanel({
   onRetry: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
+  const text = result?.translation ?? "";
+  const textRef = useRef(text);
+  textRef.current = text;
 
   useEffect(() => {
     setShowAlt(false);
-  }, [result]);
+    setCopied(false);
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    setSpeaking(false);
+  }, [text]);
 
   useEffect(() => {
     if (!copied) return;
-    const id = setTimeout(() => setCopied(false), 1400);
+    const id = setTimeout(() => setCopied(false), 1500);
     return () => clearTimeout(id);
   }, [copied]);
 
-  if (error && !result) {
-    return (
-      <div className="animate-rise px-5 py-6">
-        <p className="text-[15px] text-muted-foreground">{ERROR_COPY[error]}</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-3 inline-flex items-center gap-2 rounded-full border border-border-strong px-4 py-2 text-[13px] transition-colors active:bg-muted"
-        >
-          <RotateCw className="size-3.5" strokeWidth={1.75} /> Try again
-        </button>
-      </div>
-    );
-  }
+  const copy = useCallback(() => {
+    const value = textRef.current;
+    const done = () => {
+      setCopied(true);
+      tick();
+    };
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(value).then(done, () => undefined);
+    }
+  }, []);
 
-  if (!result) {
-    return (
-      <div className="px-5 py-6 text-[15px] text-muted-foreground">
-        {pending ? "Translating…" : "Translation appears here."}
-      </div>
-    );
-  }
+  const lang = result?.targetLanguage || target;
+  const speak = useCallback(() => {
+    if (!("speechSynthesis" in window)) return;
+    const synth = window.speechSynthesis;
+    if (synth.speaking) {
+      synth.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(textRef.current);
+    u.lang = lang;
+    u.rate = 0.95;
+    u.onend = u.onerror = () => setSpeaking(false);
+    synth.speak(u);
+    setSpeaking(true);
+  }, [lang]);
 
-  const rtl = isRtl(target);
-  const text = result.translation;
-
-  const copy = () => {
-    void navigator.clipboard?.writeText(text).then(() => setCopied(true));
-  };
-  const speak = () => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = result.targetLanguage || target;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  };
-  const share = () => {
-    if (navigator.share) void navigator.share({ text }).catch(() => undefined);
+  const share = useCallback(() => {
+    if (navigator.share) void navigator.share({ text: textRef.current }).catch(() => undefined);
     else copy();
-  };
+  }, [copy]);
 
-  return (
-    <div className={`px-5 pb-4 pt-5 ${pending ? "opacity-55" : "animate-rise"} transition-opacity`}>
-      <p
-        dir={rtl ? "rtl" : "ltr"}
-        className={`whitespace-pre-wrap break-words font-display text-[26px] leading-[1.35] tracking-tight ${
-          rtl ? "text-right" : "text-left"
-        }`}
-      >
-        {text}
-      </p>
+  const rtl = isRtl(lang);
 
-      {result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => setShowAlt((v) => !v)}
-            className="text-[12px] text-muted-foreground underline underline-offset-4"
+  let body: React.ReactNode;
+  if (result) {
+    body = (
+      <div key={text} className="animate-reveal">
+        <p
+          dir={rtl ? "rtl" : "ltr"}
+          lang={lang}
+          className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${
+            rtl ? "font-arabic" : "font-display tracking-[-0.01em]"
+          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-45" : "opacity-100"}`}
+        >
+          {text}
+        </p>
+
+        {result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowAlt((v) => !v)}
+              aria-expanded={showAlt}
+              className="press-soft text-[12px] text-muted-foreground underline decoration-border-strong underline-offset-4"
+            >
+              {showAlt ? "Hide other reading" : "This could also mean…"}
+            </button>
+            {showAlt ? (
+              <ul className="animate-rise mt-2 space-y-2 border-s border-border ps-3">
+                {result.alternativeTranslations.map((alt) => (
+                  <li
+                    key={alt}
+                    dir={rtl ? "rtl" : "ltr"}
+                    lang={lang}
+                    className="result-text text-start text-[15px] leading-relaxed text-muted-foreground"
+                  >
+                    {alt}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+
+        {result.notes && result.confidence < 0.75 ? (
+          <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
+        ) : null}
+
+        <div className="animate-reveal-late -ms-3 mt-3 flex items-center">
+          <Action label={copied ? "Copied" : "Copy translation"} onClick={copy}>
+            <Copy
+              className={`swap-icon size-[18px] ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
+              strokeWidth={1.75}
+            />
+            <Check
+              className={`swap-icon absolute size-[18px] text-accent ${
+                copied ? "opacity-100" : "scale-75 opacity-0"
+              }`}
+              strokeWidth={2}
+            />
+          </Action>
+          <Action label={speaking ? "Stop" : "Listen"} onClick={speak} active={speaking}>
+            <Volume2
+              className={`size-[18px] ${speaking ? "animate-breathe text-accent" : ""}`}
+              strokeWidth={1.75}
+            />
+          </Action>
+          <Action label="Share" onClick={share}>
+            <Share2 className="size-[18px]" strokeWidth={1.75} />
+          </Action>
+          <span
+            aria-live="polite"
+            className={`ms-1 text-[12px] text-accent transition-[opacity,transform] duration-200 ${
+              copied ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
+            }`}
           >
-            {showAlt ? "Hide other reading" : "This could also mean…"}
-          </button>
-          {showAlt ? (
-            <ul className="mt-2 space-y-2 border-l border-border pl-3">
-              {result.alternativeTranslations.map((alt) => (
-                <li
-                  key={alt}
-                  dir={rtl ? "rtl" : "ltr"}
-                  className="text-[15px] leading-relaxed text-muted-foreground"
-                >
-                  {alt}
-                </li>
-              ))}
-            </ul>
+            {copied ? "Copied" : ""}
+          </span>
+          {error ? (
+            <button
+              type="button"
+              onClick={onRetry}
+              title={error === "offline" ? ERROR_COPY.offline : undefined} className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
+            >
+              <RotateCw className="size-3" strokeWidth={1.75} />
+              {error === "offline" ? "Offline" : "Retry"}
+            </button>
           ) : null}
         </div>
-      ) : null}
-
-      {result.notes && result.confidence < 0.75 ? (
-        <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
-      ) : null}
-
-      <div className="mt-3 flex items-center gap-1">
-        <Action label="Copy translation" onClick={copy}>
-          {copied ? (
-            <Check className="size-[18px] text-accent" strokeWidth={1.75} />
-          ) : (
-            <Copy className="size-[18px]" strokeWidth={1.75} />
-          )}
-        </Action>
-        <Action label="Listen" onClick={speak}>
-          <Volume2 className="size-[18px]" strokeWidth={1.75} />
-        </Action>
-        <Action label="Share" onClick={share}>
-          <Share2 className="size-[18px]" strokeWidth={1.75} />
-        </Action>
-        {error ? (
+      </div>
+    );
+  } else if (error) {
+    body = (
+      <div key="error" className="animate-rise">
+        <p className="text-[15px] leading-relaxed text-muted-foreground">{ERROR_COPY[error]}</p>
+        {error !== "auth" ? (
           <button
             type="button"
             onClick={onRetry}
-            className="ml-auto text-[12px] text-muted-foreground underline underline-offset-4"
+            className="press mt-3 inline-flex items-center gap-2 rounded-full border border-border-strong px-4 py-2 text-[13px]"
           >
-            Retry
+            <RotateCw className="size-3.5" strokeWidth={1.75} /> Try again
           </button>
         ) : null}
       </div>
+    );
+  } else if (pending) {
+    body = <Skeleton key="pending" />;
+  } else {
+    body = (
+      <p key="idle" className="animate-fade text-[15px] text-muted-foreground/70">
+        Translation appears here.
+      </p>
+    );
+  }
+
+  return (
+    <div className="relative min-h-[176px] px-5 pb-4 pt-5" aria-busy={pending}>
+      <div
+        aria-hidden
+        className={`progress-line absolute inset-x-0 top-0 transition-opacity duration-300 ${
+          pending ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      {body}
+      <span className="sr-only" aria-live="polite">
+        {pending ? "Translating" : ""}
+      </span>
     </div>
   );
 });

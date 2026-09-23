@@ -2,7 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 /*
  * Design system: calm, paper-like, typographic.
@@ -63,10 +63,15 @@
   --border-strong: oklch(0.83 0.008 90);
   --input: oklch(0.9 0.006 90);
   --ring: oklch(0.52 0.09 168);
+  --shimmer: oklch(0.21 0.012 70 / 6%);
+  --focus-surface: oklch(0.21 0.012 70 / 1.8%);
+  color-scheme: light;
 }
 
-.dark {
-  --background: oklch(0.17 0.008 75);
+@media (prefers-color-scheme: dark) {
+:root {
+  color-scheme: dark;
+  --background: oklch(0.165 0.006 70);
   --foreground: oklch(0.95 0.005 95);
   --surface: oklch(0.21 0.008 75);
   --card: oklch(0.22 0.009 75);
@@ -87,6 +92,9 @@
   --border-strong: oklch(1 0 0 / 20%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.72 0.1 168);
+  --shimmer: oklch(1 0 0 / 7%);
+  --focus-surface: oklch(1 0 0 / 2.5%);
+}
 }
 
 @layer base {
@@ -104,6 +112,16 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+
+  textarea {
+    caret-color: var(--accent);
   }
 
   [dir="rtl"],
@@ -126,26 +144,141 @@
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+/* ---------- Motion language: short, compositor-only (opacity + transform) ---------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 @keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes from-start {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes from-end {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes exchange {
+  0% { transform: translateX(0); }
+  35% { transform: translateX(3px) scaleX(0.86); }
+  100% { transform: none; }
+}
+@keyframes breathe {
+  50% { opacity: 0.45; }
+}
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@keyframes progress {
+  from { transform: translateX(-100%) scaleX(0.4); }
+  to { transform: translateX(250%) scaleX(0.4); }
+}
+
+@utility animate-rise { animation: rise 220ms var(--ease-out) both; }
+@utility animate-reveal { animation: reveal 320ms var(--ease-out) both; }
+@utility animate-reveal-late { animation: fade 260ms var(--ease-soft) 90ms both; }
+@utility animate-fade { animation: fade 200ms var(--ease-soft) both; }
+@utility animate-from-start { animation: from-start 240ms var(--ease-out) both; }
+@utility animate-from-end { animation: from-end 240ms var(--ease-out) both; }
+@utility animate-exchange { animation: exchange 300ms var(--ease-out); }
+@utility animate-breathe { animation: breathe 1.4s ease-in-out infinite; }
+
+/* Tactile press: tiny, immediate on touch, soft release. */
+@utility press {
+  transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-soft), color 160ms var(--ease-soft), opacity 200ms var(--ease-soft);
+  touch-action: manipulation;
+  &:active { transform: scale(0.94); background-color: var(--muted); transition-duration: 40ms; }
+  &:focus-visible { outline: 2px solid color-mix(in oklab, var(--ring) 55%, transparent); outline-offset: 2px; }
+}
+@utility press-soft {
+  transition: opacity 160ms var(--ease-soft), background-color 160ms var(--ease-soft);
+  touch-action: manipulation;
+  &:active { opacity: 0.6; transition-duration: 40ms; }
+  &:focus-within:has(:focus-visible), &:focus-visible { outline: 2px solid color-mix(in oklab, var(--ring) 55%, transparent); outline-offset: 2px; }
+}
+
+@utility swap-icon {
+  transition: opacity 180ms var(--ease-soft), transform 220ms var(--ease-out);
+}
+
+/* Input "opens" for writing: a barely-there surface shift, no borders or glow. */
+@utility input-shell {
+  transition: background-color 180ms var(--ease-soft);
+  &:focus-within { background-color: var(--focus-surface); }
+  & textarea::placeholder { transition: opacity 180ms var(--ease-soft); }
+  &:focus-within textarea::placeholder { opacity: 0.55; }
+}
+
+/* Grows with content, then scrolls — no JS measurement where supported. */
+@utility autogrow {
+  field-sizing: content;
+  min-height: calc(3lh);
+  max-height: min(38dvh, 340px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+
+@utility result-text {
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
+  unicode-bidi: plaintext;
+  text-wrap: pretty;
+  font-feature-settings: "kern", "liga";
+}
+
+@utility shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--muted);
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--shimmer), transparent);
+    animation: shimmer 1.3s var(--ease-soft) infinite;
+    will-change: transform;
   }
 }
 
-@utility animate-rise {
-  animation: rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+@utility progress-line {
+  height: 1px;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform-origin: left;
+    animation: progress 1.4s var(--ease-soft) infinite;
+    will-change: transform;
+  }
 }
 
+/* Reduced motion: remove movement, keep state legible through opacity. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  *, *::before, *::after {
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
+  .animate-reveal, .animate-rise, .animate-from-start, .animate-from-end {
+    animation-name: fade !important;
+  }
+  .animate-exchange, .shimmer::after, .progress-line::after { animation: none !important; }
+  .progress-line::after { transform: none; opacity: 0.5; }
+  .press:active { transform: none; }
 }

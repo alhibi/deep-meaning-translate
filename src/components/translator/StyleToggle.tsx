@@ -25,7 +25,7 @@ export const StyleToggle = memo(function StyleToggle({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(o.value)}
-            className={`rounded-full px-3 py-1.5 text-[12px] tracking-tight transition-colors ${
+            className={`press-soft rounded-full px-3 py-2 text-[12px] tracking-tight ${
               active
                 ? "bg-secondary text-secondary-foreground"
                 : "text-muted-foreground active:bg-muted"
