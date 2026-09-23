@@ -38,6 +38,48 @@ export function speechLang(source: string, target: string, uiLocale: string, dia
   return TAGS[code] ?? code;
 }
 
+const norm = (w: string) => w.replace(/[\u064B-\u0652\u0640.,!?؟،]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").toLowerCase();
+
+/**
+ * Merge a new recognised chunk into what was already heard, removing the echoes some
+ * engines (Chrome on Android) produce: repeated cumulative phrases and overlapping tails.
+ */
+export function mergeSpeech(acc: string, chunk: string): string {
+  const a = acc.trim().split(/\s+/).filter(Boolean);
+  const b = chunk.trim().split(/\s+/).filter(Boolean);
+  if (!b.length) return a.join(" ");
+  if (!a.length) return collapseRepeats(b).join(" ");
+  const na = a.map(norm), nb = b.map(norm);
+  // Chunk restates everything so far (cumulative engines) → take the chunk.
+  if (nb.length >= na.length && na.every((w, i) => w === nb[i])) return collapseRepeats(b).join(" ");
+  // Chunk already contained at the end → nothing new.
+  const tail = na.slice(-nb.length).join(" ");
+  if (tail === nb.join(" ")) return a.join(" ");
+  // Largest suffix/prefix overlap.
+  for (let k = Math.min(na.length, nb.length); k > 0; k--) {
+    if (na.slice(-k).join(" ") === nb.slice(0, k).join(" ")) return collapseRepeats([...a, ...b.slice(k)]).join(" ");
+  }
+  return collapseRepeats([...a, ...b]).join(" ");
+}
+
+/** Drop immediately repeated runs ("اذهب اذهب انت انت" → "اذهب انت"), longest run first. */
+export function collapseRepeats(words: string[]): string[] {
+  let out = words.slice();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const n = out.map(norm);
+    outer: for (let size = Math.floor(out.length / 2); size >= 1; size--) {
+      for (let i = 0; i + 2 * size <= out.length; i++) {
+        let same = true;
+        for (let j = 0; j < size; j++) if (n[i + j] !== n[i + size + j]) { same = false; break; }
+        if (same) { out = [...out.slice(0, i + size), ...out.slice(i + 2 * size)]; changed = true; break outer; }
+      }
+    }
+  }
+  return out;
+}
+
 /** Join recognised chunks cleanly: one space between, no doubled spaces. */
 export function joinSpeech(...parts: string[]): string {
   return parts.map((p) => p.trim()).filter(Boolean).join(" ").replace(/\s+/g, " ");
@@ -89,17 +131,20 @@ export function useSpeech(opts: { lang: string; onText: (text: string, final: bo
     let finals = "";
     let failed: string | null = null;
     r.onresult = (e) => {
+      // Rebuild from the whole result list every time (never append blindly), merging echoes away.
+      let fin = "";
       let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+      for (let i = 0; i < e.results.length; i++) {
         const res = e.results[i];
         const alt = res?.[0];
         if (!res || !alt) continue;
-        if (res.isFinal) finals = joinSpeech(finals, alt.transcript);
-        else interim = joinSpeech(interim, alt.transcript);
+        if (res.isFinal) fin = mergeSpeech(fin, alt.transcript);
+        else interim = mergeSpeech(interim, alt.transcript);
       }
+      finals = fin;
       heard.current = true;
       retries.current = 0;
-      cb.current.onText(joinSpeech(said.current, finals, interim), !interim);
+      cb.current.onText(mergeSpeech(mergeSpeech(said.current, finals), interim), !interim);
     };
     r.onerror = (e) => {
       failed = e.error;
@@ -110,7 +155,7 @@ export function useSpeech(opts: { lang: string; onText: (text: string, final: bo
     };
     r.onend = () => {
       rec.current = null;
-      said.current = joinSpeech(said.current, finals);
+      said.current = mergeSpeech(said.current, finals);
       // Unexpected end while the user still wants to talk: quietly resume, keeping all text.
       const transient = failed === null || TRANSIENT.has(failed) || failed === "no-speech";
       if (wanted.current && transient && retries.current < MAX_RETRIES && failed !== "no-speech") {

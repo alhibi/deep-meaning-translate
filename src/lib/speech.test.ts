@@ -22,3 +22,19 @@ describe("speech extras", () => {
     expect(joinSpeech("مرحبا", "", "  كيف  حالك ")).toBe("مرحبا كيف حالك");
   });
 });
+
+describe("mergeSpeech (Android echo repair)", async () => {
+  const { mergeSpeech } = await import("./speech");
+  it("fixes the real reported case", () => {
+    const chunks = ["اذهب", "اذهب انت", "اذهب انت", "اذهب انت الى", "اذهب انت الى المدرسة"];
+    let acc = "";
+    for (const c of chunks) acc = mergeSpeech(acc, c);
+    expect(acc).toBe("اذهب انت الى المدرسة");
+    expect(mergeSpeech("", "اذهب اذهب انت اذهب انت اذهب انت الى اذهب انت الى المدرسه")).toBe("اذهب انت الى المدرسه");
+  });
+  it("keeps genuinely new text and overlaps", () => {
+    expect(mergeSpeech("ich gehe", "gehe heute nach Hause")).toBe("ich gehe heute nach Hause");
+    expect(mergeSpeech("guten Morgen", "wie geht's")).toBe("guten Morgen wie geht's");
+    expect(mergeSpeech("كيف حالك", "حالك")).toBe("كيف حالك");
+  });
+});
