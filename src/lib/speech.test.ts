@@ -30,7 +30,9 @@ describe("mergeSpeech (Android echo repair)", async () => {
     let acc = "";
     for (const c of chunks) acc = mergeSpeech(acc, c);
     expect(acc).toBe("اذهب انت الى المدرسة");
-    expect(mergeSpeech("", "اذهب اذهب انت اذهب انت اذهب انت الى اذهب انت الى المدرسه")).toBe("اذهب انت الى المدرسه");
+    expect(mergeSpeech("", "اذهب اذهب انت اذهب انت اذهب انت الى اذهب انت الى المدرسه")).toBe(
+      "اذهب انت الى المدرسه",
+    );
   });
   it("keeps genuinely new text and overlaps", () => {
     expect(mergeSpeech("ich gehe", "gehe heute nach Hause")).toBe("ich gehe heute nach Hause");

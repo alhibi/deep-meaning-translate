@@ -24,7 +24,12 @@ export const SavedSheet = memo(function SavedSheet({
   if (!open) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={t("savedTitle")} className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("savedTitle")}
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20"
+    >
       <button type="button" aria-label={t("close")} className="flex-1" onClick={onClose} />
       <div className="animate-rise max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-3">
@@ -34,7 +39,8 @@ export const SavedSheet = memo(function SavedSheet({
               onClick={() => setMode("list")}
               className={mode === "list" ? "font-medium text-foreground" : "text-faint"}
             >
-              {t("savedTitle")} <span className="tabular-nums text-faint">{entries.length || ""}</span>
+              {t("savedTitle")}{" "}
+              <span className="tabular-nums text-faint">{entries.length || ""}</span>
             </button>
             {entries.length > 0 ? (
               <button
@@ -57,7 +63,9 @@ export const SavedSheet = memo(function SavedSheet({
         </div>
 
         {entries.length === 0 ? (
-          <p className="px-5 py-8 text-[14px] leading-relaxed text-muted-foreground">{t("savedEmpty")}</p>
+          <p className="px-5 py-8 text-[14px] leading-relaxed text-muted-foreground">
+            {t("savedEmpty")}
+          </p>
         ) : mode === "review" ? (
           <Review />
         ) : (
@@ -69,13 +77,23 @@ export const SavedSheet = memo(function SavedSheet({
                   onClick={() => onPick(e)}
                   className="min-w-0 flex-1 px-5 py-4 text-start transition-colors active:bg-muted"
                 >
-                  <span dir="ltr" className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <span
+                    dir="ltr"
+                    className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground"
+                  >
                     {languageLabel(e.source)} → {languageLabel(e.target)}
                   </span>
-                  <span dir={isRtl(e.target) ? "rtl" : "ltr"} lang={e.target} className={`mt-1 block text-start text-[16px] leading-snug ${isRtl(e.target) ? "font-arabic" : ""}`}>
+                  <span
+                    dir={isRtl(e.target) ? "rtl" : "ltr"}
+                    lang={e.target}
+                    className={`mt-1 block text-start text-[16px] leading-snug ${isRtl(e.target) ? "font-arabic" : ""}`}
+                  >
                     {e.translated}
                   </span>
-                  <span dir="auto" className="mt-0.5 line-clamp-2 block text-start text-[13px] text-muted-foreground">
+                  <span
+                    dir="auto"
+                    className="mt-0.5 line-clamp-2 block text-start text-[13px] text-muted-foreground"
+                  >
                     {e.original}
                   </span>
                 </button>
@@ -144,18 +162,32 @@ function Review() {
         className="mt-5 block min-h-[88px] w-full rounded-2xl bg-surface px-4 py-4 text-start"
       >
         {shown ? (
-          <span dir={rtlT ? "rtl" : "ltr"} lang={card.target} className={`animate-fade block text-start text-[20px] leading-snug text-signal-text ${rtlT ? "font-arabic" : ""}`}>
+          <span
+            dir={rtlT ? "rtl" : "ltr"}
+            lang={card.target}
+            className={`animate-fade block text-start text-[20px] leading-snug text-signal-text ${rtlT ? "font-arabic" : ""}`}
+          >
             {card.translated}
           </span>
         ) : (
           <span className="text-[13px] text-faint">{t("reveal")}</span>
         )}
       </button>
-      <div className={`mt-4 flex gap-2 transition-opacity duration-200 ${shown ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-        <button type="button" onClick={() => next(false)} className="press h-11 flex-1 rounded-full bg-surface text-[13px] text-muted-foreground">
+      <div
+        className={`mt-4 flex gap-2 transition-opacity duration-200 ${shown ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      >
+        <button
+          type="button"
+          onClick={() => next(false)}
+          className="press h-11 flex-1 rounded-full bg-surface text-[13px] text-muted-foreground"
+        >
           {t("again")}
         </button>
-        <button type="button" onClick={() => next(true)} className="press h-11 flex-1 rounded-full bg-signal text-[13px] font-medium text-signal-foreground">
+        <button
+          type="button"
+          onClick={() => next(true)}
+          className="press h-11 flex-1 rounded-full bg-signal text-[13px] font-medium text-signal-foreground"
+        >
           {t("knewIt")}
         </button>
       </div>

@@ -23,16 +23,18 @@ export const HistorySheet = memo(function HistorySheet({
   if (!open) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={t("recent")} className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
-      <button
-        type="button"
-        aria-label={t("closeRecent")}
-        className="flex-1"
-        onClick={onClose}
-      />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("recent")}
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20"
+    >
+      <button type="button" aria-label={t("closeRecent")} className="flex-1" onClick={onClose} />
       <div className="animate-rise max-h-[72vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">
         <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-5 py-3">
-          <span className="text-[13px] tracking-tight text-muted-foreground">{t("recentShort")}</span>
+          <span className="text-[13px] tracking-tight text-muted-foreground">
+            {t("recentShort")}
+          </span>
           <div className="flex items-center gap-2">
             {entries.length > 0 ? (
               <button
@@ -65,7 +67,10 @@ export const HistorySheet = memo(function HistorySheet({
                   onClick={() => onPick(e)}
                   className="w-full border-b border-border px-5 py-4 text-start transition-colors active:bg-muted"
                 >
-                  <span dir="ltr" className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <span
+                    dir="ltr"
+                    className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground"
+                  >
                     {languageLabel(e.source)} → {languageLabel(e.target)}
                   </span>
                   <span
@@ -75,7 +80,11 @@ export const HistorySheet = memo(function HistorySheet({
                   >
                     {e.translated}
                   </span>
-                  <span dir="auto" lang={e.source} className="mt-0.5 line-clamp-1 block text-start text-[13px] text-muted-foreground">
+                  <span
+                    dir="auto"
+                    lang={e.source}
+                    className="mt-0.5 line-clamp-1 block text-start text-[13px] text-muted-foreground"
+                  >
                     {e.original}
                   </span>
                 </button>

@@ -22,9 +22,18 @@ let cache: SavedPhrase[] | null = null;
 /** Damaged or foreign rows in storage are dropped, never allowed to crash the app. */
 export function isPhrase(v: unknown): v is SavedPhrase {
   const p = v as SavedPhrase;
-  return !!p && typeof p === "object" && typeof p.id === "string" && typeof p.original === "string" &&
-    typeof p.translated === "string" && typeof p.target === "string" && typeof p.source === "string" &&
-    Number.isFinite(p.createdAt) && Number.isFinite(p.known) && Number.isFinite(p.reviewedAt);
+  return (
+    !!p &&
+    typeof p === "object" &&
+    typeof p.id === "string" &&
+    typeof p.original === "string" &&
+    typeof p.translated === "string" &&
+    typeof p.target === "string" &&
+    typeof p.source === "string" &&
+    Number.isFinite(p.createdAt) &&
+    Number.isFinite(p.known) &&
+    Number.isFinite(p.reviewedAt)
+  );
 }
 const listeners = new Set<() => void>();
 
@@ -66,7 +75,14 @@ export const saved = {
     }
     const now = Date.now();
     write([
-      { ...entry, original: norm(entry.original), id: `${now}-${Math.random().toString(36).slice(2, 7)}`, createdAt: now, known: 0, reviewedAt: 0 },
+      {
+        ...entry,
+        original: norm(entry.original),
+        id: `${now}-${Math.random().toString(36).slice(2, 7)}`,
+        createdAt: now,
+        known: 0,
+        reviewedAt: 0,
+      },
       ...read(),
     ]);
     return true;

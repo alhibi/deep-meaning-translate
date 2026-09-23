@@ -8,7 +8,10 @@ const InputSchema = z.object({
   source: z.string().regex(/^[a-z]{2}$|^auto$/),
   target: z.string().regex(/^[a-z]{2}$/),
   style: z.enum(["natural", "formal", "casual"]),
-  dialect: z.enum(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"]).optional().default("auto"),
+  dialect: z
+    .enum(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"])
+    .optional()
+    .default("auto"),
   partial: z.boolean().optional().default(false),
 });
 
@@ -37,7 +40,13 @@ export const translate = createServerFn({ method: "POST" })
     // Privacy: metrics only — never the text, never the translation.
     const log = (outcome: string) =>
       console.info(
-        JSON.stringify({ event: "translate", outcome, ms: Date.now() - started, chars: data.text.length, partial: data.partial }),
+        JSON.stringify({
+          event: "translate",
+          outcome,
+          ms: Date.now() - started,
+          chars: data.text.length,
+          partial: data.partial,
+        }),
       );
     try {
       const result = await runTranslation(data);
@@ -48,5 +57,4 @@ export const translate = createServerFn({ method: "POST" })
       log(kind);
       return { ok: false, kind };
     }
-
   });

@@ -13,9 +13,16 @@ const LIMIT = 40;
 /** Damaged or foreign rows in storage are dropped, never allowed to crash the app. */
 export function isEntry(v: unknown): v is HistoryEntry {
   const e = v as HistoryEntry;
-  return !!e && typeof e === "object" && typeof e.id === "string" && typeof e.original === "string" &&
-    typeof e.translated === "string" && typeof e.target === "string" && typeof e.source === "string" &&
-    Number.isFinite(e.createdAt);
+  return (
+    !!e &&
+    typeof e === "object" &&
+    typeof e.id === "string" &&
+    typeof e.original === "string" &&
+    typeof e.translated === "string" &&
+    typeof e.target === "string" &&
+    typeof e.source === "string" &&
+    Number.isFinite(e.createdAt)
+  );
 }
 
 function read(): HistoryEntry[] {
@@ -52,7 +59,11 @@ export const history = {
         ),
     );
     const next = [
-      { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, createdAt: Date.now() },
+      {
+        ...entry,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: Date.now(),
+      },
       ...existing,
     ].slice(0, LIMIT);
     write(next);
