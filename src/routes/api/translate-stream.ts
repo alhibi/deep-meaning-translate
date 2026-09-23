@@ -76,7 +76,7 @@ export const Route = createFileRoute("/api/translate-stream")({
           },
         });
         return new Response(body, {
-          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no" },
         });
       },
     },
