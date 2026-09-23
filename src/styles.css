@@ -35,65 +35,89 @@
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-signal-soft: var(--signal-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Serif", ui-serif, Georgia, serif;
   --font-arabic: "IBM Plex Sans Arabic", "Work Sans", sans-serif;
 }
 
+/*
+ * Lingua visual system.
+ * Ink on paper, one signal colour. Indigo means "the app is helping you" —
+ * focus, active language, live activity, the key action. Nothing else.
+ * Semantic colours appear only for their meaning: success, caution, failure.
+ */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.985 0.004 95);
-  --foreground: oklch(0.21 0.012 70);
-  --surface: oklch(0.965 0.005 95);
-  --card: oklch(0.995 0.002 95);
-  --card-foreground: oklch(0.21 0.012 70);
-  --popover: oklch(0.995 0.002 95);
-  --popover-foreground: oklch(0.21 0.012 70);
-  --primary: oklch(0.29 0.02 70);
-  --primary-foreground: oklch(0.985 0.004 95);
-  --secondary: oklch(0.945 0.006 95);
-  --secondary-foreground: oklch(0.29 0.02 70);
-  --muted: oklch(0.95 0.005 95);
-  --muted-foreground: oklch(0.55 0.012 75);
-  --accent: oklch(0.52 0.09 168);
-  --accent-foreground: oklch(0.99 0.004 95);
-  --destructive: oklch(0.52 0.16 28);
-  --destructive-foreground: oklch(0.99 0.004 95);
-  --border: oklch(0.905 0.006 90);
-  --border-strong: oklch(0.83 0.008 90);
-  --input: oklch(0.9 0.006 90);
-  --ring: oklch(0.52 0.09 168);
-  --shimmer: oklch(0.21 0.012 70 / 6%);
-  --focus-surface: oklch(0.21 0.012 70 / 1.8%);
+  /* Foundation */
+  --background: oklch(0.975 0.002 106);   /* Paper   #F7F7F5 */
+  --foreground: oklch(0.2 0.008 275);     /* Ink     #17181C */
+  --surface: oklch(1 0 0);                /* Surface #FFFFFF */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.008 275);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.008 275);
+  --primary: oklch(0.2 0.008 275);
+  --primary-foreground: oklch(0.975 0.002 106);
+  --secondary: oklch(0.945 0.003 106);
+  --secondary-foreground: oklch(0.2 0.008 275);
+  --muted: oklch(0.945 0.003 106);
+  --muted-foreground: oklch(0.5 0.01 275); /* ≥4.5:1 on paper and surface */
+  /* Signal — Indigo #4F46E5 */
+  --signal: oklch(0.511 0.23 277);
+  --signal-foreground: oklch(0.99 0 0);
+  --signal-soft: oklch(0.511 0.23 277 / 9%);
+  --accent: var(--signal);
+  --accent-foreground: var(--signal-foreground);
+  /* Semantic */
+  --success: oklch(0.57 0.1 163);         /* #2F8F6B */
+  --warning: oklch(0.65 0.13 65);         /* #C9822B */
+  --destructive: oklch(0.6 0.13 22);      /* #C95C5C */
+  --destructive-foreground: oklch(0.99 0 0);
+  /* Lines */
+  --border: oklch(0.2 0.008 275 / 8%);
+  --border-strong: oklch(0.2 0.008 275 / 16%);
+  --input: oklch(0.2 0.008 275 / 10%);
+  --ring: var(--signal);
+  --shimmer: oklch(0.2 0.008 275 / 5%);
+  --focus-surface: oklch(1 0 0);
+  --elev-1: 0 1px 2px oklch(0.2 0.008 275 / 4%);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
 :root {
   color-scheme: dark;
-  --background: oklch(0.165 0.006 70);
-  --foreground: oklch(0.95 0.005 95);
-  --surface: oklch(0.21 0.008 75);
-  --card: oklch(0.22 0.009 75);
-  --card-foreground: oklch(0.95 0.005 95);
-  --popover: oklch(0.22 0.009 75);
-  --popover-foreground: oklch(0.95 0.005 95);
-  --primary: oklch(0.93 0.006 95);
-  --primary-foreground: oklch(0.2 0.01 75);
-  --secondary: oklch(0.26 0.009 75);
-  --secondary-foreground: oklch(0.95 0.005 95);
-  --muted: oklch(0.25 0.008 75);
-  --muted-foreground: oklch(0.68 0.01 80);
-  --accent: oklch(0.72 0.1 168);
-  --accent-foreground: oklch(0.18 0.01 75);
-  --destructive: oklch(0.65 0.15 28);
-  --destructive-foreground: oklch(0.18 0.01 75);
-  --border: oklch(1 0 0 / 10%);
-  --border-strong: oklch(1 0 0 / 20%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.72 0.1 168);
-  --shimmer: oklch(1 0 0 / 7%);
-  --focus-surface: oklch(1 0 0 / 2.5%);
+  --background: oklch(0.155 0.005 275);   /* Deep Ink #0F1013 */
+  --foreground: oklch(0.94 0.004 275);
+  --surface: oklch(0.205 0.008 265);      /* #17191E */
+  --card: oklch(0.232 0.01 265);          /* #1D2026 */
+  --card-foreground: oklch(0.94 0.004 275);
+  --popover: oklch(0.232 0.01 265);
+  --popover-foreground: oklch(0.94 0.004 275);
+  --primary: oklch(0.94 0.004 275);
+  --primary-foreground: oklch(0.155 0.005 275);
+  --secondary: oklch(0.26 0.01 265);
+  --secondary-foreground: oklch(0.94 0.004 275);
+  --muted: oklch(0.24 0.009 265);
+  --muted-foreground: oklch(0.7 0.01 275);
+  --signal: oklch(0.7 0.14 277);          /* lifted for contrast, not neon */
+  --signal-foreground: oklch(0.16 0.01 275);
+  --signal-soft: oklch(0.7 0.14 277 / 12%);
+  --success: oklch(0.72 0.1 163);
+  --warning: oklch(0.76 0.12 70);
+  --destructive: oklch(0.7 0.12 22);
+  --destructive-foreground: oklch(0.16 0.01 275);
+  --border: oklch(1 0 0 / 8%);
+  --border-strong: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 12%);
+  --shimmer: oklch(1 0 0 / 6%);
+  --focus-surface: oklch(0.205 0.008 265);
+  --elev-1: 0 1px 0 oklch(1 0 0 / 3%);
 }
 }
 
@@ -222,10 +246,26 @@
   transition: opacity 180ms var(--ease-soft), transform 220ms var(--ease-out);
 }
 
-/* Input "opens" for writing: a barely-there surface shift, no borders or glow. */
+/* Input becomes the active centre: surface lifts from paper to white,
+ * and a hairline of signal draws in from the reading edge. No glow. */
 @utility input-shell {
-  transition: background-color 180ms var(--ease-soft);
+  background-color: transparent;
+  transition: background-color 200ms var(--ease-soft);
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: -1px;
+    height: 1.5px;
+    background: var(--signal);
+    transform: scaleX(0);
+    transform-origin: var(--line-origin, left);
+    transition: transform 280ms var(--ease-out);
+  }
+  &:dir(rtl)::after { --line-origin: right; }
   &:focus-within { background-color: var(--focus-surface); }
+  &:focus-within::after { transform: scaleX(1); }
+  & textarea { caret-color: var(--signal); }
   & textarea::placeholder { transition: opacity 180ms var(--ease-soft); }
   &:focus-within textarea::placeholder { opacity: 0.55; }
 }
@@ -270,7 +310,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: var(--accent);
+    background: var(--signal);
     transform-origin: left;
     animation: progress 1.4s var(--ease-soft) infinite;
     will-change: transform;
@@ -290,3 +330,7 @@
   .progress-line::after { transform: none; opacity: 0.5; }
   .press:active { transform: none; }
 }
+
+::selection { background: var(--signal-soft); }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: 6px; }
+textarea:focus-visible { outline: none; }

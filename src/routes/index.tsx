@@ -266,7 +266,7 @@ function Translator() {
         onSwap={swap}
       />
 
-      <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pt-4">
+      <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pb-3 pt-4">
         <textarea
           ref={inputRef}
           value={text}
@@ -317,7 +317,7 @@ function Translator() {
         </div>
       </section>
 
-      <div className="mt-3 border-t border-border">
+      <div className="border-t border-border">
         <ResultPanel
           result={result}
           pending={pending}

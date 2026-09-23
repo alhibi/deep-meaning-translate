@@ -211,11 +211,11 @@ export const ResultPanel = memo(function ResultPanel({
         <div className="animate-reveal-late -ms-3 mt-3 flex items-center">
           <Action label={copied ? t("copied") : t("copy")} onClick={copy}>
             <Copy
-              className={`swap-icon size-[18px] ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
+              className={`swap-icon size-[18px] text-signal ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
               strokeWidth={1.75}
             />
             <Check
-              className={`swap-icon absolute size-[18px] text-accent ${
+              className={`swap-icon absolute size-[18px] text-success ${
                 copied ? "opacity-100" : "scale-75 opacity-0"
               }`}
               strokeWidth={2}
@@ -223,7 +223,7 @@ export const ResultPanel = memo(function ResultPanel({
           </Action>
           <Action label={speaking ? t("stop") : t("listen")} onClick={speak} active={speaking}>
             <Volume2
-              className={`size-[18px] ${speaking ? "animate-breathe text-accent" : ""}`}
+              className={`size-[18px] ${speaking ? "animate-breathe text-signal" : ""}`}
               strokeWidth={1.75}
             />
           </Action>
@@ -232,7 +232,7 @@ export const ResultPanel = memo(function ResultPanel({
           </Action>
           <span
             aria-live="polite"
-            className={`ms-1 text-[12px] ${noVoice ? "text-muted-foreground" : "text-accent"} transition-[opacity,transform] duration-200 ${
+            className={`ms-1 text-[12px] ${noVoice ? "text-muted-foreground" : "text-success"} transition-[opacity,transform] duration-200 ${
               copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
@@ -254,12 +254,15 @@ export const ResultPanel = memo(function ResultPanel({
   } else if (error) {
     body = (
       <div key="error" className="animate-rise">
-        <p className="text-[15px] leading-relaxed text-muted-foreground">{t(`err_${error}`)}</p>
+        <p className="flex items-start gap-2.5 text-[15px] leading-relaxed text-muted-foreground">
+          <span aria-hidden className={`mt-[0.6em] size-1.5 shrink-0 rounded-full ${error === "offline" || error === "rate" || error === "timeout" ? "bg-warning" : "bg-destructive"}`} />
+          {t(`err_${error}`)}
+        </p>
         {error !== "auth" ? (
           <button
             type="button"
             onClick={onRetry}
-            className="press mt-3 inline-flex items-center gap-2 rounded-full border border-border-strong px-4 py-2 text-[13px]"
+            className="press ms-4 mt-3 inline-flex items-center gap-2 rounded-full bg-signal px-4 py-2 text-[13px] font-medium text-signal-foreground"
           >
             <RotateCw className="size-3.5" strokeWidth={1.75} /> {t("tryAgain")}
           </button>
@@ -282,6 +285,12 @@ export const ResultPanel = memo(function ResultPanel({
         aria-hidden
         className={`progress-line absolute inset-x-0 top-0 transition-opacity duration-300 ${
           pending ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <span
+        aria-hidden
+        className={`absolute end-5 top-6 size-1.5 rounded-full bg-signal transition-opacity duration-300 ${
+          provisional && !pending && result ? "animate-breathe opacity-100" : "opacity-0"
         }`}
       />
       {body}
