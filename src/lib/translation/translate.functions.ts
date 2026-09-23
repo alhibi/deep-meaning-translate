@@ -53,7 +53,10 @@ export const translate = createServerFn({ method: "POST" })
 const ResultSchema = z.object({
   sourceLanguage: z.string().max(10),
   targetLanguage: z.string().max(10),
-  translation: z.string().min(1).max(MAX_CHARS * 3),
+  translation: z
+    .string()
+    .min(1)
+    .max(MAX_CHARS * 3),
   tone: z.string().max(60),
   formality: z.string().max(30),
   confidence: z.number(),
