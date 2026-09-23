@@ -50,7 +50,7 @@ export function Intro({ onComplete }: { onComplete: () => void }) {
           <img
             src="/icon-monochrome-512.png"
             alt=""
-            className="intro-cat relative size-28 object-contain sm:size-32"
+            className="intro-cat relative size-36 object-contain sm:size-40"
           />
         </div>
         <h1 className="intro-title mt-8 max-w-[330px] text-balance text-[34px] font-medium leading-[1.12] text-foreground">
