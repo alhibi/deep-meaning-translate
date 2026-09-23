@@ -536,7 +536,7 @@ function Translator() {
         <div
           ref={scrollRef}
           className={`flex flex-1 flex-col overflow-y-auto overscroll-contain ${
-            kbUp ? "justify-start pb-3 pt-1" : "justify-center pb-[6dvh]"
+            kbUp ? "justify-start pb-3 pt-1" : "justify-start pb-[6dvh] pt-[3dvh]"
           }`}
         >
           <LanguageBar
