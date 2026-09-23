@@ -18,6 +18,14 @@ const LIMIT = 300;
 const EMPTY: SavedPhrase[] = [];
 
 let cache: SavedPhrase[] | null = null;
+
+/** Damaged or foreign rows in storage are dropped, never allowed to crash the app. */
+export function isPhrase(v: unknown): v is SavedPhrase {
+  const p = v as SavedPhrase;
+  return !!p && typeof p === "object" && typeof p.id === "string" && typeof p.original === "string" &&
+    typeof p.translated === "string" && typeof p.target === "string" && typeof p.source === "string" &&
+    Number.isFinite(p.createdAt) && Number.isFinite(p.known) && Number.isFinite(p.reviewedAt);
+}
 const listeners = new Set<() => void>();
 
 function read(): SavedPhrase[] {
@@ -25,7 +33,7 @@ function read(): SavedPhrase[] {
   if (cache) return cache;
   try {
     const parsed = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
-    cache = Array.isArray(parsed) ? (parsed as SavedPhrase[]) : [];
+    cache = Array.isArray(parsed) ? (parsed as unknown[]).filter(isPhrase) : [];
   } catch {
     cache = [];
   }

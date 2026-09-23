@@ -249,7 +249,7 @@ const de: Record<Key, string> = {
   sit_dismiss: "Schließen",
 };
 
-const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
+export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
 const STORAGE = "lingua.ui-locale";
 
 let current: Locale = "en";

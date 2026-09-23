@@ -10,12 +10,20 @@ export interface HistoryEntry {
 const KEY = "lingua.history.v1";
 const LIMIT = 40;
 
+/** Damaged or foreign rows in storage are dropped, never allowed to crash the app. */
+export function isEntry(v: unknown): v is HistoryEntry {
+  const e = v as HistoryEntry;
+  return !!e && typeof e === "object" && typeof e.id === "string" && typeof e.original === "string" &&
+    typeof e.translated === "string" && typeof e.target === "string" && typeof e.source === "string" &&
+    Number.isFinite(e.createdAt);
+}
+
 function read(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? (parsed as HistoryEntry[]) : [];
+    return Array.isArray(parsed) ? (parsed as unknown[]).filter(isEntry) : [];
   } catch {
     return [];
   }
