@@ -84,6 +84,7 @@ const en = {
   sit_chat: "Sounds personal — make it casual?",
   sit_apply: "Switch",
   sit_dismiss: "Dismiss",
+  crashed: "Something went wrong here. Tap to try again.",
 };
 export type Key = keyof typeof en;
 
@@ -166,6 +167,7 @@ const ar: Record<Key, string> = {
   sit_chat: "يبدو نصاً شخصياً — أجعلها ودّية؟",
   sit_apply: "غيّر",
   sit_dismiss: "تجاهل",
+  crashed: "حدث خلل هنا. اضغط للمحاولة مرة أخرى.",
 };
 
 const de: Record<Key, string> = {
@@ -247,6 +249,7 @@ const de: Record<Key, string> = {
   sit_chat: "Klingt persönlich – locker übersetzen?",
   sit_apply: "Wechseln",
   sit_dismiss: "Schließen",
+  crashed: "Hier ist etwas schiefgelaufen. Tippen, um es erneut zu versuchen.",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
