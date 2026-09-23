@@ -1,0 +1,109 @@
+import { useSyncExternalStore } from "react";
+
+/** Personal phrasebook: device-only, never sent anywhere. */
+export interface SavedPhrase {
+  id: string;
+  source: string;
+  target: string;
+  original: string;
+  translated: string;
+  createdAt: number;
+  /** Times reviewed and remembered — weaker phrases come up first. */
+  known: number;
+  reviewedAt: number;
+}
+
+const KEY = "lingua.saved.v1";
+const LIMIT = 300;
+const EMPTY: SavedPhrase[] = [];
+
+let cache: SavedPhrase[] | null = null;
+const listeners = new Set<() => void>();
+
+function read(): SavedPhrase[] {
+  if (typeof window === "undefined") return EMPTY;
+  if (cache) return cache;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
+    cache = Array.isArray(parsed) ? (parsed as SavedPhrase[]) : [];
+  } catch {
+    cache = [];
+  }
+  return cache;
+}
+
+function write(next: SavedPhrase[]) {
+  cache = next.slice(0, LIMIT);
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(cache));
+  } catch {
+    /* storage unavailable */
+  }
+  listeners.forEach((fn) => fn());
+}
+
+const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+
+export const saved = {
+  list: read,
+  find(original: string, target: string) {
+    const o = norm(original);
+    return read().find((p) => p.target === target && norm(p.original) === o);
+  },
+  toggle(entry: Pick<SavedPhrase, "source" | "target" | "original" | "translated">) {
+    const hit = saved.find(entry.original, entry.target);
+    if (hit) {
+      write(read().filter((p) => p.id !== hit.id));
+      return false;
+    }
+    const now = Date.now();
+    write([
+      { ...entry, original: norm(entry.original), id: `${now}-${Math.random().toString(36).slice(2, 7)}`, createdAt: now, known: 0, reviewedAt: 0 },
+      ...read(),
+    ]);
+    return true;
+  },
+  remove(id: string) {
+    write(read().filter((p) => p.id !== id));
+  },
+  mark(id: string, remembered: boolean) {
+    write(
+      read().map((p) =>
+        p.id === id ? { ...p, known: remembered ? p.known + 1 : 0, reviewedAt: Date.now() } : p,
+      ),
+    );
+  },
+  /** Review order: least known first, then longest since last seen. */
+  reviewQueue() {
+    return [...read()].sort((a, b) => a.known - b.known || a.reviewedAt - b.reviewedAt);
+  },
+  /** One phrase per calendar day, stable for the whole day. */
+  ofTheDay(): SavedPhrase | null {
+    const list = read();
+    if (list.length === 0) return null;
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60_000) / 86_400_000);
+    return list[day % list.length] ?? null;
+  },
+  clear() {
+    write([]);
+  },
+};
+
+function subscribe(fn: () => void) {
+  listeners.add(fn);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === KEY) {
+      cache = null;
+      fn();
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(fn);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useSaved(): SavedPhrase[] {
+  return useSyncExternalStore(subscribe, read, () => EMPTY);
+}
