@@ -62,7 +62,8 @@ const en = {
   save: "Save",
   unsave: "Saved",
   savedTitle: "Saved",
-  savedEmpty: "Save a translation with the bookmark and it lands here — your own phrasebook, kept only on this device.",
+  savedEmpty:
+    "Save a translation with the bookmark and it lands here — your own phrasebook, kept only on this device.",
   review: "Review",
   reveal: "Tap to see the translation",
   again: "Again",
@@ -239,13 +240,15 @@ const de: Record<Key, string> = {
   err_rate: "Gerade viele Anfragen auf einmal. Einen Moment bitte.",
   err_network: "Die Verbindung brach ab, bevor die Übersetzung fertig war.",
   err_timeout: "Das hat zu lange gedauert. Dein Text ist noch da.",
-  err_offline: "Du bist offline. Dein Text ist sicher – die Übersetzung geht weiter, sobald du wieder online bist.",
+  err_offline:
+    "Du bist offline. Dein Text ist sicher – die Übersetzung geht weiter, sobald du wieder online bist.",
   err_provider: "Etwas hat die Übersetzung unterbrochen.",
   err_input: "Dieser Text ließ sich so nicht übersetzen.",
   save: "Merken",
   unsave: "Gemerkt",
   savedTitle: "Gemerkt",
-  savedEmpty: "Merke dir eine Übersetzung mit dem Lesezeichen – dein eigenes Phrasenbuch, nur auf diesem Gerät.",
+  savedEmpty:
+    "Merke dir eine Übersetzung mit dem Lesezeichen – dein eigenes Phrasenbuch, nur auf diesem Gerät.",
   review: "Üben",
   reveal: "Tippen, um die Übersetzung zu sehen",
   again: "Nochmal",
@@ -325,7 +328,11 @@ function subscribe(fn: () => void) {
 }
 
 export function useI18n() {
-  const locale = useSyncExternalStore(subscribe, () => current, () => "en" as Locale);
+  const locale = useSyncExternalStore(
+    subscribe,
+    () => current,
+    () => "en" as Locale,
+  );
   const dict = DICT[locale];
   return { locale, t: (k: Key) => dict[k], rtl: locale === "ar" };
 }

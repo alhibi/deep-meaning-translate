@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDownToLine, Bookmark, ChevronDown, ClipboardPaste, Clock3, Mic, X } from "lucide-react";
+import {
+  ArrowDownToLine,
+  Bookmark,
+  ChevronDown,
+  ClipboardPaste,
+  Clock3,
+  Mic,
+  X,
+} from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { LanguageBar } from "@/components/translator/LanguageBar";
@@ -122,7 +130,8 @@ function Translator() {
     } else {
       const session = persist.session();
       if (session?.text) {
-        if (session.result) prime(session.text, session.source, session.target, session.style, session.result);
+        if (session.result)
+          prime(session.text, session.source, session.target, session.style, session.result);
         submitNext();
         setText(session.text);
       }
@@ -148,7 +157,8 @@ function Translator() {
   const rerouting =
     source === "auto" &&
     !!raw &&
-    (lang2(raw.sourceLanguage) === lang2(raw.targetLanguage) || raw.translation.trim() === text.trim());
+    (lang2(raw.sourceLanguage) === lang2(raw.targetLanguage) ||
+      raw.translation.trim() === text.trim());
   // Never present a translation into a language the user no longer asked for.
   const staleTarget = !!raw && !!raw.targetLanguage && lang2(raw.targetLanguage) !== target;
   const result = rerouting || staleTarget ? null : raw;
@@ -157,7 +167,9 @@ function Translator() {
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
     if (source === "auto" && detected && detected === target) {
-      setTarget(detected === "ar" ? "de" : detected === "de" ? "ar" : target === "de" ? "ar" : "de");
+      setTarget(
+        detected === "ar" ? "de" : detected === "de" ? "ar" : target === "de" ? "ar" : "de",
+      );
     }
   }, [source, detected, target]);
 
@@ -186,7 +198,9 @@ function Translator() {
   const swap = useCallback(() => {
     const nextSource = target;
     const nextTarget =
-      source === "auto" ? (detected ?? (arabicScript ? "ar" : target === "ar" ? "de" : "ar")) : source;
+      source === "auto"
+        ? (detected ?? (arabicScript ? "ar" : target === "ar" ? "de" : "ar"))
+        : source;
     setSource(nextSource);
     setTarget(nextTarget === nextSource ? (nextSource === "de" ? "ar" : "de") : nextTarget);
     if (result?.translation) {
@@ -209,7 +223,8 @@ function Translator() {
 
   // A paste is a deliberate submission: translate the whole thing right away.
   const onPaste = useCallback(() => submitNext(), [submitNext]);
-  const canReadClipboard = restored && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
+  const canReadClipboard =
+    restored && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
   const pasteClipboard = useCallback(async () => {
     try {
       const value = (await navigator.clipboard.readText()).trim();
@@ -247,13 +262,16 @@ function Translator() {
     closeHistory();
   }, [closeHistory]);
   const clearHistory = useCallback(() => setEntries(history.clear()), []);
-  const pickHistory = useCallback((e: HistoryEntry) => {
-    setText(e.original);
-    setSource(e.source);
-    setTarget(e.target);
-    submitNext();
-    closeHistory();
-  }, [submitNext, closeHistory]);
+  const pickHistory = useCallback(
+    (e: HistoryEntry) => {
+      setText(e.original);
+      setSource(e.source);
+      setTarget(e.target);
+      submitNext();
+      closeHistory();
+    },
+    [submitNext, closeHistory],
+  );
 
   const { t, locale, rtl: uiRtl } = useI18n();
   const hasClip = useClipboardHint();
@@ -323,15 +341,23 @@ function Translator() {
   const isSaved = !!result && !!savedList && !!saved.find(text, target);
   const toggleSave = useCallback(() => {
     if (!result) return;
-    saved.toggle({ source: result.sourceLanguage || source, target, original: text, translated: result.translation });
+    saved.toggle({
+      source: result.sourceLanguage || source,
+      target,
+      original: text,
+      translated: result.translation,
+    });
   }, [result, source, target, text]);
-  const pickSaved = useCallback((p: SavedPhrase) => {
-    setSavedOpen(false);
-    setSource(p.source === "auto" ? "auto" : p.source);
-    setTarget(p.target);
-    submitNext();
-    setText(p.original);
-  }, [submitNext]);
+  const pickSaved = useCallback(
+    (p: SavedPhrase) => {
+      setSavedOpen(false);
+      setSource(p.source === "auto" ? "auto" : p.source);
+      setTarget(p.target);
+      submitNext();
+      setText(p.original);
+    },
+    [submitNext],
+  );
 
   // Situation detection → one quiet suggestion, only when it disagrees with the chosen style.
   const sit = result?.situation;
@@ -360,13 +386,19 @@ function Translator() {
           <span
             aria-hidden
             className="grid size-2 shrink-0 place-items-center transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
-            style={{ transform: tagline ? "rotate(225deg) scale(0.7)" : "rotate(0deg) scale(1)", opacity: tagline ? 0.55 : 1 }}
+            style={{
+              transform: tagline ? "rotate(225deg) scale(0.7)" : "rotate(0deg) scale(1)",
+              opacity: tagline ? 0.55 : 1,
+            }}
           >
             <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
           </span>
           {/* Storm swap: the outgoing word is swept away (blur + skew + stretch) while the incoming one condenses out of the blur — overlapped, never a pause. */}
           <span className="relative block h-[19px]">
-            <span aria-hidden className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]">
+            <span
+              aria-hidden
+              className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]"
+            >
               say it naturally.
             </span>
             <span
@@ -408,13 +440,20 @@ function Translator() {
             aria-label={t("uiLanguage")}
             className="press-soft grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground"
           >
-            <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>{LOCALE_SHORT[locale]}</span>
+            <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>
+              {LOCALE_SHORT[locale]}
+            </span>
           </button>
           <LanguageSheet
             open={localeOpen}
             title={t("uiLanguage")}
             searchable={false}
-            items={LOCALES.map((l) => ({ code: l, native: LOCALE_NAME[l], name: LOCALE_NAME[l], rtl: l === "ar" }))}
+            items={LOCALES.map((l) => ({
+              code: l,
+              native: LOCALE_NAME[l],
+              name: LOCALE_NAME[l],
+              rtl: l === "ar",
+            }))}
             value={locale}
             onSelect={(c) => setLocale(c as typeof locale)}
             onClose={closeLocale}
@@ -448,7 +487,6 @@ function Translator() {
         </div>
       </header>
 
-
       <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
         <LanguageBar
           source={source}
@@ -476,7 +514,9 @@ function Translator() {
               placeholder={t("placeholder")}
               aria-label={t("inputLabel")}
               className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
-                rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                rtlInput
+                  ? "font-arabic text-[24px] leading-[1.7]"
+                  : "text-[22px] leading-[1.45] tracking-[-0.015em]"
               } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
             />
             {speech.listening ? (
@@ -485,16 +525,21 @@ function Translator() {
                 aria-hidden
                 dir={rtlInput ? "rtl" : "ltr"}
                 className={`pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
-                  rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                  rtlInput
+                    ? "font-arabic text-[24px] leading-[1.7]"
+                    : "text-[22px] leading-[1.45] tracking-[-0.015em]"
                 }`}
               >
                 {(() => {
                   const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
-                  return text.split(/\s+/).filter(Boolean).map((w, i) => (
-                    <span key={i} className={i < baseLen ? undefined : "speech-word"}>
-                      {w}{" "}
-                    </span>
-                  ));
+                  return text
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .map((w, i) => (
+                      <span key={i} className={i < baseLen ? undefined : "speech-word"}>
+                        {w}{" "}
+                      </span>
+                    ));
                 })()}
               </div>
             ) : null}
@@ -520,7 +565,9 @@ function Translator() {
                     aria-busy={speech.starting}
                     data-live={speech.listening || undefined}
                     className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
-                      speech.listening ? "text-signal-foreground" : "text-muted-foreground hover:text-foreground"
+                      speech.listening
+                        ? "text-signal-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <span aria-hidden className="mic-halo" />
@@ -530,14 +577,31 @@ function Translator() {
                   </button>
                 ) : null}
                 {speech.listening ? (
-                  <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
+                  <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">
+                    {t("micListening")}
+                  </span>
                 ) : speech.error ? (
-                  <span className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground" aria-live="polite">
+                  <span
+                    className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground"
+                    aria-live="polite"
+                  >
                     <span className="truncate">
-                      {t(speech.error === "denied" ? "micDenied" : speech.error === "nospeech" ? "micNoSpeech" : speech.error === "nomic" ? "micNoDevice" : "micFailed")}
+                      {t(
+                        speech.error === "denied"
+                          ? "micDenied"
+                          : speech.error === "nospeech"
+                            ? "micNoSpeech"
+                            : speech.error === "nomic"
+                              ? "micNoDevice"
+                              : "micFailed",
+                      )}
                     </span>
                     {speech.error !== "denied" ? (
-                      <button type="button" onClick={retryMic} className="press-soft shrink-0 rounded-full px-2 py-1 text-signal-text">
+                      <button
+                        type="button"
+                        onClick={retryMic}
+                        className="press-soft shrink-0 rounded-full px-2 py-1 text-signal-text"
+                      >
                         {t("micRetry")}
                       </button>
                     ) : null}
@@ -545,21 +609,21 @@ function Translator() {
                 ) : null}
               </div>
               <div className="flex items-center gap-3">
-              {!hasText && canReadClipboard && hasClip && !speech.listening ? (
-                <button
-                  type="button"
-                  onClick={() => void pasteClipboard()}
-                  className="press-soft animate-fade inline-flex h-9 items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
-                >
-                  <ClipboardPaste className="size-4" strokeWidth={1.6} />
-                  {t("paste")}
-                </button>
-              ) : null}
-              {text.length > MAX_CHARS * 0.7 ? (
-                <span className="animate-fade text-[11px] tabular-nums text-faint">
-                  {text.length}/{MAX_CHARS}
-                </span>
-              ) : null}
+                {!hasText && canReadClipboard && hasClip && !speech.listening ? (
+                  <button
+                    type="button"
+                    onClick={() => void pasteClipboard()}
+                    className="press-soft animate-fade inline-flex h-9 items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
+                  >
+                    <ClipboardPaste className="size-4" strokeWidth={1.6} />
+                    {t("paste")}
+                  </button>
+                ) : null}
+                {text.length > MAX_CHARS * 0.7 ? (
+                  <span className="animate-fade text-[11px] tabular-nums text-faint">
+                    {text.length}/{MAX_CHARS}
+                  </span>
+                ) : null}
               </div>
             </div>
           </section>
@@ -594,41 +658,51 @@ function Translator() {
 
           <div>
             <SafeArea>
-            <ResultPanel
-              result={result}
-              pending={pending}
-              provisional={provisional}
-              error={error}
-              target={target}
-              onRetry={retry}
-              isSaved={isSaved}
-              onSave={toggleSave}
-              suggestion={
-                suggestion
-                  ? {
-                      label: suggestion.label,
-                      onApply: () => setStyle(suggestion.next),
-                      onDismiss: () => setDismissedFor(suggestKey),
-                    }
-                  : null
-              }
-              idle={
-                today ? (
-                  <button type="button" onClick={() => pickSaved(today)} className="press-soft block w-full text-start">
-                    <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
-                      <span aria-hidden className="size-1 rotate-45 bg-signal" />
-                      {t("phraseOfDay")}
-                    </span>
-                    <span dir="auto" className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}>
-                      {today.translated}
-                    </span>
-                    <span dir="auto" className="mt-1 block text-start text-[14px] text-muted-foreground">
-                      {today.original}
-                    </span>
-                  </button>
-                ) : undefined
-              }
-            />
+              <ResultPanel
+                result={result}
+                pending={pending}
+                provisional={provisional}
+                error={error}
+                target={target}
+                onRetry={retry}
+                isSaved={isSaved}
+                onSave={toggleSave}
+                suggestion={
+                  suggestion
+                    ? {
+                        label: suggestion.label,
+                        onApply: () => setStyle(suggestion.next),
+                        onDismiss: () => setDismissedFor(suggestKey),
+                      }
+                    : null
+                }
+                idle={
+                  today ? (
+                    <button
+                      type="button"
+                      onClick={() => pickSaved(today)}
+                      className="press-soft block w-full text-start"
+                    >
+                      <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
+                        <span aria-hidden className="size-1 rotate-45 bg-signal" />
+                        {t("phraseOfDay")}
+                      </span>
+                      <span
+                        dir="auto"
+                        className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}
+                      >
+                        {today.translated}
+                      </span>
+                      <span
+                        dir="auto"
+                        className="mt-1 block text-start text-[14px] text-muted-foreground"
+                      >
+                        {today.original}
+                      </span>
+                    </button>
+                  ) : undefined
+                }
+              />
             </SafeArea>
           </div>
         </div>
@@ -636,37 +710,46 @@ function Translator() {
       <div className="h-3 pad-safe-bottom" />
 
       <SafeArea silent>
-      <LanguageSheet
-        open={dialectOpen}
-        title={t("dialect")}
-        searchable={false}
-        plain
-        items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map((d) => ({
-          code: d,
-          native: t(`d_${d}`),
-          name: t(`d_${d}`),
-          rtl: true,
-        }))}
-        value={dialect}
-        onSelect={selectDialect}
-        onClose={closeDialect}
-      />
-      <SavedSheet open={savedOpen} entries={savedList} onClose={() => setSavedOpen(false)} onPick={pickSaved} />
-      <HistorySheet
-        open={historyOpen}
-        entries={entries}
-        onClose={closeHistory}
-        onPick={pickHistory}
-        onClear={clearHistory}
-        onForgetAll={forgetAll}
-      />
+        <LanguageSheet
+          open={dialectOpen}
+          title={t("dialect")}
+          searchable={false}
+          plain
+          items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map(
+            (d) => ({
+              code: d,
+              native: t(`d_${d}`),
+              name: t(`d_${d}`),
+              rtl: true,
+            }),
+          )}
+          value={dialect}
+          onSelect={selectDialect}
+          onClose={closeDialect}
+        />
+        <SavedSheet
+          open={savedOpen}
+          entries={savedList}
+          onClose={() => setSavedOpen(false)}
+          onPick={pickSaved}
+        />
+        <HistorySheet
+          open={historyOpen}
+          entries={entries}
+          onClose={closeHistory}
+          onPick={pickHistory}
+          onClear={clearHistory}
+          onForgetAll={forgetAll}
+        />
       </SafeArea>
     </main>
   );
 }
 
 const SUPPORTS_FIELD_SIZING =
-  typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("field-sizing", "content");
+  typeof CSS !== "undefined" &&
+  typeof CSS.supports === "function" &&
+  CSS.supports("field-sizing", "content");
 
 const useLayoutEffectSafe = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -676,6 +759,8 @@ function lang2(code: string | undefined) {
 
 /** Direction follows the first strong character the user typed. */
 function startsRtl(value: string) {
-  const m = value.match(/[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/);
+  const m = value.match(
+    /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/,
+  );
   return !!m && /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(m[0]);
 }

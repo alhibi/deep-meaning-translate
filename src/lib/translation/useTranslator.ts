@@ -6,14 +6,7 @@ import { delayFor, isProvisional, normalize, worthTranslating } from "./schedule
 import { metrics } from "./metrics";
 
 export type ErrorKind =
-  | "auth"
-  | "quota"
-  | "rate"
-  | "network"
-  | "offline"
-  | "timeout"
-  | "provider"
-  | "input";
+  "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
 
 /** One state at a time — the UI derives everything from this. */
 export type Phase =
@@ -106,14 +99,17 @@ export function useTranslator(opts: {
     retryTimer.current = null;
   };
 
-  const commit = useCallback((key: string, value: TranslationResult, prov: boolean, norm: string) => {
-    committedKey.current = key;
-    setResult(value);
-    setProvisional(prov);
-    setError(null);
-    setPhase("COMPLETE");
-    successRef.current?.(value, norm, prov);
-  }, []);
+  const commit = useCallback(
+    (key: string, value: TranslationResult, prov: boolean, norm: string) => {
+      committedKey.current = key;
+      setResult(value);
+      setProvisional(prov);
+      setError(null);
+      setPhase("COMPLETE");
+      successRef.current?.(value, norm, prov);
+    },
+    [],
+  );
 
   const run = useCallback(
     async (norm: string, key: string, prov: boolean, attempt = 0) => {
@@ -261,7 +257,12 @@ export function useTranslator(opts: {
     const delay =
       isDeliberate || paramsChanged
         ? 0
-        : delayFor({ normalized: norm, raw: text, intervals: intervals.current, hasResult: hasResult.current });
+        : delayFor({
+            normalized: norm,
+            raw: text,
+            intervals: intervals.current,
+            hasResult: hasResult.current,
+          });
     setPhase(delay === 0 ? "READY" : "SCHEDULED");
     const id = setTimeout(() => void run(norm, key, prov), delay);
     return () => clearTimeout(id);
@@ -306,7 +307,11 @@ export function useTranslator(opts: {
   /** Seed a known result (e.g. restored session) so it shows without a new request. */
   const prime = useCallback(
     (raw: string, s: string, t: string, st: StyleOverride, value: TranslationResult) => {
-      cache.current.set(keyOf(normalize(raw), s, t, st), { result: value, at: Date.now(), provisional: false });
+      cache.current.set(keyOf(normalize(raw), s, t, st), {
+        result: value,
+        at: Date.now(),
+        provisional: false,
+      });
     },
     [],
   );

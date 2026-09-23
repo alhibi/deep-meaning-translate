@@ -46,7 +46,6 @@ export class TranslationError extends Error {
     public readonly kind: "auth" | "quota" | "rate" | "network" | "provider" | "input",
     message: string,
   ) {
-
     super(message);
   }
 }

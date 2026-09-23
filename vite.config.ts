@@ -21,6 +21,7 @@ export default defineConfig({
         injectRegister: null, // src/lib/pwa.ts is the only registrar
         manifest: false, // served from public/manifest.webmanifest
         filename: "sw.js",
+        outDir: "dist/client", // serve sw.js from the public client root
         devOptions: { enabled: false },
         workbox: {
           globPatterns: ["**/*.{js,css,woff2,png,svg,ico,webmanifest}"],
@@ -42,7 +43,8 @@ export default defineConfig({
             },
             {
               // Hashed build assets are immutable: cache once, serve instantly (incl. offline).
-              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
+              urlPattern: ({ url, sameOrigin }) =>
+                sameOrigin && url.pathname.startsWith("/assets/"),
               handler: "CacheFirst",
               options: { cacheName: "lingua-assets", expiration: { maxEntries: 80 } },
             },

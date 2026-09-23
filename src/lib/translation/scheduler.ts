@@ -47,8 +47,9 @@ function wordCount(t: string) {
 }
 
 function slowConnection(): boolean {
-  const c = (navigator as Navigator & { connection?: { effectiveType?: string; saveData?: boolean } })
-    .connection;
+  const c = (
+    navigator as Navigator & { connection?: { effectiveType?: string; saveData?: boolean } }
+  ).connection;
   return !!c && (c.saveData === true || /(^|-)2g|3g/.test(c.effectiveType ?? ""));
 }
 
@@ -72,7 +73,8 @@ export function delayFor(opts: {
   else d = 520; // mid-word: most likely still typing
 
   if (avg < 160) d += 120; // fast typist — wait for the real pause
-  if (!hasResult && wordCount(normalized) < 2 && !SENTENCE_END.test(normalized)) d = Math.max(d, 650);
+  if (!hasResult && wordCount(normalized) < 2 && !SENTENCE_END.test(normalized))
+    d = Math.max(d, 650);
   if (normalized.length > 600) d += 180;
   if (typeof navigator !== "undefined" && slowConnection()) d += 250;
   return d;

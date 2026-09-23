@@ -26,9 +26,23 @@ interface Props {
 }
 
 const norm = (s: string) =>
-  s.toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f\u064B-\u065F]/g, "").trim();
+  s
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f\u064B-\u065F]/g, "")
+    .trim();
 
-export function LanguageSheet({ open, title, items, value, recent = [], searchable = true, plain = false, onSelect, onClose }: Props) {
+export function LanguageSheet({
+  open,
+  title,
+  items,
+  value,
+  recent = [],
+  searchable = true,
+  plain = false,
+  onSelect,
+  onClose,
+}: Props) {
   const { t, locale, rtl } = useI18n();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -111,12 +125,20 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
   const filtered = useMemo(() => {
     if (!q) return items;
     return items.filter((it) =>
-      [it.native, it.name, localized(it.code), it.code, ...(it.aliases ?? [])].some((s) => s && norm(s).includes(q)),
+      [it.native, it.name, localized(it.code), it.code, ...(it.aliases ?? [])].some(
+        (s) => s && norm(s).includes(q),
+      ),
     );
   }, [items, q, localized]);
 
   const recentItems = useMemo(
-    () => (q ? [] : recent.map((c) => items.find((i) => i.code === c)).filter((i): i is PickerItem => Boolean(i)).slice(0, 3)),
+    () =>
+      q
+        ? []
+        : recent
+            .map((c) => items.find((i) => i.code === c))
+            .filter((i): i is PickerItem => Boolean(i))
+            .slice(0, 3),
     [recent, items, q],
   );
 
@@ -138,7 +160,8 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
   const Row = ({ it }: { it: PickerItem }) => {
     const active = it.code === value;
     const sub = plain ? "" : localized(it.code);
-    const secondary = sub && norm(sub) !== norm(it.native) ? sub : it.name !== it.native ? it.name : "";
+    const secondary =
+      sub && norm(sub) !== norm(it.native) ? sub : it.name !== it.native ? it.name : "";
     return (
       <li>
         <button
@@ -151,7 +174,9 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
             <span
               style={{ textAlign: rtl ? "right" : "left" }}
               className={`truncate ${active ? "text-foreground" : "text-foreground/90"} ${
-                it.rtl ? "font-arabic text-[19px] leading-[1.35]" : "text-[17px] leading-[1.35] tracking-[-0.01em]"
+                it.rtl
+                  ? "font-arabic text-[19px] leading-[1.35]"
+                  : "text-[17px] leading-[1.35] tracking-[-0.01em]"
               } ${active ? "font-semibold" : "font-medium"}`}
             >
               {it.code === "auto" && !plain ? t("detect") : it.native}
@@ -160,7 +185,9 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
               <span className="truncate text-[12px] text-faint">{secondary}</span>
             ) : null}
           </span>
-          <span className={`grid size-6 shrink-0 place-items-center ${active ? "text-signal" : "text-transparent"}`}>
+          <span
+            className={`grid size-6 shrink-0 place-items-center ${active ? "text-signal" : "text-transparent"}`}
+          >
             <Check className="size-[18px]" strokeWidth={2} />
           </span>
         </button>
@@ -169,23 +196,39 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50" dir={rtl ? "rtl" : "ltr"} role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className="fixed inset-0 z-50"
+      dir={rtl ? "rtl" : "ltr"}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <div
         onClick={onClose}
         className={`absolute inset-0 bg-background/70 ${closing ? "animate-sheet-scrim-out" : "animate-sheet-scrim"}`}
       />
       <div
-        style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: drag ? "none" : undefined }}
+        style={{
+          transform: drag ? `translateY(${drag}px)` : undefined,
+          transition: drag ? "none" : undefined,
+        }}
         className={`absolute inset-x-0 bottom-0 mx-auto flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface ${
           closing ? "animate-sheet-out" : "animate-sheet-in"
         }`}
       >
-        <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} className="shrink-0 touch-none">
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="shrink-0 touch-none"
+        >
           <div className="flex justify-center pt-2.5">
             <span aria-hidden className="h-1 w-9 rounded-full bg-border-strong" />
           </div>
           <div className="flex items-center justify-between px-5 pb-2 pt-3">
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">{title}</h2>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+              {title}
+            </h2>
             <button
               type="button"
               onClick={onClose}
@@ -211,7 +254,12 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
                 className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
               />
               {query ? (
-                <button type="button" onClick={() => setQuery("")} aria-label={t("clear")} className="text-faint">
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={t("clear")}
+                  className="text-faint"
+                >
                   <X className="size-4" strokeWidth={1.75} />
                 </button>
               ) : null}
@@ -221,13 +269,25 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {recentItems.length ? (
             <>
-              <p className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t("langRecent")}</p>
-              <ul>{recentItems.map((it) => <Row key={`r-${it.code}`} it={it} />)}</ul>
-              <p className="px-4 pb-1 pt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t("langAll")}</p>
+              <p className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
+                {t("langRecent")}
+              </p>
+              <ul>
+                {recentItems.map((it) => (
+                  <Row key={`r-${it.code}`} it={it} />
+                ))}
+              </ul>
+              <p className="px-4 pb-1 pt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
+                {t("langAll")}
+              </p>
             </>
           ) : null}
           {filtered.length ? (
-            <ul>{filtered.map((it) => <Row key={it.code} it={it} />)}</ul>
+            <ul>
+              {filtered.map((it) => (
+                <Row key={it.code} it={it} />
+              ))}
+            </ul>
           ) : (
             <p className="px-4 py-8 text-center text-[14px] text-faint">{t("langNone")}</p>
           )}

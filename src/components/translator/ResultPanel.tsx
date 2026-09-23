@@ -7,8 +7,14 @@ import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 
-
-const LOCALE: Record<string, string> = { ar: "ar-SA", de: "de-DE", en: "en-US", fr: "fr-FR", es: "es-ES", tr: "tr-TR" };
+const LOCALE: Record<string, string> = {
+  ar: "ar-SA",
+  de: "de-DE",
+  en: "en-US",
+  fr: "fr-FR",
+  es: "es-ES",
+  tr: "tr-TR",
+};
 
 /** Prefer a local, high-quality voice for the exact language; fall back gracefully. */
 function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
@@ -25,8 +31,10 @@ function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
 
 /** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
 function sizeFor(len: number, rtl: boolean) {
-  if (len < 60) return rtl ? "text-[32px] leading-[1.6]" : "text-[30px] leading-[1.25] tracking-[-0.02em]";
-  if (len < 220) return rtl ? "text-[26px] leading-[1.7]" : "text-[24px] leading-[1.35] tracking-[-0.015em]";
+  if (len < 60)
+    return rtl ? "text-[32px] leading-[1.6]" : "text-[30px] leading-[1.25] tracking-[-0.02em]";
+  if (len < 220)
+    return rtl ? "text-[26px] leading-[1.7]" : "text-[24px] leading-[1.35] tracking-[-0.015em]";
   return rtl ? "text-[21px] leading-[1.8]" : "text-[19px] leading-[1.5]";
 }
 
@@ -101,7 +109,8 @@ export const ResultPanel = memo(function ResultPanel({
   useEffect(() => {
     setShowAlt(false);
     setCopied(false);
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (typeof window !== "undefined" && "speechSynthesis" in window)
+      window.speechSynthesis.cancel();
     setSpeaking(false);
   }, [text]);
 
@@ -222,7 +231,11 @@ export const ResultPanel = memo(function ResultPanel({
               <span aria-hidden className="size-1 rotate-45 bg-signal" />
               {suggestion.label}
             </span>
-            <button type="button" onClick={suggestion.onApply} className="press-soft font-medium text-signal-text underline decoration-signal/40 underline-offset-4">
+            <button
+              type="button"
+              onClick={suggestion.onApply}
+              className="press-soft font-medium text-signal-text underline decoration-signal/40 underline-offset-4"
+            >
               {t("sit_apply")}
             </button>
             <button type="button" onClick={suggestion.onDismiss} className="press-soft text-faint">
@@ -237,7 +250,9 @@ export const ResultPanel = memo(function ResultPanel({
 
         <div
           className={`-ms-0.5 mt-5 flex items-center transition-[opacity,transform] duration-300 ${
-            provisional || pending ? "pointer-events-none translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+            provisional || pending
+              ? "pointer-events-none translate-y-1 opacity-0"
+              : "translate-y-0 opacity-100"
           }`}
         >
           <button
@@ -249,8 +264,14 @@ export const ResultPanel = memo(function ResultPanel({
             }`}
           >
             <span className="relative grid size-4 place-items-center">
-              <Copy className={`swap-icon size-4 ${copied ? "scale-75 opacity-0" : "opacity-100"}`} strokeWidth={1.8} />
-              <Check className={`swap-icon absolute size-4 ${copied ? "opacity-100" : "scale-75 opacity-0"}`} strokeWidth={2.2} />
+              <Copy
+                className={`swap-icon size-4 ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
+                strokeWidth={1.8}
+              />
+              <Check
+                className={`swap-icon absolute size-4 ${copied ? "opacity-100" : "scale-75 opacity-0"}`}
+                strokeWidth={2.2}
+              />
             </span>
             {copied ? t("copied") : t("copyShort")}
           </button>
@@ -261,7 +282,14 @@ export const ResultPanel = memo(function ResultPanel({
             />
           </Action>
           {onSave ? (
-            <Action label={isSaved ? t("unsave") : t("save")} onClick={() => { onSave(); tick(); }} active={!!isSaved}>
+            <Action
+              label={isSaved ? t("unsave") : t("save")}
+              onClick={() => {
+                onSave();
+                tick();
+              }}
+              active={!!isSaved}
+            >
               <Bookmark
                 className={`size-[18px] transition-transform duration-200 ${isSaved ? "scale-110 fill-signal text-signal" : ""}`}
                 strokeWidth={1.75}
@@ -283,7 +311,8 @@ export const ResultPanel = memo(function ResultPanel({
             <button
               type="button"
               onClick={onRetry}
-              title={error === "offline" ? t("err_offline") : undefined} className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
+              title={error === "offline" ? t("err_offline") : undefined}
+              className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
             >
               <RotateCw className="size-3" strokeWidth={1.75} />
               {error === "offline" ? t("offline") : t("retry")}
@@ -296,7 +325,10 @@ export const ResultPanel = memo(function ResultPanel({
     body = (
       <div key="error" className="animate-rise">
         <p className="flex items-start gap-2.5 text-[15px] leading-relaxed text-muted-foreground">
-          <span aria-hidden className={`mt-[0.6em] size-1.5 shrink-0 rounded-full ${error === "offline" || error === "rate" || error === "timeout" ? "bg-warning" : "bg-destructive"}`} />
+          <span
+            aria-hidden
+            className={`mt-[0.6em] size-1.5 shrink-0 rounded-full ${error === "offline" || error === "rate" || error === "timeout" ? "bg-warning" : "bg-destructive"}`}
+          />
           {t(`err_${error}`)}
         </p>
         {error !== "auth" ? (
@@ -314,7 +346,9 @@ export const ResultPanel = memo(function ResultPanel({
     body = <Skeleton key="pending" />;
   } else {
     body = idle ? (
-      <div key="idle-extra" className="animate-fade">{idle}</div>
+      <div key="idle-extra" className="animate-fade">
+        {idle}
+      </div>
     ) : (
       <p key="idle" className="animate-fade text-[15px] text-faint">
         {t("idle")}

@@ -1,5 +1,10 @@
 import { buildRepairPrompt, buildSystemPrompt, buildUserPrompt } from "../prompt";
-import type { Situation, TranslationProvider, TranslationRequest, TranslationResult } from "../types";
+import type {
+  Situation,
+  TranslationProvider,
+  TranslationRequest,
+  TranslationResult,
+} from "../types";
 import { TranslationError } from "../types";
 
 const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
@@ -7,6 +12,7 @@ const MODEL = "gpt-5.6-luna";
 const SESSION = "lingua-translator";
 
 function extractText(payload: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped provider JSON, narrowed below
   const p = payload as Record<string, any>;
   if (typeof p?.["output_text"] === "string" && p["output_text"].trim()) return p["output_text"];
   const out = p?.["output"];
@@ -30,7 +36,11 @@ function extractText(payload: unknown): string {
 const SITUATIONS: Situation[] = ["chat", "work", "official", "general"];
 
 function parseResult(raw: string, req: TranslationRequest): TranslationResult {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1) throw new TranslationError("provider", "Malformed model output.");
@@ -59,7 +69,9 @@ function parseResult(raw: string, req: TranslationRequest): TranslationResult {
     isAmbiguous: data["isAmbiguous"] === true,
     alternativeTranslations: alts,
     notes: typeof data["notes"] === "string" ? data["notes"].slice(0, 240) : "",
-    situation: SITUATIONS.includes(data["situation"] as Situation) ? (data["situation"] as Situation) : "general",
+    situation: SITUATIONS.includes(data["situation"] as Situation)
+      ? (data["situation"] as Situation)
+      : "general",
   };
 }
 

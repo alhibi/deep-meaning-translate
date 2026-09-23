@@ -31,7 +31,12 @@ describe("history", () => {
   it("merges a sentence that grew while typing", async () => {
     const { history } = await import("./history");
     history.add({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
-    const list = history.add({ source: "de", target: "ar", original: "Hallo Welt", translated: "مرحبا يا عالم" });
+    const list = history.add({
+      source: "de",
+      target: "ar",
+      original: "Hallo Welt",
+      translated: "مرحبا يا عالم",
+    });
     expect(list).toHaveLength(1);
   });
   it("drops damaged rows", async () => {

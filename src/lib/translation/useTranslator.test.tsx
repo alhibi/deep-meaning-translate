@@ -7,8 +7,15 @@ vi.mock("@tanstack/react-start", () => ({ useServerFn: () => call }));
 vi.mock("./translate.functions", () => ({ translate: {} }));
 
 const result = (translation: string): TranslationResult => ({
-  sourceLanguage: "de", targetLanguage: "ar", translation, tone: "", formality: "neutral",
-  confidence: 0.9, isAmbiguous: false, alternativeTranslations: [], notes: "",
+  sourceLanguage: "de",
+  targetLanguage: "ar",
+  translation,
+  tone: "",
+  formality: "neutral",
+  confidence: 0.9,
+  isAmbiguous: false,
+  alternativeTranslations: [],
+  notes: "",
 });
 
 const { useTranslator } = await import("./useTranslator");
@@ -41,7 +48,9 @@ describe("useTranslator", () => {
     call
       .mockImplementationOnce(() => new Promise((r) => (resolveFirst = r)))
       .mockResolvedValue({ ok: true, result: result("جديد") });
-    const { result: h, rerender } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo.") });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Hallo."),
+    });
     await flush(300);
     rerender(opts("Tschüss."));
     await flush(300);
@@ -54,8 +63,12 @@ describe("useTranslator", () => {
   });
 
   it("keeps the last good result when a later request fails", async () => {
-    call.mockResolvedValueOnce({ ok: true, result: result("جيد") }).mockResolvedValue({ ok: false, kind: "auth" });
-    const { result: h, rerender } = renderHook((p) => useTranslator(p), { initialProps: opts("Gut.") });
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("جيد") })
+      .mockResolvedValue({ ok: false, kind: "auth" });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Gut."),
+    });
     await flush(500);
     rerender(opts("Gut gemacht."));
     await flush(500);
