@@ -338,3 +338,38 @@ textarea:focus-visible { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet-in, .animate-sheet-out { animation-duration: 1ms !important; }
 }
+
+/* ---------- Voice: soft clay orb, words condense from blur ---------- */
+@keyframes word-in {
+  from { opacity: 0; filter: blur(6px); transform: translateY(0.12em); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+@keyframes halo {
+  0% { transform: scale(0.85); opacity: 0.45; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes core-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+@keyframes wave-text {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.speech-word { display: inline; animation: word-in 420ms var(--ease-out) both; }
+.mic-orb .mic-core, .mic-orb .mic-halo {
+  position: absolute; inset: 4px; border-radius: 9999px; pointer-events: none;
+}
+.mic-orb .mic-core {
+  background: var(--signal); opacity: 0; transform: scale(0.6);
+  transition: opacity 280ms var(--ease-soft), transform 360ms var(--ease-out);
+}
+.mic-orb .mic-halo { border: 1px solid color-mix(in oklab, var(--signal) 60%, transparent); opacity: 0; }
+.mic-orb[data-live] .mic-core { opacity: 1; transform: scale(1); animation: core-breathe 2.4s ease-in-out 360ms infinite; }
+.mic-orb[data-live] .mic-halo { animation: halo 2.4s var(--ease-out) infinite; }
+.mic-orb[data-live] .mic-halo-2 { animation-delay: 1.2s; }
+.mic-orb[aria-busy="true"] .mic-core { opacity: 0.35; transform: scale(0.85); }
+.mic-wave { animation: fade 240ms var(--ease-soft) both, wave-text 2.4s ease-in-out 240ms infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .speech-word, .mic-orb[data-live] .mic-halo, .mic-orb[data-live] .mic-core, .mic-wave { animation: none; }
+}

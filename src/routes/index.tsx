@@ -476,8 +476,27 @@ function Translator() {
               aria-label={t("inputLabel")}
               className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
                 rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
-              }`}
+              } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
             />
+            {speech.listening ? (
+              /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
+              <div
+                aria-hidden
+                dir={rtlInput ? "rtl" : "ltr"}
+                className={`pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
+                  rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                }`}
+              >
+                {(() => {
+                  const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
+                  return text.split(/\s+/).filter(Boolean).map((w, i) => (
+                    <span key={i} className={i < baseLen ? undefined : "speech-word"}>
+                      {w}{" "}
+                    </span>
+                  ));
+                })()}
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={clear}

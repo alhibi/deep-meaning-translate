@@ -11,3 +11,14 @@ describe("speechLang", () => {
     expect(speechLang("auto", "de", "ar")).toBe("ar-SA");
   });
 });
+
+describe("speech extras", () => {
+  it("listens in the chosen Arabic dialect", () => {
+    expect(speechLang("ar", "de", "ar", "egypt")).toBe("ar-EG");
+    expect(speechLang("ar", "de", "ar", "auto")).toBe("ar-SA");
+  });
+  it("joins chunks without losing or doubling text", async () => {
+    const { joinSpeech } = await import("./speech");
+    expect(joinSpeech("مرحبا", "", "  كيف  حالك ")).toBe("مرحبا كيف حالك");
+  });
+});
