@@ -26,8 +26,7 @@ import { joinSpeech } from "@/lib/speech";
 import { useSpeech, speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
-import type { Dialect, ModelId, StyleOverride, TranslationResult } from "@/lib/translation/types";
-import { MODELS, MODEL_LABEL } from "@/lib/translation/types";
+import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
 import { shouldShowIntro } from "@/lib/intro";
@@ -69,8 +68,6 @@ function Translator() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
-  const [model, setModel] = useState<ModelId>("gpt-5.6-luna");
-  const [modelOpen, setModelOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
@@ -111,7 +108,6 @@ function Translator() {
     target,
     style,
     dialect,
-    model,
     onSuccess: handleSuccess,
   });
 
@@ -127,7 +123,6 @@ function Translator() {
       setTarget(prefs.target);
       setStyle(prefs.style);
       if (prefs.dialect) setDialect(prefs.dialect);
-      if (prefs.model && MODELS.includes(prefs.model)) setModel(prefs.model);
     }
     const params = new URLSearchParams(window.location.search);
     const shared = [params.get("title"), params.get("text"), params.get("url")]
@@ -153,8 +148,8 @@ function Translator() {
   }, [submitNext, prime]);
 
   useEffect(() => {
-    if (restored) persist.savePrefs({ source, target, style, dialect, model });
-  }, [restored, source, target, style, dialect, model]);
+    if (restored) persist.savePrefs({ source, target, style, dialect });
+  }, [restored, source, target, style, dialect]);
 
   useEffect(() => {
     if (!restored) return;

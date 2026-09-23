@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { repairTranslation } from "./translate.functions";
 import { parseResult } from "./parse";
 import { verifyTranslation } from "./verify";
-import type { Dialect, ModelId, StyleOverride, TranslationResult } from "./types";
+import type { Dialect, StyleOverride, TranslationResult } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
 import { streamTranslate, warmTranslation } from "./stream";
