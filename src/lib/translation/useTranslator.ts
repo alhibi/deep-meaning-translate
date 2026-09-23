@@ -48,6 +48,8 @@ const PENDING_DELAY_MS = 260;
 /** Generous safety net for a hung connection — not a cap on normal model thinking. */
 const REQUEST_TIMEOUT_MS = 60_000;
 const CACHE_LIMIT = 60;
+/** Longest the screen goes without a fresh request while someone types non-stop. */
+const MAX_WAIT_MS = 650;
 const CACHE_TTL_MS = 30 * 60_000;
 
 interface Cached {
@@ -105,13 +107,32 @@ export function useTranslator(opts: {
   const [streaming, setStreaming] = useState(false);
 
   const latest = useRef(0);
-  const inflight = useRef<{ ctrl: AbortController; key: string } | null>(null);
+  const inflight = useRef<{
+    ctrl: AbortController;
+    key: string;
+    norm: string;
+    prov: boolean;
+  } | null>(null);
+  /**
+   * A live stream for an earlier prefix of the current text keeps running instead of
+   * being cancelled, so continuous typing still shows words flowing in — never a gap.
+   */
+  const lingering = useRef<AbortController | null>(null);
+  /** Request token of the text currently on screen; older streams never overwrite it. */
+  const shown = useRef(0);
+  /** Length of the text on screen: a newer stream takes over only once it catches up (no shrinking flicker). */
+  const shownLen = useRef(0);
+  const dropLingering = () => {
+    lingering.current?.abort();
+    lingering.current = null;
+  };
   const committedKey = useRef<string | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cache = useRef(new Map<string, Cached>());
   const deliberate = useRef(false);
   const lastRaw = useRef("");
   const lastKeyAt = useRef(0);
+  const lastSentAt = useRef(0);
   const intervals = useRef<number[]>([]);
   const lastParams = useRef("");
   const current = useRef({ norm: "", key: "", provisional: false });
@@ -130,6 +151,7 @@ export function useTranslator(opts: {
   const commit = useCallback(
     (key: string, value: TranslationResult, prov: boolean, norm: string) => {
       committedKey.current = key;
+      shownLen.current = value.translation.length;
       setResult(value);
       setProvisional(prov);
       setError(null);
@@ -147,7 +169,8 @@ export function useTranslator(opts: {
       if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
         cache.current.delete(key);
         cache.current.set(key, hit); // LRU touch
-        latest.current++;
+        shown.current = ++latest.current;
+        dropLingering();
         if (inflight.current) {
           inflight.current.ctrl.abort();
           inflight.current = null;
@@ -165,13 +188,19 @@ export function useTranslator(opts: {
         return;
       }
 
-      if (inflight.current) {
-        inflight.current.ctrl.abort();
-        metrics.cancel();
+      const prev = inflight.current;
+      if (prev) {
+        if (prev.prov && prov && norm.startsWith(prev.norm)) {
+          dropLingering();
+          lingering.current = prev.ctrl; // still useful: its text is a prefix of what's typed now
+        } else {
+          prev.ctrl.abort();
+          metrics.cancel();
+        }
       }
       const token = ++latest.current;
       const ctrl = new AbortController();
-      inflight.current = { ctrl, key };
+      inflight.current = { ctrl, key, norm, prov };
       let timedOut = false;
       const timer = setTimeout(() => {
         timedOut = true;
@@ -181,6 +210,7 @@ export function useTranslator(opts: {
       setStreaming(false);
       setPhase(attempt > 0 ? "RETRYING" : hasResult.current ? "UPDATING" : "TRANSLATING");
       metrics.request();
+      lastSentAt.current = Date.now();
       const started = performance.now();
 
       const fail = (kind: ErrorKind) => {
@@ -207,7 +237,10 @@ export function useTranslator(opts: {
         // Live typing streams plain text so words appear as they are generated;
         // a finished sentence gets the full structured, verified translation.
         const onText = (partialText: string) => {
-          if (token !== latest.current) return;
+          if (token < shown.current || ctrl.signal.aborted) return;
+          if (token > shown.current && partialText.length < shownLen.current) return;
+          shown.current = token;
+          shownLen.current = partialText.length;
           setStreaming(true);
           setResult((r) => liveResult(r, partialText, source, target));
           setProvisional(true);
@@ -237,12 +270,13 @@ export function useTranslator(opts: {
                 return { ok: false as const, kind: "provider" as const };
               }
             });
-        if (token !== latest.current) return; // superseded — never commit
+        if (token !== latest.current) return; // superseded — shown live at most, never committed
         metrics.latency(performance.now() - started);
         if (res.ok) {
           cache.current.set(key, { result: res.result, at: Date.now(), provisional: prov });
           if (cache.current.size > CACHE_LIMIT)
             cache.current.delete(cache.current.keys().next().value as string);
+          shown.current = token;
           commit(key, res.result, prov, norm);
           if (res.needsRepair) {
             // Shown already; improve it quietly and swap only if still on screen.
@@ -276,6 +310,7 @@ export function useTranslator(opts: {
       } finally {
         clearTimeout(timer);
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
+        if (lingering.current === ctrl) lingering.current = null;
       }
     },
     [callRepair, commit, source, target, style, dialect],
@@ -301,7 +336,9 @@ export function useTranslator(opts: {
 
     const norm = normalize(text);
     if (!norm) {
-      latest.current++;
+      shown.current = ++latest.current;
+      shownLen.current = 0;
+      dropLingering();
       clearRetry();
       inflight.current?.ctrl.abort();
       inflight.current = null;
@@ -333,8 +370,11 @@ export function useTranslator(opts: {
       return; // already on screen, or already on its way
     }
 
+    // Continuous typing never pauses long enough for the debounce, so after
+    // MAX_WAIT_MS without a request, each finished word goes out immediately.
+    const starved = now - lastSentAt.current > MAX_WAIT_MS && /\s$/.test(text);
     const delay =
-      isDeliberate || paramsChanged
+      isDeliberate || paramsChanged || starved
         ? 0
         : delayFor({
             normalized: norm,
@@ -406,8 +446,9 @@ export function useTranslator(opts: {
       if (p === "OFFLINE" || p === "PROVIDER_ERROR" || p === "TIMEOUT") retryRef.current();
     };
     const onOffline = () => {
+      dropLingering();
       if (inflight.current) {
-        latest.current++;
+        shown.current = ++latest.current;
         inflight.current.ctrl.abort();
         inflight.current = null;
       }
@@ -428,6 +469,7 @@ export function useTranslator(opts: {
   useEffect(
     () => () => {
       inflight.current?.ctrl.abort();
+      dropLingering();
       clearRetry();
     },
     [],

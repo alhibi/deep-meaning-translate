@@ -128,4 +128,45 @@ describe("useTranslator", () => {
     await flush(50);
     expect(h.current.result?.translation).toBe("مصححة 3");
   });
+
+  it("keeps an earlier live stream flowing while typing continues", async () => {
+    const signals: AbortSignal[] = [];
+    let resolveFirst: (v: unknown) => void = () => {};
+    call
+      .mockImplementationOnce(({ signal }: { signal: AbortSignal }) => {
+        signals.push(signal);
+        return new Promise((r) => (resolveFirst = r));
+      })
+      .mockImplementation(({ signal }: { signal: AbortSignal }) => {
+        signals.push(signal);
+        return new Promise(() => {});
+      });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ich wollte "),
+    });
+    await flush(600);
+    rerender(opts("Ich wollte dir "));
+    await flush(600);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]!.aborted).toBe(false);
+    resolveFirst({ ok: true, result: result("كنت أريد") });
+    await flush(20);
+    expect(h.current.result?.translation).toBe("كنت أريد");
+    rerender(opts("Etwas anderes"));
+    await flush(600);
+    expect(signals[1]!.aborted).toBe(true);
+  });
+
+  it("translates word by word during non-stop fast typing", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const { rerender } = renderHook((p) => useTranslator(p), { initialProps: opts("I") });
+    const words = "Ich wollte dir heute nur kurz sagen dass ".split("");
+    let typed = "";
+    for (const ch of words) {
+      typed += ch;
+      rerender(opts(typed));
+      await flush(90);
+    }
+    expect(call.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
 });
