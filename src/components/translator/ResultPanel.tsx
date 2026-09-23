@@ -24,9 +24,9 @@ function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
 
 /** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
 function sizeFor(len: number, rtl: boolean) {
-  if (len < 70) return rtl ? "text-[27px] leading-[1.7]" : "text-[30px] leading-[1.25]";
-  if (len < 220) return rtl ? "text-[22px] leading-[1.75]" : "text-[24px] leading-[1.32]";
-  return rtl ? "text-[18px] leading-[1.85]" : "text-[20px] leading-[1.45]";
+  if (len < 60) return rtl ? "text-[32px] leading-[1.6]" : "text-[30px] leading-[1.25] tracking-[-0.02em]";
+  if (len < 220) return rtl ? "text-[26px] leading-[1.7]" : "text-[24px] leading-[1.35] tracking-[-0.015em]";
+  return rtl ? "text-[21px] leading-[1.8]" : "text-[19px] leading-[1.5]";
 }
 
 function Action({
@@ -171,8 +171,8 @@ export const ResultPanel = memo(function ResultPanel({
           dir={rtl ? "rtl" : "ltr"}
           lang={lang}
           className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${
-            rtl ? "font-arabic" : "font-display tracking-[-0.01em]"
-          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-55" : provisional ? "opacity-80" : "opacity-100"}`}
+            rtl ? "font-arabic font-medium" : "font-medium"
+          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
         >
           {text}
         </p>
@@ -273,14 +273,14 @@ export const ResultPanel = memo(function ResultPanel({
     body = <Skeleton key="pending" />;
   } else {
     body = (
-      <p key="idle" className="animate-fade text-[15px] text-muted-foreground/70">
+      <p key="idle" className="animate-fade text-[15px] text-faint">
         {t("idle")}
       </p>
     );
   }
 
   return (
-    <div className="relative min-h-[176px] px-5 pb-4 pt-5" aria-busy={pending}>
+    <div className="relative min-h-[200px] px-5 pb-5 pt-5" aria-busy={pending}>
       <div
         aria-hidden
         className={`progress-line absolute inset-x-0 top-0 transition-opacity duration-300 ${

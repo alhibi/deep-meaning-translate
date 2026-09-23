@@ -251,7 +251,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, var(--signal), transparent);
+    background: var(--signal);
     transform: translateX(-100%);
     opacity: 0;
     transition: opacity 240ms var(--ease-soft);
