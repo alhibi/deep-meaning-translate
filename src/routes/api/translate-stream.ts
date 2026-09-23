@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/translate-stream")({
               ? await streamFullTranslation(apiKey, { ...req, partial: false }, request.signal)
               : await streamLiveTranslation(apiKey, { ...req, partial: true }, request.signal);
         } catch (err) {
-          if ((err as Error)?.name === "AbortError") return new Response(null, { status: 499 });
+          if (request.signal.aborted || (err as Error)?.name === "AbortError") return new Response(null, { status: 499 });
           const kind = err instanceof TranslationError ? err.kind : "provider";
           return fail(kind, kind === "rate" ? 429 : 502);
         }
@@ -56,8 +56,20 @@ export const Route = createFileRoute("/api/translate-stream")({
               for await (const d of deltas) controller.enqueue(enc.encode(d));
               controller.close();
             } catch (err) {
-              outcome = (err as Error)?.name === "AbortError" ? "cancelled" : "stream_error";
-              controller.error(err);
+              // The app cancels outdated translations on purpose; a dropped
+              // connection is normal, not a server error — end quietly.
+              const cancelled =
+                request.signal.aborted ||
+                (err as Error)?.name === "AbortError" ||
+                (err as Error)?.message === "aborted";
+              outcome = cancelled ? "cancelled" : "stream_error";
+              if (cancelled) {
+                try {
+                  controller.close();
+                } catch {
+                  /* already closed */
+                }
+              } else controller.error(err);
             } finally {
               // Privacy: metrics only — never the text.
               console.info(
@@ -72,7 +84,7 @@ export const Route = createFileRoute("/api/translate-stream")({
             }
           },
           cancel() {
-            void deltas.return(undefined);
+            void deltas.return(undefined).catch(() => {});
           },
         });
         return new Response(body, {
