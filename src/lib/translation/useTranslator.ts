@@ -4,6 +4,7 @@ import { translate } from "./translate.functions";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
+import { streamTranslate } from "./stream";
 
 export type ErrorKind =
   "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
@@ -56,6 +57,27 @@ interface Cached {
 const keyOf = (text: string, source: string, target: string, style: string) =>
   `${source}|${target}|${style}|${text}`;
 
+/** A streamed live translation keeps the last known metadata; only the text is fresh. */
+function liveResult(
+  prev: TranslationResult | null,
+  translation: string,
+  source: string,
+  target: string,
+): TranslationResult {
+  return {
+    sourceLanguage: source === "auto" ? (prev?.sourceLanguage ?? "auto") : source,
+    targetLanguage: target,
+    translation,
+    tone: prev?.tone ?? "",
+    formality: prev?.formality ?? "",
+    confidence: prev?.confidence ?? 0.8,
+    isAmbiguous: false,
+    alternativeTranslations: [],
+    notes: "",
+    ...(prev?.situation ? { situation: prev.situation } : {}),
+  };
+}
+
 const isOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
 export function useTranslator(opts: {
@@ -91,6 +113,8 @@ export function useTranslator(opts: {
   const current = useRef({ norm: "", key: "", provisional: false });
   const hasResult = useRef(false);
   hasResult.current = !!result;
+  const resultRef = useRef<TranslationResult | null>(null);
+  resultRef.current = result;
   const successRef = useRef(onSuccess);
   successRef.current = onSuccess;
 
@@ -174,10 +198,18 @@ export function useTranslator(opts: {
       };
 
       try {
-        const res = await call({
-          data: { text: norm, source, target, style, dialect, partial: prov },
-          signal: ctrl.signal,
-        });
+        const data = { text: norm, source, target, style, dialect, partial: prov };
+        // Live typing streams plain text so words appear as they are generated;
+        // a finished sentence gets the full structured, verified translation.
+        const res = prov
+          ? await streamTranslate(data, ctrl.signal, (partialText) => {
+              if (token !== latest.current) return;
+              setResult((r) => liveResult(r, partialText, source, target));
+              setProvisional(true);
+            }).then((r) =>
+              r.ok ? { ok: true as const, result: liveResult(resultRef.current, r.text, source, target) } : r,
+            )
+          : await call({ data, signal: ctrl.signal });
         if (token !== latest.current) return; // superseded — never commit
         metrics.latency(performance.now() - started);
         if (res.ok) {

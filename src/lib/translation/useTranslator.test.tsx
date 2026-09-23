@@ -5,6 +5,15 @@ import type { TranslationResult } from "./types";
 const call = vi.fn();
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => call }));
 vi.mock("./translate.functions", () => ({ translate: {} }));
+// Live (partial) requests stream; route them through the same mock so behaviour stays testable.
+vi.mock("./stream", () => ({
+  streamTranslate: async (data: unknown, signal: AbortSignal, onText: (t: string) => void) => {
+    const r = await call({ data, signal });
+    if (!r.ok) return r;
+    onText(r.result.translation);
+    return { ok: true, text: r.result.translation };
+  },
+}));
 
 const result = (translation: string): TranslationResult => ({
   sourceLanguage: "de",
@@ -85,5 +94,16 @@ describe("useTranslator", () => {
     rerender(opts("Eins."));
     await flush(500);
     expect(call).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows streamed live text as it arrives", async () => {
+    const { streamTranslate } = await import("./stream");
+    const spy = vi.spyOn({ streamTranslate }, "streamTranslate");
+    void spy;
+    call.mockResolvedValue({ ok: true, result: result("مرحبا يا") });
+    const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo du") });
+    await flush(1000);
+    expect(h.current.result?.translation).toBe("مرحبا يا");
+    expect(h.current.result?.alternativeTranslations).toEqual([]);
   });
 });
