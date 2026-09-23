@@ -23,7 +23,7 @@ async def overlaps_text(page, dialog):
 async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await (await browser.new_context(viewport={"width": 390, "height": 844})).new_page()
+        page = await (await browser.new_context(viewport={"width": 390, "height": 844}, service_workers="block")).new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", headers={"x-tss-serialized": "true"}, body=FAKE))
         await page.goto(URL)
