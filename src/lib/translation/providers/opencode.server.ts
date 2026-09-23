@@ -5,13 +5,9 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
 } from "../prompt";
-import type {
-  Situation,
-  TranslationProvider,
-  TranslationRequest,
-  TranslationResult,
-} from "../types";
+import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
+import { parseResult } from "../parse";
 
 const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
 const MODEL = "gpt-5.6-luna";
@@ -37,48 +33,6 @@ function extractText(payload: unknown): string {
   const choice = p?.["choices"]?.[0]?.message?.content;
   if (typeof choice === "string") return choice;
   throw new TranslationError("provider", "Unrecognised provider response shape.");
-}
-
-const SITUATIONS: Situation[] = ["chat", "work", "official", "general"];
-
-function parseResult(raw: string, req: TranslationRequest): TranslationResult {
-  const cleaned = raw
-    .trim()
-    .replace(/^```(?:json)?/i, "")
-    .replace(/```$/, "")
-    .trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new TranslationError("provider", "Malformed model output.");
-  let data: Record<string, unknown>;
-  try {
-    data = JSON.parse(cleaned.slice(start, end + 1));
-  } catch {
-    throw new TranslationError("provider", "Malformed model output.");
-  }
-  const translation = typeof data["translation"] === "string" ? data["translation"] : "";
-  if (!translation.trim()) throw new TranslationError("provider", "Empty translation.");
-  const alts = Array.isArray(data["alternativeTranslations"])
-    ? (data["alternativeTranslations"] as unknown[])
-        .filter((a): a is string => typeof a === "string" && a.trim().length > 0)
-        .slice(0, 2)
-    : [];
-  return {
-    sourceLanguage:
-      typeof data["sourceLanguage"] === "string" ? data["sourceLanguage"] : req.source,
-    targetLanguage:
-      typeof data["targetLanguage"] === "string" ? data["targetLanguage"] : req.target,
-    translation,
-    tone: typeof data["tone"] === "string" ? data["tone"] : "",
-    formality: typeof data["formality"] === "string" ? data["formality"] : "",
-    confidence: typeof data["confidence"] === "number" ? data["confidence"] : 0.8,
-    isAmbiguous: data["isAmbiguous"] === true,
-    alternativeTranslations: alts,
-    notes: typeof data["notes"] === "string" ? data["notes"].slice(0, 240) : "",
-    situation: SITUATIONS.includes(data["situation"] as Situation)
-      ? (data["situation"] as Situation)
-      : "general",
-  };
 }
 
 async function send(
@@ -208,4 +162,15 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
       return parseResult(raw, req);
     },
   };
+}
+
+/** Final sentence: the full structured JSON, streamed so the translation text shows while it is written. */
+export async function streamFullTranslation(
+  apiKey: string,
+  req: TranslationRequest,
+  signal?: AbortSignal,
+): Promise<AsyncGenerator<string>> {
+  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true);
+  if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
+  return textDeltas(res.body);
 }

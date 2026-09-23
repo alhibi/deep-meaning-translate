@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { repairTranslation, translate } from "./translate.functions";
+import { repairTranslation } from "./translate.functions";
+import { parseResult } from "./parse";
+import { verifyTranslation } from "./verify";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
@@ -92,7 +94,6 @@ export function useTranslator(opts: {
   const style = opts.style;
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const styleKey = dialect === "auto" ? style : `${style}~${dialect}`;
-  const call = useServerFn(translate);
   const callRepair = useServerFn(repairTranslation);
 
   const [phase, setPhase] = useState<Phase>("EMPTY");
@@ -100,6 +101,8 @@ export function useTranslator(opts: {
   const [provisional, setProvisional] = useState(false);
   const [error, setError] = useState<ErrorKind | null>(null);
   const [showPending, setShowPending] = useState(false);
+  /** Words are already flowing in — no loading dim, it should feel live. */
+  const [streaming, setStreaming] = useState(false);
 
   const latest = useRef(0);
   const inflight = useRef<{ ctrl: AbortController; key: string } | null>(null);
@@ -175,6 +178,7 @@ export function useTranslator(opts: {
         ctrl.abort();
       }, REQUEST_TIMEOUT_MS);
 
+      setStreaming(false);
       setPhase(attempt > 0 ? "RETRYING" : hasResult.current ? "UPDATING" : "TRANSLATING");
       metrics.request();
       const started = performance.now();
@@ -202,20 +206,37 @@ export function useTranslator(opts: {
         const data = { text: norm, source, target, style, dialect, partial: prov };
         // Live typing streams plain text so words appear as they are generated;
         // a finished sentence gets the full structured, verified translation.
-        const res = prov
-          ? await streamTranslate(data, ctrl.signal, (partialText) => {
-              if (token !== latest.current) return;
-              setResult((r) => liveResult(r, partialText, source, target));
-              setProvisional(true);
-            }).then((r) =>
+        const onText = (partialText: string) => {
+          if (token !== latest.current) return;
+          setStreaming(true);
+          setResult((r) => liveResult(r, partialText, source, target));
+          setProvisional(true);
+        };
+        const res:
+          | { ok: true; result: TranslationResult; needsRepair: boolean }
+          | { ok: false; kind: ErrorKind } = prov
+          ? await streamTranslate(data, ctrl.signal, onText, "live").then((r) =>
               r.ok
                 ? {
                     ok: true as const,
                     result: liveResult(resultRef.current, r.text, source, target),
+                    needsRepair: false,
                   }
                 : r,
             )
-          : await call({ data, signal: ctrl.signal });
+          : await streamTranslate(data, ctrl.signal, onText, "full").then((r) => {
+              if (!r.ok) return r;
+              try {
+                const parsed = parseResult(r.text, data);
+                return {
+                  ok: true as const,
+                  result: parsed,
+                  needsRepair: verifyTranslation(data, parsed).length > 0,
+                };
+              } catch {
+                return { ok: false as const, kind: "provider" as const };
+              }
+            });
         if (token !== latest.current) return; // superseded — never commit
         metrics.latency(performance.now() - started);
         if (res.ok) {
@@ -223,7 +244,7 @@ export function useTranslator(opts: {
           if (cache.current.size > CACHE_LIMIT)
             cache.current.delete(cache.current.keys().next().value as string);
           commit(key, res.result, prov, norm);
-          if ("needsRepair" in res && res.needsRepair) {
+          if (res.needsRepair) {
             // Shown already; improve it quietly and swap only if still on screen.
             void callRepair({ data: { request: data, previous: res.result } })
               .then((r) => {
@@ -257,7 +278,7 @@ export function useTranslator(opts: {
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
       }
     },
-    [call, callRepair, commit, source, target, style, dialect],
+    [callRepair, commit, source, target, style, dialect],
   );
 
   // Warm the path to the translation service on the first keystroke, once per visit.
@@ -417,12 +438,12 @@ export function useTranslator(opts: {
       phase,
       result,
       provisional,
-      pending: showPending,
+      pending: showPending && !streaming,
       error: error ?? PHASE_ERROR[phase] ?? null,
       retry,
       submitNext,
       prime,
     }),
-    [phase, result, provisional, showPending, error, retry, submitNext, prime],
+    [phase, result, provisional, showPending, streaming, error, retry, submitNext, prime],
   );
 }

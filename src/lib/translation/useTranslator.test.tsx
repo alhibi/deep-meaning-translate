@@ -11,11 +11,16 @@ vi.mock("./translate.functions", () => ({ translate: {}, repairTranslation: { ki
 // Live (partial) requests stream; route them through the same mock so behaviour stays testable.
 vi.mock("./stream", () => ({
   warmTranslation: () => {},
-  streamTranslate: async (data: unknown, signal: AbortSignal, onText: (t: string) => void) => {
+  streamTranslate: async (
+    data: unknown,
+    signal: AbortSignal,
+    onText: (t: string) => void,
+    mode: string,
+  ) => {
     const r = await call({ data, signal });
     if (!r.ok) return r;
     onText(r.result.translation);
-    return { ok: true, text: r.result.translation };
+    return { ok: true, text: mode === "full" ? JSON.stringify(r.result) : r.result.translation };
   },
 }));
 
@@ -110,7 +115,7 @@ describe("useTranslator", () => {
   });
 
   it("shows the first translation at once and swaps in a quiet repair", async () => {
-    call.mockResolvedValue({ ok: true, result: result("أولى"), needsRepair: true });
+    call.mockResolvedValue({ ok: true, result: result("أولى") });
     let finish: (v: unknown) => void = () => {};
     repairCall.mockImplementation(() => new Promise((r) => (finish = r)));
     const { result: h } = renderHook((p) => useTranslator(p), {
