@@ -1,5 +1,5 @@
 import { buildRepairPrompt, buildSystemPrompt, buildUserPrompt } from "../prompt";
-import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
+import type { Situation, TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 
 const ENDPOINT = "https://opencode.ai/zen/go/v1/responses";
