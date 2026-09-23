@@ -1,6 +1,18 @@
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
+/** Heat-haze shimmer blooming from the tap point, like sun mirage on hot ground. */
+function heatShimmer(x: number, y: number) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = document.createElement("div");
+  el.className = "heat-shimmer";
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  el.setAttribute("aria-hidden", "true");
+  document.body.appendChild(el);
+  window.setTimeout(() => el.remove(), 1400);
+}
+
 export function ThemeToggle({ label }: { label: string }) {
   const { theme, toggle } = useTheme();
   const dark = theme === "dark";
@@ -11,7 +23,10 @@ export function ThemeToggle({ label }: { label: string }) {
       aria-pressed={!dark}
       onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
-        toggle(e.clientX || r.left + r.width / 2, e.clientY || r.top + r.height / 2);
+        const x = e.clientX || r.left + r.width / 2;
+        const y = e.clientY || r.top + r.height / 2;
+        heatShimmer(x, y);
+        toggle(x, y);
       }}
       className="press relative grid size-11 place-items-center overflow-hidden rounded-full text-muted-foreground hover:text-foreground"
     >
