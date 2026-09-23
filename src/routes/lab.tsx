@@ -9,6 +9,7 @@ import type { TranslationResult } from "@/lib/translation/types";
  * development, so it never touches the product experience.
  */
 export const Route = createFileRoute("/lab")({
+  staticData: { sitemap: false },
   beforeLoad: () => {
     if (!import.meta.env.DEV) throw notFound();
   },
