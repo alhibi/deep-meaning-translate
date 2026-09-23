@@ -43,7 +43,9 @@ export const Route = createFileRoute("/api/translate-stream")({
               ? await streamFullTranslation(apiKey, { ...req, partial: false }, request.signal)
               : await streamLiveTranslation(apiKey, { ...req, partial: true }, request.signal);
         } catch (err) {
-          if (request.signal.aborted || (err as Error)?.name === "AbortError") return new Response(null, { status: 499 });
+          // Cancelled by the app (newer text typed): end quietly, not an error.
+          if (request.signal.aborted || (err as Error)?.name === "AbortError")
+            return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
           const kind = err instanceof TranslationError ? err.kind : "provider";
           return fail(kind, kind === "rate" ? 429 : 502);
         }
