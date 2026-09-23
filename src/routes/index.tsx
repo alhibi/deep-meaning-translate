@@ -131,8 +131,10 @@ function Translator() {
     source === "auto" &&
     !!raw &&
     (lang2(raw.sourceLanguage) === lang2(raw.targetLanguage) || raw.translation.trim() === text.trim());
-  const result = rerouting ? null : raw;
-  const pending = rawPending || rerouting;
+  // Never present a translation into a language the user no longer asked for.
+  const staleTarget = !!raw && !!raw.targetLanguage && lang2(raw.targetLanguage) !== target;
+  const result = rerouting || staleTarget ? null : raw;
+  const pending = rawPending || rerouting || (staleTarget && !!text.trim());
 
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
@@ -141,16 +143,39 @@ function Translator() {
     }
   }, [source, detected, target]);
 
+  // Arabic script is unambiguous: route before the first request instead of after a wasted one.
+  const arabicScript = text.trim() ? startsRtl(text) : false;
+  useEffect(() => {
+    if (source === "auto" && arabicScript && target === "ar") setTarget("de");
+  }, [source, arabicScript, target]);
+
+  // Picking the language already on the other side trades places instead of translating X→X.
+  const chooseSource = useCallback(
+    (code: string) => {
+      if (code === target) setTarget(source === "auto" ? (code === "ar" ? "de" : "ar") : source);
+      setSource(code);
+    },
+    [source, target],
+  );
+  const chooseTarget = useCallback(
+    (code: string) => {
+      if (code === source) setSource(target);
+      setTarget(code);
+    },
+    [source, target],
+  );
+
   const swap = useCallback(() => {
     const nextSource = target;
-    const nextTarget = source === "auto" ? (detected ?? "en") : source;
+    const nextTarget =
+      source === "auto" ? (detected ?? (arabicScript ? "ar" : target === "ar" ? "de" : "ar")) : source;
     setSource(nextSource);
     setTarget(nextTarget === nextSource ? (nextSource === "de" ? "ar" : "de") : nextTarget);
     if (result?.translation) {
       submitNext();
       setText(result.translation);
     }
-  }, [source, target, detected, result, submitNext]);
+  }, [source, target, detected, arabicScript, result, submitNext]);
 
   // Fallback autosize only for browsers without CSS field-sizing.
   useLayoutEffectSafe(() => {
@@ -257,13 +282,13 @@ function Translator() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col justify-center pb-[8dvh]">
+      <div className="flex-1 pt-[max(1rem,14dvh)]">
       <LanguageBar
         source={source}
         target={target}
         detected={detected}
-        onSource={setSource}
-        onTarget={setTarget}
+        onSource={chooseSource}
+        onTarget={chooseTarget}
         onSwap={swap}
       />
 
