@@ -22,7 +22,7 @@ export function Intro({ onComplete }: { onComplete: () => void }) {
     markIntroSeen();
     setLeaving(true);
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.setTimeout(onComplete, reduceMotion ? 20 : 880);
+    window.setTimeout(onComplete, reduceMotion ? 20 : 1200);
   }
 
   return (
@@ -35,6 +35,7 @@ export function Intro({ onComplete }: { onComplete: () => void }) {
     >
       <div aria-hidden className="intro-thread intro-thread-a" />
       <div aria-hidden className="intro-thread intro-thread-b" />
+      <span aria-hidden className="intro-bloom" />
 
       <div className="intro-brand flex items-center gap-2 text-[15px] font-semibold text-foreground">
         <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
