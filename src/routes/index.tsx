@@ -131,8 +131,10 @@ function Translator() {
     source === "auto" &&
     !!raw &&
     (lang2(raw.sourceLanguage) === lang2(raw.targetLanguage) || raw.translation.trim() === text.trim());
-  const result = rerouting ? null : raw;
-  const pending = rawPending || rerouting;
+  // Never present a translation into a language the user no longer asked for.
+  const staleTarget = !!raw && !!raw.targetLanguage && lang2(raw.targetLanguage) !== target;
+  const result = rerouting || staleTarget ? null : raw;
+  const pending = rawPending || rerouting || (staleTarget && !!text.trim());
 
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
