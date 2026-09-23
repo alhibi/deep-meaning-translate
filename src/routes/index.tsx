@@ -6,6 +6,7 @@ import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
+import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { StyleOverride, TranslationResult } from "@/lib/translation/types";
@@ -238,6 +239,8 @@ function Translator() {
   }, [submitNext, closeHistory]);
 
   const { t, locale, rtl: uiRtl } = useI18n();
+  const [localeOpen, setLocaleOpen] = useState(false);
+  const closeLocale = useCallback(() => setLocaleOpen(false), []);
   const rtlInput = text.trim() ? startsRtl(text) : source === "auto" ? uiRtl : isRtl(source);
   const hasText = text.length > 0;
 
@@ -246,21 +249,24 @@ function Translator() {
       <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
         <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold tracking-[-0.01em]"><span aria-hidden className="size-1.5 rounded-full bg-signal" />Lingua</span>
         <div className="flex items-center gap-1">
-          <label className="press-soft relative grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground">
-            <select
-              value={locale}
-              onChange={(e) => setLocale(e.target.value as typeof locale)}
-              aria-label={t("uiLanguage")}
-              className="absolute inset-0 cursor-pointer appearance-none opacity-0"
-            >
-              {LOCALES.map((l) => (
-                <option key={l} value={l}>
-                  {LOCALE_NAME[l]}
-                </option>
-              ))}
-            </select>
+          <button
+            type="button"
+            onClick={() => setLocaleOpen(true)}
+            aria-haspopup="dialog"
+            aria-label={t("uiLanguage")}
+            className="press-soft grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground"
+          >
             <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>{LOCALE_SHORT[locale]}</span>
-          </label>
+          </button>
+          <LanguageSheet
+            open={localeOpen}
+            title={t("uiLanguage")}
+            searchable={false}
+            items={LOCALES.map((l) => ({ code: l, native: LOCALE_NAME[l], name: LOCALE_NAME[l], rtl: l === "ar" }))}
+            value={locale}
+            onSelect={(c) => setLocale(c as typeof locale)}
+            onClose={closeLocale}
+          />
           {canInstall ? (
             <button
               type="button"
