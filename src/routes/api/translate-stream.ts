@@ -7,6 +7,12 @@ export const Route = createFileRoute("/api/translate-stream")({
   staticData: { sitemap: false },
   server: {
     handlers: {
+      // Warm-up: resolve and open the connection to the provider so the first real
+      // translation skips DNS/TLS setup. Sends no text and no credentials.
+      GET: async () => {
+        await fetch("https://opencode.ai/zen/go/v1/models", { method: "HEAD" }).catch(() => {});
+        return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+      },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number) =>
           Response.json({ ok: false, kind }, { status });

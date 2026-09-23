@@ -4,9 +4,10 @@ import type { TranslationResult } from "./types";
 
 const call = vi.fn();
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => call }));
-vi.mock("./translate.functions", () => ({ translate: {} }));
+vi.mock("./translate.functions", () => ({ translate: {}, repairTranslation: {} }));
 // Live (partial) requests stream; route them through the same mock so behaviour stays testable.
 vi.mock("./stream", () => ({
+  warmTranslation: () => {},
   streamTranslate: async (data: unknown, signal: AbortSignal, onText: (t: string) => void) => {
     const r = await call({ data, signal });
     if (!r.ok) return r;
