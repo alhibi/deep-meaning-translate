@@ -19,7 +19,7 @@ export const HistorySheet = memo(function HistorySheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/15 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
       <button
         type="button"
         aria-label="Close recent translations"
