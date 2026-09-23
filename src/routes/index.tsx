@@ -271,7 +271,11 @@ function Translator() {
             <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
           </span>
           {/* One masked window: the name exits upward while the tagline rises in from below — a single continuous motion. */}
-          <span className="relative h-[19px] w-auto overflow-hidden">
+          <span className="relative block h-[19px] overflow-hidden">
+            {/* Invisible sizer: keeps the window as wide as the longer text so nothing clips and nothing shifts. */}
+            <span aria-hidden className="font-literary block h-0 overflow-hidden whitespace-nowrap text-[16px] italic lowercase leading-[19px]">
+              say it naturally.
+            </span>
             <span
               aria-hidden={tagline}
               className={`block whitespace-nowrap leading-[19px] transition-[transform,opacity] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
