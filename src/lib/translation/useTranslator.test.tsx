@@ -97,9 +97,6 @@ describe("useTranslator", () => {
   });
 
   it("shows streamed live text as it arrives", async () => {
-    const { streamTranslate } = await import("./stream");
-    const spy = vi.spyOn({ streamTranslate }, "streamTranslate");
-    void spy;
     call.mockResolvedValue({ ok: true, result: result("مرحبا يا") });
     const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo du") });
     await flush(1000);

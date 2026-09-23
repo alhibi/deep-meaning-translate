@@ -4,6 +4,7 @@ import { takeToken } from "@/lib/translation/throttle";
 
 /** Live translation while typing: plain-text stream so words appear as they are generated. */
 export const Route = createFileRoute("/api/translate-stream")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -19,9 +20,8 @@ export const Route = createFileRoute("/api/translate-stream")({
         const apiKey = process.env["OPENCODE_API_KEY"];
         if (!apiKey) return fail("auth", 500);
 
-        const { streamLiveTranslation } = await import(
-          "@/lib/translation/providers/opencode.server"
-        );
+        const { streamLiveTranslation } =
+          await import("@/lib/translation/providers/opencode.server");
         const { TranslationError } = await import("@/lib/translation/types");
         const started = Date.now();
         let deltas: AsyncGenerator<string>;
@@ -46,7 +46,12 @@ export const Route = createFileRoute("/api/translate-stream")({
             } finally {
               // Privacy: metrics only — never the text.
               console.info(
-                JSON.stringify({ event: "translate_stream", outcome, ms: Date.now() - started, chars: data.text.length }),
+                JSON.stringify({
+                  event: "translate_stream",
+                  outcome,
+                  ms: Date.now() - started,
+                  chars: data.text.length,
+                }),
               );
             }
           },

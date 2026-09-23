@@ -207,7 +207,12 @@ export function useTranslator(opts: {
               setResult((r) => liveResult(r, partialText, source, target));
               setProvisional(true);
             }).then((r) =>
-              r.ok ? { ok: true as const, result: liveResult(resultRef.current, r.text, source, target) } : r,
+              r.ok
+                ? {
+                    ok: true as const,
+                    result: liveResult(resultRef.current, r.text, source, target),
+                  }
+                : r,
             )
           : await call({ data, signal: ctrl.signal });
         if (token !== latest.current) return; // superseded — never commit
