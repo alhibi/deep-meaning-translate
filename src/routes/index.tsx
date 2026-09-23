@@ -237,9 +237,9 @@ function Translator() {
     closeHistory();
   }, [submitNext, closeHistory]);
 
-  const rtlInput = text.trim() ? startsRtl(text) : isRtl(source === "auto" ? "" : source);
+  const { t, locale, rtl: uiRtl } = useI18n();
+  const rtlInput = text.trim() ? startsRtl(text) : source === "auto" ? uiRtl : isRtl(source);
   const hasText = text.length > 0;
-  const { t, locale } = useI18n();
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col bg-background">
@@ -293,7 +293,7 @@ function Translator() {
         />
 
         {/* One canvas: source writing surface, a live seam, then the result. */}
-        <div className="mx-3 flex flex-1 flex-col overflow-hidden rounded-[22px] bg-surface">
+        <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
           <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
             <textarea
               ref={inputRef}
@@ -356,7 +356,7 @@ function Translator() {
           </div>
           <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
 
-          <div className="flex-1">
+          <div>
             <ResultPanel
               result={result}
               pending={pending}

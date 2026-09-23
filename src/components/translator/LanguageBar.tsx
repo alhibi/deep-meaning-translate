@@ -20,6 +20,7 @@ function Side({
   caption,
   end,
   swapped,
+  detected,
 }: {
   value: string;
   options: { code: string; native: string }[];
@@ -27,9 +28,10 @@ function Side({
   caption: string;
   end?: boolean;
   swapped: number;
+  detected?: string | undefined;
 }) {
   const { t } = useI18n();
-  const label = value === "auto" ? t("detect") : languageLabel(value);
+  const label = value === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(value);
   return (
     <label className={`press-soft relative flex min-w-0 flex-1 flex-col py-2 ${end ? "items-end text-end" : "items-start text-start"}`}>
       <select
@@ -48,7 +50,7 @@ function Side({
       <span
         key={`${value}-${swapped}`}
         className={`pointer-events-none mt-1 block max-w-full truncate font-semibold ${
-          isRtl(value) ? "font-arabic text-[24px] leading-[1.25]" : "text-[22px] leading-[1.25] tracking-[-0.02em]"
+          isRtl(value === "auto" ? detected ?? "" : value) ? "font-arabic text-[24px] leading-[1.25]" : "text-[22px] leading-[1.25] tracking-[-0.02em]"
         } ${end ? "text-foreground" : "text-foreground/90"} ${swapped ? (end ? "animate-cross-from-start" : "animate-cross-from-end") : ""}`}
       >
         {label}
@@ -67,11 +69,11 @@ export const LanguageBar = memo(function LanguageBar({ source, target, detected,
     onSwap();
   }, [onSwap]);
 
-  const sourceCaption = source === "auto" ? (detected ? `${t("auto")} · ${languageLabel(detected)}` : t("auto")) : t("from");
+  const sourceCaption = source === "auto" ? `${t("from")} · ${t("auto")}` : t("from");
 
   return (
     <div className="flex items-center gap-3 px-6 pb-4 pt-2">
-      <Side value={source} options={LANGUAGES} onChange={onSource} caption={sourceCaption} swapped={swapped} />
+      <Side value={source} options={LANGUAGES} onChange={onSource} caption={sourceCaption} swapped={swapped} detected={detected} />
       <button
         type="button"
         onClick={swap}
