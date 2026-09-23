@@ -19,6 +19,8 @@ interface Props {
   value: string;
   recent?: string[];
   searchable?: boolean;
+  /** Items aren't languages (e.g. dialects): show names as given, no locale lookups. */
+  plain?: boolean;
   onSelect: (code: string) => void;
   onClose: () => void;
 }
@@ -26,7 +28,7 @@ interface Props {
 const norm = (s: string) =>
   s.toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f\u064B-\u065F]/g, "").trim();
 
-export function LanguageSheet({ open, title, items, value, recent = [], searchable = true, onSelect, onClose }: Props) {
+export function LanguageSheet({ open, title, items, value, recent = [], searchable = true, plain = false, onSelect, onClose }: Props) {
   const { t, locale, rtl } = useI18n();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -42,7 +44,15 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
     } catch {
       dn = null;
     }
-    return (code: string) => (dn && code !== "auto" ? dn.of(code) ?? "" : "");
+    // Non-language codes (e.g. dialect ids like "levant") make Intl throw — fall back to nothing.
+    return (code: string) => {
+      if (!dn || code === "auto") return "";
+      try {
+        return dn.of(code) ?? "";
+      } catch {
+        return "";
+      }
+    };
   }, [locale]);
 
   // Mount / unmount with exit animation
@@ -127,7 +137,7 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
 
   const Row = ({ it }: { it: PickerItem }) => {
     const active = it.code === value;
-    const sub = localized(it.code);
+    const sub = plain ? "" : localized(it.code);
     const secondary = sub && norm(sub) !== norm(it.native) ? sub : it.name !== it.native ? it.name : "";
     return (
       <li>
@@ -144,7 +154,7 @@ export function LanguageSheet({ open, title, items, value, recent = [], searchab
                 it.rtl ? "font-arabic text-[19px] leading-[1.35]" : "text-[17px] leading-[1.35] tracking-[-0.01em]"
               } ${active ? "font-semibold" : "font-medium"}`}
             >
-              {it.code === "auto" ? t("detect") : it.native}
+              {it.code === "auto" && !plain ? t("detect") : it.native}
             </span>
             {secondary && it.code !== "auto" ? (
               <span className="truncate text-[12px] text-faint">{secondary}</span>

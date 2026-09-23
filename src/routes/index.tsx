@@ -51,6 +51,9 @@ function Translator() {
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
+  // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
+  const closeDialect = useCallback(() => setDialectOpen(false), []);
+  const selectDialect = useCallback((c: string) => setDialect(c as Dialect), []);
   const savedList = useSaved();
   const [dismissedFor, setDismissedFor] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -553,6 +556,7 @@ function Translator() {
         open={dialectOpen}
         title={t("dialect")}
         searchable={false}
+        plain
         items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map((d) => ({
           code: d,
           native: t(`d_${d}`),
@@ -560,8 +564,8 @@ function Translator() {
           rtl: true,
         }))}
         value={dialect}
-        onSelect={(c) => setDialect(c as Dialect)}
-        onClose={() => setDialectOpen(false)}
+        onSelect={selectDialect}
+        onClose={closeDialect}
       />
       <SavedSheet open={savedOpen} entries={savedList} onClose={() => setSavedOpen(false)} onPick={pickSaved} />
       <HistorySheet
