@@ -76,7 +76,7 @@ export const repairTranslation = createServerFn({ method: "POST" })
       if (!takeToken()) return { ok: true, result: null };
       const { runRepair } = await import("./engine.server");
       const started = Date.now();
-      const result = await runRepair(data.request, data.previous).catch(() => null);
+      const result = await runRepair(data.request, data.previous as import("./types").TranslationResult).catch(() => null);
       console.info(
         JSON.stringify({
           event: "repair",
