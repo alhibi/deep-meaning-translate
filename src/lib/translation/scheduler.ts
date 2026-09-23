@@ -37,8 +37,9 @@ export function isProvisional(normalized: string, raw: string, deliberate: boole
 
 /** Minimum meaningful input: something with letters or digits, beyond a single stray character. */
 export function worthTranslating(text: string): boolean {
-  if (text.length < 2) return /[\u0600-\u06FF\u4E00-\u9FFF]/.test(text);
-  return /[\p{L}\p{N}]/u.test(text);
+  // CJK carries meaning per character; everything else needs at least two letters/digits.
+  if (/[\u4E00-\u9FFF]/.test(text)) return true;
+  return (text.match(/[\p{L}\p{N}]/gu)?.length ?? 0) >= 2;
 }
 
 function wordCount(t: string) {
