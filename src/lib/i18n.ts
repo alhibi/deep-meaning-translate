@@ -89,6 +89,9 @@ const en = {
   micStop: "Stop listening",
   micDenied: "Allow microphone access in your browser settings.",
   micNoSpeech: "Didn’t catch that — try again.",
+  micNoDevice: "No microphone found.",
+  micFailed: "Recording stopped — your text is safe.",
+  micRetry: "Try again",
   micListening: "Listening…",
 };
 export type Key = keyof typeof en;
@@ -177,6 +180,9 @@ const ar: Record<Key, string> = {
   micStop: "إيقاف الاستماع",
   micDenied: "اسمح باستخدام الميكروفون من إعدادات المتصفح.",
   micNoSpeech: "لم أسمع شيئاً — حاول مرة أخرى.",
+  micNoDevice: "لم يُعثر على ميكروفون.",
+  micFailed: "توقف التسجيل — نصك محفوظ.",
+  micRetry: "أعد المحاولة",
   micListening: "أستمع…",
 };
 
@@ -264,6 +270,9 @@ const de: Record<Key, string> = {
   micStop: "Zuhören beenden",
   micDenied: "Erlaube den Mikrofonzugriff in den Browser-Einstellungen.",
   micNoSpeech: "Nichts verstanden – bitte noch einmal.",
+  micNoDevice: "Kein Mikrofon gefunden.",
+  micFailed: "Aufnahme unterbrochen – dein Text bleibt.",
+  micRetry: "Erneut versuchen",
   micListening: "Ich höre zu…",
 };
 

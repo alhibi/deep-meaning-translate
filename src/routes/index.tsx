@@ -12,7 +12,7 @@ import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
 import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
-import { speechLang, useSpeech } from "@/lib/speech";
+import { joinSpeech, speechLang, useSpeech } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
@@ -260,11 +260,10 @@ function Translator() {
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
   const speechBase = useRef("");
   const speech = useSpeech({
-    lang: speechLang(source, target, locale),
+    lang: speechLang(source, target, locale, dialect),
     onText: (spoken, final) => {
       if (final) submitNext(); // a finished phrase translates right away
-      const base = speechBase.current;
-      setText((base ? `${base} ${spoken}` : spoken).slice(0, MAX_CHARS));
+      setText(joinSpeech(speechBase.current, spoken).slice(0, MAX_CHARS));
     },
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
@@ -272,6 +271,10 @@ function Translator() {
     if (!speech.listening) speechBase.current = inputRef.current?.value.trim() ?? "";
     tick();
     speech.toggle();
+  }, [speech]);
+  const retryMic = useCallback(() => {
+    tick();
+    speech.retry(); // keeps both the typed text and what was already heard
   }, [speech]);
   const [tagline, setTagline] = useState(false);
   const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -473,8 +476,27 @@ function Translator() {
               aria-label={t("inputLabel")}
               className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
                 rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
-              }`}
+              } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
             />
+            {speech.listening ? (
+              /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
+              <div
+                aria-hidden
+                dir={rtlInput ? "rtl" : "ltr"}
+                className={`pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
+                  rtlInput ? "font-arabic text-[24px] leading-[1.7]" : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                }`}
+              >
+                {(() => {
+                  const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
+                  return text.split(/\s+/).filter(Boolean).map((w, i) => (
+                    <span key={i} className={i < baseLen ? undefined : "speech-word"}>
+                      {w}{" "}
+                    </span>
+                  ));
+                })()}
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={clear}
@@ -494,18 +516,30 @@ function Translator() {
                     onClick={toggleMic}
                     aria-label={speech.listening ? t("micStop") : t("mic")}
                     aria-pressed={speech.listening}
-                    className={`press -ms-2 grid size-10 place-items-center rounded-full transition-colors duration-200 ${
-                      speech.listening ? "bg-signal/15 text-signal-text" : "text-muted-foreground hover:text-foreground"
+                    aria-busy={speech.starting}
+                    data-live={speech.listening || undefined}
+                    className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
+                      speech.listening ? "text-signal-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Mic className={`size-[18px] ${speech.listening ? "animate-[breathe_1.4s_ease-in-out_infinite]" : ""}`} strokeWidth={1.7} />
+                    <span aria-hidden className="mic-halo" />
+                    <span aria-hidden className="mic-halo mic-halo-2" />
+                    <span aria-hidden className="mic-core" />
+                    <Mic className="relative size-[18px]" strokeWidth={1.7} />
                   </button>
                 ) : null}
                 {speech.listening ? (
-                  <span className="animate-fade text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
-                ) : speech.error === "denied" || speech.error === "nospeech" ? (
-                  <span className="animate-fade truncate text-[12px] text-muted-foreground" aria-live="polite">
-                    {t(speech.error === "denied" ? "micDenied" : "micNoSpeech")}
+                  <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">{t("micListening")}</span>
+                ) : speech.error ? (
+                  <span className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground" aria-live="polite">
+                    <span className="truncate">
+                      {t(speech.error === "denied" ? "micDenied" : speech.error === "nospeech" ? "micNoSpeech" : speech.error === "nomic" ? "micNoDevice" : "micFailed")}
+                    </span>
+                    {speech.error !== "denied" ? (
+                      <button type="button" onClick={retryMic} className="press-soft shrink-0 rounded-full px-2 py-1 text-signal-text">
+                        {t("micRetry")}
+                      </button>
+                    ) : null}
                   </span>
                 ) : null}
               </div>
