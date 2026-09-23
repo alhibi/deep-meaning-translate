@@ -241,10 +241,11 @@ function Translator() {
   const { t, locale, rtl: uiRtl } = useI18n();
   const [tagline, setTagline] = useState(false);
   const taglineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (taglineTimer.current) clearTimeout(taglineTimer.current); }, []);
   const toggleTagline = useCallback(() => {
     if (taglineTimer.current) clearTimeout(taglineTimer.current);
     setTagline((v) => {
-      if (!v) taglineTimer.current = setTimeout(() => setTagline(false), 4200);
+      if (!v) taglineTimer.current = setTimeout(() => setTagline(false), 1500);
       return !v;
     });
   }, []);
@@ -262,8 +263,28 @@ function Translator() {
           aria-expanded={tagline}
           className="press-soft -ms-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
         >
-          <span aria-hidden className="size-1.5 rounded-full bg-signal" />
-          today
+          <span
+            aria-hidden
+            className={`size-1.5 shrink-0 rounded-full bg-signal transition-opacity duration-500 ${tagline ? "opacity-0" : "opacity-100"}`}
+          />
+          {/* The name and the tagline occupy the same spot: one crossfades out with a soft blur, the other resolves in. */}
+          <span className="relative grid items-center">
+            <span
+              aria-hidden={tagline}
+              className={`col-start-1 row-start-1 leading-none transition-[opacity,filter,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                tagline ? "scale-[0.97] opacity-0 blur-[3px]" : "scale-100 opacity-100 blur-0"
+              }`}
+            >
+              today
+            </span>
+            <span
+              className={`font-literary col-start-1 row-start-1 whitespace-nowrap text-[17px] font-normal italic leading-none text-muted-foreground transition-[opacity,filter,transform,letter-spacing] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                tagline ? "scale-100 opacity-100 blur-0 tracking-normal" : "scale-[1.03] opacity-0 blur-[3px] tracking-[0.02em]"
+              }`}
+            >
+              Say it naturally.
+            </span>
+          </span>
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -305,16 +326,6 @@ function Translator() {
         </div>
       </header>
 
-      {/* Tagline: revealed only when the name is pressed; a reserved line, so nothing shifts. */}
-      <div className="flex h-9 items-center justify-center px-6" aria-hidden={!tagline}>
-        <span
-          className={`font-literary text-[20px] italic leading-none text-muted-foreground transition-opacity duration-500 ${
-            tagline ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Say it naturally.
-        </span>
-      </div>
 
       <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
         <LanguageBar
