@@ -5,6 +5,7 @@ from playwright.async_api import async_playwright
 
 URL = "http://localhost:8080"
 FAKE = '{"t":10,"i":0,"p":{"k":["result","error","context"],"v":[{"t":10,"i":1,"p":{"k":["ok","result"],"v":[{"t":2,"s":2},{"t":10,"i":2,"p":{"k":["sourceLanguage","targetLanguage","translation","tone","formality","confidence","isAmbiguous","alternativeTranslations","notes","situation"],"v":[{"t":1,"s":"de"},{"t":1,"s":"ar"},{"t":1,"s":"صباح الخير"},{"t":1,"s":"neutral"},{"t":1,"s":"neutral"},{"t":0,"s":1},{"t":2,"s":3},{"t":9,"i":3,"a":[],"o":0},{"t":1,"s":""},{"t":1,"s":"general"}]},"o":0}]},"o":0},{"t":2,"s":1},{"t":11,"i":4,"p":{"k":[],"v":[]},"o":0}]},"o":0}'
+FULL = json.dumps({"translation":"صباح الخير","sourceLanguage":"de","targetLanguage":"ar","tone":"neutral","formality":"neutral","confidence":1,"isAmbiguous":False,"alternativeTranslations":[],"notes":"","situation":"general"}, ensure_ascii=False)
 failures, errors = [], []
 
 def check(ok, msg):
@@ -26,7 +27,7 @@ async def main():
         page = await (await browser.new_context(viewport={"width": 390, "height": 844})).new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
         await page.route("**/_serverFn/**", lambda r: r.fulfill(status=200, content_type="application/json", headers={"x-tss-serialized": "true"}, body=FAKE))
-        await page.route("**/api/translate-stream", lambda r: r.fulfill(status=200, content_type="text/plain; charset=utf-8", body="صباح الخير"))
+        await page.route("**/api/translate-stream", lambda r: r.fulfill(status=200, content_type="text/plain; charset=utf-8", body=(FULL if '"full"' in (r.request.post_data or "") else "صباح الخير")))
         await page.goto(URL)
         intro = page.get_by_test_id("first-intro")
         await intro.wait_for(state="visible")
