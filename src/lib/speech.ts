@@ -16,7 +16,7 @@ interface Recognition {
 function ctor(): (new () => Recognition) | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as Record<string, unknown>;
-  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as (new () => Recognition) | null;
+  return (w["SpeechRecognition"] ?? w["webkitSpeechRecognition"] ?? null) as (new () => Recognition) | null;
 }
 
 const TAGS: Record<string, string> = {
@@ -58,6 +58,7 @@ export function useSpeech(opts: { lang: string; onText: (text: string, final: bo
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
+        if (!res) continue;
         if (res.isFinal) finals += res[0].transcript;
         else interim += res[0].transcript;
       }
