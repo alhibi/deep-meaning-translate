@@ -305,6 +305,17 @@ function Translator() {
         </div>
       </header>
 
+      {/* Tagline: revealed only when the name is pressed; a reserved line, so nothing shifts. */}
+      <div className="flex h-9 items-center justify-center px-6" aria-hidden={!tagline}>
+        <span
+          className={`font-literary text-[20px] italic leading-none text-muted-foreground transition-opacity duration-500 ${
+            tagline ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          Say it naturally.
+        </span>
+      </div>
+
       <div className="flex flex-1 flex-col justify-center pb-[6dvh]">
         <LanguageBar
           source={source}
