@@ -15,6 +15,7 @@ import { persist } from "@/lib/persist";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: "Lingua — meaning-first translation" },
