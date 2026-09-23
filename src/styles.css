@@ -70,10 +70,10 @@
   --muted-foreground: #a7a19a;
   --faint: #6f6a64;
   /* Signal: appears only where attention is required. */
-  --signal: #6d5ef4;
-  --signal-text: #9b90ff; /* signal used as text/lines on dark: 4.5:1+ */
-  --signal-foreground: #ffffff;
-  --signal-soft: rgb(109 94 244 / 16%);
+  --signal: #c97a5a;
+  --signal-text: #dd9169; /* signal used as text/lines on dark: 4.5:1+ */
+  --signal-foreground: #1a110b; /* warm ink on clay: 5.7:1+ */
+  --signal-soft: rgb(201 122 90 / 16%);
   --accent: var(--signal);
   --accent-foreground: var(--signal-foreground);
   --success: #5fbf97;
