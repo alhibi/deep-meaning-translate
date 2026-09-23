@@ -31,7 +31,7 @@ async def main():
         await intro.wait_for(state="visible")
         check(await intro.count() == 1, "first-arrival introduction appears")
         await page.get_by_test_id("intro-enter").click()
-        await page.wait_for_timeout(1000)
+        await page.wait_for_timeout(1600)  # intro exit choreography runs ~1.2s
         check(await intro.count() == 0, "introduction opens the translator")
         await page.reload(); await page.wait_for_timeout(500)
         check(await page.get_by_test_id("first-intro").count() == 0, "introduction appears only once")
