@@ -489,17 +489,87 @@
     transform: translate3d(0, -5px, 0);
   }
 }
+@keyframes intro-exit-up {
+  to {
+    opacity: 0;
+    transform: translateY(-24px);
+    filter: blur(12px);
+  }
+}
+@keyframes intro-exit-down {
+  to {
+    opacity: 0;
+    transform: translateY(26px);
+    filter: blur(12px);
+  }
+}
+@keyframes intro-bloom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.35);
+  }
+  35% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(1.7);
+  }
+}
 .intro-screen {
   isolation: isolate;
   transition:
-    clip-path 860ms var(--ease-out),
-    opacity 500ms var(--ease-soft);
+    clip-path 900ms var(--ease-soft),
+    opacity 460ms var(--ease-soft);
   clip-path: inset(0 0 0 0);
 }
 .intro-screen[data-leaving] {
+  transition:
+    clip-path 920ms var(--ease-soft) 300ms,
+    opacity 420ms var(--ease-soft) 320ms;
   clip-path: inset(0 0 100% 0 round 0 0 48% 48%);
-  opacity: 0.76;
+  opacity: 0.8;
   pointer-events: none;
+}
+.intro-screen[data-leaving] .intro-brand {
+  animation: intro-exit-up 440ms var(--ease-soft) both;
+}
+.intro-screen[data-leaving] .intro-icon-wrap,
+.intro-screen[data-leaving] .intro-ring {
+  animation: intro-exit-up 500ms var(--ease-soft) 80ms both;
+}
+.intro-screen[data-leaving] .intro-cat {
+  animation: intro-exit-up 500ms var(--ease-soft) 80ms both;
+}
+.intro-screen[data-leaving] .intro-title {
+  animation: intro-exit-up 520ms var(--ease-soft) 140ms both;
+}
+.intro-screen[data-leaving] .intro-copy {
+  animation: intro-exit-up 540ms var(--ease-soft) 200ms both;
+}
+.intro-screen[data-leaving] .intro-action {
+  animation: intro-exit-down 540ms var(--ease-soft) 260ms both;
+}
+.intro-bloom {
+  position: absolute;
+  bottom: 9%;
+  left: 50%;
+  z-index: 1;
+  width: 280px;
+  height: 280px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--signal) 42%, transparent),
+    transparent 72%
+  );
+  filter: blur(28px);
+  opacity: 0;
+  transform: translate(-50%, 0) scale(0.35);
+  pointer-events: none;
+}
+.intro-screen[data-leaving] .intro-bloom {
+  animation: intro-bloom 980ms var(--ease-soft) 140ms both;
 }
 .intro-brand {
   animation: intro-rise 600ms var(--ease-out) 80ms both;
@@ -550,6 +620,16 @@
   .intro-title,
   .intro-copy,
   .intro-action {
+    animation: none !important;
+  }
+  .intro-screen[data-leaving] .intro-brand,
+  .intro-screen[data-leaving] .intro-icon-wrap,
+  .intro-screen[data-leaving] .intro-ring,
+  .intro-screen[data-leaving] .intro-cat,
+  .intro-screen[data-leaving] .intro-title,
+  .intro-screen[data-leaving] .intro-copy,
+  .intro-screen[data-leaving] .intro-action,
+  .intro-screen[data-leaving] .intro-bloom {
     animation: none !important;
   }
   .intro-screen {
