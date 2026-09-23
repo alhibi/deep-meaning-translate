@@ -10,6 +10,7 @@ import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { HistorySheet } from "@/components/translator/HistorySheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
+import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { speechLang, useSpeech } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
@@ -260,15 +261,12 @@ function Translator() {
   const speechBase = useRef("");
   const speech = useSpeech({
     lang: speechLang(source, target, locale),
-    onText: (spoken) => {
+    onText: (spoken, final) => {
+      if (final) submitNext(); // a finished phrase translates right away
       const base = speechBase.current;
       setText((base ? `${base} ${spoken}` : spoken).slice(0, MAX_CHARS));
     },
-    onDone: () => {
-      submitNext();
-      setText((v) => v.trimEnd() + " "); // nudge a deliberate, final translation
-      setTimeout(() => setText((v) => v.trimEnd()), 0);
-    },
+    onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
   const toggleMic = useCallback(() => {
     if (!speech.listening) speechBase.current = inputRef.current?.value.trim() ?? "";
