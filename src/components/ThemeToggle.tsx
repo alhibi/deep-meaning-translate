@@ -6,8 +6,8 @@ function heatShimmer(x: number, y: number) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const el = document.createElement("div");
   el.className = "heat-shimmer";
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
+  el.style.setProperty("--x", `${x}px`);
+  el.style.setProperty("--y", `${y}px`);
   el.setAttribute("aria-hidden", "true");
   document.body.appendChild(el);
   window.setTimeout(() => el.remove(), 1400);
