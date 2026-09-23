@@ -6,14 +6,14 @@ import { useI18n } from "@/lib/i18n";
  * instead of taking the whole screen down.
  */
 export class SafeArea extends Component<{ children: ReactNode; silent?: boolean }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  componentDidCatch(error: unknown) {
+  override componentDidCatch(error: unknown) {
     console.error("[SafeArea]", error);
   }
-  render() {
+  override render() {
     if (!this.state.failed) return this.props.children;
     if (this.props.silent) return null;
     return <Fallback onRetry={() => this.setState({ failed: false })} />;
