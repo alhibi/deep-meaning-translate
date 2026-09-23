@@ -6,7 +6,7 @@ export const MODELS: readonly ModelId[] = ["gpt-5.6-luna", "gpt-6-luna", "glm-5.
 export const MODEL_LABEL: Record<ModelId, string> = {
   "gpt-5.6-luna": "Luna 5.6",
   "gpt-6-luna": "Luna 6",
-  "glm-5.3-flash": "GLM Flash",
+  "glm-5.3-flash": "GLM Flash · beta",
 };
 export type Situation = "chat" | "work" | "official" | "general";
 
