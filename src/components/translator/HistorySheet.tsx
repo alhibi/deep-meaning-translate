@@ -9,17 +9,19 @@ export const HistorySheet = memo(function HistorySheet({
   onClose,
   onPick,
   onClear,
+  onForgetAll,
 }: {
   open: boolean;
   entries: HistoryEntry[];
   onClose: () => void;
   onPick: (entry: HistoryEntry) => void;
   onClear: () => void;
+  onForgetAll: () => void;
 }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
+    <div role="dialog" aria-modal="true" aria-label="Recent translations" className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20">
       <button
         type="button"
         aria-label="Close recent translations"
@@ -66,11 +68,12 @@ export const HistorySheet = memo(function HistorySheet({
                   </span>
                   <span
                     dir={isRtl(e.target) ? "rtl" : "ltr"}
+                    lang={e.target}
                     className="mt-1 line-clamp-2 block text-[15px] leading-snug"
                   >
                     {e.translated}
                   </span>
-                  <span className="mt-0.5 line-clamp-1 block text-[13px] text-muted-foreground">
+                  <span dir="auto" lang={e.source} className="mt-0.5 line-clamp-1 block text-start text-[13px] text-muted-foreground">
                     {e.original}
                   </span>
                 </button>
@@ -78,6 +81,20 @@ export const HistorySheet = memo(function HistorySheet({
             ))}
           </ul>
         )}
+
+        <div className="px-5 py-5 text-[12px] leading-relaxed text-muted-foreground">
+          <p>
+            Recent translations, your draft and language choice are kept only on this device. Text is
+            sent for translation and not stored on our side.
+          </p>
+          <button
+            type="button"
+            onClick={onForgetAll}
+            className="press-soft mt-2 underline decoration-border-strong underline-offset-4"
+          >
+            Delete everything on this device
+          </button>
+        </div>
       </div>
     </div>
   );
