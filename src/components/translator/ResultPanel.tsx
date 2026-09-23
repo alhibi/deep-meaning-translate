@@ -205,7 +205,7 @@ export const ResultPanel = memo(function ResultPanel({
               className="press-soft animate-fade ms-auto inline-flex items-center gap-1.5 text-[12px] text-muted-foreground"
             >
               <RotateCw className="size-3" strokeWidth={1.75} />
-              {error === "offline" ? "Offline" : "Retry"}
+              {error === "offline" ? "Offline — resumes when you're back" : "Retry"}
             </button>
           ) : null}
         </div>

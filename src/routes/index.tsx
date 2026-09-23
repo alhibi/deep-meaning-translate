@@ -125,7 +125,7 @@ function Translator() {
     setHistoryOpen(false);
   }, []);
 
-  const rtlInput = isRtl(source === "auto" ? (detected ?? "") : source);
+  const rtlInput = text.trim() ? startsRtl(text) : isRtl(source === "auto" ? "" : source);
   const hasText = text.length > 0;
 
   return (
@@ -163,12 +163,12 @@ function Translator() {
         onSwap={swap}
       />
 
-      <section className="input-shell relative px-5 pt-4">
+      <section dir={rtlInput ? "rtl" : "ltr"} className="input-shell relative px-5 pt-4">
         <textarea
           ref={inputRef}
           value={text}
           onChange={onInput}
-          dir={rtlInput ? "rtl" : "auto"}
+          dir={rtlInput ? "rtl" : "ltr"}
           rows={3}
           autoCapitalize="sentences"
           autoComplete="off"
@@ -233,4 +233,10 @@ const useLayoutEffectSafe = typeof window === "undefined" ? useEffect : useLayou
 
 function lang2(code: string | undefined) {
   return (code ?? "").slice(0, 2).toLowerCase();
+}
+
+/** Direction follows the first strong character the user typed. */
+function startsRtl(value: string) {
+  const m = value.match(/[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/);
+  return !!m && /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(m[0]);
 }
