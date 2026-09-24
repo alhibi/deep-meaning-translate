@@ -1,0 +1,3 @@
+- [x] Add conditional dictionary enrichment for words and short terms
+- [x] Add expandable RTL-aware meanings panel
+- [x] Add unit and mobile smoke coverage; verify full app

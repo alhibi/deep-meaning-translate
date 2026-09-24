@@ -16,7 +16,9 @@ function apply(t: Theme) {
   d.classList.remove("light", "dark");
   d.classList.add(t);
   d.style.colorScheme = t;
-  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", COLORS[t]));
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((m) => m.setAttribute("content", COLORS[t]));
 }
 
 export function useTheme() {
@@ -51,7 +53,9 @@ export function useTheme() {
       setTheme(next);
     };
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+    };
     if (!doc.startViewTransition || reduce) {
       document.documentElement.classList.add("theme-fade");
       run();
@@ -63,7 +67,11 @@ export function useTheme() {
     void vt.ready.then(() => {
       document.documentElement.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-        { duration: 720, easing: "cubic-bezier(0.65, 0, 0.35, 1)", pseudoElement: "::view-transition-new(root)" },
+        {
+          duration: 720,
+          easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+          pseudoElement: "::view-transition-new(root)",
+        },
       );
     });
   }, []);
