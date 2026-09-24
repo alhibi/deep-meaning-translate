@@ -47,6 +47,9 @@ async def main():
         copy = page.get_by_role("button", name="نسخ").or_(page.get_by_role("button", name="Copy")).or_(page.get_by_role("button", name="Kopieren")).first
         check(await copy.count() > 0 and await copy.evaluate("e => getComputedStyle(e.parentElement).opacity") == "1", "Copy visible without final punctuation")
 
+        # Dictionary enrichment is optional and never blocks the primary translation.
+        check(await page.get_by_text("معانٍ أكثر").count() == 0, "dictionary stays hidden when no enrichment is returned")
+
         # 2. Swapping languages keeps text and writing-box direction.
         swap = page.locator("button.animate-exchange, button[aria-label*='swap' i], button[aria-label*='تبديل'], button[aria-label*='tausch' i]").first
         if await swap.count():

@@ -26,6 +26,8 @@ import { joinSpeech } from "@/lib/speech";
 import { useSpeech, speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
+import { useLexicon } from "@/lib/translation/useLexicon";
+import { LexiconPanel } from "@/components/translator/LexiconPanel";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
@@ -317,6 +319,13 @@ function Translator() {
   );
 
   const { t, locale, rtl: uiRtl } = useI18n();
+  const { lexicon, loading: lexiconLoading } = useLexicon({
+    text,
+    source: result?.sourceLanguage || source,
+    target,
+    uiLocale: locale,
+    settled: !!result && !provisional && !pending && !error,
+  });
   const hasClip = useClipboardHint();
 
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
@@ -754,6 +763,7 @@ function Translator() {
                     ) : undefined
                   }
                 />
+                <LexiconPanel value={lexicon} loading={lexiconLoading} />
               </SafeArea>
             </div>
           </div>

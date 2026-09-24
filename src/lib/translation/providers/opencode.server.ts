@@ -8,6 +8,7 @@ import {
 import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
+import { parseLexicon, type LexiconResult } from "../lexicon";
 
 const BASE = "https://opencode.ai/zen/go/v1";
 const DEFAULT_MODEL = "gpt-6-luna";
@@ -182,4 +183,31 @@ export async function streamFullTranslation(
   const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
+}
+
+const LEXICON_SYSTEM = `You are a precise multilingual dictionary editor. Analyze only a single word, proper name, adjective, verb, idiom, or short term. If the input is a sentence, fragment, random text, or has no useful dictionary readings, return null.
+Return ONLY minified JSON (or the literal null). Give distinct common readings, not a thesaurus dump. Put the contextually best/common reading first. Definitions must be brief and written in the requested UI language. Examples must be natural, short, and useful.
+Schema: {"sourceTerm":string,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"entries":[1-10 items: {"term":string,"partOfSpeech":"noun"|"adjective"|"verb"|"adverb"|"phrase"|"proper_noun"|"term","meanings":[1-6 concise equivalents],"definition":string,"example":string,"exampleTranslation":string,"primary":boolean}]}`;
+
+/** Optional dictionary pass. It is deliberately separate so translation streaming is never delayed. */
+export async function analyzeLexicon(
+  apiKey: string,
+  input: { text: string; source: string; target: string; uiLocale: "ar" | "en" | "de" },
+  signal?: AbortSignal,
+): Promise<LexiconResult | null> {
+  const raw = await call(
+    apiKey,
+    LEXICON_SYSTEM,
+    `UI language: ${input.uiLocale}\nTranslate/analyze: ${input.source}→${input.target}\n<term>\n${input.text}\n</term>`,
+    signal,
+  );
+  if (raw.trim() === "null") return null;
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === -1 || end === -1) return null;
+  try {
+    return parseLexicon(JSON.parse(raw.slice(start, end + 1)));
+  } catch {
+    return null;
+  }
 }

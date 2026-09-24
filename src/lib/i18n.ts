@@ -100,6 +100,18 @@ const en = {
   introCopy: "Translation that keeps your meaning, tone and natural voice.",
   introEnter: "Start translating",
   theme: "Light or dark",
+  lexMore: "More meanings",
+  lexAll: "Show all",
+  lexLess: "Show less",
+  lexLoading: "Finding precise meanings…",
+  lexBest: "best match",
+  lexNoun: "noun",
+  lexAdjective: "adjective",
+  lexVerb: "verb",
+  lexAdverb: "adverb",
+  lexPhrase: "expression",
+  lexName: "name",
+  lexTerm: "term",
 };
 export type Key = keyof typeof en;
 
@@ -197,6 +209,18 @@ const ar: Record<Key, string> = {
   introCopy: "ترجمة تحفظ المعنى والنبرة وطبيعة كلامك.",
   introEnter: "ابدأ الترجمة",
   theme: "الوضع الفاتح أو الداكن",
+  lexMore: "معانٍ أكثر",
+  lexAll: "عرض الكل",
+  lexLess: "عرض أقل",
+  lexLoading: "أبحث عن المعاني الدقيقة…",
+  lexBest: "الأنسب",
+  lexNoun: "اسم",
+  lexAdjective: "صفة",
+  lexVerb: "فعل",
+  lexAdverb: "حال",
+  lexPhrase: "تعبير",
+  lexName: "اسم علم",
+  lexTerm: "مصطلح",
 };
 
 const de: Record<Key, string> = {
@@ -295,6 +319,18 @@ const de: Record<Key, string> = {
   introCopy: "Übersetzungen, die Bedeutung, Ton und deine natürliche Stimme bewahren.",
   introEnter: "Übersetzen",
   theme: "Hell oder dunkel",
+  lexMore: "Weitere Bedeutungen",
+  lexAll: "Alle anzeigen",
+  lexLess: "Weniger anzeigen",
+  lexLoading: "Genaue Bedeutungen werden gesucht…",
+  lexBest: "passendste",
+  lexNoun: "Substantiv",
+  lexAdjective: "Adjektiv",
+  lexVerb: "Verb",
+  lexAdverb: "Adverb",
+  lexPhrase: "Ausdruck",
+  lexName: "Eigenname",
+  lexTerm: "Begriff",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
