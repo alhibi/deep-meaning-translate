@@ -25,6 +25,8 @@ describe("LexiconPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show all" }));
     expect(screen.getByText("آسر")).toBeTruthy();
     expect(screen.getByText("مثال 4")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Show less" }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: "Show less" }).getAttribute("aria-expanded")).toBe(
+      "true",
+    );
   });
 });

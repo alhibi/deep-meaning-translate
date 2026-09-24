@@ -4,7 +4,10 @@ import { useI18n } from "@/lib/i18n";
 import { isRtl } from "@/lib/translation/languages";
 import type { LexicalKind, LexiconResult } from "@/lib/translation/lexicon";
 
-const LABEL: Record<LexicalKind, "lexNoun" | "lexAdjective" | "lexVerb" | "lexAdverb" | "lexPhrase" | "lexName" | "lexTerm"> = {
+const LABEL: Record<
+  LexicalKind,
+  "lexNoun" | "lexAdjective" | "lexVerb" | "lexAdverb" | "lexPhrase" | "lexName" | "lexTerm"
+> = {
   noun: "lexNoun",
   adjective: "lexAdjective",
   verb: "lexVerb",
@@ -43,7 +46,10 @@ export const LexiconPanel = memo(function LexiconPanel({
   const rtl = isRtl(value.targetLanguage);
 
   return (
-    <section className="animate-rise border-t border-border px-5 pb-5 pt-4" aria-labelledby={`${contentId}-title`}>
+    <section
+      className="animate-rise border-t border-border px-5 pb-5 pt-4"
+      aria-labelledby={`${contentId}-title`}
+    >
       <div className="flex items-center justify-between gap-4">
         <h2 id={`${contentId}-title`} className="text-[13px] font-medium text-muted-foreground">
           {t("lexMore")}
@@ -57,7 +63,10 @@ export const LexiconPanel = memo(function LexiconPanel({
             className="press-soft inline-flex min-h-9 items-center gap-1.5 text-[12px] text-signal-text"
           >
             {expanded ? t("lexLess") : t("lexAll")}
-            <ChevronDown className={`size-3.5 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`} strokeWidth={1.75} />
+            <ChevronDown
+              className={`size-3.5 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
+              strokeWidth={1.75}
+            />
           </button>
         ) : null}
       </div>
@@ -69,20 +78,38 @@ export const LexiconPanel = memo(function LexiconPanel({
               <span aria-hidden className="mt-2 size-1.5 shrink-0 rotate-45 bg-signal" />
               <div className="min-w-0 flex-1 text-start">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span lang={value.targetLanguage} className={`text-[18px] font-medium text-foreground ${rtl ? "font-arabic" : ""}`}>
+                  <span
+                    lang={value.targetLanguage}
+                    className={`text-[18px] font-medium text-foreground ${rtl ? "font-arabic" : ""}`}
+                  >
                     {entry.term}
                   </span>
                   <span className="text-[11px] text-faint">{t(LABEL[entry.partOfSpeech])}</span>
-                  {entry.primary ? <span className="text-[10px] text-signal-text">{t("lexBest")}</span> : null}
+                  {entry.primary ? (
+                    <span className="text-[10px] text-signal-text">{t("lexBest")}</span>
+                  ) : null}
                 </div>
-                <p lang={value.targetLanguage} className={`mt-1 text-[14px] leading-relaxed text-muted-foreground ${rtl ? "font-arabic" : ""}`}>
+                <p
+                  lang={value.targetLanguage}
+                  className={`mt-1 text-[14px] leading-relaxed text-muted-foreground ${rtl ? "font-arabic" : ""}`}
+                >
                   {entry.meanings.join("، ")}
                 </p>
-                {entry.definition ? <p className="mt-1.5 text-[12px] leading-relaxed text-faint">{entry.definition}</p> : null}
+                {entry.definition ? (
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-faint">
+                    {entry.definition}
+                  </p>
+                ) : null}
                 {expanded && entry.example ? (
                   <div className="mt-2 border-s border-border-strong ps-3 text-[12px] leading-relaxed">
-                    <p dir="auto" className="text-muted-foreground">{entry.example}</p>
-                    {entry.exampleTranslation ? <p dir="auto" className="mt-0.5 text-faint">{entry.exampleTranslation}</p> : null}
+                    <p dir="auto" className="text-muted-foreground">
+                      {entry.example}
+                    </p>
+                    {entry.exampleTranslation ? (
+                      <p dir="auto" className="mt-0.5 text-faint">
+                        {entry.exampleTranslation}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

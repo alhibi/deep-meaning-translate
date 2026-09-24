@@ -1,4 +1,5 @@
-export type LexicalKind = "noun" | "adjective" | "verb" | "adverb" | "phrase" | "proper_noun" | "term";
+export type LexicalKind =
+  "noun" | "adjective" | "verb" | "adverb" | "phrase" | "proper_noun" | "term";
 
 export interface LexicalEntry {
   term: string;
@@ -47,7 +48,8 @@ export function parseLexicon(value: unknown): LexiconResult | null {
   const sourceTerm = cleanString(data["sourceTerm"], 80);
   const sourceLanguage = cleanString(data["sourceLanguage"], 10);
   const targetLanguage = cleanString(data["targetLanguage"], 10);
-  if (!sourceTerm || !sourceLanguage || !targetLanguage || !Array.isArray(data["entries"])) return null;
+  if (!sourceTerm || !sourceLanguage || !targetLanguage || !Array.isArray(data["entries"]))
+    return null;
 
   const entries = data["entries"]
     .slice(0, 10)

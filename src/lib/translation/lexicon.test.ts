@@ -17,8 +17,24 @@ describe("lexicon", () => {
       sourceLanguage: "en",
       targetLanguage: "ar",
       entries: [
-        { term: "مشعوذ", partOfSpeech: "noun", meanings: ["دجال"], definition: "", example: "", exampleTranslation: "", primary: false },
-        { term: "ساحر", partOfSpeech: "noun", meanings: ["من يمارس السحر"], definition: "الأكثر شيوعاً", example: "The sorcerer arrived.", exampleTranslation: "وصل الساحر.", primary: true },
+        {
+          term: "مشعوذ",
+          partOfSpeech: "noun",
+          meanings: ["دجال"],
+          definition: "",
+          example: "",
+          exampleTranslation: "",
+          primary: false,
+        },
+        {
+          term: "ساحر",
+          partOfSpeech: "noun",
+          meanings: ["من يمارس السحر"],
+          definition: "الأكثر شيوعاً",
+          example: "The sorcerer arrived.",
+          exampleTranslation: "وصل الساحر.",
+          primary: true,
+        },
         { term: "broken", partOfSpeech: "unknown", meanings: [] },
       ],
     });
@@ -28,6 +44,8 @@ describe("lexicon", () => {
 
   it("silently rejects unusable provider data", () => {
     expect(parseLexicon(null)).toBeNull();
-    expect(parseLexicon({ sourceTerm: "x", sourceLanguage: "en", targetLanguage: "de", entries: [] })).toBeNull();
+    expect(
+      parseLexicon({ sourceTerm: "x", sourceLanguage: "en", targetLanguage: "de", entries: [] }),
+    ).toBeNull();
   });
 });

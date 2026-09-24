@@ -11,12 +11,14 @@ const LexiconInput = z.object({
 
 export const lookupLexicon = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => LexiconInput.parse(input))
-  .handler(async ({ data }): Promise<{ ok: true; lexicon: import("./lexicon").LexiconResult | null }> => {
-    const { isLexiconCandidate } = await import("./lexicon");
-    if (!isLexiconCandidate(data.text) || !takeToken()) return { ok: true, lexicon: null };
-    const apiKey = process.env["OPENCODE_API_KEY"];
-    if (!apiKey) return { ok: true, lexicon: null };
-    const { analyzeLexicon } = await import("./providers/opencode.server");
-    const lexicon = await analyzeLexicon(apiKey, data).catch(() => null);
-    return { ok: true, lexicon };
-  });
+  .handler(
+    async ({ data }): Promise<{ ok: true; lexicon: import("./lexicon").LexiconResult | null }> => {
+      const { isLexiconCandidate } = await import("./lexicon");
+      if (!isLexiconCandidate(data.text) || !takeToken()) return { ok: true, lexicon: null };
+      const apiKey = process.env["OPENCODE_API_KEY"];
+      if (!apiKey) return { ok: true, lexicon: null };
+      const { analyzeLexicon } = await import("./providers/opencode.server");
+      const lexicon = await analyzeLexicon(apiKey, data).catch(() => null);
+      return { ok: true, lexicon };
+    },
+  );
