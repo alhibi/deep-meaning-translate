@@ -7,6 +7,8 @@ const LexiconInput = z.object({
   source: z.string().regex(/^[a-z]{2}$|^auto$/),
   target: z.string().regex(/^[a-z]{2}$/),
   uiLocale: z.enum(["ar", "en", "de"]),
+  translation: z.string().trim().max(200).optional(),
+  dialect: z.enum(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"]).optional(),
 });
 
 export const lookupLexicon = createServerFn({ method: "POST" })

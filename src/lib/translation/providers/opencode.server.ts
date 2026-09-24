@@ -185,20 +185,30 @@ export async function streamFullTranslation(
   return textDeltas(res.body);
 }
 
-const LEXICON_SYSTEM = `You are a precise multilingual dictionary editor. Analyze only a single word, proper name, adjective, verb, idiom, or short term. If the input is a sentence, fragment, random text, or has no useful dictionary readings, return null.
-Return ONLY minified JSON (or the literal null). Give distinct common readings, not a thesaurus dump. Put the contextually best/common reading first. Definitions must be brief and written in the requested UI language. Examples must be natural, short, and useful.
-Schema: {"sourceTerm":string,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"entries":[1-10 items: {"term":string,"partOfSpeech":"noun"|"adjective"|"verb"|"adverb"|"phrase"|"proper_noun"|"term","meanings":[1-6 concise equivalents],"definition":string,"example":string,"exampleTranslation":string,"primary":boolean}]}`;
+const LEXICON_SYSTEM = `You are a precise multilingual lexicographer with deep coverage of Modern Standard Arabic, Arabic dialects (Levantine, Egyptian, Gulf, Iraqi, Maghrebi), German (incl. Austrian/Swiss variants, colloquial) and other languages. Analyze only a single word, proper name, adjective, verb, idiom, or short term. Recognize dialect spellings, Arabizi, missing hamza/diacritics, German umlaut substitutes (ae/oe/ue/ss) and inflected forms, and resolve them to the lemma. If the input is a sentence, random text, or has no useful dictionary readings, return null.
+Return ONLY minified JSON (or the literal null). Give distinct common readings, not a thesaurus dump. Rank by everyday frequency; the reading that matches the given model translation comes first. Definitions brief, in the UI language. Examples natural and short.
+forms: key inflections (German: article+gender, plural, genitive, verb Präteritum/Perfekt, comparative; Arabic: plural/broken plural, feminine, past/present/masdar, dialect variants). synonyms: 2-6 target-language synonyms. frequency: 0-1 commonness. register: dialect/register label in UI language or "".
+Schema: {"sourceTerm":lemma,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"translation":string,"entries":[1-10 items: {"term":string,"partOfSpeech":"noun"|"adjective"|"verb"|"adverb"|"phrase"|"proper_noun"|"term","meanings":[1-6],"definition":string,"example":string,"exampleTranslation":string,"primary":boolean,"forms":[string],"synonyms":[string],"frequency":number,"register":string}]}`;
 
 /** Optional dictionary pass. It is deliberately separate so translation streaming is never delayed. */
 export async function analyzeLexicon(
   apiKey: string,
-  input: { text: string; source: string; target: string; uiLocale: "ar" | "en" | "de" },
+  input: {
+    text: string;
+    source: string;
+    target: string;
+    uiLocale: "ar" | "en" | "de";
+    translation?: string;
+    dialect?: string;
+  },
   signal?: AbortSignal,
 ): Promise<LexiconResult | null> {
   const raw = await call(
     apiKey,
     LEXICON_SYSTEM,
-    `UI language: ${input.uiLocale}\nTranslate/analyze: ${input.source}→${input.target}\n<term>\n${input.text}\n</term>`,
+    `UI language: ${input.uiLocale}\nTranslate/analyze: ${input.source}→${input.target}${
+      input.dialect && input.dialect !== "auto" ? `\nArabic dialect: ${input.dialect}` : ""
+    }${input.translation ? `\nModel translation: ${input.translation}` : ""}\n<term>\n${input.text}\n</term>`,
     signal,
   );
   if (raw.trim() === "null") return null;

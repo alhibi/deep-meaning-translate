@@ -1,6 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
+import type { Dialect } from "./types";
 import { isLexiconCandidate, type LexiconResult } from "./lexicon";
 import { lookupLexicon } from "./lexicon.functions";
 
@@ -12,6 +13,9 @@ export function useLexicon(opts: {
   target: string;
   uiLocale: Locale;
   settled: boolean;
+  /** The model's translation: ranks the most common matching meaning first. */
+  translation?: string;
+  dialect?: Dialect;
 }) {
   const lookup = useServerFn(lookupLexicon);
   const [lexicon, setLexicon] = useState<LexiconResult | null>(null);
@@ -19,6 +23,8 @@ export function useLexicon(opts: {
   const generation = useRef(0);
   const cache = useRef(new Map<string, LexiconResult | null>());
   const { text, source, target, uiLocale, settled } = opts;
+  const translation = (opts.translation ?? "").trim().slice(0, 200);
+  const dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
 
   useEffect(() => {
     const token = ++generation.current;
@@ -27,7 +33,7 @@ export function useLexicon(opts: {
     setLoading(false);
     if (!settled || !isLexiconCandidate(normalized)) return;
 
-    const key = `${source}|${target}|${uiLocale}|${normalized.toLocaleLowerCase()}`;
+    const key = `${source}|${target}|${uiLocale}|${dialect}|${normalized.toLocaleLowerCase()}`;
     if (cache.current.has(key)) {
       setLexicon(cache.current.get(key) ?? null);
       return;
@@ -36,7 +42,16 @@ export function useLexicon(opts: {
     const id = setTimeout(() => {
       if (token !== generation.current) return;
       setLoading(true);
-      void lookup({ data: { text: normalized, source, target, uiLocale } })
+      void lookup({
+        data: {
+          text: normalized,
+          source,
+          target,
+          uiLocale,
+          ...(translation ? { translation } : {}),
+          dialect,
+        },
+      })
         .then((response) => {
           if (token !== generation.current) return;
           const value = response?.ok ? response.lexicon : null;
@@ -56,7 +71,9 @@ export function useLexicon(opts: {
     }, 260);
 
     return () => clearTimeout(id);
-  }, [text, source, target, uiLocale, settled, lookup]);
+    // translation is context only; it doesn't change while settled.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, source, target, uiLocale, settled, dialect, lookup]);
 
   return { lexicon, loading };
 }
