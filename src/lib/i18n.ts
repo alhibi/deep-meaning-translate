@@ -112,6 +112,11 @@ const en = {
   lexPhrase: "expression",
   lexName: "name",
   lexTerm: "term",
+  lexTitle: "Dictionary",
+  lexOpen: "Open dictionary",
+  lexForms: "Forms",
+  lexSynonyms: "Synonyms",
+  lexModel: "Model translation",
 };
 export type Key = keyof typeof en;
 
@@ -221,6 +226,11 @@ const ar: Record<Key, string> = {
   lexPhrase: "تعبير",
   lexName: "اسم علم",
   lexTerm: "مصطلح",
+  lexTitle: "المعجم",
+  lexOpen: "افتح المعجم",
+  lexForms: "الصيغ",
+  lexSynonyms: "المترادفات",
+  lexModel: "ترجمة النموذج",
 };
 
 const de: Record<Key, string> = {
@@ -331,6 +341,11 @@ const de: Record<Key, string> = {
   lexPhrase: "Ausdruck",
   lexName: "Eigenname",
   lexTerm: "Begriff",
+  lexTitle: "Wörterbuch",
+  lexOpen: "Wörterbuch öffnen",
+  lexForms: "Formen",
+  lexSynonyms: "Synonyme",
+  lexModel: "Modellübersetzung",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
