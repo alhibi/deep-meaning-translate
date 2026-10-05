@@ -93,7 +93,13 @@ export function parseLexicon(value: unknown): LexiconResult | null {
 
   if (entries.length === 0) return null;
   const translation = cleanString(data["translation"], 200);
-  return { sourceTerm, sourceLanguage, targetLanguage, translation, entries: rankEntries(entries, translation) };
+  return {
+    sourceTerm,
+    sourceLanguage,
+    targetLanguage,
+    translation,
+    entries: rankEntries(entries, translation),
+  };
 }
 
 function cleanList(value: unknown, max: number): string[] {
@@ -101,7 +107,9 @@ function cleanList(value: unknown, max: number): string[] {
   const seen = new Set<string>();
   return value
     .map((item) => cleanString(item, 60))
-    .filter((item) => item && !seen.has(item.toLocaleLowerCase()) && !!seen.add(item.toLocaleLowerCase()))
+    .filter(
+      (item) => item && !seen.has(item.toLocaleLowerCase()) && !!seen.add(item.toLocaleLowerCase()),
+    )
     .slice(0, max);
 }
 

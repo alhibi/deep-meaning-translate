@@ -49,3 +49,36 @@ describe("lexicon", () => {
     ).toBeNull();
   });
 });
+
+describe("lexicon ranking and forms", () => {
+  it("keeps forms and synonyms and ranks the model's translation first", () => {
+    const parsed = parseLexicon({
+      sourceTerm: "Bank",
+      sourceLanguage: "de",
+      targetLanguage: "ar",
+      translation: "مصرف",
+      entries: [
+        {
+          term: "مقعد",
+          partOfSpeech: "noun",
+          meanings: ["كرسي طويل"],
+          primary: true,
+          frequency: 0.6,
+          forms: ["die Bank", "die Bänke", "die Bänke"],
+          synonyms: ["دكة"],
+        },
+        {
+          term: "بنك",
+          partOfSpeech: "noun",
+          meanings: ["مصرف"],
+          frequency: 0.9,
+          forms: ["die Banken"],
+          synonyms: ["مصرف"],
+        },
+      ],
+    });
+    expect(parsed?.entries[0]?.term).toBe("بنك");
+    expect(parsed?.entries[1]?.forms).toEqual(["die Bank", "die Bänke"]);
+    expect(parsed?.entries[1]?.synonyms).toEqual(["دكة"]);
+  });
+});

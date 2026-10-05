@@ -30,3 +30,19 @@ describe("LexiconPanel", () => {
     );
   });
 });
+
+describe("LexiconPanel extras", () => {
+  it("shows model translation, forms and synonyms", () => {
+    const v = {
+      ...value,
+      translation: "ساحر",
+      entries: [
+        { ...value.entries[0]!, forms: ["charm"], synonyms: ["فاتن"], frequency: 1, register: "" },
+      ],
+    };
+    render(<LexiconPanel value={v} loading={false} />);
+    expect(screen.getByText("Model translation")).toBeTruthy();
+    expect(screen.getByText("charm")).toBeTruthy();
+    expect(screen.getByText("فاتن")).toBeTruthy();
+  });
+});

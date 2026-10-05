@@ -308,7 +308,10 @@ export const ResultPanel = memo(function ResultPanel({
             <Action label={t("lexOpen")} onClick={onDictionary}>
               <BookOpen className="size-[18px]" strokeWidth={1.75} />
               {dictionaryReady ? (
-                <span aria-hidden className="absolute end-2.5 top-2.5 size-1.5 rounded-full bg-signal" />
+                <span
+                  aria-hidden
+                  className="absolute end-2.5 top-2.5 size-1.5 rounded-full bg-signal"
+                />
               ) : null}
             </Action>
           ) : null}

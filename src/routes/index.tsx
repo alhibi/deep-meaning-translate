@@ -795,7 +795,12 @@ function Translator() {
             onSelect={selectDialect}
             onClose={closeDialect}
           />
-          <LexiconSheet open={lexOpen} value={lexicon} loading={lexiconLoading} onClose={closeLex} />
+          <LexiconSheet
+            open={lexOpen}
+            value={lexicon}
+            loading={lexiconLoading}
+            onClose={closeLex}
+          />
           <SavedSheet
             open={savedOpen}
             entries={savedList}
