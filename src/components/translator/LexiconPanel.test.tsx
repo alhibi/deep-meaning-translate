@@ -14,6 +14,10 @@ const value = {
     example: `example ${index + 1}`,
     exampleTranslation: `مثال ${index + 1}`,
     primary: index === 0,
+    forms: [] as string[],
+    synonyms: [] as string[],
+    frequency: 0.5,
+    register: "",
   })),
 };
 
@@ -28,5 +32,21 @@ describe("LexiconPanel", () => {
     expect(screen.getByRole("button", { name: "Show less" }).getAttribute("aria-expanded")).toBe(
       "true",
     );
+  });
+});
+
+describe("LexiconPanel extras", () => {
+  it("shows model translation, forms and synonyms", () => {
+    const v = {
+      ...value,
+      translation: "ساحر",
+      entries: [
+        { ...value.entries[0]!, forms: ["charm"], synonyms: ["خلّاب"], frequency: 1, register: "" },
+      ],
+    };
+    render(<LexiconPanel value={v} loading={false} />);
+    expect(screen.getByText("Model translation")).toBeTruthy();
+    expect(screen.getByText("charm")).toBeTruthy();
+    expect(screen.getByText("خلّاب")).toBeTruthy();
   });
 });

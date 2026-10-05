@@ -19,6 +19,10 @@ const entry = (sourceTerm: string) => ({
       example: "",
       exampleTranslation: "",
       primary: true,
+      forms: [],
+      synonyms: [],
+      frequency: 1,
+      register: "",
     },
   ],
 });

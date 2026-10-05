@@ -46,10 +46,19 @@ export const LexiconPanel = memo(function LexiconPanel({
   const rtl = isRtl(value.targetLanguage);
 
   return (
-    <section
-      className="animate-rise border-t border-border px-5 pb-5 pt-4"
-      aria-labelledby={`${contentId}-title`}
-    >
+    <section className="animate-rise px-5 pb-5 pt-2" aria-labelledby={`${contentId}-title`}>
+      {value.translation ? (
+        <div className="mb-3 rounded-2xl bg-card px-4 py-3">
+          <p className="text-[11px] text-faint">{t("lexModel")}</p>
+          <p
+            lang={value.targetLanguage}
+            dir={rtl ? "rtl" : "ltr"}
+            className={`mt-0.5 text-start text-[20px] font-medium text-foreground ${rtl ? "font-arabic" : ""}`}
+          >
+            {value.translation}
+          </p>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between gap-4">
         <h2 id={`${contentId}-title`} className="text-[13px] font-medium text-muted-foreground">
           {t("lexMore")}
@@ -98,6 +107,21 @@ export const LexiconPanel = memo(function LexiconPanel({
                 {entry.definition ? (
                   <p className="mt-1.5 text-[12px] leading-relaxed text-faint">
                     {entry.definition}
+                    {entry.register ? ` · ${entry.register}` : ""}
+                  </p>
+                ) : null}
+                {entry.forms?.length ? (
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+                    <span className="text-faint">{t("lexForms")}: </span>
+                    <span dir="auto">{entry.forms.join(" · ")}</span>
+                  </p>
+                ) : null}
+                {entry.synonyms?.length ? (
+                  <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                    <span className="text-faint">{t("lexSynonyms")}: </span>
+                    <span lang={value.targetLanguage} className={rtl ? "font-arabic" : ""}>
+                      {entry.synonyms.join("، ")}
+                    </span>
                   </p>
                 ) : null}
                 {expanded && entry.example ? (

@@ -14,8 +14,8 @@ export function useLexicon(opts: {
   uiLocale: Locale;
   settled: boolean;
   /** The model's translation: ranks the most common matching meaning first. */
-  translation?: string;
-  dialect?: Dialect;
+  translation?: string | undefined;
+  dialect?: Dialect | undefined;
 }) {
   const lookup = useServerFn(lookupLexicon);
   const [lexicon, setLexicon] = useState<LexiconResult | null>(null);
