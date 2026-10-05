@@ -98,7 +98,7 @@ export const ResultPanel = memo(function ResultPanel({
   /** Shown in place of the idle hint (e.g. phrase of the day). */
   idle?: React.ReactNode;
   /** Opens the mini dictionary; omitted when the text isn't a word/term. */
-  onDictionary?: () => void;
+  onDictionary?: (() => void) | undefined;
   dictionaryReady?: boolean;
 }) {
   const [copied, setCopied] = useState(false);

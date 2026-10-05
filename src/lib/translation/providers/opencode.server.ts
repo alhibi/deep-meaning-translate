@@ -198,8 +198,8 @@ export async function analyzeLexicon(
     source: string;
     target: string;
     uiLocale: "ar" | "en" | "de";
-    translation?: string;
-    dialect?: string;
+    translation?: string | undefined;
+    dialect?: string | undefined;
   },
   signal?: AbortSignal,
 ): Promise<LexiconResult | null> {

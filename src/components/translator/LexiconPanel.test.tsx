@@ -14,6 +14,10 @@ const value = {
     example: `example ${index + 1}`,
     exampleTranslation: `مثال ${index + 1}`,
     primary: index === 0,
+    forms: [] as string[],
+    synonyms: [] as string[],
+    frequency: 0.5,
+    register: "",
   })),
 };
 
