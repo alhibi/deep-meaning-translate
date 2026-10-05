@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { notifyCopied } from "@/lib/clipboardHint";
-import { Bookmark, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
+import { BookOpen, Bookmark, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
@@ -82,6 +82,8 @@ export const ResultPanel = memo(function ResultPanel({
   onSave,
   suggestion,
   idle,
+  onDictionary,
+  dictionaryReady,
 }: {
   result: TranslationResult | null;
   pending: boolean;
@@ -95,6 +97,9 @@ export const ResultPanel = memo(function ResultPanel({
   suggestion?: { label: string; onApply: () => void; onDismiss: () => void } | null;
   /** Shown in place of the idle hint (e.g. phrase of the day). */
   idle?: React.ReactNode;
+  /** Opens the mini dictionary; omitted when the text isn't a word/term. */
+  onDictionary?: () => void;
+  dictionaryReady?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const { t } = useI18n();
@@ -299,6 +304,14 @@ export const ResultPanel = memo(function ResultPanel({
           <Action label={t("share")} onClick={share}>
             <Share2 className="size-[18px]" strokeWidth={1.75} />
           </Action>
+          {onDictionary ? (
+            <Action label={t("lexOpen")} onClick={onDictionary}>
+              <BookOpen className="size-[18px]" strokeWidth={1.75} />
+              {dictionaryReady ? (
+                <span aria-hidden className="absolute end-2.5 top-2.5 size-1.5 rounded-full bg-signal" />
+              ) : null}
+            </Action>
+          ) : null}
           <span
             aria-live="polite"
             className={`ms-1 text-[12px] ${noVoice ? "text-muted-foreground" : "text-success"} transition-[opacity,transform] duration-200 ${

@@ -27,7 +27,7 @@ import { useSpeech, speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import { useLexicon } from "@/lib/translation/useLexicon";
-import { LexiconPanel } from "@/components/translator/LexiconPanel";
+import { LexiconSheet } from "@/components/translator/LexiconSheet";
 import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
@@ -325,7 +325,13 @@ function Translator() {
     target,
     uiLocale: locale,
     settled: !!result && !provisional && !pending && !error,
+    translation: result?.translation,
+    dialect,
   });
+  const [lexOpen, setLexOpen] = useState(false);
+  const openLex = useCallback(() => setLexOpen(true), []);
+  const closeLex = useCallback(() => setLexOpen(false), []);
+  useEffect(() => setLexOpen(false), [text]);
   const hasClip = useClipboardHint();
 
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
@@ -762,8 +768,9 @@ function Translator() {
                       </button>
                     ) : undefined
                   }
+                  onDictionary={lexicon || lexiconLoading ? openLex : undefined}
+                  dictionaryReady={!!lexicon}
                 />
-                <LexiconPanel value={lexicon} loading={lexiconLoading} />
               </SafeArea>
             </div>
           </div>
@@ -788,6 +795,7 @@ function Translator() {
             onSelect={selectDialect}
             onClose={closeDialect}
           />
+          <LexiconSheet open={lexOpen} value={lexicon} loading={lexiconLoading} onClose={closeLex} />
           <SavedSheet
             open={savedOpen}
             entries={savedList}
