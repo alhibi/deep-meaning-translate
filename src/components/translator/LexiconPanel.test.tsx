@@ -41,12 +41,12 @@ describe("LexiconPanel extras", () => {
       ...value,
       translation: "ساحر",
       entries: [
-        { ...value.entries[0]!, forms: ["charm"], synonyms: ["فاتن"], frequency: 1, register: "" },
+        { ...value.entries[0]!, forms: ["charm"], synonyms: ["خلّاب"], frequency: 1, register: "" },
       ],
     };
     render(<LexiconPanel value={v} loading={false} />);
     expect(screen.getByText("Model translation")).toBeTruthy();
     expect(screen.getByText("charm")).toBeTruthy();
-    expect(screen.getByText("فاتن")).toBeTruthy();
+    expect(screen.getByText("خلّاب")).toBeTruthy();
   });
 });
