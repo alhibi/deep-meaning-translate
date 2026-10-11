@@ -1,3 +1,5 @@
 - [x] Add conditional dictionary enrichment for words and short terms
 - [x] Add expandable RTL-aware meanings panel
 - [x] Add unit and mobile smoke coverage; verify full app
+- [x] Mini dictionary button + window (meanings, forms, synonyms, model translation)
+- [x] Broad Arabic/German/dialect lexicon linked to model translation ranking
