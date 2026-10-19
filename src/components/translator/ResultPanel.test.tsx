@@ -98,11 +98,12 @@ describe("copy action", () => {
         onRetry={() => {}}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy translation" }));
     await act(async () => {
       await Promise.resolve();
     });
     expect(writeText).toHaveBeenCalledWith("Hallo schöne Welt");
-    expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
+    const btn = screen.getByRole("button", { name: "Copied" });
+    expect(btn.textContent).toBe("Copied");
   });
 });
