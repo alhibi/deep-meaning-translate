@@ -15,10 +15,10 @@ export const DEFAULT_VOICE_PREFS: VoicePrefs = { engine: "gemini", voice: DEFAUL
 export function parseVoicePrefs(v: unknown): VoicePrefs {
   const p = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   return {
-    engine: p.engine === "device" ? "device" : "gemini",
-    voice: (VOICE_NAMES as readonly string[]).includes(p.voice as string) ? (p.voice as GeminiVoice) : DEFAULT_VOICE,
-    quality: p.quality === "fast" ? "fast" : "best",
-    pace: (PACES as readonly string[]).includes(p.pace as string) ? (p.pace as Pace) : "normal",
+    engine: p['engine'] === "device" ? "device" : "gemini",
+    voice: (VOICE_NAMES as readonly string[]).includes(p['voice'] as string) ? (p['voice'] as GeminiVoice) : DEFAULT_VOICE,
+    quality: p['quality'] === "fast" ? "fast" : "best",
+    pace: (PACES as readonly string[]).includes(p['pace'] as string) ? (p['pace'] as Pace) : "normal",
   };
 }
 

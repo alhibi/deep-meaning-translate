@@ -264,8 +264,8 @@ export function speakTranslation(text: string, lang: string, h: SpeakHandlers, p
         }
       },
       onWord: (ci, exact) => h.onWord?.(offset + ci, exact),
-      onEnd: h.onEnd,
-      onFail: h.onFail,
+      onEnd: () => h.onEnd?.(),
+      onFail: (why) => h.onFail?.(why),
     }, rate);
   };
 
