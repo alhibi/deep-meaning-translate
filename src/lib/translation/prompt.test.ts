@@ -43,3 +43,15 @@ describe("prompt", () => {
     );
   });
 });
+
+import { STYLE_GUIDANCE as SG } from "./prompt";
+import { buildLiveUserPrompt as live } from "./prompt";
+describe("three styles", () => {
+  it("each style sends different instructions to the model", () => {
+    const base = { text: "Danke", source: "de", target: "ar" } as const;
+    const p = (["natural", "formal", "casual"] as const).map((style) => live({ ...base, style }));
+    expect(new Set(p).size).toBe(3);
+    expect(SG.formal).toContain("Sie");
+    expect(SG.casual).toContain("du");
+  });
+});

@@ -1,9 +1,13 @@
 import type { Dialect, StyleOverride, TranslationRequest, TranslationResult } from "./types";
 
-const STYLE_GUIDANCE: Record<StyleOverride, string> = {
-  natural: "match the source register exactly",
-  formal: "polished and respectful but human (de: Sie; ar: refined MSA)",
-  casual: "as a native says it to a friend (de: du; ar: natural spoken phrasing), no added slang",
+/** Three clearly different voices: switching style must visibly change the wording. */
+export const STYLE_GUIDANCE: Record<StyleOverride, string> = {
+  natural:
+    "NATURAL — mirror the source's own register, no shift up or down; clear standard everyday wording (de: keep the source's du/Sie, default du for chat; ar: clean modern standard Arabic, light and simple, not stiff)",
+  formal:
+    "FORMAL — clearly elevated and courteous, as in a letter to an official or a client: de: Sie, full forms (es, habe), Konjunktiv courtesy (Könnten Sie…, Ich wäre Ihnen dankbar…), no contractions; ar: refined فصحى with courtesy (حضرتك، هل بإمكانكم، أكون ممتنًا، تفضّلوا), no dialect",
+  casual:
+    "CASUAL — clearly relaxed, how friends text: de: du, everyday contractions (hab, geht's, 'n, gern), short and loose, colloquial words (echt, kurz, mal) but no crude slang; ar: spoken dialect, never فصحى (Levantine unless a dialect is given: شو، بدّي، فيك، كتير، تسلم), short",
 };
 
 export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually ""),"situation":"chat"|"work"|"official"|"general","tags":{"kind":"word"|"phrase"|"sentence"|"text"|"idiom"|"slang"|"proverb","domain":"daily"|"work"|"study"|"social"|"feelings"|"travel"|"shopping"|"food"|"services"|"tech"|"health"|"culture"|"none","intent":"greet"|"ask"|"request"|"thank"|"apologize"|"feel"|"praise"|"complain"|"agree"|"describe"|"humor"|"none"}}`;
@@ -11,6 +15,7 @@ export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targe
 export function buildSystemPrompt(): string {
   return `Expert native-level translator. Carry meaning, intent, tone, register and cultural nuance, never literal words; output must read as written by a fluent native.
 Rules: never add, drop, explain or soften anything; keep certainty, politeness (du/Sie, أنت/حضرتك), negation and humor/sarcasm; render idioms idiomatically; don't assume unstated gender; keep genuine ambiguity (isAmbiguous); preserve names, numbers, dates, URLs, emojis, line breaks exactly.
+Style is decisive and must be audible even in short text: formal ≠ natural ≠ casual. e.g. \"Danke für deine Hilfe\" → natural: شكرًا على مساعدتك · formal: أشكرك جزيل الشكر على مساعدتك الكريمة · casual: تسلم إيدك عالمساعدة; \"شكراً كتير على مساعدتك\" → natural: Vielen Dank für deine Hilfe · formal: Haben Sie vielen Dank für Ihre Unterstützung · casual: Danke dir, echt lieb!
 Typos, missing letters/hamza/diacritics, swapped letters, Arabizi and ae/oe/ue/ss: silently read the intended word from context and translate that; never copy or mirror the mistake.
 ar→de: German syntax and cases, particles (mal/doch/halt) only when natural, not over-formal for casual text. de→ar: conversational German → natural spoken-leaning Arabic, not rigid MSA; correct gender agreement. Understand every Arabic dialect (Levantine, Egyptian, Gulf, Iraqi, Maghrebi) and its idioms, e.g. شلونك/إزيك/كيفك = wie geht's.
 situation: chat = personal/friends, work = colleagues/business, official = authorities/letters/formal requests.
@@ -23,6 +28,7 @@ ${SCHEMA_SHAPE}`;
 export function buildLiveSystemPrompt(): string {
   return `Expert native-level translator. Carry meaning, intent, tone, register and cultural nuance, never literal words; read as a fluent native wrote it.
 Never add, drop, explain or soften; keep politeness (du/Sie, أنت/حضرتك), negation, names, numbers, URLs, emojis, line breaks. Understand every Arabic dialect.
+Style is decisive and must be audible even in short text: formal ≠ natural ≠ casual. e.g. \"Danke für deine Hilfe\" → natural: شكرًا على مساعدتك · formal: أشكرك جزيل الشكر على مساعدتك الكريمة · casual: تسلم إيدك عالمساعدة; \"شكراً كتير على مساعدتك\" → natural: Vielen Dank für deine Hilfe · formal: Haben Sie vielen Dank für Ihre Unterstützung · casual: Danke dir, echt lieb!
 Typos, missing letters/hamza/diacritics, swapped letters, Arabizi and ae/oe/ue/ss: silently read the intended word from context and translate that; never copy or mirror the mistake.
 The writer is still typing: translate only what is written, never complete the thought or add a final period.
 Reply with the translation text ONLY — no quotes, labels, JSON or commentary.`;
