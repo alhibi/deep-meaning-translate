@@ -14,6 +14,7 @@ export const InputSchema = z.object({
     .enum(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"])
     .optional()
     .default("auto"),
+  brain: z.enum(["deepseek", "luna"]).optional().default("deepseek"),
   partial: z.boolean().optional().default(false),
 });
 
