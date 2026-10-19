@@ -6,7 +6,8 @@ import type { MicError } from "./speech";
 
 // AudioWorklet: modern audio thread, real 16kHz signed little-endian PCM, 100ms frames.
 const processor = `class DictationPCM extends AudioWorkletProcessor {
- constructor(){super();this.samples=[];this.sum=0;this.count=0;this.position=0;}
+ constructor(){super();this.samples=[];this.sum=0;this.count=0;this.position=0;
+ this.port.onmessage=()=>{if(this.samples.length){const buf=new ArrayBuffer(3200);const view=new DataView(buf);this.samples.forEach((v,i)=>view.setInt16(i*2,Math.round(v*(v<0?32768:32767)),true));this.port.postMessage(buf,[buf]);this.samples=[];}this.port.postMessage({flushed:true});};}
  process(inputs){const audio=inputs[0]?.[0];if(!audio)return true;
  for(const sample of audio){this.sum+=sample;this.count++;this.position+=16000;
  if(this.position>=sampleRate){this.position-=sampleRate;this.samples.push(Math.max(-1,Math.min(1,this.sum/this.count)));this.sum=0;this.count=0;}
@@ -46,6 +47,7 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
     let node: AudioWorkletNode | null = null;
     let closing = false;
     let finished = false;
+    let flushing = false;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let shutdown: ReturnType<typeof setTimeout> | undefined;
     const current = () => gen === generation.current;
@@ -68,12 +70,18 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
       setError(kind); setMessage(detail ?? null); finish();
     };
     dispose.current = cleanup;
-    stopSession.current = () => {
-      closing = true;
+    const terminate = () => {
+      flushing = false;
       stream?.getTracks().forEach(t => t.stop());
       node?.disconnect();
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "ForceEndpoint" }));
+    };
+    stopSession.current = () => {
+      if (closing) return;
+      closing = true;
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "ForceEndpoint" }));
+        if (node) { flushing = true; node.port.postMessage("flush"); }
+        else terminate();
         shutdown = setTimeout(() => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "Terminate" })); finish(); }, 2500);
       } else { generation.current++; finish(); active.current = false; setStarting(false); setListening(false); }
     };
@@ -101,7 +109,8 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
           if (closing) { ws.send(JSON.stringify({ type: "Terminate" })); finish(); return; }
           node = new AudioWorkletNode(context, "dictation-pcm");
           node.port.onmessage = e => {
-            if (current() && !closing && ws?.readyState === WebSocket.OPEN) {
+            if (e.data?.flushed) { if (flushing) terminate(); return; }
+            if (current() && (!closing || flushing) && ws?.readyState === WebSocket.OPEN) {
               if (ws.bufferedAmount > 16000 * 2 * 5) { fail("failed", "Connection too slow for live dictation."); return; }
               ws.send(e.data);
             }
