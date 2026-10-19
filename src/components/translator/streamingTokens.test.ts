@@ -22,8 +22,11 @@ describe("spoken word sync", () => {
     expect(tokenAt(t, 4)).toBe(2);
     expect(tokenAt(t, 14)).toBe(6);
   });
-  it("a position on a space points at the next word", () => {
-    expect(tokenAt(t, 3)).toBe(2);
+  it("a pause on whitespace never highlights an unspoken next word", () => {
+    expect(tokenAt(t, 3)).toBe(0);
+    expect(tokenAt(tokenize("مرحباً  بك"), 6)).toBe(0);
+    expect(tokenAt(tokenize("Hallo  "), 99)).toBe(0);
+    expect(tokenAt([], 0)).toBe(-1);
   });
   it("estimates slower progress for Arabic", () => {
     expect(estimateChar(1000, 1, true)).toBeLessThan(estimateChar(1000, 1, false));

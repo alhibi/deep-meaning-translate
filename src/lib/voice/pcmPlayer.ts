@@ -37,6 +37,8 @@ export class PcmPlayer {
   private pending: AudioBuffer[] = [];
   private sources: AudioBufferSourceNode[] = [];
   private startAt = 0;
+  private nextAt = 0;
+  private segments: { at: number; offset: number; duration: number }[] = [];
   private queued = 0; // seconds of audio on the timeline
   private started = false;
   private stopped = false;
@@ -52,7 +54,30 @@ export class PcmPlayer {
   }
   /** Current playback position on the timeline, in seconds. */
   get position() {
-    return this.started ? Math.max(0, this.ctx.currentTime - this.startAt) : 0;
+    const now = this.audibleTime;
+    let position = 0;
+    for (const segment of this.segments) {
+      if (now < segment.at) break;
+      position = segment.offset + Math.min(segment.duration, now - segment.at);
+    }
+    return Math.min(this.queued, position);
+  }
+
+  private get audibleTime() {
+    const stamp = this.ctx.getOutputTimestamp?.();
+    const contextTime = stamp?.contextTime ?? 0;
+    const performanceTime = stamp?.performanceTime ?? 0;
+    if (contextTime > 0 && performanceTime > 0) {
+      return Math.min(
+        this.ctx.currentTime,
+        contextTime + Math.max(0, performance.now() - performanceTime) / 1000,
+      );
+    }
+    return this.ctx.currentTime - (this.ctx.outputLatency || this.ctx.baseLatency || 0);
+  }
+
+  get audible() {
+    return this.started && this.audibleTime >= this.startAt;
   }
 
   push(bytes: Uint8Array) {
@@ -74,12 +99,7 @@ export class PcmPlayer {
     if (!this.started && this.pending.length) this.begin();
     return new Promise((resolve) => {
       const check = () => {
-        if (
-          this.stopped ||
-          !this.started ||
-          this.ctx.currentTime >= this.startAt + this.queued - 0.02
-        )
-          resolve();
+        if (this.stopped || !this.started || this.audibleTime >= this.nextAt) resolve();
         else setTimeout(check, 60);
       };
       check();
@@ -102,6 +122,7 @@ export class PcmPlayer {
   private begin() {
     this.started = true;
     this.startAt = this.ctx.currentTime + 0.04;
+    this.nextAt = this.startAt;
     const list = this.pending;
     this.pending = [];
     list.forEach((b, i) => this.schedule(b, i === 0));
@@ -110,22 +131,23 @@ export class PcmPlayer {
 
   private schedule(buf: AudioBuffer, fadeIn = false) {
     // Underrun (network slower than speech): continue from now instead of in the past.
-    const now = this.ctx.currentTime - this.startAt;
-    if (this.queued < now + 0.01) this.queued = now + 0.03;
+    const at = Math.max(this.nextAt, this.ctx.currentTime + 0.01);
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     if (fadeIn) {
       const g = this.ctx.createGain();
-      const t = this.startAt + this.queued;
+      const t = at;
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(1, t + 0.012);
       src.connect(g).connect(this.ctx.destination);
     } else src.connect(this.ctx.destination);
-    src.start(this.startAt + this.queued);
+    src.start(at);
     src.onended = () => {
       this.sources = this.sources.filter((s) => s !== src);
     };
     this.sources.push(src);
+    this.segments.push({ at, offset: this.queued, duration: buf.duration });
+    this.nextAt = at + buf.duration;
     this.queued += buf.duration;
   }
 }

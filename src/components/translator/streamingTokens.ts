@@ -11,15 +11,20 @@ export function stableTokens(prev: string[], next: string[]): number {
   return i;
 }
 
-/** Index of the word token that contains (or follows) a character offset in the joined text. */
+/** Whitespace belongs to the preceding spoken word, never highlights the next word early. */
 export function tokenAt(tokens: string[], charIndex: number): number {
   let pos = 0;
   for (let i = 0; i < tokens.length; i++) {
-    const end = pos + tokens[i]!.length;
-    if (charIndex < end) return /^\s+$/.test(tokens[i]!) ? Math.min(i + 1, tokens.length - 1) : i;
+    const token = tokens[i] ?? "";
+    const end = pos + token.length;
+    if (charIndex < end && !/^\s+$/.test(token)) return i;
+    if (charIndex < end && i > 0) return i - 1;
     pos = end;
   }
-  return tokens.length - 1;
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    if (/\S/.test(tokens[i] ?? "")) return i;
+  }
+  return -1;
 }
 
 /**

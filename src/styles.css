@@ -913,18 +913,17 @@ textarea:focus-visible {
 
 /* Read-along while listening: synced to the voice's word events. */
 .spoken-word {
-  display: inline-block;
+  display: inline;
   white-space: pre-wrap;
   border-radius: 0.3em;
   transition:
-    opacity 220ms var(--ease-out),
-    color 220ms var(--ease-out),
-    transform 220ms var(--ease-out),
-    background-color 220ms var(--ease-out),
-    box-shadow 220ms var(--ease-out);
+    opacity 160ms var(--ease-out),
+    color 100ms var(--ease-out),
+    background-color 100ms var(--ease-out),
+    box-shadow 140ms var(--ease-out);
 }
 .spoken-word[data-state="next"] {
-  opacity: 0.38;
+  opacity: 0.65;
 }
 .spoken-word[data-state="said"] {
   opacity: 1;
@@ -932,7 +931,6 @@ textarea:focus-visible {
 .spoken-word[data-state="now"] {
   opacity: 1;
   color: var(--signal-text);
-  transform: translateY(-0.04em) scale(1.04);
   background-color: color-mix(in oklab, var(--signal) 14%, transparent);
   box-shadow: 0 0 0 0.12em color-mix(in oklab, var(--signal) 14%, transparent),
     0 0.35em 1.1em -0.4em color-mix(in oklab, var(--signal) 70%, transparent);
