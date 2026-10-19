@@ -7,7 +7,7 @@ import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 import { speakTranslation, stopSpeaking } from "@/lib/tts";
-import { getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
+import { PACE_RATE, getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
 import { VoiceSheet } from "./VoiceSheet";
 import { StreamingText } from "./StreamingText";
 import { SpokenText } from "./SpokenText";
@@ -185,7 +185,7 @@ export const ResultPanel = memo(function ResultPanel({
     const tokens = tokenize(value);
     const rtlVoice = isRtl(lang);
     const prefs = getVoicePrefs();
-    const rate = { slow: 0.8, normal: 0.95, fast: 1.1 }[prefs.pace];
+    const rate = PACE_RATE[prefs.pace];
     // Read-along: exact word events when the voice sends them; otherwise an
     // estimate from speaking time since the current chunk began.
     let exact = false;
