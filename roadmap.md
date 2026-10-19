@@ -15,3 +15,4 @@
 - [x] Fix persistent homepage heading and descriptive search metadata
 - [x] Add linked Arabic–German translation guide with public sitemap inclusion
 - [x] Verify SEO changes, unit tests and mobile smoke checks
+- [x] Add three sequential dark themes with the existing button and verify persistence, cycling and app smoke checks
