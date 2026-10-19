@@ -13,6 +13,7 @@ import { warmVoice } from "@/lib/voice/cloud";
 import { StreamingText } from "./StreamingText";
 import { SpokenText } from "./SpokenText";
 import { estimateChar, tokenAt, tokenize } from "./streamingTokens";
+import { ELEVEN_VOICES } from "@/lib/voice/elevenVoice";
 
 /** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
 function sizeFor(len: number, rtl: boolean) {
@@ -109,7 +110,7 @@ export const ResultPanel = memo(function ResultPanel({
   const [spokenWord, setSpokenWord] = useState(0);
   const [voiceStarted, setVoiceStarted] = useState(false);
   const [engineNote, setEngineNote] = useState<{
-    engine: "gemini" | "device";
+    engine: "elevenlabs" | "gemini" | "device";
     reason?: string | undefined;
   } | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -142,8 +143,8 @@ export const ResultPanel = memo(function ResultPanel({
 
   // A settled translation may be listened to: open the path to the voice service (free, once).
   useEffect(() => {
-    if (!text || provisional || pending || voicePrefs.engine !== "gemini") return;
-    warmVoice();
+    if (!text || provisional || pending || voicePrefs.engine === "device") return;
+    if (voicePrefs.engine === "gemini") warmVoice();
     // Prepare the voice as soon as the translation settles, so Listen is instant.
     const id = setTimeout(() => prefetchSpeech(text, voiceLang, voicePrefs), 350);
     return () => clearTimeout(id);
@@ -430,7 +431,7 @@ export const ResultPanel = memo(function ResultPanel({
                       ? `vFb_${engineNote.reason}`
                       : "vFb_other") as Parameters<typeof t>[0],
                   )
-                : !voiceStarted && engineNote.engine === "gemini"
+                : !voiceStarted && engineNote.engine !== "device"
                   ? t("voicePreparing")
                   : null}
               <button
@@ -438,7 +439,9 @@ export const ResultPanel = memo(function ResultPanel({
                 onClick={() => setVoiceOpen(true)}
                 className="press-soft text-faint underline decoration-border-strong underline-offset-4"
               >
-                {engineNote.engine === "gemini" ? `Gemini · ${voicePrefs.voice}` : t("vDevice")}
+                {engineNote.engine === "elevenlabs"
+                  ? `ElevenLabs · ${ELEVEN_VOICES.find(([id]) => id === voicePrefs.elevenVoice)?.[1] ?? "Sarah"}`
+                  : engineNote.engine === "gemini" ? `Gemini · ${voicePrefs.voice}` : t("vDevice")}
               </button>
             </span>
           ) : null}

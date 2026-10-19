@@ -14,7 +14,8 @@
 import { cloudAvailable, speechPieces, CloudSpeakError, getFeed, type Feed } from "./voice/cloud";
 import { PcmPlayer, unlockAudio } from "./voice/pcmPlayer";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
-import { timedChar } from "./voice/elevenVoice";
+import { timedChar, ElevenInput } from "./voice/elevenVoice";
+import { SpeakInput } from "./voice/geminiVoice";
 
 export const LOCALE: Record<string, string> = {
   ar: "ar-SA",
@@ -98,7 +99,7 @@ export interface SpeakHandlers {
   onEnd?: () => void;
   onFail?: (why: SpeakFailure) => void;
   /** Which engine is speaking; reason is set when Gemini was skipped or failed. */
-  onEngine?: (engine: "gemini" | "device", reason?: string) => void;
+  onEngine?: (engine: VoicePrefs["engine"], reason?: string) => void;
 }
 
 // Module-level reference: Chrome otherwise collects the utterance and its events vanish.
@@ -238,6 +239,13 @@ function secPerChar(lang: string, pace: VoicePrefs["pace"]) {
   return base * { slow: 1.3, normal: 1, fast: 0.85 }[pace];
 }
 
+function speechRequest(text: string, lang: string, prefs: VoicePrefs) {
+  const common = { text, lang, quality: prefs.quality, pace: prefs.pace };
+  return prefs.engine === "elevenlabs"
+    ? ElevenInput.parse({ ...common, engine: "elevenlabs", voice: prefs.elevenVoice })
+    : SpeakInput.parse({ ...common, voice: prefs.voice });
+}
+
 /**
  * Speak a translation: Gemini voice when enabled and available, streamed so it starts as
  * soon as the first audio arrives; the next piece is fetched while the current one plays,
@@ -272,14 +280,7 @@ export function speakTranslation(
     if (i >= pieces.length) return undefined;
     const piece = pieces[i];
     if (!piece) return undefined;
-    feeds[i] ??= getFeed({
-      ...(prefs.engine === "elevenlabs" ? { engine: "elevenlabs" as const } : {}),
-      text: piece.text,
-      lang,
-      voice: prefs.engine === "elevenlabs" ? prefs.elevenVoice : prefs.voice,
-      quality: prefs.quality,
-      pace: prefs.pace,
-    });
+    feeds[i] ??= getFeed(speechRequest(piece.text, lang, prefs));
     return feeds[i];
   };
   const player = new PcmPlayer(ctx);
@@ -355,6 +356,7 @@ export function speakTranslation(
   };
 
   void (async () => {
+    try {
     for (let i = 0; i < pieces.length; i++) {
       const f = feed(i);
       if (!f) return;
@@ -381,6 +383,7 @@ export function speakTranslation(
     raf = 0;
     stopCloud = null;
     h.onEnd?.();
+    } catch (e) { fallback(0, e); }
   })();
 
   return () => {
@@ -395,6 +398,7 @@ export function speakTranslation(
  */
 export function prefetchSpeech(text: string, lang: string, prefs: VoicePrefs) {
   if (prefs.engine === "device" || !text.trim() || !cloudAvailable(prefs.engine)) return;
-  for (const p of speechPieces(text, chunkText))
-    getFeed({ ...(prefs.engine === "elevenlabs" ? { engine: "elevenlabs" as const } : {}), text: p.text, lang, voice: prefs.engine === "elevenlabs" ? prefs.elevenVoice : prefs.voice, quality: prefs.quality, pace: prefs.pace });
+  try {
+    for (const p of speechPieces(text, chunkText)) getFeed(speechRequest(p.text, lang, prefs));
+  } catch { /* An unsupported/stale language must never crash the translation canvas. */ }
 }
