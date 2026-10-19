@@ -306,7 +306,7 @@ export const ResultPanel = memo(function ResultPanel({
     body = (
       <div key="result" className="animate-reveal">
         <div className="result-wrap relative">
-          {showShadow ? (
+          {showShadow && shadow ? (
             <ShadowInk
               text={text}
               losses={shadow.losses}
@@ -327,7 +327,7 @@ export const ResultPanel = memo(function ResultPanel({
               <StreamingText text={text} />
             )}
           </p>
-          {showShadow ? (
+          {showShadow && shadow ? (
             <ShadowHits
               text={text}
               losses={shadow.losses}

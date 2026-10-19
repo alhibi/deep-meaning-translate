@@ -27,6 +27,10 @@ import { speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import { useLexicon } from "@/lib/translation/useLexicon";
+import { useShadow } from "@/lib/translation/useShadow";
+import type { Loss } from "@/lib/translation/shadow";
+import { ShadowSummary } from "@/components/translator/SentenceShadow";
+import { ShadowMap, ShadowSheet } from "@/components/translator/ShadowSheet";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
 import { FlagSheet } from "@/components/translator/FlagSheet";
 import { useFlags } from "@/lib/flags";
@@ -76,6 +80,7 @@ function Translator() {
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
   const [brain, setBrain] = useState<Brain>(DEFAULT_BRAIN);
+  const [shadowOn, setShadowOn] = useState(true);
   const [savedOpen, setSavedOpen] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);
   const flagList = useFlags();
@@ -151,6 +156,7 @@ function Translator() {
       setStyle(prefs.style);
       if (prefs.dialect) setDialect(prefs.dialect);
       if (prefs.brain) setBrain(effectiveBrain(prefs.brain));
+      if (prefs.shadow === false) setShadowOn(false);
     }
     const params = new URLSearchParams(window.location.search);
     const shared = [params.get("title"), params.get("text"), params.get("url")]
@@ -185,8 +191,8 @@ function Translator() {
   }, [submitNext, prime]);
 
   useEffect(() => {
-    if (restored) persist.savePrefs({ source, target, style, dialect, brain });
-  }, [restored, source, target, style, dialect, brain]);
+    if (restored) persist.savePrefs({ source, target, style, dialect, brain, shadow: shadowOn });
+  }, [restored, source, target, style, dialect, brain, shadowOn]);
 
   // Debounced while typing, but flushed when the app is hidden or closed so the
   // last keystrokes are never lost to the debounce window.
@@ -221,7 +227,15 @@ function Translator() {
       raw.translation.trim() === text.trim());
   // Never present a translation into a language the user no longer asked for.
   const staleTarget = !!raw && !!raw.targetLanguage && lang2(raw.targetLanguage) !== target;
-  const result = rerouting || staleTarget ? null : raw;
+  const baseResult = rerouting || staleTarget ? null : raw;
+  // Sentence shadow fix: shown over the model's translation it was made for, and only that one.
+  const [applied, setApplied] = useState<{ base: string; original: string; text: string } | null>(
+    null,
+  );
+  const result =
+    baseResult && applied && applied.base === baseResult.translation && applied.original === text
+      ? { ...baseResult, translation: applied.text }
+      : baseResult;
   const pending = rawPending || rerouting || (staleTarget && !!text.trim());
 
   // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
@@ -356,6 +370,72 @@ function Translator() {
     translation: result?.translation,
     dialect,
   });
+  const shadowSettled = !!result && !provisional && !pending && !error;
+  const { state: shadowState, dismiss: dismissShadow, prepareApply } = useShadow({
+    text,
+    translation: result?.translation ?? "",
+    source: result?.sourceLanguage || source,
+    target,
+    style,
+    dialect,
+    uiLocale: locale,
+    settled: shadowSettled,
+    enabled: shadowOn,
+  });
+  const shadowLosses = shadowState.status === "ready" ? shadowState.losses : [];
+  const [shadowFocus, setShadowFocus] = useState<string | null>(null);
+  const [shadowMapOpen, setShadowMapOpen] = useState(false);
+  const [undo, setUndo] = useState<{ prev: typeof applied } | null>(null);
+  const focusLoss = shadowLosses.find((l) => l.id === shadowFocus) ?? null;
+  useEffect(() => {
+    if (!undo) return;
+    const id = setTimeout(() => setUndo(null), 6000);
+    return () => clearTimeout(id);
+  }, [undo]);
+  const closeShadow = useCallback(() => setShadowFocus(null), []);
+  const closeShadowMap = useCallback(() => setShadowMapOpen(false), []);
+  const pickShadow = useCallback((id: string) => {
+    setShadowMapOpen(false);
+    setShadowFocus(id);
+  }, []);
+  const archiveFix = useCallback(
+    (translated: string) => {
+      if (!result) return;
+      history.add(
+        { source: result.sourceLanguage || source, target, original: text, translated, style },
+        { quiet: true },
+      );
+      const hit = saved.find(text, target);
+      if (hit) saved.update(hit.id, translated);
+    },
+    [result, source, target, text, style],
+  );
+  const applyShadow = useCallback(
+    (loss: Loss, index: number) => {
+      const restore = loss.restores[index];
+      if (!baseResult || !result || !restore) return;
+      prepareApply(loss.id, restore.text);
+      setUndo({ prev: applied });
+      setApplied({ base: baseResult.translation, original: text, text: restore.text });
+      archiveFix(restore.text);
+      setShadowFocus(null);
+      tick();
+    },
+    [baseResult, result, applied, text, prepareApply, archiveFix],
+  );
+  const undoShadow = useCallback(() => {
+    if (!undo) return;
+    setApplied(undo.prev);
+    archiveFix(undo.prev?.text ?? baseResult?.translation ?? "");
+    setUndo(null);
+  }, [undo, archiveFix, baseResult]);
+  const keepShadow = useCallback(
+    (loss: Loss) => {
+      dismissShadow(loss.id);
+      setShadowFocus(null);
+    },
+    [dismissShadow],
+  );
   const [lexOpen, setLexOpen] = useState(false);
   const openLex = useCallback(() => setLexOpen(true), []);
   const closeLex = useCallback(() => setLexOpen(false), []);
@@ -811,6 +891,24 @@ function Translator() {
                   dictionaryReady={!!lexicon}
                   onFlag={() => setFlagOpen(true)}
                   flagLabel={{ ar: "غير دقيق", de: "Ungenau" }[locale as string] ?? "Inaccurate"}
+                  shadowOn={shadowOn}
+                  onToggleShadow={() => setShadowOn((v) => !v)}
+                  shadow={
+                    shadowState.status === "ready"
+                      ? { losses: shadowLosses, focusId: shadowFocus, onPick: pickShadow }
+                      : null
+                  }
+                  shadowSummary={
+                    undo || shadowState.status === "loading" || shadowState.status === "ready" ? (
+                      <ShadowSummary
+                        status={shadowState.status === "ready" ? "ready" : "loading"}
+                        losses={shadowLosses}
+                        onPick={pickShadow}
+                        onMap={() => setShadowMapOpen(true)}
+                        undo={undo ? { onUndo: undoShadow } : null}
+                      />
+                    ) : null
+                  }
                 />
               </SafeArea>
             </div>
@@ -842,6 +940,26 @@ function Translator() {
             value={dialect}
             onSelect={selectDialect}
             onClose={closeDialect}
+          />
+          <ShadowSheet
+            loss={focusLoss}
+            sourceText={text}
+            sourceLang={result?.sourceLanguage || source}
+            translation={result?.translation ?? ""}
+            targetLang={target}
+            onApply={applyShadow}
+            onKeep={keepShadow}
+            onClose={closeShadow}
+          />
+          <ShadowMap
+            open={shadowMapOpen && shadowLosses.length > 0}
+            losses={shadowLosses}
+            sourceText={text}
+            sourceLang={result?.sourceLanguage || source}
+            translation={result?.translation ?? ""}
+            targetLang={target}
+            onPick={pickShadow}
+            onClose={closeShadowMap}
           />
           <LexiconSheet
             open={lexOpen}
