@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { notifyCopied } from "@/lib/clipboardHint";
-import { BookOpen, Bookmark, Flag, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
+import { BookOpen, Bookmark, Flag, Check, Contrast, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
+import type { Loss } from "@/lib/translation/shadow";
+import { ShadowHits, ShadowInk } from "./SentenceShadow";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
@@ -82,6 +84,10 @@ export const ResultPanel = memo(function ResultPanel({
   dictionaryReady,
   onFlag,
   flagLabel,
+  shadow,
+  shadowSummary,
+  shadowOn,
+  onToggleShadow,
 }: {
   result: TranslationResult | null;
   pending: boolean;
@@ -101,6 +107,11 @@ export const ResultPanel = memo(function ResultPanel({
   /** Opens the "inaccurate" marking window. */
   onFlag?: () => void;
   flagLabel?: string;
+  /** Sentence shadow over the settled translation (null hides it). */
+  shadow?: { losses: Loss[]; focusId: string | null; onPick: (id: string) => void } | null;
+  shadowSummary?: React.ReactNode;
+  shadowOn?: boolean;
+  onToggleShadow?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const { t } = useI18n();
@@ -287,23 +298,48 @@ export const ResultPanel = memo(function ResultPanel({
 
   const rtl = isRtl(lang);
 
+  const textCls = `${rtl ? "font-arabic font-medium" : "font-medium"} ${sizeFor(text.length, rtl)}`;
+  const showShadow =
+    !!shadow && shadow.losses.length > 0 && !provisional && !pending && !speaking ? true : false;
   let body: React.ReactNode;
   if (result) {
     body = (
       <div key="result" className="animate-reveal">
-        <p
-          dir={rtl ? "rtl" : "ltr"}
-          lang={lang}
-          className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${
-            rtl ? "font-arabic font-medium" : "font-medium"
-          } ${sizeFor(text.length, rtl)} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
-        >
-          {speaking && voiceStarted ? (
-            <SpokenText text={text} current={spokenWord} />
-          ) : (
-            <StreamingText text={text} />
-          )}
-        </p>
+        <div className="result-wrap relative">
+          {showShadow ? (
+            <ShadowInk
+              text={text}
+              losses={shadow.losses}
+              focusId={shadow.focusId}
+              className={`whitespace-pre-wrap text-start ${textCls}`}
+              rtl={rtl}
+              lang={lang}
+            />
+          ) : null}
+          <p
+            dir={rtl ? "rtl" : "ltr"}
+            lang={lang}
+            className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${textCls} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
+          >
+            {speaking && voiceStarted ? (
+              <SpokenText text={text} current={spokenWord} />
+            ) : (
+              <StreamingText text={text} />
+            )}
+          </p>
+          {showShadow ? (
+            <ShadowHits
+              text={text}
+              losses={shadow.losses}
+              focusId={shadow.focusId}
+              className={`whitespace-pre-wrap text-start ${textCls}`}
+              rtl={rtl}
+              lang={lang}
+              onPick={shadow.onPick}
+            />
+          ) : null}
+        </div>
+        {!provisional && !pending && !speaking ? shadowSummary : null}
 
         {result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
           <div className="mt-4">
@@ -420,6 +456,14 @@ export const ResultPanel = memo(function ResultPanel({
                   className="absolute end-2.5 top-2.5 size-1.5 rounded-full bg-signal"
                 />
               ) : null}
+            </Action>
+          ) : null}
+          {onToggleShadow ? (
+            <Action label={shadowOn ? t("shOff") : t("shOn")} onClick={onToggleShadow} active={!!shadowOn}>
+              <Contrast
+                className={`size-[18px] transition-opacity ${shadowOn ? "opacity-100" : "opacity-50"}`}
+                strokeWidth={1.75}
+              />
             </Action>
           ) : null}
           {onFlag ? (
