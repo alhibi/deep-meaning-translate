@@ -71,7 +71,13 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   {t(e === "elevenlabs" ? "vEleven" : e === "gemini" ? "vGemini" : "vDevice")}
                 </span>
                 <span className="block text-[12.5px] text-muted-foreground">
-                  {t(e === "elevenlabs" ? "vElevenSub" : e === "gemini" ? "vGeminiSub" : "vDeviceSub")}
+                  {t(
+                    e === "elevenlabs"
+                      ? "vElevenSub"
+                      : e === "gemini"
+                        ? "vGeminiSub"
+                        : "vDeviceSub",
+                  )}
                 </span>
               </span>
               {p.engine === e ? (
@@ -123,11 +129,14 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
                     aria-checked={(eleven ? p.elevenVoice : p.voice) === name}
                     onClick={() => {
                       if (eleven) setVoicePrefs({ elevenVoice: name });
-                      else if (GEMINI_VOICES.some(([v]) => v === name)) setVoicePrefs({ voice: name as typeof p.voice });
+                      else if (GEMINI_VOICES.some(([v]) => v === name))
+                        setVoicePrefs({ voice: name as typeof p.voice });
                       tick();
                     }}
                     className={`press-soft rounded-xl px-3 py-2 text-start ${
-                      (eleven ? p.elevenVoice : p.voice) === name ? "bg-card ring-1 ring-signal" : "bg-card/60"
+                      (eleven ? p.elevenVoice : p.voice) === name
+                        ? "bg-card ring-1 ring-signal"
+                        : "bg-card/60"
                     }`}
                   >
                     <span dir="ltr" className="block text-[14px] text-foreground">

@@ -357,33 +357,35 @@ export function speakTranslation(
 
   void (async () => {
     try {
-    for (let i = 0; i < pieces.length; i++) {
-      const f = feed(i);
-      if (!f) return;
-      feed(i + 1); // pipeline: the next piece generates while this one plays
-      starts[i] = player.queuedSeconds;
-      try {
-        for (let c = 0; ; c++) {
-          const chunk = await f.next(c);
-          if (!alive()) return;
-          if (!chunk) break;
-          player.push(chunk);
+      for (let i = 0; i < pieces.length; i++) {
+        const f = feed(i);
+        if (!f) return;
+        feed(i + 1); // pipeline: the next piece generates while this one plays
+        starts[i] = player.queuedSeconds;
+        try {
+          for (let c = 0; ; c++) {
+            const chunk = await f.next(c);
+            if (!alive()) return;
+            if (!chunk) break;
+            player.push(chunk);
+          }
+        } catch (e) {
+          // Mid-piece failure: let what is already queued finish first? Simpler and clearer:
+          // the device voice resumes at this piece.
+          fallback(i, e);
+          return;
         }
-      } catch (e) {
-        // Mid-piece failure: let what is already queued finish first? Simpler and clearer:
-        // the device voice resumes at this piece.
-        fallback(i, e);
-        return;
+        ends[i] = player.queuedSeconds;
       }
-      ends[i] = player.queuedSeconds;
+      await player.finish();
+      if (!alive()) return;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      stopCloud = null;
+      h.onEnd?.();
+    } catch (e) {
+      fallback(0, e);
     }
-    await player.finish();
-    if (!alive()) return;
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    stopCloud = null;
-    h.onEnd?.();
-    } catch (e) { fallback(0, e); }
   })();
 
   return () => {
@@ -400,5 +402,7 @@ export function prefetchSpeech(text: string, lang: string, prefs: VoicePrefs) {
   if (prefs.engine === "device" || !text.trim() || !cloudAvailable(prefs.engine)) return;
   try {
     for (const p of speechPieces(text, chunkText)) getFeed(speechRequest(p.text, lang, prefs));
-  } catch { /* An unsupported/stale language must never crash the translation canvas. */ }
+  } catch {
+    /* An unsupported/stale language must never crash the translation canvas. */
+  }
 }

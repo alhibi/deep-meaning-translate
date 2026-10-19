@@ -441,7 +441,9 @@ export const ResultPanel = memo(function ResultPanel({
               >
                 {engineNote.engine === "elevenlabs"
                   ? `ElevenLabs · ${ELEVEN_VOICES.find(([id]) => id === voicePrefs.elevenVoice)?.[1] ?? "Sarah"}`
-                  : engineNote.engine === "gemini" ? `Gemini · ${voicePrefs.voice}` : t("vDevice")}
+                  : engineNote.engine === "gemini"
+                    ? `Gemini · ${voicePrefs.voice}`
+                    : t("vDevice")}
               </button>
             </span>
           ) : null}

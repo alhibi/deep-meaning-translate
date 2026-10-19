@@ -30,8 +30,11 @@ export const DEFAULT_VOICE_PREFS: VoicePrefs = {
 export function parseVoicePrefs(v: unknown): VoicePrefs {
   const p = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   return {
-    engine: p["engine"] === "device" ? "device" : p["engine"] === "gemini" ? "gemini" : "elevenlabs",
-    elevenVoice: ELEVEN_VOICES.some(([id]) => id === p["elevenVoice"]) ? String(p["elevenVoice"]) : DEFAULT_ELEVEN_VOICE,
+    engine:
+      p["engine"] === "device" ? "device" : p["engine"] === "gemini" ? "gemini" : "elevenlabs",
+    elevenVoice: ELEVEN_VOICES.some(([id]) => id === p["elevenVoice"])
+      ? String(p["elevenVoice"])
+      : DEFAULT_ELEVEN_VOICE,
     voice: (VOICE_NAMES as readonly string[]).includes(p["voice"] as string)
       ? (p["voice"] as GeminiVoice)
       : DEFAULT_VOICE,

@@ -1,7 +1,8 @@
 import { MAX_SPEAK_CHARS, type SpeakErrorKind, type SpeakRequest } from "./geminiVoice";
 import { elevenParser, type ElevenRequest, type CharTiming } from "./elevenVoice";
 export type CloudRequest = SpeakRequest | ElevenRequest;
-const isEleven = (r: CloudRequest): r is ElevenRequest => "engine" in r && r.engine === "elevenlabs";
+const isEleven = (r: CloudRequest): r is ElevenRequest =>
+  "engine" in r && r.engine === "elevenlabs";
 
 /**
  * Browser side of Gemini speech: fetches WAV clips from /api/speak, keeps a small
@@ -61,12 +62,15 @@ const pausedUntil = { gemini: 0, elevenlabs: 0 };
 const alignments = new WeakMap<Blob, CharTiming[]>();
 
 export const clipKey = (r: CloudRequest) =>
-  [isEleven(r) ? "elevenlabs" : "gemini", r.quality, r.voice, r.pace, r.lang, r.text].join("\u0001");
+  [isEleven(r) ? "elevenlabs" : "gemini", r.quality, r.voice, r.pace, r.lang, r.text].join(
+    "\u0001",
+  );
 
 /** Whether Gemini should be tried right now (not paused by quota/config, online). */
 export function cloudAvailable(engine: "gemini" | "elevenlabs" = "gemini") {
   return (
-    Date.now() >= pausedUntil[engine] && (typeof navigator === "undefined" || navigator.onLine !== false)
+    Date.now() >= pausedUntil[engine] &&
+    (typeof navigator === "undefined" || navigator.onLine !== false)
   );
 }
 
@@ -149,7 +153,10 @@ export class Feed {
       try {
         for (;;) {
           const { value, done } = await reader.read();
-          if (done) { accept(new Uint8Array(), true); break; }
+          if (done) {
+            accept(new Uint8Array(), true);
+            break;
+          }
           if (value?.length) {
             accept(value);
           }
