@@ -34,7 +34,7 @@ export const isTargetCode = (v: unknown): v is string =>
 const isStyle = (v: unknown): v is StyleOverride => typeof v === "string" && STYLES.includes(v);
 
 export function parsePrefs(v: unknown): Prefs | null {
-  const p = v as Record<string, unknown> | null;
+  const p = v as { [K in keyof Prefs]?: unknown } | null;
   if (!p || typeof p !== "object") return null;
   if (!isSourceCode(p.source) || !isTargetCode(p.target) || !isStyle(p.style)) return null;
   if (p.source === p.target) return null;
@@ -58,7 +58,7 @@ export function isResult(v: unknown): v is TranslationResult {
 }
 
 export function parseSession(v: unknown): Session | null {
-  const s = v as Record<string, unknown> | null;
+  const s = v as { [K in keyof Session]?: unknown } | null;
   if (!s || typeof s !== "object") return null;
   if (typeof s.text !== "string" || !s.text.trim()) return null;
   if (!isSourceCode(s.source) || !isTargetCode(s.target) || !isStyle(s.style)) return null;
