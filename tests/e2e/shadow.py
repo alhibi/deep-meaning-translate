@@ -14,7 +14,7 @@ def check(ok, msg):
     print(("PASS " if ok else "FAIL ") + msg)
     if not ok: failures.append(msg)
 
-async def run(p, width, ui, reduced):
+async def run(p, width, ui, reduced, dark=False):
     browser = await p.chromium.launch(headless=True)
     ctx = await browser.new_context(viewport={"width": width, "height": 900 if width < 600 else 1000}, reduced_motion="reduce" if reduced else "no-preference")
     page = await ctx.new_page()
@@ -23,9 +23,11 @@ async def run(p, width, ui, reduced):
     await page.evaluate("""ui => { localStorage.setItem('lingua.intro.seen.v1','1');
       localStorage.setItem('lingua.ui-locale', ui);
       localStorage.setItem('lingua.prefs.v1', JSON.stringify({source:'ar',target:'de',style:'natural'})); }""", ui)
-    await page.reload()
+    await page.reload(); await page.wait_for_load_state("networkidle"); await page.wait_for_timeout(800)
+    if dark: await page.evaluate("document.documentElement.classList.remove('light')")
     box = page.locator("textarea").first
     await box.click(); await box.press_sequentially(TEXT, delay=25)
+    check((await box.input_value()) == TEXT, f"[{width}/{ui}] full sentence typed")
     await page.wait_for_timeout(300)
     check(await page.get_by_test_id("shadow-ink").count() == 0, f"[{width}/{ui}] no shadow while typing")
     ink = page.get_by_test_id("shadow-ink")
@@ -77,7 +79,7 @@ async def run(p, width, ui, reduced):
 async def main():
     async with async_playwright() as p:
         await run(p, 424, "ar", False)
-        await run(p, 1280, "de", True)
+        await run(p, 1280, "de", True, dark=True)
     for e in errors: print("PAGE ERROR", e)
     if failures or errors: sys.exit(1)
     print("ALL PASS")

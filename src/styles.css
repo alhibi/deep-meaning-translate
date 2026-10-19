@@ -945,17 +945,17 @@ textarea:focus-visible {
 
 /* ── Sentence Shadow ─────────────────────────────────────────────── */
 :root {
-  --shadow-ink-1: color-mix(in oklab, #c97a5a 30%, transparent);
-  --shadow-ink-2: color-mix(in oklab, #c97a5a 52%, transparent);
+  --shadow-ink-1: color-mix(in oklab, #c97a5a 42%, transparent);
+  --shadow-ink-2: color-mix(in oklab, #c97a5a 62%, transparent);
   --shadow-ink-3: color-mix(in oklab, #dd9169 78%, transparent);
   --shadow-offset-x: 3px;
-  --shadow-offset-y: 5px;
-  --shadow-blur: 5px;
+  --shadow-offset-y: 6px;
+  --shadow-blur: 4px;
 }
 html.light {
-  --shadow-ink-1: color-mix(in oklab, #5b3a28 20%, transparent);
-  --shadow-ink-2: color-mix(in oklab, #5b3a28 34%, transparent);
-  --shadow-ink-3: color-mix(in oklab, #7a3f22 52%, transparent);
+  --shadow-ink-1: color-mix(in oklab, #6b3f28 34%, transparent);
+  --shadow-ink-2: color-mix(in oklab, #6b3f28 50%, transparent);
+  --shadow-ink-3: color-mix(in oklab, #8a4322 66%, transparent);
 }
 .shadow-ink,
 .shadow-hits {
@@ -975,7 +975,9 @@ html.light {
 }
 .shadow-spot {
   --ink: var(--shadow-ink-1);
-  text-shadow: 0 0 var(--shadow-blur) var(--ink);
+  text-shadow:
+    0 0 var(--shadow-blur) var(--ink),
+    0 0 calc(var(--shadow-blur) * 3) var(--ink);
   transition: text-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease;
 }
 .shadow-spot[data-severity="2"] { --ink: var(--shadow-ink-2); }
