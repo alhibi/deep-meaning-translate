@@ -50,7 +50,16 @@ for (const c of CASES) {
     `You are a professional ${c.source}→${c.target} translator. Translate the meaning naturally in a ${style} style. Return JSON {"t":"..."}.`,
     c.text,
   );
-  const translation = String(JSON.parse(tr.slice(tr.indexOf("{"), tr.lastIndexOf("}") + 1)).t ?? "").trim();
+  let translation = "";
+  try {
+    translation = String(JSON.parse(tr.slice(tr.indexOf("{"), tr.lastIndexOf("}") + 1)).t ?? "").trim();
+  } catch {
+    translation = tr.replace(/^[\s\S]*?"t"\s*:\s*"/, "").replace(/"\s*}\s*$/, "").trim();
+  }
+  if (!translation) {
+    console.log(`SKIP (no translation) ${c.text}`);
+    continue;
+  }
   const raw = await call(
     key,
     SHADOW_SYSTEM,
