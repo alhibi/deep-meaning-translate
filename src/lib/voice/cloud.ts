@@ -5,7 +5,7 @@ const isEleven = (r: CloudRequest): r is ElevenRequest =>
   "engine" in r && r.engine === "elevenlabs";
 
 /**
- * Browser side of Gemini speech: fetches WAV clips from /api/speak, keeps a small
+ * Browser side of cloud speech: fetches streamed PCM and keeps a small
  * in-memory cache (never written to disk, gone when the app closes), streams each piece
  * so playback starts early, and pauses itself after quota/config errors.
  */
@@ -66,7 +66,7 @@ export const clipKey = (r: CloudRequest) =>
     "\u0001",
   );
 
-/** Whether Gemini should be tried right now (not paused by quota/config, online). */
+/** Provider-local circuit breaker; one provider's quota never disables the other. */
 export function cloudAvailable(engine: "gemini" | "elevenlabs" = "gemini") {
   return (
     Date.now() >= pausedUntil[engine] &&
@@ -161,11 +161,12 @@ export class Feed {
             accept(value);
           }
         }
-      } catch {
+      } catch (e) {
+        const kind = this.ctrl.signal.reason === "timeout" ? "timeout" : e instanceof TypeError ? "network" : "provider";
         this.ctrl.abort("provider");
         void reader.cancel().catch(() => {});
         clearTimeout(firstByte);
-        this.fail(new CloudSpeakError(this.ctrl.signal.aborted ? "timeout" : "offline"));
+        this.fail(new CloudSpeakError(kind));
         return;
       }
       clearTimeout(firstByte);
@@ -217,9 +218,10 @@ export function getFeed(r: CloudRequest): Feed {
   const f = new Feed(r).start();
   if (!f.done) {
     live.set(key, f);
+    const remove = () => { if (live.get(key) === f) live.delete(key); };
     void f.next(Number.MAX_SAFE_INTEGER).then(
-      () => live.delete(key),
-      () => live.delete(key),
+      remove,
+      remove,
     );
   }
   return f;

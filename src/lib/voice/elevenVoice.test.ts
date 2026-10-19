@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ElevenInput, ELEVEN_MODELS, elevenBody, elevenParser, timedChar, DEFAULT_ELEVEN_VOICE } from "./elevenVoice";
 import { getFeed, clipKey } from "./cloud";
 import { parseVoicePrefs } from "./prefs";
+import { resumeWordOffset } from "../tts";
 
 const req = { engine: "elevenlabs" as const, text: "Hallo", lang: "de" as const, voice: DEFAULT_ELEVEN_VOICE, quality: "best" as const, pace: "normal" as const };
 const packet = (chars = ["H", "i"], start = [0, 0.1], end = [0.1, 0.2]) => JSON.stringify({ audio_base64: btoa("\x00\x01".repeat(100)), alignment: { characters: chars, character_start_times_seconds: start, character_end_times_seconds: end } });
@@ -61,8 +62,35 @@ describe("ElevenLabs speech", () => {
     const fetcher = vi.fn().mockImplementation(() => Promise.resolve(new Response("broken\n")));
     vi.stubGlobal("fetch", fetcher);
     const r = { ...req, text: "unique-failure-test" };
-    await expect(getFeed(r).next(0)).rejects.toThrow();
+    await expect(getFeed(r).next(0)).rejects.toMatchObject({ kind: "provider" });
     await expect(getFeed(r).next(0)).rejects.toThrow();
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+  it("keeps the replacement feed when an older failed feed cleans up", async () => {
+    let oldController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    let newController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(new ReadableStream<Uint8Array>({ start(c) { oldController = c; } })))
+      .mockResolvedValueOnce(new Response(new ReadableStream<Uint8Array>({ start(c) { newController = c; } })));
+    vi.stubGlobal("fetch", fetcher);
+    const r = { ...req, text: "replacement-feed-race" };
+    const old = getFeed(r);
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    const waiting = old.next(0).catch(() => {
+      // Register before the registry's terminal-error callback finishes.
+      return getFeed(r);
+    });
+    oldController?.error(new Error("broken stream"));
+    const replacement = await waiting;
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    expect(getFeed(r)).toBe(replacement);
+    newController?.enqueue(new TextEncoder().encode(packet() + "\n"));
+    newController?.close();
+    await replacement.next(Number.MAX_SAFE_INTEGER);
+  });
+  it("resumes at the audible word instead of repeating the sentence or skipping queued text", () => {
+    expect(resumeWordOffset("Hallo schöne Welt", 9)).toBe(6);
+    expect(resumeWordOffset("أهلاً كيف حالك", 8)).toBe(6);
+    expect(resumeWordOffset("Hallo", 0)).toBe(0);
   });
 });

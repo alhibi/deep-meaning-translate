@@ -73,6 +73,13 @@ export function chunkText(text: string, max = 180): { text: string; offset: numb
   return out;
 }
 
+/** Resume at the current word, never skip unplayed pieces already being generated. */
+export function resumeWordOffset(text: string, char: number) {
+  let offset = Math.min(text.length, Math.max(0, char));
+  while (offset > 0 && !/\s/u.test(text.charAt(offset - 1))) offset--;
+  return offset;
+}
+
 function voicesReady(synth: SpeechSynthesis, timeout = 1500): Promise<SpeechSynthesisVoice[]> {
   const now = synth.getVoices();
   if (now.length) return Promise.resolve(now);
@@ -137,6 +144,7 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
   const alive = () => id === session;
   const chunks = chunkText(text);
   let started = false;
+  let spokenChar = 0;
   let retried = false;
 
   const run = async (useVoice: boolean) => {
@@ -306,7 +314,8 @@ export function speakTranslation(
       if (!p) return;
       const aligned = timedChar(feeds[i]?.timing ?? [], pos - (starts[i] ?? 0));
       if (aligned !== undefined) {
-        h.onWord?.(p.offset + aligned, true);
+        spokenChar = p.offset + aligned;
+        h.onWord?.(spokenChar, true);
         raf = requestAnimationFrame(tickFn);
         return;
       }
@@ -319,20 +328,21 @@ export function speakTranslation(
           ? (ends[i] ?? 0) - (starts[i] ?? 0)
           : Math.max(player.queuedSeconds - (starts[i] ?? 0), p.text.length * spc);
       const frac = Math.min(1, Math.max(0, (pos - (starts[i] ?? 0)) / dur));
-      h.onWord?.(p.offset + Math.floor(frac * p.text.length * 0.97), true);
+      spokenChar = p.offset + Math.floor(frac * p.text.length * 0.97);
+      h.onWord?.(spokenChar, true);
       raf = requestAnimationFrame(tickFn);
     };
     if (raf) cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tickFn);
   };
 
-  const fallback = (from: number, err: unknown) => {
+  const fallback = (_from: number, err: unknown) => {
     if (!alive()) return;
     player.stop();
     if (raf) cancelAnimationFrame(raf);
     const kind = err instanceof CloudSpeakError ? err.kind : "provider";
     h.onEngine?.("device", kind);
-    const offset = pieces[from]?.offset ?? 0;
+    const offset = resumeWordOffset(text, spokenChar);
     deviceStop = speak(
       text.slice(offset),
       lang,
@@ -370,8 +380,7 @@ export function speakTranslation(
             player.push(chunk);
           }
         } catch (e) {
-          // Mid-piece failure: let what is already queued finish first? Simpler and clearer:
-          // the device voice resumes at this piece.
+          // Resume from the audible word, not the failed prefetch piece.
           fallback(i, e);
           return;
         }
