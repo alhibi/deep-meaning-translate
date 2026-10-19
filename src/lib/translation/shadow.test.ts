@@ -83,7 +83,7 @@ describe("sentence shadow contract", () => {
   });
 
   it("anchors across case and spacing differences", () => {
-    expect(anchor("Das  ist gut", "das ist")).toEqual({ start: 0, end: 7 });
+    expect(anchor("Das  ist gut", "das ist")).toEqual({ start: 0, end: 8 });
   });
 
   it("carries untouched losses into an edited translation", () => {
