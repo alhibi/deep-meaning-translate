@@ -144,7 +144,6 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
   const alive = () => id === session;
   const chunks = chunkText(text);
   let started = false;
-  let spokenChar = 0;
   let retried = false;
 
   const run = async (useVoice: boolean) => {
@@ -296,6 +295,7 @@ export function speakTranslation(
   const starts: number[] = [];
   const ends: number[] = [];
   let started = false;
+  let spokenChar = 0;
   let deviceStop: (() => void) | null = null;
   h.onEngine?.(prefs.engine);
 

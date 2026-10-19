@@ -7,7 +7,7 @@ import {
   timedChar,
   DEFAULT_ELEVEN_VOICE,
 } from "./elevenVoice";
-import { getFeed, clipKey } from "./cloud";
+import { getFeed, clipKey, Feed } from "./cloud";
 import { parseVoicePrefs } from "./prefs";
 import { resumeWordOffset } from "../tts";
 
@@ -159,6 +159,7 @@ describe("ElevenLabs speech", () => {
     expect(getFeed(r)).toBe(replacement);
     newController?.enqueue(new TextEncoder().encode(packet() + "\n"));
     newController?.close();
+    if (!(replacement instanceof Feed)) throw new Error("Expected replacement feed");
     await replacement.next(Number.MAX_SAFE_INTEGER);
   });
   it("resumes at the audible word instead of repeating the sentence or skipping queued text", () => {
