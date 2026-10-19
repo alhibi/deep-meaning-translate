@@ -4,7 +4,7 @@ import { getFeed, clipKey } from "./cloud";
 import { parseVoicePrefs } from "./prefs";
 
 const req = { engine: "elevenlabs" as const, text: "Hallo", lang: "de" as const, voice: DEFAULT_ELEVEN_VOICE, quality: "best" as const, pace: "normal" as const };
-const packet = (chars = ["H", "i"], start = [0, 0.1], end = [0.1, 0.2]) => JSON.stringify({ audio_base64: btoa("\0\1".repeat(100)), alignment: { characters: chars, character_start_times_seconds: start, character_end_times_seconds: end } });
+const packet = (chars = ["H", "i"], start = [0, 0.1], end = [0.1, 0.2]) => JSON.stringify({ audio_base64: btoa("\x00\x01".repeat(100)), alignment: { characters: chars, character_start_times_seconds: start, character_end_times_seconds: end } });
 afterEach(() => vi.unstubAllGlobals());
 describe("ElevenLabs speech", () => {
   it("provides both verified models with explicit native language and speed", () => {
@@ -58,7 +58,7 @@ describe("ElevenLabs speech", () => {
     expect(clipKey(req)).not.toBe(clipKey({ ...gemini, voice: "Kore" }));
   });
   it("does not cache a broken stream as successful audio", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response("broken\n"));
+    const fetcher = vi.fn().mockImplementation(() => Promise.resolve(new Response("broken\n")));
     vi.stubGlobal("fetch", fetcher);
     const r = { ...req, text: "unique-failure-test" };
     await expect(getFeed(r).next(0)).rejects.toThrow();
