@@ -580,7 +580,7 @@ function Translator() {
             kbUp ? "justify-start pb-3 pt-1" : "justify-start pb-[6dvh] pt-[3dvh]"
           }`}
         >
-          <h1 dir={uiRtl ? "rtl" : "ltr"} className="px-5 pb-2 text-[16px] font-medium leading-relaxed text-muted-foreground">
+          <h1 dir={uiRtl ? "rtl" : "ltr"} className="sr-only">
             {t("translatorTitle")}
           </h1>
           <LanguageBar
