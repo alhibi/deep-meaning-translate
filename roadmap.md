@@ -18,4 +18,4 @@
 - [x] Add three sequential dark themes with the existing button and verify persistence, cycling and app smoke checks
 - [x] Restore light and replace green/pink with navy and #7B1B38 burgundy; verify all four themes
 - [x] Remove navy and burgundy, keep clay dark + light only; verify cycling, persistence and fallback
-- [ ] Correct audible-clock synchronization, chunk offsets and device fallback; soften highlighting and verify regressions
+- [x] Correct audible-clock synchronization, chunk offsets and device fallback; soften highlighting and verify regressions
