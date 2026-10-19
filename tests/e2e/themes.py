@@ -50,7 +50,7 @@ async def main():
                         '--background','--surface','--card','--foreground','--muted-foreground']
                         .map(key => [key, rgb(key)]));
                     }""")
-                    assert palette["--background"] == ([8, 21, 52] if theme == "navy" else [123, 27, 56])
+                    assert palette["--background"] == ([8, 21, 52] if theme == "navy" else [123, 27, 56]), (theme, palette)
                     # Both alternatives use a warm, distinct attention hue, never blue/pink-on-blue/pink.
                     assert palette["--signal"][0] > palette["--signal"][2]
                     def luminance(rgb):
