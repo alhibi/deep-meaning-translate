@@ -1,4 +1,7 @@
 import { MAX_SPEAK_CHARS, type SpeakErrorKind, type SpeakRequest } from "./geminiVoice";
+import { elevenParser, type ElevenRequest, type CharTiming } from "./elevenVoice";
+export type CloudRequest = SpeakRequest | ElevenRequest;
+const isEleven = (r: CloudRequest): r is ElevenRequest => "engine" in r && r.engine === "elevenlabs";
 
 /**
  * Browser side of Gemini speech: fetches WAV clips from /api/speak, keeps a small
@@ -32,7 +35,7 @@ export class ClipCache {
     this.bytes += b.size;
     while (this.map.size > this.maxItems || this.bytes > this.maxBytes) {
       const first = this.map.keys().next().value as string;
-      this.bytes -= this.map.get(first)!.size;
+      this.bytes -= this.map.get(first)?.size ?? 0;
       this.map.delete(first);
     }
   }
@@ -54,15 +57,16 @@ export class CloudSpeakError extends Error {
 }
 
 const cache = new ClipCache();
-let pausedUntil = 0;
+const pausedUntil = { gemini: 0, elevenlabs: 0 };
+const alignments = new WeakMap<Blob, CharTiming[]>();
 
-export const clipKey = (r: SpeakRequest) =>
-  [r.quality, r.voice, r.pace, r.lang, r.text].join("\u0001");
+export const clipKey = (r: CloudRequest) =>
+  [isEleven(r) ? "elevenlabs" : "gemini", r.quality, r.voice, r.pace, r.lang, r.text].join("\u0001");
 
 /** Whether Gemini should be tried right now (not paused by quota/config, online). */
-export function cloudAvailable() {
+export function cloudAvailable(engine: "gemini" | "elevenlabs" = "gemini") {
   return (
-    Date.now() >= pausedUntil && (typeof navigator === "undefined" || navigator.onLine !== false)
+    Date.now() >= pausedUntil[engine] && (typeof navigator === "undefined" || navigator.onLine !== false)
   );
 }
 
@@ -74,6 +78,7 @@ export class Feed {
   chunks: Uint8Array[] = [];
   done = false;
   error: CloudSpeakError | null = null;
+  timing: CharTiming[] = [];
   private waiters: (() => void)[] = [];
   private wake() {
     const w = this.waiters;
@@ -81,12 +86,13 @@ export class Feed {
     w.forEach((f) => f());
   }
   private ctrl = new AbortController();
-  constructor(private r: SpeakRequest) {}
+  constructor(private r: CloudRequest) {}
 
   start() {
     const key = clipKey(this.r);
     const hit = cache.get(key);
     if (hit) {
+      this.timing = alignments.get(hit) ?? [];
       void hit.arrayBuffer().then((b) => {
         this.chunks.push(new Uint8Array(b));
         this.end();
@@ -102,7 +108,7 @@ export class Feed {
     void (async () => {
       let res: Response;
       try {
-        res = await fetch("/api/speak", {
+        res = await fetch(isEleven(this.r) ? "/api/eleven-speak" : "/api/speak", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(this.r),
@@ -121,23 +127,36 @@ export class Feed {
         const kind = body?.kind ?? "provider";
         const retry = Number(res.headers.get("Retry-After")) || 0;
         // Circuit breaker: never hammer Google after quota or key problems.
-        if (kind === "quota") pausedUntil = Date.now() + Math.max(60, retry) * 1000;
-        if (kind === "config") pausedUntil = Date.now() + 10 * 60_000;
+        const engine = isEleven(this.r) ? "elevenlabs" : "gemini";
+        if (kind === "quota") pausedUntil[engine] = Date.now() + Math.max(60, retry) * 1000;
+        if (kind === "config") pausedUntil[engine] = Date.now() + 10 * 60_000;
         this.fail(new CloudSpeakError(kind, retry));
         return;
       }
       const reader = res.body.getReader();
+      const parse = isEleven(this.r) ? elevenParser() : null;
+      const decoder = new TextDecoder();
+      const accept = (value: Uint8Array, final = false) => {
+        if (parse) {
+          for (const p of parse(decoder.decode(value, { stream: !final }), final)) {
+            this.timing.push(...p.timing);
+            if (p.audio.length) this.chunks.push(p.audio);
+          }
+        } else if (value.length) this.chunks.push(value);
+        if (this.chunks.length) clearTimeout(firstByte);
+        this.wake();
+      };
       try {
         for (;;) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) { accept(new Uint8Array(), true); break; }
           if (value?.length) {
-            clearTimeout(firstByte);
-            this.chunks.push(value);
-            this.wake();
+            accept(value);
           }
         }
       } catch {
+        this.ctrl.abort("provider");
+        void reader.cancel().catch(() => {});
         clearTimeout(firstByte);
         this.fail(new CloudSpeakError(this.ctrl.signal.aborted ? "timeout" : "offline"));
         return;
@@ -148,7 +167,9 @@ export class Feed {
         this.fail(new CloudSpeakError("provider"));
         return;
       }
-      cache.set(key, new Blob(this.chunks as BlobPart[], { type: "audio/l16" }));
+      const blob = new Blob(this.chunks as BlobPart[], { type: "audio/l16" });
+      alignments.set(blob, this.timing);
+      cache.set(key, blob);
       this.end();
     })();
     return this;
@@ -156,7 +177,8 @@ export class Feed {
   /** Waits for the chunk at index i; null when the piece has ended. Throws on failure. */
   async next(i: number): Promise<Uint8Array | null> {
     for (;;) {
-      if (i < this.chunks.length) return this.chunks[i]!;
+      const chunk = this.chunks[i];
+      if (chunk) return chunk;
       if (this.error) throw this.error;
       if (this.done) return null;
       await new Promise<void>((r) => this.waiters.push(r));
@@ -181,7 +203,7 @@ const live = new Map<string, Feed>();
  * One feed per clip: a tap while the clip is still being prepared in the background joins
  * that stream instead of asking Google again. Finished clips come from the memory cache.
  */
-export function getFeed(r: SpeakRequest): Feed {
+export function getFeed(r: CloudRequest): Feed {
   const key = clipKey(r);
   const running = live.get(key);
   if (running && !running.error) return running;

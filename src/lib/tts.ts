@@ -14,6 +14,7 @@
 import { cloudAvailable, speechPieces, CloudSpeakError, getFeed, type Feed } from "./voice/cloud";
 import { PcmPlayer, unlockAudio } from "./voice/pcmPlayer";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
+import { timedChar } from "./voice/elevenVoice";
 
 export const LOCALE: Record<string, string> = {
   ar: "ar-SA",
@@ -250,7 +251,7 @@ export function speakTranslation(
   prefs: VoicePrefs,
 ): () => void {
   const rate = PACE_RATE[prefs.pace];
-  const ctx = prefs.engine === "gemini" && cloudAvailable() ? unlockAudio() : null;
+  const ctx = prefs.engine !== "device" && cloudAvailable(prefs.engine) ? unlockAudio() : null;
   if (!ctx) {
     h.onEngine?.(
       "device",
@@ -269,10 +270,13 @@ export function speakTranslation(
   const feeds: (Feed | undefined)[] = [];
   const feed = (i: number) => {
     if (i >= pieces.length) return undefined;
+    const piece = pieces[i];
+    if (!piece) return undefined;
     feeds[i] ??= getFeed({
-      text: pieces[i]!.text,
+      ...(prefs.engine === "elevenlabs" ? { engine: "elevenlabs" as const } : {}),
+      text: piece.text,
       lang,
-      voice: prefs.voice,
+      voice: prefs.engine === "elevenlabs" ? prefs.elevenVoice : prefs.voice,
       quality: prefs.quality,
       pace: prefs.pace,
     });
@@ -284,7 +288,7 @@ export function speakTranslation(
   const ends: number[] = [];
   let started = false;
   let deviceStop: (() => void) | null = null;
-  h.onEngine?.("gemini");
+  h.onEngine?.(prefs.engine);
 
   player.onStart = () => {
     if (!alive()) return;
@@ -296,16 +300,23 @@ export function speakTranslation(
       if (!alive()) return;
       const pos = player.position;
       let i = 0;
-      while (i + 1 < starts.length && starts[i + 1]! <= pos) i++;
-      const p = pieces[i]!;
+      while (i + 1 < starts.length && (starts[i + 1] ?? Infinity) <= pos) i++;
+      const p = pieces[i];
+      if (!p) return;
+      const aligned = timedChar(feeds[i]?.timing ?? [], pos - (starts[i] ?? 0));
+      if (aligned !== undefined) {
+        h.onWord?.(p.offset + aligned, true);
+        raf = requestAnimationFrame(tickFn);
+        return;
+      }
       // Learned rate from finished pieces, else a per-language estimate.
       let spc = secPerChar(lang, prefs.pace);
-      const doneChars = ends.reduce((n, _e, k) => n + pieces[k]!.text.length, 0);
-      if (ends.length && doneChars > 0) spc = ends[ends.length - 1]! / doneChars;
+      const doneChars = ends.reduce((n, _e, k) => n + (pieces[k]?.text.length ?? 0), 0);
+      if (ends.length && doneChars > 0) spc = (ends[ends.length - 1] ?? 0) / doneChars;
       const dur =
         ends[i] !== undefined
-          ? ends[i]! - starts[i]!
-          : Math.max(player.queuedSeconds - starts[i]!, p.text.length * spc);
+          ? (ends[i] ?? 0) - (starts[i] ?? 0)
+          : Math.max(player.queuedSeconds - (starts[i] ?? 0), p.text.length * spc);
       const frac = Math.min(1, Math.max(0, (pos - (starts[i] ?? 0)) / dur));
       h.onWord?.(p.offset + Math.floor(frac * p.text.length * 0.97), true);
       raf = requestAnimationFrame(tickFn);
@@ -345,7 +356,8 @@ export function speakTranslation(
 
   void (async () => {
     for (let i = 0; i < pieces.length; i++) {
-      const f = feed(i)!;
+      const f = feed(i);
+      if (!f) return;
       feed(i + 1); // pipeline: the next piece generates while this one plays
       starts[i] = player.queuedSeconds;
       try {
@@ -382,7 +394,7 @@ export function speakTranslation(
  * Every piece is requested; a later tap joins the running streams or hits the cache.
  */
 export function prefetchSpeech(text: string, lang: string, prefs: VoicePrefs) {
-  if (prefs.engine !== "gemini" || !text.trim() || !cloudAvailable()) return;
+  if (prefs.engine === "device" || !text.trim() || !cloudAvailable(prefs.engine)) return;
   for (const p of speechPieces(text, chunkText))
-    getFeed({ text: p.text, lang, voice: prefs.voice, quality: prefs.quality, pace: prefs.pace });
+    getFeed({ ...(prefs.engine === "elevenlabs" ? { engine: "elevenlabs" as const } : {}), text: p.text, lang, voice: prefs.engine === "elevenlabs" ? prefs.elevenVoice : prefs.voice, quality: prefs.quality, pace: prefs.pace });
 }
