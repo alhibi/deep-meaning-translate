@@ -74,7 +74,8 @@ describe("gemini voice", () => {
   });
   it("voice settings fall back to defaults when damaged", () => {
     expect(parseVoicePrefs({ voice: "Nope", pace: 3, engine: "x" })).toEqual({
-      engine: "gemini",
+      engine: "elevenlabs",
+      elevenVoice: "EXAVITQu4vr4xnSDxMaL",
       voice: "Kore",
       quality: "best",
       pace: "normal",

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LabRouteImport } from './routes/lab'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as ApiElevenSpeakRouteImport } from './routes/api/eleven-speak'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranslateStreamRouteImport } from './routes/api/translate-stream'
 
@@ -36,6 +37,11 @@ const StatsRoute = StatsRouteImport.update({
   path: '/stats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiElevenSpeakRoute = ApiElevenSpeakRouteImport.update({
+  id: '/api/eleven-speak',
+  path: '/api/eleven-speak',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSpeakRoute = ApiSpeakRouteImport.update({
   id: '/api/speak',
   path: '/api/speak',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
+  '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/lab'
     | '/sitemap.xml'
     | '/stats'
+    | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/lab'
     | '/sitemap.xml'
     | '/stats'
+    | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/lab'
     | '/sitemap.xml'
     | '/stats'
+    | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
   fileRoutesById: FileRoutesById
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   LabRoute: typeof LabRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
+  ApiElevenSpeakRoute: typeof ApiElevenSpeakRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
   ApiTranslateStreamRoute: typeof ApiTranslateStreamRoute
 }
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/eleven-speak': {
+      id: '/api/eleven-speak'
+      path: '/api/eleven-speak'
+      fullPath: '/api/eleven-speak'
+      preLoaderRoute: typeof ApiElevenSpeakRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/speak': {
       id: '/api/speak'
       path: '/api/speak'
@@ -160,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   LabRoute: LabRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
+  ApiElevenSpeakRoute: ApiElevenSpeakRoute,
   ApiSpeakRoute: ApiSpeakRoute,
   ApiTranslateStreamRoute: ApiTranslateStreamRoute,
 }

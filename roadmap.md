@@ -9,3 +9,5 @@
 - [x] Wrong-source hint + model told source is a hint; verified 15 languages live
 - [x] Hardened device voice + read-along (exact word events, estimate fallback)
 - [x] Gemini TTS on the speaker button (voices, quality, speed, cache, device fallback)
+- [x] ElevenLabs streaming voice, timing, settings, prefetch and device fallback
+- [x] Verify ElevenLabs real Arabic/German playback, tests and smoke checks

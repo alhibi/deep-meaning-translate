@@ -14,6 +14,8 @@
 import { cloudAvailable, speechPieces, CloudSpeakError, getFeed, type Feed } from "./voice/cloud";
 import { PcmPlayer, unlockAudio } from "./voice/pcmPlayer";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
+import { timedChar, ElevenInput } from "./voice/elevenVoice";
+import { SpeakInput } from "./voice/geminiVoice";
 
 export const LOCALE: Record<string, string> = {
   ar: "ar-SA",
@@ -71,6 +73,13 @@ export function chunkText(text: string, max = 180): { text: string; offset: numb
   return out;
 }
 
+/** Resume at the current word, never skip unplayed pieces already being generated. */
+export function resumeWordOffset(text: string, char: number) {
+  let offset = Math.min(text.length, Math.max(0, char));
+  while (offset > 0 && !/\s/u.test(text.charAt(offset - 1))) offset--;
+  return offset;
+}
+
 function voicesReady(synth: SpeechSynthesis, timeout = 1500): Promise<SpeechSynthesisVoice[]> {
   const now = synth.getVoices();
   if (now.length) return Promise.resolve(now);
@@ -97,7 +106,7 @@ export interface SpeakHandlers {
   onEnd?: () => void;
   onFail?: (why: SpeakFailure) => void;
   /** Which engine is speaking; reason is set when Gemini was skipped or failed. */
-  onEngine?: (engine: "gemini" | "device", reason?: string) => void;
+  onEngine?: (engine: VoicePrefs["engine"], reason?: string) => void;
 }
 
 // Module-level reference: Chrome otherwise collects the utterance and its events vanish.
@@ -237,6 +246,13 @@ function secPerChar(lang: string, pace: VoicePrefs["pace"]) {
   return base * { slow: 1.3, normal: 1, fast: 0.85 }[pace];
 }
 
+function speechRequest(text: string, lang: string, prefs: VoicePrefs) {
+  const common = { text, lang, quality: prefs.quality, pace: prefs.pace };
+  return prefs.engine === "elevenlabs"
+    ? ElevenInput.parse({ ...common, engine: "elevenlabs", voice: prefs.elevenVoice })
+    : SpeakInput.parse({ ...common, voice: prefs.voice });
+}
+
 /**
  * Speak a translation: Gemini voice when enabled and available, streamed so it starts as
  * soon as the first audio arrives; the next piece is fetched while the current one plays,
@@ -250,7 +266,7 @@ export function speakTranslation(
   prefs: VoicePrefs,
 ): () => void {
   const rate = PACE_RATE[prefs.pace];
-  const ctx = prefs.engine === "gemini" && cloudAvailable() ? unlockAudio() : null;
+  const ctx = prefs.engine !== "device" && cloudAvailable(prefs.engine) ? unlockAudio() : null;
   if (!ctx) {
     h.onEngine?.(
       "device",
@@ -269,13 +285,9 @@ export function speakTranslation(
   const feeds: (Feed | undefined)[] = [];
   const feed = (i: number) => {
     if (i >= pieces.length) return undefined;
-    feeds[i] ??= getFeed({
-      text: pieces[i]!.text,
-      lang,
-      voice: prefs.voice,
-      quality: prefs.quality,
-      pace: prefs.pace,
-    });
+    const piece = pieces[i];
+    if (!piece) return undefined;
+    feeds[i] ??= getFeed(speechRequest(piece.text, lang, prefs));
     return feeds[i];
   };
   const player = new PcmPlayer(ctx);
@@ -283,8 +295,9 @@ export function speakTranslation(
   const starts: number[] = [];
   const ends: number[] = [];
   let started = false;
+  let spokenChar = 0;
   let deviceStop: (() => void) | null = null;
-  h.onEngine?.("gemini");
+  h.onEngine?.(prefs.engine);
 
   player.onStart = () => {
     if (!alive()) return;
@@ -296,31 +309,40 @@ export function speakTranslation(
       if (!alive()) return;
       const pos = player.position;
       let i = 0;
-      while (i + 1 < starts.length && starts[i + 1]! <= pos) i++;
-      const p = pieces[i]!;
+      while (i + 1 < starts.length && (starts[i + 1] ?? Infinity) <= pos) i++;
+      const p = pieces[i];
+      if (!p) return;
+      const aligned = timedChar(feeds[i]?.timing ?? [], pos - (starts[i] ?? 0));
+      if (aligned !== undefined) {
+        spokenChar = p.offset + aligned;
+        h.onWord?.(spokenChar, true);
+        raf = requestAnimationFrame(tickFn);
+        return;
+      }
       // Learned rate from finished pieces, else a per-language estimate.
       let spc = secPerChar(lang, prefs.pace);
-      const doneChars = ends.reduce((n, _e, k) => n + pieces[k]!.text.length, 0);
-      if (ends.length && doneChars > 0) spc = ends[ends.length - 1]! / doneChars;
+      const doneChars = ends.reduce((n, _e, k) => n + (pieces[k]?.text.length ?? 0), 0);
+      if (ends.length && doneChars > 0) spc = (ends[ends.length - 1] ?? 0) / doneChars;
       const dur =
         ends[i] !== undefined
-          ? ends[i]! - starts[i]!
-          : Math.max(player.queuedSeconds - starts[i]!, p.text.length * spc);
+          ? (ends[i] ?? 0) - (starts[i] ?? 0)
+          : Math.max(player.queuedSeconds - (starts[i] ?? 0), p.text.length * spc);
       const frac = Math.min(1, Math.max(0, (pos - (starts[i] ?? 0)) / dur));
-      h.onWord?.(p.offset + Math.floor(frac * p.text.length * 0.97), true);
+      spokenChar = p.offset + Math.floor(frac * p.text.length * 0.97);
+      h.onWord?.(spokenChar, true);
       raf = requestAnimationFrame(tickFn);
     };
     if (raf) cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tickFn);
   };
 
-  const fallback = (from: number, err: unknown) => {
+  const fallback = (_from: number, err: unknown) => {
     if (!alive()) return;
     player.stop();
     if (raf) cancelAnimationFrame(raf);
     const kind = err instanceof CloudSpeakError ? err.kind : "provider";
     h.onEngine?.("device", kind);
-    const offset = pieces[from]?.offset ?? 0;
+    const offset = resumeWordOffset(text, spokenChar);
     deviceStop = speak(
       text.slice(offset),
       lang,
@@ -344,31 +366,35 @@ export function speakTranslation(
   };
 
   void (async () => {
-    for (let i = 0; i < pieces.length; i++) {
-      const f = feed(i)!;
-      feed(i + 1); // pipeline: the next piece generates while this one plays
-      starts[i] = player.queuedSeconds;
-      try {
-        for (let c = 0; ; c++) {
-          const chunk = await f.next(c);
-          if (!alive()) return;
-          if (!chunk) break;
-          player.push(chunk);
+    try {
+      for (let i = 0; i < pieces.length; i++) {
+        const f = feed(i);
+        if (!f) return;
+        feed(i + 1); // pipeline: the next piece generates while this one plays
+        starts[i] = player.queuedSeconds;
+        try {
+          for (let c = 0; ; c++) {
+            const chunk = await f.next(c);
+            if (!alive()) return;
+            if (!chunk) break;
+            player.push(chunk);
+          }
+        } catch (e) {
+          // Resume from the audible word, not the failed prefetch piece.
+          fallback(i, e);
+          return;
         }
-      } catch (e) {
-        // Mid-piece failure: let what is already queued finish first? Simpler and clearer:
-        // the device voice resumes at this piece.
-        fallback(i, e);
-        return;
+        ends[i] = player.queuedSeconds;
       }
-      ends[i] = player.queuedSeconds;
+      await player.finish();
+      if (!alive()) return;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      stopCloud = null;
+      h.onEnd?.();
+    } catch (e) {
+      fallback(0, e);
     }
-    await player.finish();
-    if (!alive()) return;
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    stopCloud = null;
-    h.onEnd?.();
   })();
 
   return () => {
@@ -382,7 +408,10 @@ export function speakTranslation(
  * Every piece is requested; a later tap joins the running streams or hits the cache.
  */
 export function prefetchSpeech(text: string, lang: string, prefs: VoicePrefs) {
-  if (prefs.engine !== "gemini" || !text.trim() || !cloudAvailable()) return;
-  for (const p of speechPieces(text, chunkText))
-    getFeed({ text: p.text, lang, voice: prefs.voice, quality: prefs.quality, pace: prefs.pace });
+  if (prefs.engine === "device" || !text.trim() || !cloudAvailable(prefs.engine)) return;
+  try {
+    for (const p of speechPieces(text, chunkText)) getFeed(speechRequest(p.text, lang, prefs));
+  } catch {
+    /* An unsupported/stale language must never crash the translation canvas. */
+  }
 }
