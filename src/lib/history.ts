@@ -69,6 +69,11 @@ export const history = {
     write(next);
     return next;
   },
+  remove(id: string): HistoryEntry[] {
+    const next = read().filter((e) => e.id !== id);
+    write(next);
+    return next;
+  },
   clear(): HistoryEntry[] {
     write([]);
     return [];

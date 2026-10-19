@@ -90,6 +90,14 @@ export const saved = {
   remove(id: string) {
     write(read().filter((p) => p.id !== id));
   },
+  /** Edit the saved translation. Empty or unchanged text is refused. */
+  update(id: string, translated: string): boolean {
+    const next = translated.trim();
+    const hit = read().find((p) => p.id === id);
+    if (!hit || !next || next === hit.translated || next.length > 5000) return false;
+    write(read().map((p) => (p.id === id ? { ...p, translated: next } : p)));
+    return true;
+  },
   mark(id: string, remembered: boolean) {
     write(
       read().map((p) =>
