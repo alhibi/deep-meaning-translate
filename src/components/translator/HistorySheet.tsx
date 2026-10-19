@@ -10,6 +10,7 @@ export const HistorySheet = memo(function HistorySheet({
   onClose,
   onPick,
   onClear,
+  onRemove,
   onForgetAll,
 }: {
   open: boolean;
@@ -17,6 +18,7 @@ export const HistorySheet = memo(function HistorySheet({
   onClose: () => void;
   onPick: (entry: HistoryEntry) => void;
   onClear: () => void;
+  onRemove: (id: string) => void;
   onForgetAll: () => void;
 }) {
   const { t } = useI18n();
@@ -61,11 +63,11 @@ export const HistorySheet = memo(function HistorySheet({
         ) : (
           <ul>
             {entries.map((e) => (
-              <li key={e.id}>
+              <li key={e.id} className="flex items-start border-b border-border">
                 <button
                   type="button"
                   onClick={() => onPick(e)}
-                  className="w-full border-b border-border px-5 py-4 text-start transition-colors active:bg-muted"
+                  className="min-w-0 flex-1 px-5 py-4 text-start transition-colors active:bg-muted"
                 >
                   <span
                     dir="ltr"
@@ -87,6 +89,14 @@ export const HistorySheet = memo(function HistorySheet({
                   >
                     {e.original}
                   </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(e.id)}
+                  aria-label={t("remove")}
+                  className="press-soft me-2 mt-3 grid size-9 shrink-0 place-items-center rounded-full text-faint hover:text-foreground"
+                >
+                  <X className="size-4" strokeWidth={1.6} />
                 </button>
               </li>
             ))}

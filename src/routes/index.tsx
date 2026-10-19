@@ -167,7 +167,7 @@ function Translator() {
   useEffect(() => {
     if (!restored) return;
     const flush = () => {
-      if (document.visibilityState === "hidden" || !document.hasFocus())
+      if (document.visibilityState === "hidden")
         persist.saveSession(sessionRef.current);
     };
     const onHide = () => persist.saveSession(sessionRef.current);
