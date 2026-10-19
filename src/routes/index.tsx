@@ -32,8 +32,6 @@ import type { Loss } from "@/lib/translation/shadow";
 import { ShadowSummary } from "@/components/translator/SentenceShadow";
 import { ShadowMap, ShadowSheet } from "@/components/translator/ShadowSheet";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
-import { FlagSheet } from "@/components/translator/FlagSheet";
-import { useFlags } from "@/lib/flags";
 import { DEFAULT_BRAIN, effectiveBrain, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
 import { LanguageNotice } from "@/components/translator/LanguageNotice";
@@ -82,8 +80,6 @@ function Translator() {
   const [brain, setBrain] = useState<Brain>(DEFAULT_BRAIN);
   const [shadowOn, setShadowOn] = useState(true);
   const [savedOpen, setSavedOpen] = useState(false);
-  const [flagOpen, setFlagOpen] = useState(false);
-  const flagList = useFlags();
   const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
   const closeDialect = useCallback(() => setDialectOpen(false), []);
@@ -889,8 +885,6 @@ function Translator() {
                   }
                   onDictionary={lexicon || lexiconLoading ? openLex : undefined}
                   dictionaryReady={!!lexicon}
-                  onFlag={() => setFlagOpen(true)}
-                  flagLabel={{ ar: "غير دقيق", de: "Ungenau" }[locale as string] ?? "Inaccurate"}
                   shadowOn={shadowOn}
                   onToggleShadow={() => setShadowOn((v) => !v)}
                   shadow={
@@ -966,22 +960,6 @@ function Translator() {
             value={lexicon}
             loading={lexiconLoading}
             onClose={closeLex}
-          />
-          <FlagSheet
-            open={flagOpen}
-            draft={
-              result
-                ? {
-                    source: result.sourceLanguage || source,
-                    target: result.targetLanguage || target,
-                    original: text,
-                    translated: result.translation,
-                    brain,
-                  }
-                : null
-            }
-            list={flagList}
-            onClose={() => setFlagOpen(false)}
           />
           <SavedSheet
             open={savedOpen}
