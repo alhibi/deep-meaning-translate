@@ -22,7 +22,8 @@ import { Intro } from "@/components/Intro";
 import { tick } from "@/lib/haptics";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { joinSpeech } from "@/lib/speech";
-import { useSpeech, speechLang } from "@/lib/speech";
+import { useAssemblySpeech } from "@/lib/useAssemblySpeech";
+import { speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import { useLexicon } from "@/lib/translation/useLexicon";
@@ -363,8 +364,8 @@ function Translator() {
 
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
   const speechBase = useRef("");
-  const speech = useSpeech({
-    lang: speechLang(source, target, locale, dialect), // listening follows the source language and dialect
+  const speech = useAssemblySpeech({
+    lang: source === "auto" ? "auto" : speechLang(source, target, locale, dialect),
     onText: (spoken, final) => {
       if (final) submitNext(); // a finished phrase translates right away
       setText(joinSpeech(speechBase.current, spoken).slice(0, MAX_CHARS));
@@ -372,7 +373,7 @@ function Translator() {
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
   const toggleMic = useCallback(() => {
-    if (!speech.listening) speechBase.current = inputRef.current?.value.trim() ?? "";
+    if (!speech.listening && !speech.starting) speechBase.current = inputRef.current?.value.trim() ?? "";
     tick();
     speech.toggle();
   }, [speech]);
@@ -680,8 +681,8 @@ function Translator() {
                       className="animate-fade flex min-w-0 items-center gap-2 text-[12px] text-muted-foreground"
                       aria-live="polite"
                     >
-                      <span className="truncate">
-                        {t(
+                      <span className="break-words">
+                        {speech.message ?? t(
                           speech.error === "denied"
                             ? "micDenied"
                             : speech.error === "nospeech"
