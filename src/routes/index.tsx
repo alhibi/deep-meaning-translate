@@ -44,13 +44,13 @@ export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
   head: () => ({
     meta: [
-      { title: "today — meaning-first translation" },
+      { title: "today — Meaning-first Arabic–German Translator" },
       {
         name: "description",
         content:
-          "A quiet, fast translator that carries meaning, tone and nuance across languages — built for Arabic and German.",
+          "Translate between Arabic and German with attention to meaning, tone and idioms. Choose natural, formal or casual wording, explore word meanings and hear translations.",
       },
-      { property: "og:title", content: "today — meaning-first translation" },
+      { property: "og:title", content: "today — Meaning-first Arabic–German Translator" },
       {
         property: "og:description",
         content:
@@ -580,6 +580,9 @@ function Translator() {
             kbUp ? "justify-start pb-3 pt-1" : "justify-start pb-[6dvh] pt-[3dvh]"
           }`}
         >
+          <h1 dir={uiRtl ? "rtl" : "ltr"} className="px-5 pb-2 text-[16px] font-medium leading-relaxed text-muted-foreground">
+            {t("translatorTitle")}
+          </h1>
           <LanguageBar
             source={source}
             target={target}
@@ -811,6 +814,13 @@ function Translator() {
               </SafeArea>
             </div>
           </div>
+          <Link
+            to="/arabic-german-translation"
+            dir={uiRtl ? "rtl" : "ltr"}
+            className="mx-5 mt-5 self-start text-[13px] text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            {t("pairGuide")}
+          </Link>
         </div>
         <div className="h-3 pad-safe-bottom" />
 
