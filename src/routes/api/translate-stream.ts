@@ -15,11 +15,8 @@ export const Route = createFileRoute("/api/translate-stream")({
       // Warm-up: resolve and open the connection to the provider so the first real
       // translation skips DNS/TLS setup. Sends no text and no credentials.
       GET: async () => {
-        // Both brains, in parallel: whichever writes (or falls back) is already connected.
-        await Promise.all([
-          fetch("https://opencode.ai/zen/go/v1/models", { method: "HEAD" }).catch(() => {}),
-          fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {}),
-        ]);
+        // DeepSeek writes everything while Luna is paused.
+        await fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {});
         return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
       },
       POST: async ({ request }) => {
@@ -36,7 +33,7 @@ export const Route = createFileRoute("/api/translate-stream")({
 
         const { streamLiveTranslation, streamFullTranslation } =
           await import("@/lib/translation/providers/opencode.server");
-        const { TranslationError } = await import("@/lib/translation/types");
+        const { TranslationError, LUNA_ENABLED, effectiveBrain } = await import("@/lib/translation/types");
         const started = Date.now();
         let deltas: AsyncGenerator<string>;
         const { mode, ...rest } = data;
@@ -45,7 +42,7 @@ export const Route = createFileRoute("/api/translate-stream")({
         const { shouldFallBack } = await import("@/lib/translation/engine.server");
         const brains = {
           luna: () => {
-            if (!apiKey) throw new TranslationError("auth", "Luna is not configured.");
+            if (!apiKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
             return mode === "full"
               ? streamFullTranslation(apiKey, req, request.signal)
               : streamLiveTranslation(apiKey, req, request.signal);
@@ -58,13 +55,13 @@ export const Route = createFileRoute("/api/translate-stream")({
               : ds.streamDeepSeekLive(key, req, request.signal);
           },
         } as const;
-        let brain: keyof typeof brains = data.brain;
+        let brain: keyof typeof brains = effectiveBrain(data.brain);
         try {
           try {
             deltas = await brains[brain]();
           } catch (err) {
             // The other brain takes over when the chosen one is down, out of credit or rate limited.
-            if (request.signal.aborted || !shouldFallBack(err)) throw err;
+            if (request.signal.aborted || !LUNA_ENABLED || !shouldFallBack(err)) throw err;
             brain = brain === "luna" ? "deepseek" : "luna";
             deltas = await brains[brain]();
           }

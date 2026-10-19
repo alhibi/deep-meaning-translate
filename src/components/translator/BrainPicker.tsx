@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import type { Brain } from "@/lib/translation/types";
+import { LUNA_ENABLED, type Brain } from "@/lib/translation/types";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSheet } from "./LanguageSheet";
 
@@ -18,7 +18,7 @@ export const BrainPicker = memo(function BrainPicker({
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
-  const select = useCallback((c: string) => onChange(c === "luna" ? "luna" : "deepseek"), [onChange]);
+  const select = useCallback((c: string) => onChange(c === "luna" && LUNA_ENABLED ? "luna" : "deepseek"), [onChange]);
   return (
     <>
       <button
@@ -37,7 +37,7 @@ export const BrainPicker = memo(function BrainPicker({
         title={t("model")}
         searchable={false}
         plain
-        items={ORDER.map((b) => ({ code: b, native: NAMES[b], name: t(`m_${b}`) }))}
+        items={ORDER.map((b) => ({ code: b, native: NAMES[b], name: b === "luna" && !LUNA_ENABLED ? t("soon") : t(`m_${b}`) }))}
         value={value}
         onSelect={select}
         onClose={close}

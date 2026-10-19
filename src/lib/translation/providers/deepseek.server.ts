@@ -76,7 +76,7 @@ async function send(
   return res;
 }
 
-async function call(apiKey: string, system: string, user: string, signal?: AbortSignal) {
+export async function call(apiKey: string, system: string, user: string, signal?: AbortSignal) {
   const res = await send(apiKey, system, user, signal, false, true);
   const payload = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };
   const text = payload.choices?.[0]?.message?.content;

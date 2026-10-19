@@ -17,10 +17,14 @@ export const lookupLexicon = createServerFn({ method: "POST" })
     async ({ data }): Promise<{ ok: true; lexicon: import("./lexicon").LexiconResult | null }> => {
       const { isLexiconCandidate } = await import("./lexicon");
       if (!isLexiconCandidate(data.text) || !takeToken()) return { ok: true, lexicon: null };
-      const apiKey = process.env["OPENCODE_API_KEY"];
-      if (!apiKey) return { ok: true, lexicon: null };
-      const { analyzeLexicon } = await import("./providers/opencode.server");
-      const lexicon = await analyzeLexicon(apiKey, data).catch(() => null);
+      // Luna is paused: the dictionary runs on DeepSeek.
+      const ds = await import("./providers/deepseek.server");
+      const key = ds.deepseekKey();
+      if (!key) return { ok: true, lexicon: null };
+      const { analyzeLexiconWith } = await import("./providers/opencode.server");
+      const lexicon = await analyzeLexiconWith((s, u) => ds.call(key, s, u), data).catch(
+        () => null,
+      );
       return { ok: true, lexicon };
     },
   );
