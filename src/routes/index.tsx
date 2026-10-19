@@ -580,7 +580,7 @@ function Translator() {
             kbUp ? "justify-start pb-3 pt-1" : "justify-start pb-[6dvh] pt-[3dvh]"
           }`}
         >
-          <h1 dir={uiRtl ? "rtl" : "ltr"} className="px-5 pb-2 text-[16px] font-medium leading-relaxed text-muted-foreground">
+          <h1 dir={uiRtl ? "rtl" : "ltr"} className="sr-only">
             {t("translatorTitle")}
           </h1>
           <LanguageBar
@@ -817,7 +817,7 @@ function Translator() {
           <Link
             to="/arabic-german-translation"
             dir={uiRtl ? "rtl" : "ltr"}
-            className="mx-5 mt-5 self-start text-[13px] text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="sr-only"
           >
             {t("pairGuide")}
           </Link>
