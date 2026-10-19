@@ -103,6 +103,16 @@ describe("gemini voice", () => {
       expect(text.slice(p.offset, p.offset + p.text.length)).toBe(p.text);
     }
   });
+  it("keeps cloud offsets exact after input-schema trimming, whitespace and emoji", () => {
+    const text = "  😀 Hallo Welt! \n".repeat(60);
+    const pieces = speechPieces(text, chunkText);
+    expect(pieces[0]?.offset).toBe(2);
+    expect(pieces.length).toBeGreaterThan(2);
+    for (const p of pieces) {
+      expect(p.text).toBe(p.text.trim());
+      expect(text.slice(p.offset, p.offset + p.text.length)).toBe(p.text);
+    }
+  });
 });
 
 import { createSseAudioParser, pcm16ToFloat } from "./geminiVoice";
