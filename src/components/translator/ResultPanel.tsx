@@ -357,14 +357,6 @@ export const ResultPanel = memo(function ResultPanel({
               <Flag className="size-[18px]" strokeWidth={1.75} />
             </Action>
           ) : null}
-          <span
-            aria-live="polite"
-            className={`ms-1 text-[12px] ${noVoice ? "text-muted-foreground" : "text-success"} transition-[opacity,transform] duration-200 ${
-              copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
-            }`}
-          >
-            {noVoice === "novoice" ? t("noVoice") : noVoice ? t("voiceBlocked") : ""}
-          </span>
           {error ? (
             <button
               type="button"
@@ -377,6 +369,14 @@ export const ResultPanel = memo(function ResultPanel({
             </button>
           ) : null}
         </div>
+        <p aria-live="polite" className="min-h-0 text-[12.5px] leading-relaxed text-muted-foreground">
+          {noVoice ? (
+            <span className="animate-fade mt-2 flex items-start gap-2">
+              <span aria-hidden className="mt-[0.55em] size-1 shrink-0 rotate-45 bg-warning" />
+              {noVoice === "novoice" ? t("noVoice") : t("voiceBlocked")}
+            </span>
+          ) : null}
+        </p>
       </div>
     );
   } else if (error) {
