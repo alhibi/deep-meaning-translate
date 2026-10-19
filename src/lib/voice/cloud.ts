@@ -162,7 +162,12 @@ export class Feed {
           }
         }
       } catch (e) {
-        const kind = this.ctrl.signal.reason === "timeout" ? "timeout" : e instanceof TypeError ? "network" : "provider";
+        const kind =
+          this.ctrl.signal.reason === "timeout"
+            ? "timeout"
+            : e instanceof TypeError
+              ? "network"
+              : "provider";
         this.ctrl.abort("provider");
         void reader.cancel().catch(() => {});
         clearTimeout(firstByte);
@@ -218,11 +223,10 @@ export function getFeed(r: CloudRequest): Feed {
   const f = new Feed(r).start();
   if (!f.done) {
     live.set(key, f);
-    const remove = () => { if (live.get(key) === f) live.delete(key); };
-    void f.next(Number.MAX_SAFE_INTEGER).then(
-      remove,
-      remove,
-    );
+    const remove = () => {
+      if (live.get(key) === f) live.delete(key);
+    };
+    void f.next(Number.MAX_SAFE_INTEGER).then(remove, remove);
   }
   return f;
 }
