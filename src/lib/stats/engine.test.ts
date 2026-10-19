@@ -68,8 +68,7 @@ describe("text type is separate from topic and function", () => {
 
 describe("records from the archive (old and new)", () => {
   it("never counts the same id twice and keeps legacy rows", () => {
-    const old = { ...entry({ original: "Hallo", at: "2026-10-10T10:00:00" }), v: undefined };
-    delete (old as Partial<HistoryEntry>).v;
+    const { v: _v, ...old } = entry({ original: "Hallo", at: "2026-10-10T10:00:00" });
     const recs = toRecords([old, old, entry({ original: "Danke", at: "2026-10-11T10:00:00" })], TZ);
     expect(recs).toHaveLength(2);
     expect(recs.find((r) => r.original === "Hallo")?.legacy).toBe(true);
