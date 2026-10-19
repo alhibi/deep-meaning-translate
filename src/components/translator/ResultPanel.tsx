@@ -92,7 +92,7 @@ export const ResultPanel = memo(function ResultPanel({
   const { t } = useI18n();
   const [speaking, setSpeaking] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
-  const [noVoice, setNoVoice] = useState(false);
+  const [noVoice, setNoVoice] = useState<false | "novoice" | "blocked">(false);
   const [spokenWord, setSpokenWord] = useState(0);
   const syncTimer = useRef<number | null>(null);
   const stopSync = () => {
@@ -205,11 +205,11 @@ export const ResultPanel = memo(function ResultPanel({
         setSpeaking(false);
         stopRef.current = null;
       },
-      onFail: () => {
+      onFail: (why) => {
         stopSync();
         setSpeaking(false);
         stopRef.current = null;
-        setNoVoice(true);
+        setNoVoice(why === "novoice" ? "novoice" : "blocked");
         setTimeout(() => setNoVoice(false), 3200);
       },
     }, rate);
@@ -363,7 +363,7 @@ export const ResultPanel = memo(function ResultPanel({
               copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
-            {noVoice ? t("noVoice") : ""}
+            {noVoice === "novoice" ? t("noVoice") : noVoice ? t("voiceBlocked") : ""}
           </span>
           {error ? (
             <button
