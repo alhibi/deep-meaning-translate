@@ -10,23 +10,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("light and three sequential dark themes", () => {
-  it("retains light and cycles through all four choices", () => {
-    expect(THEMES).toHaveLength(4);
+describe("clay dark and light themes", () => {
+  it("keeps exactly two choices and cycles between them", () => {
+    expect(THEMES).toEqual(["dark", "light"]);
     expect(nextTheme("dark")).toBe("light");
-    expect(nextTheme("light")).toBe("navy");
-    expect(nextTheme("navy")).toBe("burgundy");
-    expect(nextTheme("burgundy")).toBe("dark");
+    expect(nextTheme("light")).toBe("dark");
   });
 
-  it("validates saved choices and migrates legacy or corrupted values", () => {
+  it("validates saved choices, dropping removed themes and corrupted values", () => {
     for (const value of [null, "garbage", {}, 1]) expect(parseTheme(value)).toBe("dark");
     expect(parseTheme("light")).toBe("light");
-    expect(parseTheme("forest")).toBe("navy");
-    expect(parseTheme("rose")).toBe("burgundy");
+    for (const value of ["navy", "burgundy", "forest", "rose"]) expect(parseTheme(value)).toBe("dark");
   });
 
-  it("restores light and dark choices before paint, including migrations", () => {
+  it("restores light and dark choices before paint, including removed themes", () => {
     for (const value of ["dark", "navy", "burgundy", "forest", "rose", "light", "corrupt"]) {
       localStorage.setItem(THEME_KEY, value);
       new Function(THEME_BOOT)();
@@ -42,11 +39,11 @@ describe("light and three sequential dark themes", () => {
       result.current.toggle(1, 1);
       result.current.toggle(1, 1);
     });
-    expect(result.current.theme).toBe("navy");
-    expect(localStorage.getItem(THEME_KEY)).toBe("navy");
-    expect(document.documentElement.dataset["theme"]).toBe("navy");
+    expect(result.current.theme).toBe("dark");
+    expect(localStorage.getItem(THEME_KEY)).toBe("dark");
+    expect(document.documentElement.dataset["theme"]).toBe("dark");
     act(() => result.current.toggle(1, 1));
-    expect(result.current.theme).toBe("burgundy");
+    expect(result.current.theme).toBe("light");
     act(() => result.current.toggle(1, 1));
     expect(result.current.theme).toBe("dark");
   });
