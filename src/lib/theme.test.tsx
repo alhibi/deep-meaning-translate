@@ -6,7 +6,7 @@ afterEach(() => {
   cleanup();
   localStorage.clear();
   document.documentElement.className = "";
-  delete document.documentElement.dataset.theme;
+  delete document.documentElement.dataset["theme"];
   vi.unstubAllGlobals();
 });
 
@@ -28,7 +28,7 @@ describe("three sequential dark themes", () => {
     for (const value of ["dark", "forest", "rose", "light", "corrupt"]) {
       localStorage.setItem(THEME_KEY, value);
       new Function(THEME_BOOT)();
-      expect(document.documentElement.dataset.theme).toBe(parseTheme(value));
+      expect(document.documentElement.dataset["theme"]).toBe(parseTheme(value));
       expect(document.documentElement.style.colorScheme).toBe("dark");
     }
   });
@@ -42,7 +42,7 @@ describe("three sequential dark themes", () => {
     });
     expect(result.current.theme).toBe("rose");
     expect(localStorage.getItem(THEME_KEY)).toBe("rose");
-    expect(document.documentElement.dataset.theme).toBe("rose");
+    expect(document.documentElement.dataset["theme"]).toBe("rose");
     act(() => result.current.toggle(1, 1));
     expect(result.current.theme).toBe("dark");
   });

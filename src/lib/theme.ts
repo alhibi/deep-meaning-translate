@@ -16,14 +16,14 @@ export function nextTheme(theme: Theme): Theme {
 export const THEME_BOOT = `(function(){var t="dark";try{var s=localStorage.getItem("${THEME_KEY}");if(s==="forest"||s==="rose")t=s;}catch(e){}var d=document.documentElement;d.classList.add("dark");d.dataset.theme=t;d.style.colorScheme="dark";})();`;
 
 function current(): Theme {
-  return parseTheme(document.documentElement.dataset.theme);
+  return parseTheme(document.documentElement.dataset["theme"]);
 }
 
 function apply(t: Theme) {
   const d = document.documentElement;
   d.classList.remove("light");
   d.classList.add("dark");
-  d.dataset.theme = t;
+  d.dataset["theme"] = t;
   d.style.colorScheme = "dark";
   const color = getComputedStyle(d).getPropertyValue("--background").trim();
   document
