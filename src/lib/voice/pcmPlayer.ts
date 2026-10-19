@@ -68,7 +68,10 @@ export class PcmPlayer {
     const contextTime = stamp?.contextTime ?? 0;
     const performanceTime = stamp?.performanceTime ?? 0;
     if (contextTime > 0 && performanceTime > 0) {
-      return Math.min(this.ctx.currentTime, contextTime + Math.max(0, performance.now() - performanceTime) / 1000);
+      return Math.min(
+        this.ctx.currentTime,
+        contextTime + Math.max(0, performance.now() - performanceTime) / 1000,
+      );
     }
     return this.ctx.currentTime - (this.ctx.outputLatency || this.ctx.baseLatency || 0);
   }
@@ -96,12 +99,7 @@ export class PcmPlayer {
     if (!this.started && this.pending.length) this.begin();
     return new Promise((resolve) => {
       const check = () => {
-        if (
-          this.stopped ||
-          !this.started ||
-          this.audibleTime >= this.nextAt
-        )
-          resolve();
+        if (this.stopped || !this.started || this.audibleTime >= this.nextAt) resolve();
         else setTimeout(check, 60);
       };
       check();

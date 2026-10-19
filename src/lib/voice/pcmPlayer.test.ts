@@ -7,9 +7,21 @@ function audioClock() {
     outputLatency: 0,
     baseLatency: 0,
     destination: {},
-    createBuffer: (_channels: number, frames: number, rate: number) => ({ duration: frames / rate, copyToChannel() {} }),
-    createBufferSource: () => ({ connect: vi.fn((node) => node), start: vi.fn(), stop: vi.fn(), buffer: null, onended: null }),
-    createGain: () => ({ gain: { setValueAtTime() {}, linearRampToValueAtTime() {} }, connect: () => ({}) }),
+    createBuffer: (_channels: number, frames: number, rate: number) => ({
+      duration: frames / rate,
+      copyToChannel() {},
+    }),
+    createBufferSource: () => ({
+      connect: vi.fn((node) => node),
+      start: vi.fn(),
+      stop: vi.fn(),
+      buffer: null,
+      onended: null,
+    }),
+    createGain: () => ({
+      gain: { setValueAtTime() {}, linearRampToValueAtTime() {} },
+      connect: () => ({}),
+    }),
   };
   return ctx;
 }
@@ -54,6 +66,8 @@ describe("audible PCM clock", () => {
       ctx.currentTime = 1.05;
       await vi.advanceTimersByTimeAsync(60);
       expect(end).toHaveBeenCalledOnce();
-    } finally { vi.useRealTimers(); }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

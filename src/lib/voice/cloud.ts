@@ -252,10 +252,12 @@ export function speechPieces(
     offset: c.offset + restStart,
   }));
   // Input schemas trim requests: keep the visible offset in sync with that exact text.
-  return [first, ...rest].map((p) => ({
-    text: p.text.trim(),
-    offset: p.offset + p.text.length - p.text.trimStart().length,
-  })).filter((p) => p.text.length > 0);
+  return [first, ...rest]
+    .map((p) => ({
+      text: p.text.trim(),
+      offset: p.offset + p.text.length - p.text.trimStart().length,
+    }))
+    .filter((p) => p.text.length > 0);
 }
 
 export const _cache = cache;

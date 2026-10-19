@@ -271,7 +271,9 @@ export const ResultPanel = memo(function ResultPanel({
           setSpeaking(false);
           stopRef.current = null;
           setNoVoice(why === "novoice" ? "novoice" : "blocked");
-          setTimeout(() => { if (current()) setNoVoice(false); }, 3200);
+          setTimeout(() => {
+            if (current()) setNoVoice(false);
+          }, 3200);
         },
       },
       prefs,

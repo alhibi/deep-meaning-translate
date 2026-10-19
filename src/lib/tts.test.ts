@@ -31,17 +31,28 @@ describe("device voice", () => {
 });
 
 describe("device playback session", () => {
-  afterEach(() => { stopSpeaking(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+  afterEach(() => {
+    stopSpeaking();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
   it("ignores the old utterance end after stop and starts no more old chunks", async () => {
     const utterances: SpeechSynthesisUtterance[] = [];
     const synth = {
-      speaking: false, pending: false, paused: false,
+      speaking: false,
+      pending: false,
+      paused: false,
       getVoices: () => [{ lang: "de-DE", name: "de", localService: true }],
       cancel: vi.fn(),
       speak: (u: SpeechSynthesisUtterance) => utterances.push(u),
     };
     vi.stubGlobal("speechSynthesis", synth);
-    vi.stubGlobal("SpeechSynthesisUtterance", class { constructor(public text: string) {} });
+    vi.stubGlobal(
+      "SpeechSynthesisUtterance",
+      class {
+        constructor(public text: string) {}
+      },
+    );
     const end = vi.fn();
     const stop = speak("Ein langer Satz. ".repeat(30), "de", { onEnd: end });
     await Promise.resolve();
