@@ -1,12 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  SpeakInput,
-  base64ToBytes,
-  buildInteraction,
-  extractAudio,
-  kindForStatus,
-  normalizeToWav,
-} from "@/lib/voice/geminiVoice";
+import { SpeakInput, buildInteraction, createSseAudioParser, kindForStatus } from "@/lib/voice/geminiVoice";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
@@ -22,13 +15,19 @@ function takeSpeechToken() {
 }
 
 /**
- * Speaks a translation with Gemini TTS. The key stays on the server; the browser only
- * receives WAV audio. The text is never logged.
+ * Speaks a translation with Gemini TTS, streamed: raw 16-bit 24 kHz mono PCM is forwarded
+ * the moment Google produces it, so playback starts long before synthesis ends.
+ * The key stays on the server; the text is never logged.
  */
 export const Route = createFileRoute("/api/speak")({
   staticData: { sitemap: false },
   server: {
     handlers: {
+      // Warm-up: open DNS/TLS to Google before the first Listen tap. No key, no text.
+      GET: async () => {
+        await fetch(ENDPOINT, { method: "HEAD" }).catch(() => {});
+        return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+      },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number, extra?: Record<string, string>) =>
           Response.json(
@@ -53,40 +52,83 @@ export const Route = createFileRoute("/api/speak")({
           timedOut = true;
           ctrl.abort();
         }, 45_000);
-        try {
-          const res = await fetch(ENDPOINT, {
-            method: "POST",
-            headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-            body: JSON.stringify(buildInteraction(data)),
-            signal: ctrl.signal,
-          });
-          if (!res.ok) {
-            const kind = kindForStatus(res.status);
-            console.warn("[speak] gemini status", res.status, data.quality);
-            const retry = res.headers.get("Retry-After");
-            return fail(
-              kind,
-              kind === "quota" ? 429 : kind === "input" ? 400 : 502,
-              retry ? { "Retry-After": retry } : undefined,
-            );
-          }
-          const audio = extractAudio(await res.json());
-          if (!audio) return fail("provider", 502);
-          const wav = normalizeToWav(base64ToBytes(audio.data), audio.mime);
-          if (!wav) {
-            console.warn("[speak] unexpected audio format", audio.mime);
-            return fail("provider", 502);
-          }
-          return new Response(wav, {
-            headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store" },
-          });
-        } catch {
-          if (request.signal.aborted) return new Response(null, { status: 204 });
-          return fail(timedOut ? "timeout" : "network", timedOut ? 504 : 502);
-        } finally {
+        const cleanup = () => {
           clearTimeout(timer);
           request.signal.removeEventListener("abort", onAbort);
+        };
+        let res: Response;
+        try {
+          res = await fetch(ENDPOINT, {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": key,
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify(buildInteraction(data, true)),
+            signal: ctrl.signal,
+          });
+        } catch {
+          cleanup();
+          if (request.signal.aborted) return new Response(null, { status: 204 });
+          return fail(timedOut ? "timeout" : "network", timedOut ? 504 : 502);
         }
+        if (!res.ok || !res.body) {
+          cleanup();
+          const kind = kindForStatus(res.status);
+          console.warn("[speak] gemini status", res.status, data.quality);
+          const retry = res.headers.get("Retry-After");
+          return fail(
+            kind,
+            kind === "quota" ? 429 : kind === "input" ? 400 : 502,
+            retry ? { "Retry-After": retry } : undefined,
+          );
+        }
+
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        const parse = createSseAudioParser();
+        const body = new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            try {
+              for (;;) {
+                const { value, done } = await reader.read();
+                if (done) {
+                  cleanup();
+                  controller.close();
+                  return;
+                }
+                const out = parse(dec.decode(value, { stream: true }));
+                if (out.error) {
+                  console.warn("[speak] stream error");
+                  cleanup();
+                  controller.error(new Error("provider"));
+                  return;
+                }
+                if (out.audio.length) {
+                  for (const a of out.audio) controller.enqueue(a);
+                  return;
+                }
+              }
+            } catch {
+              cleanup();
+              // Cancelled by the app: end quietly.
+              if (request.signal.aborted) controller.close();
+              else controller.error(new Error("network"));
+            }
+          },
+          cancel() {
+            cleanup();
+            ctrl.abort();
+          },
+        });
+        return new Response(body, {
+          headers: {
+            "Content-Type": "audio/l16; rate=24000; channels=1",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
       },
     },
   },
