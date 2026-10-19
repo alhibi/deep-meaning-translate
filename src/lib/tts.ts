@@ -11,7 +11,7 @@
  * back to the full text across chunks.
  */
 
-import { cloudAvailable, speechPieces, CloudSpeakError, getFeed } from "./voice/cloud";
+import { cloudAvailable, speechPieces, CloudSpeakError, getFeed, type Feed } from "./voice/cloud";
 import { PcmPlayer, unlockAudio } from "./voice/pcmPlayer";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
 
