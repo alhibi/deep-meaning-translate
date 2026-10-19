@@ -140,6 +140,8 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
     return () => {};
   }
   const synth = window.speechSynthesis;
+  const wasActive = synth.speaking || synth.pending;
+  stopSpeaking();
   const id = ++session;
   const alive = () => id === session;
   const chunks = chunkText(text);
@@ -147,6 +149,7 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
   let retried = false;
 
   const run = async (useVoice: boolean) => {
+    if (wasActive) await new Promise((r) => setTimeout(r, 80));
     const voices = await voicesReady(synth);
     if (!alive()) return;
     const voice = useVoice ? pickVoice(voices, lang) : undefined;
@@ -185,6 +188,7 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
         h.onWord?.(c.offset + e.charIndex, true);
       };
       u.onend = () => {
+        if (!alive()) return;
         i++;
         next();
       };
@@ -212,6 +216,7 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
         // Speaking but the engine never announced it: run the read-along anyway.
         started = true;
         h.onStart?.();
+        h.onWord?.(chunks[0]?.offset ?? 0, false);
         return;
       }
       if (!retried && voice) {
@@ -301,20 +306,27 @@ export function speakTranslation(
 
   player.onStart = () => {
     if (!alive()) return;
-    if (!started) {
-      started = true;
-      h.onStart?.();
-    }
     const tickFn = () => {
       if (!alive()) return;
+      if (!player.audible) {
+        raf = requestAnimationFrame(tickFn);
+        return;
+      }
+      if (!started) {
+        started = true;
+        h.onStart?.();
+      }
       const pos = player.position;
       let i = 0;
       while (i + 1 < starts.length && (starts[i + 1] ?? Infinity) <= pos) i++;
       const p = pieces[i];
       if (!p) return;
-      const aligned = timedChar(feeds[i]?.timing ?? [], pos - (starts[i] ?? 0));
-      if (aligned !== undefined) {
-        spokenChar = p.offset + aligned;
+      const timing = feeds[i]?.timing ?? [];
+      const elapsed = pos - (starts[i] ?? 0);
+      const aligned = timedChar(timing, elapsed);
+      const last = timing.at(-1);
+      if (timing.length && (!last || elapsed <= last.end || last.char >= p.text.length - 1)) {
+        spokenChar = Math.max(spokenChar, p.offset + Math.min(p.text.length - 1, aligned ?? 0));
         h.onWord?.(spokenChar, true);
         raf = requestAnimationFrame(tickFn);
         return;
@@ -328,7 +340,7 @@ export function speakTranslation(
           ? (ends[i] ?? 0) - (starts[i] ?? 0)
           : Math.max(player.queuedSeconds - (starts[i] ?? 0), p.text.length * spc);
       const frac = Math.min(1, Math.max(0, (pos - (starts[i] ?? 0)) / dur));
-      spokenChar = p.offset + Math.floor(frac * p.text.length * 0.97);
+      spokenChar = Math.max(spokenChar, p.offset + Math.floor(frac * p.text.length * 0.97));
       h.onWord?.(spokenChar, true);
       raf = requestAnimationFrame(tickFn);
     };

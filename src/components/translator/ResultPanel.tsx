@@ -117,6 +117,7 @@ export const ResultPanel = memo(function ResultPanel({
   const voicePrefs = useVoicePrefs();
   const voiceLang = result?.targetLanguage || target;
   const syncTimer = useRef<number | null>(null);
+  const playback = useRef(0);
   const stopSync = () => {
     if (syncTimer.current !== null) cancelAnimationFrame(syncTimer.current);
     syncTimer.current = null;
@@ -129,12 +130,14 @@ export const ResultPanel = memo(function ResultPanel({
   useEffect(() => {
     setShowAlt(false);
     setCopied(false);
+    playback.current++;
     stopSpeaking();
     stopSync();
     setSpeaking(false);
-  }, [text]);
+  }, [text, voiceLang]);
   useEffect(
     () => () => {
+      playback.current++;
       stopSync();
       stopSpeaking();
     },
@@ -193,6 +196,7 @@ export const ResultPanel = memo(function ResultPanel({
   const stopRef = useRef<(() => void) | null>(null);
   const speak = useCallback(() => {
     if (speaking) {
+      playback.current++;
       stopRef.current?.();
       stopRef.current = null;
       stopSync();
@@ -203,6 +207,8 @@ export const ResultPanel = memo(function ResultPanel({
     const tokens = tokenize(value);
     const rtlVoice = isRtl(lang);
     const prefs = getVoicePrefs();
+    const generation = ++playback.current;
+    const current = () => playback.current === generation;
     const rate = PACE_RATE[prefs.pace];
     // Read-along: exact word events when the voice sends them; otherwise an
     // estimate from speaking time since the current chunk began.
@@ -210,6 +216,7 @@ export const ResultPanel = memo(function ResultPanel({
     let chunkAt = 0;
     let chunkOffset = 0;
     const tickEstimate = () => {
+      if (!current()) return;
       if (!exact) {
         const c = chunkOffset + estimateChar(performance.now() - chunkAt, rate, rtlVoice);
         setSpokenWord(tokenAt(tokens, c));
@@ -225,34 +232,46 @@ export const ResultPanel = memo(function ResultPanel({
       value,
       lang,
       {
-        onEngine: (engine, reason) => setEngineNote({ engine, reason }),
+        onEngine: (engine, reason) => {
+          if (!current()) return;
+          setEngineNote({ engine, reason });
+          exact = false;
+          stopSync();
+        },
         onStart: () => {
+          if (!current()) return;
           setVoiceStarted(true);
           chunkAt = performance.now();
           stopSync();
           syncTimer.current = requestAnimationFrame(tickEstimate);
         },
         onWord: (ci, isExact) => {
+          if (!current()) return;
           if (isExact) {
             exact = true;
             stopSync();
           } else {
+            exact = false;
             chunkAt = performance.now();
             chunkOffset = ci;
+            stopSync();
+            syncTimer.current = requestAnimationFrame(tickEstimate);
           }
           setSpokenWord(tokenAt(tokens, ci));
         },
         onEnd: () => {
+          if (!current()) return;
           stopSync();
           setSpeaking(false);
           stopRef.current = null;
         },
         onFail: (why) => {
+          if (!current()) return;
           stopSync();
           setSpeaking(false);
           stopRef.current = null;
           setNoVoice(why === "novoice" ? "novoice" : "blocked");
-          setTimeout(() => setNoVoice(false), 3200);
+          setTimeout(() => { if (current()) setNoVoice(false); }, 3200);
         },
       },
       prefs,
