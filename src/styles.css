@@ -1,7 +1,7 @@
 @import "tailwindcss" source(none);
 @source "../src";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark (&:where(.dark, .dark *));
 
 /*
  * Design system: calm, paper-like, typographic.
@@ -103,50 +103,59 @@
   color-scheme: dark;
 }
 
-/* Light: warm paper, same hierarchy and contrast ratios as dark (text ≥ 4.5:1). */
-html.light {
-  --background: #f7f3ec;
-  --foreground: #1c1815;
-  --surface: #f0ebe2;
-  --card: #fffdf9;
-  --card-foreground: #1c1815;
-  --popover: #fffdf9;
-  --popover-foreground: #1c1815;
-  --primary: #1c1815;
-  --primary-foreground: #f7f3ec;
-  --secondary: #efe9df;
-  --secondary-foreground: #1c1815;
-  --muted: #efe9df;
-  --muted-foreground: #5c554e;
-  --faint: #857d75;
-  --signal: #b0603c;
-  --signal-text: #9c4f2d;
-  --signal-foreground: #fff8f2;
-  --signal-soft: rgb(176 96 60 / 13%);
-  --success: #2c8660;
-  --warning: #9a6519;
-  --destructive: #b54444;
-  --destructive-foreground: #fff8f2;
-  --border: rgb(28 24 21 / 9%);
-  --border-strong: rgb(28 24 21 / 17%);
-  --input: rgb(28 24 21 / 12%);
-  --shimmer: rgb(28 24 21 / 5%);
-  --focus-surface: #fbf8f3;
-  --cat-1: #b86a4c;
-  --cat-2: #4e82a8;
-  --cat-3: #5e8a64;
-  --cat-4: #7d68b4;
-  --cat-5: #a68a3a;
-  --cat-6: #b65a62;
-  --cat-7: #3f8a80;
-  --cat-8: #94795a;
-  --cat-9: #34668c;
-  --cat-10: #5d4c96;
-  --cat-11: #436e4d;
-  --cat-12: #8a5e40;
-  --cat-none: #b8afa5;
-  --elev-1: 0 1px 2px rgb(28 24 21 / 6%);
-  color-scheme: light;
+/* Dark alternatives: the same luminance hierarchy, a single signal per theme. */
+html[data-theme="forest"] {
+  --background: oklch(0.17 0.012 155);
+  --surface: oklch(0.20 0.014 155);
+  --card: oklch(0.23 0.016 155);
+  --foreground: oklch(0.95 0.012 145);
+  --muted-foreground: oklch(0.72 0.018 145);
+  --faint: oklch(0.52 0.018 145);
+  --signal: oklch(0.70 0.10 155);
+  --signal-text: oklch(0.78 0.09 155);
+  --signal-foreground: oklch(0.19 0.022 155);
+  --signal-soft: color-mix(in oklab, var(--signal) 16%, transparent);
+  --focus-surface: oklch(0.22 0.015 155);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+  --secondary: var(--card);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--card);
+  --destructive-foreground: var(--background);
+  --border: color-mix(in oklab, var(--foreground) 7%, transparent);
+  --border-strong: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --shimmer: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+html[data-theme="rose"] {
+  --background: oklch(0.17 0.012 10);
+  --surface: oklch(0.20 0.014 10);
+  --card: oklch(0.23 0.017 10);
+  --foreground: oklch(0.95 0.012 15);
+  --muted-foreground: oklch(0.72 0.018 15);
+  --faint: oklch(0.52 0.018 15);
+  --signal: oklch(0.70 0.105 10);
+  --signal-text: oklch(0.78 0.095 10);
+  --signal-foreground: oklch(0.19 0.025 10);
+  --signal-soft: color-mix(in oklab, var(--signal) 16%, transparent);
+  --focus-surface: oklch(0.22 0.016 10);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+  --secondary: var(--card);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--card);
+  --destructive-foreground: var(--background);
+  --border: color-mix(in oklab, var(--foreground) 7%, transparent);
+  --border-strong: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --shimmer: color-mix(in oklab, var(--foreground) 6%, transparent);
 }
 
 /* Theme switch: circular spread (View Transitions) or soft cross-fade fallback. */

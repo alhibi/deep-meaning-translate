@@ -85,9 +85,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
       },
-      { name: "theme-color", content: "#F7F3EC", media: "(prefers-color-scheme: light)" },
-      { name: "theme-color", content: "#12100F", media: "(prefers-color-scheme: dark)" },
-      { name: "color-scheme", content: "light dark" },
+      { name: "theme-color", content: "#12100F" },
+      { name: "color-scheme", content: "dark" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "format-detection", content: "telephone=no" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
