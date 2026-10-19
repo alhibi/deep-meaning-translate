@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const THEMES = ["dark", "light", "navy", "burgundy"] as const;
+export const THEMES = ["dark", "light"] as const;
 export type Theme = (typeof THEMES)[number];
 export const THEME_KEY = "lingua.theme.v1";
 
+/** Only clay dark and light exist; every other saved value falls back to clay dark. */
 export function parseTheme(value: unknown): Theme {
-  if (value === "forest") return "navy";
-  if (value === "rose") return "burgundy";
-  return value === "light" || value === "navy" || value === "burgundy" ? value : "dark";
+  return value === "light" ? "light" : "dark";
 }
 
 export function nextTheme(theme: Theme): Theme {
   return THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length] ?? "dark";
 }
 
-/** Shared validation runs before paint, retaining saved light and migrating renamed themes. */
+/** Shared validation runs before paint, retaining saved light and defaulting the rest to clay dark. */
 export const THEME_BOOT = `(function(){var t="dark";try{var s=localStorage.getItem("${THEME_KEY}");t=s===null?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(${parseTheme.toString()})(s);}catch(e){}var d=document.documentElement;d.classList.remove("light","dark");d.classList.add(t==="light"?"light":"dark");d.dataset.theme=t;d.style.colorScheme=t==="light"?"light":"dark";})();`;
 
 function current(): Theme {
