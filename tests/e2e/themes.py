@@ -11,7 +11,7 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         for width, height in [(424, 758), (1280, 1800)]:
-            context = await browser.new_context(viewport={"width": width, "height": height}, color_scheme="light")
+            context = await browser.new_context(viewport={"width": width, "height": height}, color_scheme="light", service_workers="block")
             page = await context.new_page()
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
