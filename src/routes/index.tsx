@@ -28,7 +28,8 @@ import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import { useLexicon } from "@/lib/translation/useLexicon";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
-import type { Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
+import { DEFAULT_BRAIN, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
+import { BrainPicker } from "@/components/translator/BrainPicker";
 import { history, type HistoryEntry } from "@/lib/history";
 import { persist } from "@/lib/persist";
 import { shouldShowIntro } from "@/lib/intro";
@@ -70,6 +71,7 @@ function Translator() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
+  const [brain, setBrain] = useState<Brain>(DEFAULT_BRAIN);
   const [savedOpen, setSavedOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
@@ -110,6 +112,7 @@ function Translator() {
     target,
     style,
     dialect,
+    brain,
     onSuccess: handleSuccess,
   });
 
@@ -126,6 +129,7 @@ function Translator() {
       setTarget(prefs.target);
       setStyle(prefs.style);
       if (prefs.dialect) setDialect(prefs.dialect);
+      if (prefs.brain) setBrain(prefs.brain);
     }
     const params = new URLSearchParams(window.location.search);
     const shared = [params.get("title"), params.get("text"), params.get("url")]
@@ -151,8 +155,8 @@ function Translator() {
   }, [submitNext, prime]);
 
   useEffect(() => {
-    if (restored) persist.savePrefs({ source, target, style, dialect });
-  }, [restored, source, target, style, dialect]);
+    if (restored) persist.savePrefs({ source, target, style, dialect, brain });
+  }, [restored, source, target, style, dialect, brain]);
 
   // Debounced while typing, but flushed when the app is hidden or closed so the
   // last keystrokes are never lost to the debounce window.
@@ -728,6 +732,7 @@ function Translator() {
                     <ChevronDown className="size-3.5 text-faint" strokeWidth={1.75} />
                   </button>
                 ) : null}
+                <BrainPicker value={brain} onChange={setBrain} />
               </div>
               <span
                 className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${

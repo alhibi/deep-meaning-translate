@@ -35,27 +35,34 @@ export const Route = createFileRoute("/api/translate-stream")({
         const { TranslationError } = await import("@/lib/translation/types");
         const started = Date.now();
         let deltas: AsyncGenerator<string>;
-        let brain = "luna";
         const { mode, ...rest } = data;
         const req = { ...rest, partial: mode !== "full" };
+        const ds = await import("@/lib/translation/providers/deepseek.server");
+        const { shouldFallBack } = await import("@/lib/translation/engine.server");
+        const brains = {
+          luna: () => {
+            if (!apiKey) throw new TranslationError("auth", "Luna is not configured.");
+            return mode === "full"
+              ? streamFullTranslation(apiKey, req, request.signal)
+              : streamLiveTranslation(apiKey, req, request.signal);
+          },
+          deepseek: () => {
+            const key = ds.deepseekKey();
+            if (!key) throw new TranslationError("auth", "DeepSeek is not configured.");
+            return mode === "full"
+              ? ds.streamDeepSeekFull(key, req, request.signal)
+              : ds.streamDeepSeekLive(key, req, request.signal);
+          },
+        } as const;
+        let brain: keyof typeof brains = data.brain;
         try {
           try {
-            if (!apiKey) throw new TranslationError("auth", "Luna is not configured.");
-            deltas =
-              mode === "full"
-                ? await streamFullTranslation(apiKey, req, request.signal)
-                : await streamLiveTranslation(apiKey, req, request.signal);
+            deltas = await brains[brain]();
           } catch (err) {
-            // Second brain takes over when Luna is down, out of credit or rate limited.
-            const { shouldFallBack } = await import("@/lib/translation/engine.server");
-            const ds = await import("@/lib/translation/providers/deepseek.server");
-            const key = ds.deepseekKey();
-            if (request.signal.aborted || !key || !shouldFallBack(err)) throw err;
-            brain = "deepseek";
-            deltas =
-              mode === "full"
-                ? await ds.streamDeepSeekFull(key, req, request.signal)
-                : await ds.streamDeepSeekLive(key, req, request.signal);
+            // The other brain takes over when the chosen one is down, out of credit or rate limited.
+            if (request.signal.aborted || !shouldFallBack(err)) throw err;
+            brain = brain === "luna" ? "deepseek" : "luna";
+            deltas = await brains[brain]();
           }
         } catch (err) {
           // Cancelled by the app (newer text typed): end quietly, not an error.

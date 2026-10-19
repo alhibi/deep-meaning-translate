@@ -1,4 +1,4 @@
-import type { Dialect, StyleOverride, TranslationResult } from "./translation/types";
+import type { Brain, Dialect, StyleOverride, TranslationResult } from "./translation/types";
 
 /**
  * Intentional, device-only persistence. Nothing here leaves the device.
@@ -15,6 +15,7 @@ export interface Prefs {
   target: string;
   style: StyleOverride;
   dialect?: Dialect;
+  brain?: Brain;
 }
 export interface Session {
   text: string;
@@ -41,6 +42,7 @@ export function parsePrefs(v: unknown): Prefs | null {
   const out: Prefs = { source: p.source, target: p.target, style: p.style };
   if (typeof p.dialect === "string" && DIALECTS.includes(p.dialect))
     out.dialect = p.dialect as Dialect;
+  if (p.brain === "deepseek" || p.brain === "luna") out.brain = p.brain;
   return out;
 }
 

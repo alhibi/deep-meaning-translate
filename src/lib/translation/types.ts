@@ -1,6 +1,8 @@
 export type StyleOverride = "natural" | "formal" | "casual";
 
 export type Dialect = "auto" | "msa" | "levant" | "egypt" | "gulf" | "iraq" | "maghreb";
+export type Brain = "deepseek" | "luna";
+export const DEFAULT_BRAIN: Brain = "deepseek";
 export type Situation = "chat" | "work" | "official" | "general";
 
 export interface TranslationRequest {
@@ -11,6 +13,8 @@ export interface TranslationRequest {
   style: StyleOverride;
   /** Arabic variety for Arabic output; "auto" follows the source. */
   dialect?: Dialect;
+  /** Which model writes the translation; the other is the automatic backup. */
+  brain?: Brain;
   /** Text still being typed: translate provisionally, skip the repair pass. */
   partial?: boolean;
 }
