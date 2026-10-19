@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { notifyCopied } from "@/lib/clipboardHint";
-import { BookOpen, Bookmark, Flag, Check, Contrast, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
+import { BookOpen, Bookmark, Check, Contrast, Copy, RotateCw, Volume2 } from "lucide-react";
 import type { Loss } from "@/lib/translation/shadow";
 import { ShadowHits, ShadowInk } from "./SentenceShadow";
 import type { TranslationResult } from "@/lib/translation/types";
@@ -82,8 +82,6 @@ export const ResultPanel = memo(function ResultPanel({
   idle,
   onDictionary,
   dictionaryReady,
-  onFlag,
-  flagLabel,
   shadow,
   shadowSummary,
   shadowOn,
@@ -104,9 +102,6 @@ export const ResultPanel = memo(function ResultPanel({
   /** Opens the mini dictionary; omitted when the text isn't a word/term. */
   onDictionary?: (() => void) | undefined;
   dictionaryReady?: boolean;
-  /** Opens the "inaccurate" marking window. */
-  onFlag?: () => void;
-  flagLabel?: string;
   /** Sentence shadow over the settled translation (null hides it). */
   shadow?: { losses: Loss[]; focusId: string | null; onPick: (id: string) => void } | null;
   shadowSummary?: React.ReactNode;
@@ -291,11 +286,6 @@ export const ResultPanel = memo(function ResultPanel({
     );
   }, [lang, speaking]);
 
-  const share = useCallback(() => {
-    if (navigator.share) void navigator.share({ text: textRef.current }).catch(() => undefined);
-    else copy();
-  }, [copy]);
-
   const rtl = isRtl(lang);
 
   const textCls = `${rtl ? "font-arabic font-medium" : "font-medium"} ${sizeFor(text.length, rtl)}`;
@@ -444,9 +434,6 @@ export const ResultPanel = memo(function ResultPanel({
               />
             </Action>
           ) : null}
-          <Action label={t("share")} onClick={share}>
-            <Share2 className="size-[18px]" strokeWidth={1.75} />
-          </Action>
           {onDictionary ? (
             <Action label={t("lexOpen")} onClick={onDictionary}>
               <BookOpen className="size-[18px]" strokeWidth={1.75} />
@@ -464,11 +451,6 @@ export const ResultPanel = memo(function ResultPanel({
                 className={`size-[18px] transition-opacity ${shadowOn ? "opacity-100" : "opacity-50"}`}
                 strokeWidth={1.75}
               />
-            </Action>
-          ) : null}
-          {onFlag ? (
-            <Action label={flagLabel ?? "Inaccurate"} onClick={onFlag}>
-              <Flag className="size-[18px]" strokeWidth={1.75} />
             </Action>
           ) : null}
           {error ? (
