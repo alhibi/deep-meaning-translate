@@ -103,19 +103,21 @@
   color-scheme: dark;
 }
 
-/* Dark alternatives: the same luminance hierarchy, a single signal per theme. */
+/* Dark alternatives: tonal surfaces, with a separate harmonious attention hue. */
 html[data-theme="navy"] {
-  --background: oklch(0.18 0.035 260);
-  --surface: oklch(0.22 0.04 260);
-  --card: oklch(0.26 0.045 260);
+  --navy-base: #081534;
+  --background: var(--navy-base);
+  --surface: color-mix(in oklab, var(--navy-base) 94%, #edf0f7);
+  --card: color-mix(in oklab, var(--navy-base) 88%, #edf0f7);
   --foreground: oklch(0.95 0.012 250);
   --muted-foreground: oklch(0.72 0.025 250);
   --faint: oklch(0.56 0.025 250);
-  --signal: oklch(0.71 0.105 250);
-  --signal-text: oklch(0.79 0.09 250);
-  --signal-foreground: oklch(0.18 0.035 260);
+  --signal: oklch(0.78 0.10 65);
+  --signal-text: oklch(0.83 0.085 65);
+  --signal-foreground: var(--navy-base);
   --signal-soft: color-mix(in oklab, var(--signal) 16%, transparent);
-  --focus-surface: oklch(0.245 0.042 260);
+  --focus-surface: color-mix(in oklab, var(--navy-base) 91%, #edf0f7);
+  --ring: var(--signal);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
@@ -133,18 +135,18 @@ html[data-theme="navy"] {
 
 html[data-theme="burgundy"] {
   --burgundy-base: #7b1b38;
-  --background: color-mix(in oklab, var(--burgundy-base) 24%, #100e10);
-  --surface: color-mix(in oklab, var(--burgundy-base) 31%, #171315);
-  --card: color-mix(in oklab, var(--burgundy-base) 38%, #1c1619);
+  --background: var(--burgundy-base);
+  --surface: color-mix(in oklab, var(--burgundy-base) 94%, #f3eee8);
+  --card: color-mix(in oklab, var(--burgundy-base) 88%, #f3eee8);
   --foreground: oklch(0.95 0.012 5);
-  --muted-foreground: oklch(0.73 0.026 5);
-  --faint: oklch(0.56 0.025 5);
-  --signal: var(--burgundy-base);
-  --signal-text: color-mix(in oklab, var(--burgundy-base) 40%, #fff2f5);
-  --signal-foreground: oklch(0.97 0.01 5);
-  --signal-soft: color-mix(in oklab, var(--signal) 28%, transparent);
-  --focus-surface: color-mix(in oklab, var(--burgundy-base) 36%, #191416);
-  --ring: var(--signal-text);
+  --muted-foreground: oklch(0.84 0.015 15);
+  --faint: oklch(0.72 0.018 15);
+  --signal: oklch(0.84 0.075 85);
+  --signal-text: oklch(0.89 0.06 85);
+  --signal-foreground: oklch(0.24 0.04 15);
+  --signal-soft: color-mix(in oklab, var(--signal) 16%, transparent);
+  --focus-surface: color-mix(in oklab, var(--burgundy-base) 91%, #f3eee8);
+  --ring: var(--signal);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
