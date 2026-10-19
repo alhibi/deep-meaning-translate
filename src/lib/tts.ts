@@ -11,6 +11,15 @@
  * back to the full text across chunks.
  */
 
+import {
+  cloudAvailable,
+  fetchClip,
+  silentClip,
+  speechPieces,
+  CloudSpeakError,
+} from "./voice/cloud";
+import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
+
 export const LOCALE: Record<string, string> = {
   ar: "ar-SA",
   de: "de-DE",
@@ -92,21 +101,42 @@ export interface SpeakHandlers {
   onWord?: (charIndex: number, exact: boolean) => void;
   onEnd?: () => void;
   onFail?: (why: SpeakFailure) => void;
+  /** Which engine is speaking; reason is set when Gemini was skipped or failed. */
+  onEngine?: (engine: "gemini" | "device", reason?: string) => void;
 }
 
 // Module-level reference: Chrome otherwise collects the utterance and its events vanish.
 let live: SpeechSynthesisUtterance | null = null;
 let session = 0;
 
+let audioEl: HTMLAudioElement | null = null;
+let audioUrl: string | null = null;
+let raf = 0;
+function stopAudio() {
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
+  if (audioEl) {
+    audioEl.onended = audioEl.onerror = audioEl.onplaying = null;
+    audioEl.pause();
+  }
+  if (audioUrl) URL.revokeObjectURL(audioUrl);
+  audioUrl = null;
+}
+
 export function stopSpeaking() {
   session++;
   live = null;
+  stopAudio();
   if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
 /** Speak text in a language; returns a stop function. */
 export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95): () => void {
-  if (typeof window === "undefined" || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+  if (
+    typeof window === "undefined" ||
+    !("speechSynthesis" in window) ||
+    typeof SpeechSynthesisUtterance === "undefined"
+  ) {
     h.onFail?.("unsupported");
     return () => {};
   }
@@ -165,7 +195,11 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
         if (!started && !retried) return; // the watchdog decides
         session++;
         live = null;
-        h.onFail?.(e.error === "language-unavailable" || e.error === "voice-unavailable" ? "novoice" : "blocked");
+        h.onFail?.(
+          e.error === "language-unavailable" || e.error === "voice-unavailable"
+            ? "novoice"
+            : "blocked",
+        );
       };
       live = u;
       synth.speak(u);
@@ -201,3 +235,132 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
 
 /** Keeps the reference observable for tests. */
 export const _liveUtterance = () => live;
+
+/**
+ * Speak a translation: Gemini voice when enabled and available, otherwise (or on any
+ * failure) the device voice continues from the same place. Returns a stop function.
+ */
+export function speakTranslation(
+  text: string,
+  lang: string,
+  h: SpeakHandlers,
+  prefs: VoicePrefs,
+): () => void {
+  const rate = PACE_RATE[prefs.pace];
+  if (
+    prefs.engine === "device" ||
+    typeof window === "undefined" ||
+    typeof Audio === "undefined" ||
+    !cloudAvailable()
+  ) {
+    h.onEngine?.(
+      "device",
+      prefs.engine === "device" ? undefined : navigator.onLine === false ? "offline" : "paused",
+    );
+    return speak(text, lang, h, rate);
+  }
+  stopSpeaking();
+  const id = session;
+  const alive = () => id === session;
+  // Unlock playback inside the tap (mobile autoplay rules), before any await.
+  audioEl ??= new Audio();
+  const el = audioEl;
+  el.src = silentClip();
+  void el.play().catch(() => undefined);
+
+  const pieces = speechPieces(text, chunkText);
+  const req = (i: number) => ({
+    text: pieces[i]!.text,
+    lang,
+    voice: prefs.voice,
+    quality: prefs.quality,
+    pace: prefs.pace,
+  });
+  let started = false;
+  let deviceStop: (() => void) | null = null;
+  h.onEngine?.("gemini");
+
+  const fallback = (from: number, err: unknown) => {
+    if (!alive()) return;
+    stopAudio();
+    const kind = err instanceof CloudSpeakError ? err.kind : "provider";
+    h.onEngine?.("device", kind);
+    const offset = pieces[from]?.offset ?? 0;
+    const restText = text.slice(offset);
+    // Continue with the device voice from the unspoken part, keeping offsets in the full text.
+    deviceStop = speak(
+      restText,
+      lang,
+      {
+        onStart: () => {
+          if (!started) {
+            started = true;
+            h.onStart?.();
+          }
+        },
+        onWord: (ci, exact) => h.onWord?.(offset + ci, exact),
+        onEnd: () => h.onEnd?.(),
+        onFail: (why) => h.onFail?.(why),
+      },
+      rate,
+    );
+  };
+
+  const play = async (i: number) => {
+    if (!alive()) return;
+    const piece = pieces[i];
+    if (!piece) {
+      stopAudio();
+      h.onEnd?.();
+      return;
+    }
+    let blob: Blob;
+    try {
+      blob = await fetchClip(req(i));
+    } catch (e) {
+      fallback(i, e);
+      return;
+    }
+    if (!alive()) return;
+    if (pieces[i + 1]) void fetchClip(req(i + 1)).catch(() => undefined); // prefetch the next piece
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    audioUrl = URL.createObjectURL(blob);
+    el.src = audioUrl;
+    el.onplaying = () => {
+      if (!alive()) return;
+      if (!started) {
+        started = true;
+        h.onStart?.();
+      }
+      // Read-along: position in the clip mapped onto the characters of this piece.
+      const tickFn = () => {
+        if (!alive()) return;
+        const d = el.duration;
+        if (d && Number.isFinite(d)) {
+          const frac = Math.min(1, el.currentTime / d);
+          h.onWord?.(piece.offset + Math.floor(frac * piece.text.length * 0.97), true);
+        }
+        raf = requestAnimationFrame(tickFn);
+      };
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tickFn);
+    };
+    el.onended = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      void play(i + 1);
+    };
+    el.onerror = () => fallback(i, new CloudSpeakError("provider"));
+    try {
+      await el.play();
+    } catch (e) {
+      if (!alive()) return;
+      fallback(i, (e as Error)?.name === "NotAllowedError" ? new CloudSpeakError("provider") : e);
+    }
+  };
+  void play(0);
+  return () => {
+    if (deviceStop) deviceStop();
+    if (alive()) stopSpeaking();
+  };
+}
