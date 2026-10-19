@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArabicGermanTranslationRouteImport } from './routes/arabic-german-translation'
 import { Route as LabRouteImport } from './routes/lab'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatsRouteImport } from './routes/stats'
@@ -20,6 +21,11 @@ import { Route as ApiTranslateStreamRouteImport } from './routes/api/translate-s
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArabicGermanTranslationRoute = ArabicGermanTranslationRouteImport.update({
+  id: '/arabic-german-translation',
+  path: '/arabic-german-translation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LabRoute = LabRouteImport.update({
@@ -55,6 +61,7 @@ const ApiTranslateStreamRoute = ApiTranslateStreamRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/arabic-german-translation'
     | '/lab'
     | '/sitemap.xml'
     | '/stats'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/arabic-german-translation'
     | '/lab'
     | '/sitemap.xml'
     | '/stats'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/arabic-german-translation'
     | '/lab'
     | '/sitemap.xml'
     | '/stats'
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArabicGermanTranslationRoute: typeof ArabicGermanTranslationRoute
   LabRoute: typeof LabRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/arabic-german-translation': {
+      id: '/arabic-german-translation'
+      path: '/arabic-german-translation'
+      fullPath: '/arabic-german-translation'
+      preLoaderRoute: typeof ArabicGermanTranslationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lab': {
@@ -177,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArabicGermanTranslationRoute: ArabicGermanTranslationRoute,
   LabRoute: LabRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
