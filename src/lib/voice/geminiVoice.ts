@@ -105,7 +105,7 @@ export function sanitizeTranscript(text: string): string {
   return text.replace(/</g, "‹").replace(/>/g, "›").replace(/\s+/g, " ").trim();
 }
 
-export function buildInteraction(req: SpeakRequest) {
+export function buildInteraction(req: SpeakRequest, stream = false) {
   return {
     model: TTS_MODELS[req.quality],
     input: [
@@ -120,8 +120,9 @@ export function buildInteraction(req: SpeakRequest) {
         ],
       },
     ],
-    response_format: { type: "audio", mime_type: "audio/wav" },
+    response_format: { type: "audio", mime_type: stream ? "audio/l16" : "audio/wav" },
     generation_config: { speech_config: [{ voice: req.voice }] },
+    ...(stream ? { stream: true } : {}),
   };
 }
 
@@ -205,4 +206,47 @@ export function kindForStatus(status: number): SpeakErrorKind {
   if (status === 401 || status === 403) return "config";
   if (status === 429) return "quota";
   return "provider";
+}
+
+/**
+ * Incremental SSE reader for streamed Interactions: feed text as it arrives, get back the
+ * decoded audio bytes of every complete `step.delta` audio event. Errors surface as `error`.
+ */
+export function createSseAudioParser() {
+  let buf = "";
+  return (text: string): { audio: Uint8Array<ArrayBuffer>[]; error?: string; done?: boolean } => {
+    buf += text;
+    const audio: Uint8Array<ArrayBuffer>[] = [];
+    let error: string | undefined;
+    let done = false;
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).replace(/\r$/, "");
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      let ev: { event_type?: string; delta?: { type?: string; data?: string }; error?: { message?: string } };
+      try {
+        ev = JSON.parse(line.slice(5));
+      } catch {
+        continue;
+      }
+      if (ev.event_type === "step.delta" && ev.delta?.type === "audio" && ev.delta.data)
+        audio.push(base64ToBytes(ev.delta.data));
+      else if (ev.event_type === "interaction.completed") done = true;
+      else if (ev.event_type === "error" || ev.error) error = ev.error?.message ?? "stream error";
+    }
+    return error ? { audio, error, done } : { audio, done };
+  };
+}
+
+/** 16-bit LE PCM → float samples; an odd trailing byte is carried to the next chunk. */
+export function pcm16ToFloat(bytes: Uint8Array, carry: number[]): Float32Array {
+  const all = carry.length ? new Uint8Array([...carry, ...bytes]) : bytes;
+  carry.length = 0;
+  const even = all.length - (all.length % 2);
+  if (even < all.length) carry.push(all[all.length - 1]!);
+  const out = new Float32Array(even / 2);
+  const v = new DataView(all.buffer, all.byteOffset, even);
+  for (let i = 0; i < out.length; i++) out[i] = v.getInt16(i * 2, true) / 32768;
+  return out;
 }
