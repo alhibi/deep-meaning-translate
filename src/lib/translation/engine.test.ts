@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranslationRequest, TranslationResult } from "./types";
-import { TranslationError } from "./types";
+import { LUNA_ENABLED, TranslationError } from "./types";
+
+/** Luna-only behaviour; skipped while Luna is paused ("soon"). */
+const lunaIt = it.skipIf(!LUNA_ENABLED);
 
 const lunaTranslate = vi.fn();
 const dsTranslate = vi.fn();
@@ -40,7 +43,7 @@ afterEach(() => vi.unstubAllEnvs());
 const engine = () => import("./engine.server");
 
 describe("two brains", () => {
-  it("Luna translates; DeepSeek is not called when Luna succeeds", async () => {
+  lunaIt("Luna translates; DeepSeek is not called when Luna succeeds", async () => {
     lunaTranslate.mockResolvedValue(res("عندي 3 قطط."));
     const { result } = await (await engine()).runTranslation(req);
     expect(result.translation).toBe("عندي 3 قطط.");
@@ -54,7 +57,7 @@ describe("two brains", () => {
     expect(result.translation).toBe("لدي 3 قطط.");
   });
 
-  it("without a DeepSeek key, Luna's error is reported as before", async () => {
+  lunaIt("without a DeepSeek key, Luna's error is reported as before", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", "");
     lunaTranslate.mockRejectedValue(new TranslationError("quota", "empty"));
     await expect((await engine()).runTranslation(req)).rejects.toMatchObject({ kind: "quota" });
@@ -65,7 +68,7 @@ describe("two brains", () => {
     expect(await (await engine()).runRepair(req, res("عندي 3 قطط."))).toBeNull();
   });
 
-  it("review swaps in a real correction", async () => {
+  lunaIt("review swaps in a real correction", async () => {
     review.mockResolvedValue(res("عندي ثلاث 3 قطط."));
     const out = await (await engine()).runRepair(req, res("عندي 3 قط."));
     expect(out?.translation).toBe("عندي ثلاث 3 قطط.");
@@ -91,7 +94,7 @@ describe("model choice", () => {
     expect(result.translation).toBe("لدي 3 قطط.");
     expect(lunaTranslate).not.toHaveBeenCalled();
   });
-  it("Luna takes over when DeepSeek fails", async () => {
+  lunaIt("Luna takes over when DeepSeek fails", async () => {
     dsTranslate.mockRejectedValue(new TranslationError("rate", "busy"));
     lunaTranslate.mockResolvedValue(res("عندي 3 قطط."));
     const { result } = await (await engine()).runTranslation(dsReq);
@@ -110,5 +113,19 @@ describe("parseReview", () => {
     expect(parseReview('{"translation":"عندي 3 قطط."}', req)?.translation).toBe("عندي 3 قطط.");
     expect(parseReview("not json", req)).toBeNull();
     expect(parseReview('{"translation":""}', req)).toBeNull();
+  });
+});
+
+describe("Luna paused", () => {
+  it.runIf(!LUNA_ENABLED)("an old Luna choice is written by DeepSeek; Luna is never called", async () => {
+    dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
+    const { result } = await (await engine()).runTranslation(req);
+    expect(result.translation).toBe("لدي 3 قطط.");
+    expect(lunaTranslate).not.toHaveBeenCalled();
+  });
+  it.runIf(!LUNA_ENABLED)("a DeepSeek failure is reported, never handed to Luna", async () => {
+    dsTranslate.mockRejectedValue(new TranslationError("rate", "busy"));
+    await expect((await engine()).runTranslation(req)).rejects.toMatchObject({ kind: "rate" });
+    expect(lunaTranslate).not.toHaveBeenCalled();
   });
 });

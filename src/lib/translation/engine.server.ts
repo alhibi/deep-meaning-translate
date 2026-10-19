@@ -1,6 +1,6 @@
 import { createOpenCodeLunaProvider } from "./providers/opencode.server";
 import type { TranslationProvider, TranslationRequest, TranslationResult } from "./types";
-import { DEFAULT_BRAIN, TranslationError, type Brain } from "./types";
+import { DEFAULT_BRAIN, LUNA_ENABLED, TranslationError, effectiveBrain, type Brain } from "./types";
 import { verifyTranslation } from "./verify";
 
 /**
@@ -11,7 +11,7 @@ import { verifyTranslation } from "./verify";
  */
 function luna(): TranslationProvider | null {
   const apiKey = process.env["OPENCODE_API_KEY"];
-  return apiKey ? createOpenCodeLunaProvider(apiKey) : null;
+  return LUNA_ENABLED && apiKey ? createOpenCodeLunaProvider(apiKey) : null;
 }
 async function deepseek(): Promise<TranslationProvider | null> {
   const { deepseekKey, createDeepSeekProvider } = await import("./providers/deepseek.server");
@@ -27,7 +27,7 @@ async function withFallback<T>(
   run: (p: TranslationProvider) => Promise<T>,
   brain: Brain = DEFAULT_BRAIN,
 ): Promise<T> {
-  const lunaFirst = brain === "luna";
+  const lunaFirst = effectiveBrain(brain) === "luna";
   const primary = lunaFirst ? luna() : await deepseek();
   const other = async () => (lunaFirst ? deepseek() : luna());
   if (primary) {
@@ -83,7 +83,7 @@ export async function runReview(
   const { deepseekKey, reviewTranslation } = await import("./providers/deepseek.server");
   const key = deepseekKey();
   // DeepSeek never reviews its own writing.
-  if (!key || req.partial || (req.brain ?? DEFAULT_BRAIN) === "deepseek" || !req.text.trim()) return null;
+  if (!key || req.partial || effectiveBrain(req.brain ?? DEFAULT_BRAIN) === "deepseek" || !req.text.trim()) return null;
   try {
     const reviewed = await reviewTranslation(key, req, previous);
     if (!reviewed || norm(reviewed.translation) === norm(previous.translation)) return null;

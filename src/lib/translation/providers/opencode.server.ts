@@ -193,6 +193,15 @@ Schema: {"sourceTerm":lemma,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,
 /** Optional dictionary pass. It is deliberately separate so translation streaming is never delayed. */
 export async function analyzeLexicon(
   apiKey: string,
+  input: Parameters<typeof analyzeLexiconWith>[1],
+  signal?: AbortSignal,
+): Promise<LexiconResult | null> {
+  return analyzeLexiconWith((s, u) => call(apiKey, s, u, signal), input);
+}
+
+/** Same dictionary analysis on any chat model (DeepSeek while Luna is paused). */
+export async function analyzeLexiconWith(
+  chat: (system: string, user: string) => Promise<string>,
   input: {
     text: string;
     source: string;
@@ -201,15 +210,12 @@ export async function analyzeLexicon(
     translation?: string | undefined;
     dialect?: string | undefined;
   },
-  signal?: AbortSignal,
 ): Promise<LexiconResult | null> {
-  const raw = await call(
-    apiKey,
+  const raw = await chat(
     LEXICON_SYSTEM,
     `UI language: ${input.uiLocale}\nTranslate/analyze: ${input.source}→${input.target}${
       input.dialect && input.dialect !== "auto" ? `\nArabic dialect: ${input.dialect}` : ""
     }${input.translation ? `\nModel translation: ${input.translation}` : ""}\n<term>\n${input.text}\n</term>`,
-    signal,
   );
   if (raw.trim() === "null") return null;
   const start = raw.indexOf("{");

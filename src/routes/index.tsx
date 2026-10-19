@@ -29,7 +29,7 @@ import { useLexicon } from "@/lib/translation/useLexicon";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
 import { FlagSheet } from "@/components/translator/FlagSheet";
 import { useFlags } from "@/lib/flags";
-import { DEFAULT_BRAIN, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
+import { DEFAULT_BRAIN, effectiveBrain, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
@@ -141,7 +141,7 @@ function Translator() {
       setTarget(prefs.target);
       setStyle(prefs.style);
       if (prefs.dialect) setDialect(prefs.dialect);
-      if (prefs.brain) setBrain(prefs.brain);
+      if (prefs.brain) setBrain(effectiveBrain(prefs.brain));
     }
     const params = new URLSearchParams(window.location.search);
     const shared = [params.get("title"), params.get("text"), params.get("url")]
