@@ -21,3 +21,4 @@
 - [x] Correct audible-clock synchronization, chunk offsets and device fallback; soften highlighting and verify regressions
 - [x] Connect AssemblyAI dictation securely, verify multilingual streaming, real Arabic/German browser transcription, cancellation, duplicate prevention, unit tests and app smoke checks
 - [x] Sentence Shadow: settled-only loss analysis, ink/hit layers, card with apply/undo, map, toggle, live 30-sentence eval (26/30), unit + e2e tests
+- [x] Softer, smaller Copy action: tinted pill instead of solid fill; verified both themes, copy flow test, smoke checks

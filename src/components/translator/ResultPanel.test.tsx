@@ -83,3 +83,27 @@ describe("read-along playback ownership", () => {
     expect(document.querySelector('.spoken-word[data-state="now"]')?.textContent).toBe("Welt");
   });
 });
+
+describe("copy action", () => {
+  it("copies the exact translation and confirms in place", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(
+      <ResultPanel
+        result={result}
+        target="de"
+        pending={false}
+        provisional={false}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Copy translation" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(writeText).toHaveBeenCalledWith("Hallo schöne Welt");
+    const btn = screen.getByRole("button", { name: "Copied" });
+    expect(btn.textContent).toBe("Copied");
+  });
+});
