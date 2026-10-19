@@ -13,3 +13,19 @@ describe("streaming tokens", () => {
     expect(stableTokens(tokenize("Ich gehe heim"), tokenize("Ich laufe heim"))).toBe(2);
   });
 });
+
+import { estimateChar, tokenAt } from "./streamingTokens";
+describe("spoken word sync", () => {
+  const t = tokenize("Ich gehe nach Hause");
+  it("maps the voice's character position to the word being spoken", () => {
+    expect(tokenAt(t, 0)).toBe(0);
+    expect(tokenAt(t, 4)).toBe(2);
+    expect(tokenAt(t, 14)).toBe(6);
+  });
+  it("a position on a space points at the next word", () => {
+    expect(tokenAt(t, 3)).toBe(2);
+  });
+  it("estimates slower progress for Arabic", () => {
+    expect(estimateChar(1000, 1, true)).toBeLessThan(estimateChar(1000, 1, false));
+  });
+});

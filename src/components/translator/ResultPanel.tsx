@@ -7,6 +7,8 @@ import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
 import { StreamingText } from "./StreamingText";
+import { SpokenText } from "./SpokenText";
+import { estimateChar, tokenAt, tokenize } from "./streamingTokens";
 
 const LOCALE: Record<string, string> = {
   ar: "ar-SA",
@@ -112,6 +114,12 @@ export const ResultPanel = memo(function ResultPanel({
   const [speaking, setSpeaking] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
   const [noVoice, setNoVoice] = useState(false);
+  const [spokenWord, setSpokenWord] = useState(0);
+  const syncTimer = useRef<number | null>(null);
+  const stopSync = () => {
+    if (syncTimer.current !== null) cancelAnimationFrame(syncTimer.current);
+    syncTimer.current = null;
+  };
   const [announce, setAnnounce] = useState("");
   const text = result?.translation ?? "";
   const textRef = useRef(text);
@@ -122,8 +130,10 @@ export const ResultPanel = memo(function ResultPanel({
     setCopied(false);
     if (typeof window !== "undefined" && "speechSynthesis" in window)
       window.speechSynthesis.cancel();
+    stopSync();
     setSpeaking(false);
   }, [text]);
+  useEffect(() => () => stopSync(), []);
 
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {
@@ -168,8 +178,9 @@ export const ResultPanel = memo(function ResultPanel({
   const speak = useCallback(() => {
     if (!("speechSynthesis" in window)) return;
     const synth = window.speechSynthesis;
-    if (synth.speaking) {
+    if (synth.speaking || synth.pending) {
       synth.cancel();
+      stopSync();
       setSpeaking(false);
       return;
     }
@@ -183,8 +194,38 @@ export const ResultPanel = memo(function ResultPanel({
     u.lang = voice?.lang ?? LOCALE[lang] ?? lang;
     if (voice) u.voice = voice;
     u.rate = 0.95;
-    u.onend = u.onerror = () => setSpeaking(false);
+    const tokens = tokenize(textRef.current);
+    const rtlVoice = isRtl(lang);
+    // Precise mode: the voice reports each word as it says it. Until (unless) it
+    // does, an estimate from elapsed speaking time keeps the highlight moving.
+    let precise = false;
+    let started = 0;
+    const tickEstimate = () => {
+      if (!precise && started) {
+        const c = estimateChar(performance.now() - started, u.rate, rtlVoice);
+        setSpokenWord(tokenAt(tokens, c));
+      }
+      syncTimer.current = precise ? null : requestAnimationFrame(tickEstimate);
+    };
+    u.onstart = () => {
+      started = performance.now();
+      setSpokenWord(0);
+      stopSync();
+      syncTimer.current = requestAnimationFrame(tickEstimate);
+    };
+    u.onboundary = (e) => {
+      if (e.name && e.name !== "word") return;
+      precise = true;
+      setSpokenWord(tokenAt(tokens, e.charIndex));
+    };
+    u.onend = u.onerror = () => {
+      stopSync();
+      setSpeaking(false);
+    };
+    setSpokenWord(0);
+    synth.cancel();
     synth.speak(u);
+    synth.resume(); // Chrome can leave the queue paused after a previous cancel.
     setSpeaking(true);
   }, [lang]);
 
@@ -206,7 +247,11 @@ export const ResultPanel = memo(function ResultPanel({
             rtl ? "font-arabic font-medium" : "font-medium"
           } ${sizeFor(text.length, rtl)} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
         >
-          <StreamingText text={text} />
+          {speaking ? (
+            <SpokenText text={text} current={spokenWord} />
+          ) : (
+            <StreamingText text={text} />
+          )}
         </p>
 
         {result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
@@ -332,7 +377,7 @@ export const ResultPanel = memo(function ResultPanel({
               copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
             }`}
           >
-            {noVoice ? "" : ""}
+            {noVoice ? t("noVoice") : ""}
           </span>
           {error ? (
             <button
