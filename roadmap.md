@@ -11,4 +11,4 @@
 - [x] Gemini TTS on the speaker button (voices, quality, speed, cache, device fallback)
 - [x] ElevenLabs streaming voice, timing, settings, prefetch and device fallback
 - [x] Verify ElevenLabs real Arabic/German playback, tests and smoke checks
-- [ ] Complete Google Search Console verification and submit the existing sitemap
+- [x] Complete Google Search Console verification and submit the existing sitemap
