@@ -19,3 +19,4 @@
 - [x] Restore light and replace green/pink with navy and #7B1B38 burgundy; verify all four themes
 - [x] Remove navy and burgundy, keep clay dark + light only; verify cycling, persistence and fallback
 - [x] Correct audible-clock synchronization, chunk offsets and device fallback; soften highlighting and verify regressions
+- [ ] Connect AssemblyAI dictation securely, verify language support, and test real Arabic/German transcription (awaiting API key)
