@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const THEMES = ["dark", "forest", "rose"] as const;
+export const THEMES = ["dark", "light", "navy", "burgundy"] as const;
 export type Theme = (typeof THEMES)[number];
 export const THEME_KEY = "lingua.theme.v1";
 
 export function parseTheme(value: unknown): Theme {
-  return value === "forest" || value === "rose" ? value : "dark";
+  if (value === "forest") return "navy";
+  if (value === "rose") return "burgundy";
+  return value === "light" || value === "navy" || value === "burgundy" ? value : "dark";
 }
 
 export function nextTheme(theme: Theme): Theme {
   return THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length] ?? "dark";
 }
 
-/** Runs before paint; old light choices and damaged storage restore the dark default. */
-export const THEME_BOOT = `(function(){var t="dark";try{var s=localStorage.getItem("${THEME_KEY}");if(s==="forest"||s==="rose")t=s;}catch(e){}var d=document.documentElement;d.classList.add("dark");d.dataset.theme=t;d.style.colorScheme="dark";})();`;
+/** Shared validation runs before paint, retaining saved light and migrating renamed themes. */
+export const THEME_BOOT = `(function(){var t="dark";try{var s=localStorage.getItem("${THEME_KEY}");t=s===null?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(${parseTheme.toString()})(s);}catch(e){}var d=document.documentElement;d.classList.remove("light","dark");d.classList.add(t==="light"?"light":"dark");d.dataset.theme=t;d.style.colorScheme=t==="light"?"light":"dark";})();`;
 
 function current(): Theme {
   return parseTheme(document.documentElement.dataset["theme"]);
@@ -21,10 +23,10 @@ function current(): Theme {
 
 function apply(t: Theme) {
   const d = document.documentElement;
-  d.classList.remove("light");
-  d.classList.add("dark");
+  d.classList.remove("light", "dark");
+  d.classList.add(t === "light" ? "light" : "dark");
   d.dataset["theme"] = t;
-  d.style.colorScheme = "dark";
+  d.style.colorScheme = t === "light" ? "light" : "dark";
   const color = getComputedStyle(d).getPropertyValue("--background").trim();
   document
     .querySelectorAll('meta[name="theme-color"]')

@@ -10,26 +10,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("three sequential dark themes", () => {
-  it("cycles through exactly three choices and returns to the first", () => {
-    expect(THEMES).toHaveLength(3);
-    expect(nextTheme("dark")).toBe("forest");
-    expect(nextTheme("forest")).toBe("rose");
-    expect(nextTheme("rose")).toBe("dark");
+describe("light and three sequential dark themes", () => {
+  it("retains light and cycles through all four choices", () => {
+    expect(THEMES).toHaveLength(4);
+    expect(nextTheme("dark")).toBe("light");
+    expect(nextTheme("light")).toBe("navy");
+    expect(nextTheme("navy")).toBe("burgundy");
+    expect(nextTheme("burgundy")).toBe("dark");
   });
 
   it("validates saved choices and migrates legacy or corrupted values", () => {
-    for (const value of [null, "light", "garbage", {}, 1]) expect(parseTheme(value)).toBe("dark");
-    expect(parseTheme("forest")).toBe("forest");
-    expect(parseTheme("rose")).toBe("rose");
+    for (const value of [null, "garbage", {}, 1]) expect(parseTheme(value)).toBe("dark");
+    expect(parseTheme("light")).toBe("light");
+    expect(parseTheme("forest")).toBe("navy");
+    expect(parseTheme("rose")).toBe("burgundy");
   });
 
-  it("restores all choices before paint, remaining dark on a light system", () => {
-    for (const value of ["dark", "forest", "rose", "light", "corrupt"]) {
+  it("restores light and dark choices before paint, including migrations", () => {
+    for (const value of ["dark", "navy", "burgundy", "forest", "rose", "light", "corrupt"]) {
       localStorage.setItem(THEME_KEY, value);
       new Function(THEME_BOOT)();
       expect(document.documentElement.dataset["theme"]).toBe(parseTheme(value));
-      expect(document.documentElement.style.colorScheme).toBe("dark");
+      expect(document.documentElement.style.colorScheme).toBe(value === "light" ? "light" : "dark");
     }
   });
 
@@ -40,9 +42,11 @@ describe("three sequential dark themes", () => {
       result.current.toggle(1, 1);
       result.current.toggle(1, 1);
     });
-    expect(result.current.theme).toBe("rose");
-    expect(localStorage.getItem(THEME_KEY)).toBe("rose");
-    expect(document.documentElement.dataset["theme"]).toBe("rose");
+    expect(result.current.theme).toBe("navy");
+    expect(localStorage.getItem(THEME_KEY)).toBe("navy");
+    expect(document.documentElement.dataset["theme"]).toBe("navy");
+    act(() => result.current.toggle(1, 1));
+    expect(result.current.theme).toBe("burgundy");
     act(() => result.current.toggle(1, 1));
     expect(result.current.theme).toBe("dark");
   });
