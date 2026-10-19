@@ -8,7 +8,7 @@ function audioClock() {
     baseLatency: 0,
     destination: {},
     createBuffer: (_channels: number, frames: number, rate: number) => ({ duration: frames / rate, copyToChannel() {} }),
-    createBufferSource: () => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn(), buffer: null, onended: null }),
+    createBufferSource: () => ({ connect: vi.fn((node) => node), start: vi.fn(), stop: vi.fn(), buffer: null, onended: null }),
     createGain: () => ({ gain: { setValueAtTime() {}, linearRampToValueAtTime() {} }, connect: () => ({}) }),
   };
   return ctx;
