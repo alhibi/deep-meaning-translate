@@ -18,7 +18,13 @@ vi.mock("./providers/deepseek.server", async (orig) => ({
   reviewTranslation: review,
 }));
 
-const req: TranslationRequest = { text: "Ich habe 3 Katzen.", source: "de", target: "ar", style: "natural", brain: "luna" };
+const req: TranslationRequest = {
+  text: "Ich habe 3 Katzen.",
+  source: "de",
+  target: "ar",
+  style: "natural",
+  brain: "luna",
+};
 const res = (translation: string): TranslationResult => ({
   sourceLanguage: "de",
   targetLanguage: "ar",
@@ -117,12 +123,15 @@ describe("parseReview", () => {
 });
 
 describe("Luna paused", () => {
-  it.runIf(!LUNA_ENABLED)("an old Luna choice is written by DeepSeek; Luna is never called", async () => {
-    dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
-    const { result } = await (await engine()).runTranslation(req);
-    expect(result.translation).toBe("لدي 3 قطط.");
-    expect(lunaTranslate).not.toHaveBeenCalled();
-  });
+  it.runIf(!LUNA_ENABLED)(
+    "an old Luna choice is written by DeepSeek; Luna is never called",
+    async () => {
+      dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
+      const { result } = await (await engine()).runTranslation(req);
+      expect(result.translation).toBe("لدي 3 قطط.");
+      expect(lunaTranslate).not.toHaveBeenCalled();
+    },
+  );
   it.runIf(!LUNA_ENABLED)("a DeepSeek failure is reported, never handed to Luna", async () => {
     dsTranslate.mockRejectedValue(new TranslationError("rate", "busy"));
     await expect((await engine()).runTranslation(req)).rejects.toMatchObject({ kind: "rate" });

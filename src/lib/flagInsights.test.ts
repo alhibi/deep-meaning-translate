@@ -28,7 +28,10 @@ describe("inaccuracy insights", () => {
     expect(tips).toContainEqual({ kind: "recurring", word: "البيت", count: 2 });
   });
   it("mostly short texts suggest a single-word rule", () => {
-    expect(tipsFor([f({ original: "Haus" }), f({ original: "Bank" })])).toContainEqual({ kind: "short", count: 2 });
+    expect(tipsFor([f({ original: "Haus" }), f({ original: "Bank" })])).toContainEqual({
+      kind: "short",
+      count: 2,
+    });
   });
   it("word splitting drops punctuation; validator rejects damaged rows", () => {
     expect(wordsOf("مرحباً، كيف حالك؟")).toEqual(["مرحباً", "كيف", "حالك"]);

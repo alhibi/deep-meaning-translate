@@ -6,7 +6,8 @@ export const DEFAULT_BRAIN: Brain = "deepseek";
 /** Luna is paused ("soon"): every request runs on DeepSeek, with no Luna fallback. */
 export const LUNA_ENABLED = false;
 /** The brain that actually writes, whatever an old saved preference asked for. */
-export const effectiveBrain = (b?: Brain): Brain => (LUNA_ENABLED ? (b ?? DEFAULT_BRAIN) : "deepseek");
+export const effectiveBrain = (b?: Brain): Brain =>
+  LUNA_ENABLED ? (b ?? DEFAULT_BRAIN) : "deepseek";
 export type Situation = "chat" | "work" | "official" | "general";
 
 export interface TranslationRequest {

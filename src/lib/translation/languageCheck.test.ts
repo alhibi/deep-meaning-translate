@@ -45,9 +45,18 @@ describe("source language check", () => {
   });
 
   it("Latin languages: clear common-word evidence suggests the other language", () => {
-    expect(checkSource("Ich bin heute sehr müde und habe keine Zeit", "en")).toEqual({ suggest: "de", strong: false });
-    expect(checkSource("I am very tired today and I have no time", "de")).toEqual({ suggest: "en", strong: false });
-    expect(checkSource("Je suis très fatigué aujourd'hui", "es")).toEqual({ suggest: "fr", strong: false });
+    expect(checkSource("Ich bin heute sehr müde und habe keine Zeit", "en")).toEqual({
+      suggest: "de",
+      strong: false,
+    });
+    expect(checkSource("I am very tired today and I have no time", "de")).toEqual({
+      suggest: "en",
+      strong: false,
+    });
+    expect(checkSource("Je suis très fatigué aujourd'hui", "es")).toEqual({
+      suggest: "fr",
+      strong: false,
+    });
   });
 
   it("uses the model's detection for a finished sentence", () => {

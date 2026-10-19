@@ -74,7 +74,12 @@ export class Feed {
   chunks: Uint8Array[] = [];
   done = false;
   error: CloudSpeakError | null = null;
-  private wake: (() => void) | null = null;
+  private waiters: (() => void)[] = [];
+  private wake() {
+    const w = this.waiters;
+    this.waiters = [];
+    w.forEach((f) => f());
+  }
   private ctrl = new AbortController();
   constructor(private r: SpeakRequest) {}
 
@@ -129,7 +134,7 @@ export class Feed {
           if (value?.length) {
             clearTimeout(firstByte);
             this.chunks.push(value);
-            this.wake?.();
+            this.wake();
           }
         }
       } catch {
@@ -154,7 +159,7 @@ export class Feed {
       if (i < this.chunks.length) return this.chunks[i]!;
       if (this.error) throw this.error;
       if (this.done) return null;
-      await new Promise<void>((r) => (this.wake = r));
+      await new Promise<void>((r) => this.waiters.push(r));
     }
   }
   abort() {
@@ -162,13 +167,33 @@ export class Feed {
   }
   private end() {
     this.done = true;
-    this.wake?.();
+    this.wake();
   }
   private fail(e: CloudSpeakError) {
     if (this.error || this.done) return;
     this.error = e;
-    this.wake?.();
+    this.wake();
   }
+}
+
+const live = new Map<string, Feed>();
+/**
+ * One feed per clip: a tap while the clip is still being prepared in the background joins
+ * that stream instead of asking Google again. Finished clips come from the memory cache.
+ */
+export function getFeed(r: SpeakRequest): Feed {
+  const key = clipKey(r);
+  const running = live.get(key);
+  if (running && !running.error) return running;
+  const f = new Feed(r).start();
+  if (!f.done) {
+    live.set(key, f);
+    void f.next(Number.MAX_SAFE_INTEGER).then(
+      () => live.delete(key),
+      () => live.delete(key),
+    );
+  }
+  return f;
 }
 
 let warmed = false;

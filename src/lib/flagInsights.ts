@@ -35,7 +35,8 @@ const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 export function tipsFor(list: Flag[]): Tip[] {
   const tips: Tip[] = [];
   for (const w of wordStats(list))
-    if (w.count >= 2 && tips.length < 3) tips.push({ kind: "recurring", word: w.word, count: w.count });
+    if (w.count >= 2 && tips.length < 3)
+      tips.push({ kind: "recurring", word: w.word, count: w.count });
 
   const short = list.filter((f) => wordCount(f.original) <= 3).length;
   if (short >= 2 && short * 2 >= list.length) tips.push({ kind: "short", count: short });

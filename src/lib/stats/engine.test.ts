@@ -74,16 +74,34 @@ describe("records from the archive (old and new)", () => {
     expect(recs.find((r) => r.original === "Hallo")?.legacy).toBe(true);
   });
   it("drops rows without a translation (failed or empty)", () => {
-    expect(toRecords([entry({ original: "Hallo", translated: "  ", at: "2026-10-10T10:00:00" })], TZ)).toHaveLength(0);
+    expect(
+      toRecords([entry({ original: "Hallo", translated: "  ", at: "2026-10-10T10:00:00" })], TZ),
+    ).toHaveLength(0);
   });
   it("user correction beats model tag beats local estimate", () => {
     const [r] = toRecords(
-      [entry({ original: "Termin beim Arzt", at: "2026-10-10T10:00:00", tags: { domain: "health" }, fix: { domain: "services" } })],
+      [
+        entry({
+          original: "Termin beim Arzt",
+          at: "2026-10-10T10:00:00",
+          tags: { domain: "health" },
+          fix: { domain: "services" },
+        }),
+      ],
       TZ,
     );
     expect(r!.domain).toBe("services");
     expect(r!.origin.domain).toBe("user");
-    const [m] = toRecords([entry({ original: "Termin beim Arzt", at: "2026-10-10T10:00:00", tags: { domain: "health" } })], TZ);
+    const [m] = toRecords(
+      [
+        entry({
+          original: "Termin beim Arzt",
+          at: "2026-10-10T10:00:00",
+          tags: { domain: "health" },
+        }),
+      ],
+      TZ,
+    );
     expect(m!.origin.domain).toBe("model");
     const [l] = toRecords([entry({ original: "Termin beim Arzt", at: "2026-10-10T10:00:00" })], TZ);
     expect(l!.origin.domain).toBe("local");
@@ -109,7 +127,9 @@ describe("dates and time zones", () => {
     expect(b).toEqual({ from: "2026-10-13", to: "2026-10-19", days: 7 });
     expect(previousBounds("7d", b)).toEqual({ from: "2026-10-06", to: "2026-10-12", days: 7 });
     expect(previousBounds("all", b)).toBeNull();
-    expect(rangeBounds("custom", "2026-10-19", [], { from: "2026-10-15", to: "2026-10-01" })).toEqual({
+    expect(
+      rangeBounds("custom", "2026-10-19", [], { from: "2026-10-15", to: "2026-10-01" }),
+    ).toEqual({
       from: "2026-10-01",
       to: "2026-10-15",
       days: 15,
@@ -123,9 +143,19 @@ describe("hand-checked dataset", () => {
   const data = toRecords(
     [
       entry({ original: "Guten Morgen", at: "2026-10-19T08:00:00", source: "de", target: "ar" }), // 2 words
-      entry({ original: "Wie geht es dir?", at: "2026-10-19T09:00:00", source: "de", target: "ar" }), // 4
+      entry({
+        original: "Wie geht es dir?",
+        at: "2026-10-19T09:00:00",
+        source: "de",
+        target: "ar",
+      }), // 4
       entry({ original: "شكراً جزيلاً", at: "2026-10-18T10:00:00", source: "ar", target: "de" }), // 2
-      entry({ original: "Ich brauche einen Termin beim Amt.", at: "2026-10-16T10:00:00", source: "de", target: "ar" }), // 6
+      entry({
+        original: "Ich brauche einen Termin beim Amt.",
+        at: "2026-10-16T10:00:00",
+        source: "de",
+        target: "ar",
+      }), // 6
       entry({ original: "hello", at: "2026-10-13T23:50:00", source: "en", target: "de" }), // 1
       entry({ original: "Alt", at: "2026-10-12T12:00:00", source: "de", target: "ar" }), // outside 7d
     ],
@@ -184,7 +214,12 @@ describe("shares, others and empty sets", () => {
     expect(distribution([], "domain")).toEqual([]);
   });
   it("folds the tail into one 'others' slice with the right count", () => {
-    const slices = ["a", "b", "c", "d", "e", "f", "g"].map((id, i) => ({ id, count: 7 - i, words: 0, share: 0 }));
+    const slices = ["a", "b", "c", "d", "e", "f", "g"].map((id, i) => ({
+      id,
+      count: 7 - i,
+      words: 0,
+      share: 0,
+    }));
     const { top, others } = topWithOthers(slices, 5);
     expect(top).toHaveLength(4);
     expect(others?.count).toBe(3 + 2 + 1);
@@ -213,7 +248,9 @@ describe("patterns are descriptive and need evidence", () => {
       TZ,
     );
     const found = insights(recs, rangeBounds("7d", "2026-10-19", recs));
-    expect(found.find((i) => i.type === "repeated")).toMatchObject({ items: [{ text: "Danke", times: 3 }] });
+    expect(found.find((i) => i.type === "repeated")).toMatchObject({
+      items: [{ text: "Danke", times: 3 }],
+    });
     expect(found.find((i) => i.type === "topPair")).toMatchObject({ pair: "de>ar", count: 4 });
   });
 });
@@ -225,7 +262,12 @@ describe("model tags", () => {
       { text: "a", source: "de", target: "ar", style: "natural" },
     );
     expect(r.tags).toEqual({ kind: "idiom", intent: "thank" });
-    const none = parseResult('{"translation":"x"}', { text: "a", source: "de", target: "ar", style: "natural" });
+    const none = parseResult('{"translation":"x"}', {
+      text: "a",
+      source: "de",
+      target: "ar",
+      style: "natural",
+    });
     expect(none.tags).toBeUndefined();
   });
 });
@@ -237,7 +279,10 @@ describe("labels", () => {
     for (const l of ["ar", "en", "de"] as const)
       for (const [dim, ids] of Object.entries(DIMENSION_VALUES))
         for (const id of ids)
-          expect((CATEGORY_DICT[l] as Record<string, Record<string, string>>)[dim]![id], `${l}.${dim}.${id}`).toBeTruthy();
+          expect(
+            (CATEGORY_DICT[l] as Record<string, Record<string, string>>)[dim]![id],
+            `${l}.${dim}.${id}`,
+          ).toBeTruthy();
   });
 });
 
@@ -263,13 +308,22 @@ describe("archive behaviour", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.uses).toBe(2);
     vi.setSystemTime(new Date("2026-10-19T18:00:00Z"));
-    history.add({ source: "de", target: "ar", original: "Danke", translated: "شكراً" }, { quiet: true }); // restored draft
+    history.add(
+      { source: "de", target: "ar", original: "Danke", translated: "شكراً" },
+      { quiet: true },
+    ); // restored draft
     expect(history.list()[0]!.uses).toBe(2);
     vi.useRealTimers();
   });
   it("a correction changes only the tag, and survives a reload", async () => {
     const { history } = await import("../history");
-    history.add({ source: "de", target: "ar", original: "Termin", translated: "موعد", tags: { domain: "health" } });
+    history.add({
+      source: "de",
+      target: "ar",
+      original: "Termin",
+      translated: "موعد",
+      tags: { domain: "health" },
+    });
     const id = history.list()[0]!.id;
     const created = history.list()[0]!.createdAt;
     history.retag(id, { domain: "services" });
@@ -284,9 +338,31 @@ describe("archive behaviour", () => {
     localStorage.setItem(
       "lingua.history.v1",
       JSON.stringify([
-        { id: "a", source: "de", target: "ar", original: "Hallo", translated: "مرحبا", createdAt: 1 },
-        { id: "a", source: "de", target: "ar", original: "Hallo", translated: "مرحبا", createdAt: 1 },
-        { id: "b", source: "de", target: "ar", original: "Hi", translated: "هاي", createdAt: 2, tags: { domain: "mars" } },
+        {
+          id: "a",
+          source: "de",
+          target: "ar",
+          original: "Hallo",
+          translated: "مرحبا",
+          createdAt: 1,
+        },
+        {
+          id: "a",
+          source: "de",
+          target: "ar",
+          original: "Hallo",
+          translated: "مرحبا",
+          createdAt: 1,
+        },
+        {
+          id: "b",
+          source: "de",
+          target: "ar",
+          original: "Hi",
+          translated: "هاي",
+          createdAt: 2,
+          tags: { domain: "mars" },
+        },
       ]),
     );
     const { history } = await import("../history");
@@ -303,7 +379,8 @@ describe("archive behaviour", () => {
   });
   it("keeps far more than the old 40 rows", async () => {
     const { history, HISTORY_LIMIT } = await import("../history");
-    for (let i = 0; i < 60; i++) history.add({ source: "de", target: "ar", original: `Satz ${i} xyz${i}`, translated: "y" });
+    for (let i = 0; i < 60; i++)
+      history.add({ source: "de", target: "ar", original: `Satz ${i} xyz${i}`, translated: "y" });
     expect(history.list()).toHaveLength(60);
     expect(HISTORY_LIMIT).toBeGreaterThanOrEqual(2000);
   });

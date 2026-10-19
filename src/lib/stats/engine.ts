@@ -104,11 +104,7 @@ export function toRecord(e: HistoryEntry, timeZone?: string): StatRecord {
   );
   // A derived register is only as solid as its evidence: model kind/formality → model.
   const registerOrigin: Source =
-    register.o !== "local"
-      ? register.o
-      : kind.o !== "local" || e.formality
-        ? "model"
-        : "local";
+    register.o !== "local" ? register.o : kind.o !== "local" || e.formality ? "model" : "local";
   return {
     id: e.id,
     source,
@@ -368,7 +364,12 @@ export function insights(records: StatRecord[], b: Bounds | null): Insight[] {
   const out: Insight[] = [];
 
   const doms = distribution(records, "domain").filter((s) => s.id !== "none");
-  if (doms[0] && doms[0].count >= 3 && doms[0].share >= 0.3 && doms[0].count > (doms[1]?.count ?? 0))
+  if (
+    doms[0] &&
+    doms[0].count >= 3 &&
+    doms[0].share >= 0.3 &&
+    doms[0].count > (doms[1]?.count ?? 0)
+  )
     out.push({ type: "topDomain", domain: doms[0].id, count: doms[0].count, total });
 
   const pairs = distribution(records, "pair");
