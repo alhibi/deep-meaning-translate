@@ -84,7 +84,7 @@ describe("two brains", () => {
 });
 
 describe("model choice", () => {
-  const dsReq: TranslationRequest = { ...req, brain: undefined };
+  const { brain: _b, ...dsReq } = req;
   it("DeepSeek is the default writer; Luna is not called when it succeeds", async () => {
     dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
     const { result } = await (await engine()).runTranslation(dsReq);
