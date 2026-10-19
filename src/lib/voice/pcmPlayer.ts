@@ -65,8 +65,10 @@ export class PcmPlayer {
 
   private get audibleTime() {
     const stamp = this.ctx.getOutputTimestamp?.();
-    if (stamp && stamp.contextTime > 0 && stamp.performanceTime > 0) {
-      return Math.min(this.ctx.currentTime, stamp.contextTime + Math.max(0, performance.now() - stamp.performanceTime) / 1000);
+    const contextTime = stamp?.contextTime ?? 0;
+    const performanceTime = stamp?.performanceTime ?? 0;
+    if (contextTime > 0 && performanceTime > 0) {
+      return Math.min(this.ctx.currentTime, contextTime + Math.max(0, performance.now() - performanceTime) / 1000);
     }
     return this.ctx.currentTime - (this.ctx.outputLatency || this.ctx.baseLatency || 0);
   }
