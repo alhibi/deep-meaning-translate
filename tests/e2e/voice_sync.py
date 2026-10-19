@@ -18,7 +18,7 @@ async def main():
    context=await browser.new_context(viewport=dict(width=width,height=height))
    page=await context.new_page(); errors=[]; speech=[]
    page.on('pageerror',lambda e:errors.append(str(e)))
-   await page.route('**/_serverFn/**', lambda r:r.fulfill(status=503,content_type='application/json',body='{}'))
+   await page.route('**/_serverFn/**', lambda r:r.fulfill(status=200,content_type='application/json',headers={"x-tss-serialized":"true"},body='{"t":10,"i":0,"p":{"k":["result","error","context"],"v":[{"t":10,"i":1,"p":{"k":["ok","result"],"v":[{"t":2,"s":2},{"t":10,"i":2,"p":{"k":["sourceLanguage","targetLanguage","translation","tone","formality","confidence","isAmbiguous","alternativeTranslations","notes","situation"],"v":[{"t":1,"s":"de"},{"t":1,"s":"de"},{"t":1,"s":"Hallo schöne Welt"},{"t":1,"s":"neutral"},{"t":1,"s":"neutral"},{"t":0,"s":1},{"t":2,"s":3},{"t":9,"i":3,"a":[],"o":0},{"t":1,"s":""},{"t":1,"s":"general"}]},"o":0}]},"o":0},{"t":2,"s":1},{"t":11,"i":4,"p":{"k":[],"v":[]},"o":0}]},"o":0}'))
    await page.route('**/api/translate-stream', lambda r:r.fulfill(status=200,content_type='text/plain',body=json.dumps(FULL) if '"full"' in (r.request.post_data or '') else TEXT))
    async def voice(r):
     speech.append(r.request.url)
