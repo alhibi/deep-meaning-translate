@@ -22,7 +22,7 @@ export function assemblyText(turns: Map<number, string>, input: unknown) {
 
 export function assemblyUrl(token: string, lang: string) {
   const params = new URLSearchParams({ token, speech_model: ASSEMBLY_MODEL, sample_rate: "16000", encoding: "pcm_s16le", language_detection: "true" });
-  const code = lang.split("-")[0];
+  const code = lang.split("-")[0] ?? "";
   if (lang !== "auto" && ASSEMBLY_LANGUAGES.has(code)) params.set("language_codes", JSON.stringify([code]));
   return `wss://streaming.assemblyai.com/v3/ws?${params}`;
 }

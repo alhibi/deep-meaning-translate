@@ -79,7 +79,7 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
     };
     try {
       const lang = cb.current.lang;
-      if (lang !== "auto" && !ASSEMBLY_LANGUAGES.has(lang.split("-")[0])) {
+      if (lang !== "auto" && !ASSEMBLY_LANGUAGES.has(lang.split("-")[0] ?? "")) {
         fail("failed", "AssemblyAI does not support this language for live dictation."); return;
       }
       stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
