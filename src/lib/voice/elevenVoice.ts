@@ -58,7 +58,6 @@ export function elevenBody(r: ElevenRequest) {
       similarity_boost: 0.75,
       speed: { slow: 0.8, normal: 1, fast: 1.15 }[r.pace],
     },
-    enable_logging: false,
   };
 }
 export interface CharTiming {
@@ -75,7 +74,7 @@ const Packet = z.object({
   audio_base64: z.string().max(8 * 1024 * 1024),
   alignment: Alignment.nullable().optional(),
 });
-/** Incremental NDJSON; validation also covers cached/network-derived metadata. */
+/** Incremental NDJSON; timestamps are absolute within a request (verified across packets). */
 export function elevenParser() {
   let pending = "";
   let offset = 0;

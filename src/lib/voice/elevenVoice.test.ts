@@ -36,7 +36,6 @@ describe("ElevenLabs speech", () => {
       model_id: "eleven_v4_turbo",
       language_code: "de",
       voice_settings: { speed: 0.8 },
-      enable_logging: false,
     });
   });
   it("accepts every app language, including Persian, Hebrew and Urdu", () => {
