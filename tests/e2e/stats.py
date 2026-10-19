@@ -62,7 +62,7 @@ async def main():
         await page.screenshot(path="/tmp/stats-7d.png")
 
         # Pair detail: the list matches the count, and filtering updates every number.
-        await page.get_by_role("button", name=re.compile("الألمانية ← العربية")).first.click()
+        await page.get_by_role("button", name=re.compile("^الألمانية ← العربية")).first.click()
         dlg = page.get_by_role("dialog").first
         await dlg.wait_for()
         check("4 ترجمة" in await dlg.inner_text(), "pair detail shows 4 de→ar translations")
@@ -81,7 +81,7 @@ async def main():
         # Topic bar → detail → open a translation → correct its topic.
         await page.goto(URL + "/stats?range=7d")
         await page.locator("main section button").first.wait_for(timeout=15000)
-        await page.get_by_role("button", name=re.compile("المواعيد والإجراءات")).first.click()
+        await page.get_by_role("button", name=re.compile("^المواعيد والإجراءات")).first.click()
         dlg = page.get_by_role("dialog").first
         await dlg.wait_for()
         check(await dlg.locator("ul li button").count() == 3, "topic detail lists its 3 translations")
