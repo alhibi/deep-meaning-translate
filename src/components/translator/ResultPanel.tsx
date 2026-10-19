@@ -392,17 +392,17 @@ export const ResultPanel = memo(function ResultPanel({
             type="button"
             onClick={copy}
             aria-label={copied ? t("copied") : t("copy")}
-            className={`press me-2 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
-              copied ? "bg-card text-success" : "bg-signal text-signal-foreground"
+            className={`press-soft me-1.5 inline-flex h-9 items-center gap-1.5 rounded-full border border-signal/15 bg-signal-soft px-3 text-[12px] font-medium transition-colors duration-200 ${
+              copied ? "text-success" : "text-signal-text"
             }`}
           >
-            <span className="relative grid size-4 place-items-center">
+            <span className="relative grid size-3.5 place-items-center">
               <Copy
-                className={`swap-icon size-4 ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
+                className={`swap-icon size-3.5 ${copied ? "scale-75 opacity-0" : "opacity-100"}`}
                 strokeWidth={1.8}
               />
               <Check
-                className={`swap-icon absolute size-4 ${copied ? "opacity-100" : "scale-75 opacity-0"}`}
+                className={`swap-icon absolute size-3.5 ${copied ? "opacity-100" : "scale-75 opacity-0"}`}
                 strokeWidth={2.2}
               />
             </span>
