@@ -46,7 +46,10 @@ export const GEMINI_VOICES = [
   ["Sulafat", "Warm"],
 ] as const;
 export type GeminiVoice = (typeof GEMINI_VOICES)[number][0];
-export const VOICE_NAMES = GEMINI_VOICES.map((v) => v[0]) as unknown as [GeminiVoice, ...GeminiVoice[]];
+export const VOICE_NAMES = GEMINI_VOICES.map((v) => v[0]) as unknown as [
+  GeminiVoice,
+  ...GeminiVoice[],
+];
 export const DEFAULT_VOICE: GeminiVoice = "Kore";
 
 export const PACES = ["slow", "normal", "fast"] as const;
@@ -181,7 +184,10 @@ export function pcmToWav(pcm: Uint8Array, sampleRate = 24000): Uint8Array<ArrayB
 }
 
 /** Playable WAV from whatever the model returned; null when the format is unknown. */
-export function normalizeToWav(bytes: Uint8Array<ArrayBuffer>, mime: string): Uint8Array<ArrayBuffer> | null {
+export function normalizeToWav(
+  bytes: Uint8Array<ArrayBuffer>,
+  mime: string,
+): Uint8Array<ArrayBuffer> | null {
   if (isWav(bytes)) return bytes;
   const m = mime.toLowerCase();
   if (m.startsWith("audio/l16") || m.includes("pcm")) {
@@ -191,7 +197,8 @@ export function normalizeToWav(bytes: Uint8Array<ArrayBuffer>, mime: string): Ui
   return null;
 }
 
-export type SpeakErrorKind = "input" | "rate" | "config" | "quota" | "provider" | "timeout" | "network";
+export type SpeakErrorKind =
+  "input" | "rate" | "config" | "quota" | "provider" | "timeout" | "network";
 
 export function kindForStatus(status: number): SpeakErrorKind {
   if (status === 400) return "input";

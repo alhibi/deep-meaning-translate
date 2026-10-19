@@ -11,7 +11,13 @@
  * back to the full text across chunks.
  */
 
-import { cloudAvailable, fetchClip, silentClip, speechPieces, CloudSpeakError } from "./voice/cloud";
+import {
+  cloudAvailable,
+  fetchClip,
+  silentClip,
+  speechPieces,
+  CloudSpeakError,
+} from "./voice/cloud";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
 
 export const LOCALE: Record<string, string> = {
@@ -126,7 +132,11 @@ export function stopSpeaking() {
 
 /** Speak text in a language; returns a stop function. */
 export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95): () => void {
-  if (typeof window === "undefined" || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+  if (
+    typeof window === "undefined" ||
+    !("speechSynthesis" in window) ||
+    typeof SpeechSynthesisUtterance === "undefined"
+  ) {
     h.onFail?.("unsupported");
     return () => {};
   }
@@ -185,7 +195,11 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
         if (!started && !retried) return; // the watchdog decides
         session++;
         live = null;
-        h.onFail?.(e.error === "language-unavailable" || e.error === "voice-unavailable" ? "novoice" : "blocked");
+        h.onFail?.(
+          e.error === "language-unavailable" || e.error === "voice-unavailable"
+            ? "novoice"
+            : "blocked",
+        );
       };
       live = u;
       synth.speak(u);
@@ -222,15 +236,27 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
 /** Keeps the reference observable for tests. */
 export const _liveUtterance = () => live;
 
-
 /**
  * Speak a translation: Gemini voice when enabled and available, otherwise (or on any
  * failure) the device voice continues from the same place. Returns a stop function.
  */
-export function speakTranslation(text: string, lang: string, h: SpeakHandlers, prefs: VoicePrefs): () => void {
+export function speakTranslation(
+  text: string,
+  lang: string,
+  h: SpeakHandlers,
+  prefs: VoicePrefs,
+): () => void {
   const rate = PACE_RATE[prefs.pace];
-  if (prefs.engine === "device" || typeof window === "undefined" || typeof Audio === "undefined" || !cloudAvailable()) {
-    h.onEngine?.("device", prefs.engine === "device" ? undefined : navigator.onLine === false ? "offline" : "paused");
+  if (
+    prefs.engine === "device" ||
+    typeof window === "undefined" ||
+    typeof Audio === "undefined" ||
+    !cloudAvailable()
+  ) {
+    h.onEngine?.(
+      "device",
+      prefs.engine === "device" ? undefined : navigator.onLine === false ? "offline" : "paused",
+    );
     return speak(text, lang, h, rate);
   }
   stopSpeaking();
@@ -243,7 +269,13 @@ export function speakTranslation(text: string, lang: string, h: SpeakHandlers, p
   void el.play().catch(() => undefined);
 
   const pieces = speechPieces(text, chunkText);
-  const req = (i: number) => ({ text: pieces[i]!.text, lang, voice: prefs.voice, quality: prefs.quality, pace: prefs.pace });
+  const req = (i: number) => ({
+    text: pieces[i]!.text,
+    lang,
+    voice: prefs.voice,
+    quality: prefs.quality,
+    pace: prefs.pace,
+  });
   let started = false;
   let deviceStop: (() => void) | null = null;
   h.onEngine?.("gemini");
@@ -256,17 +288,22 @@ export function speakTranslation(text: string, lang: string, h: SpeakHandlers, p
     const offset = pieces[from]?.offset ?? 0;
     const restText = text.slice(offset);
     // Continue with the device voice from the unspoken part, keeping offsets in the full text.
-    deviceStop = speak(restText, lang, {
-      onStart: () => {
-        if (!started) {
-          started = true;
-          h.onStart?.();
-        }
+    deviceStop = speak(
+      restText,
+      lang,
+      {
+        onStart: () => {
+          if (!started) {
+            started = true;
+            h.onStart?.();
+          }
+        },
+        onWord: (ci, exact) => h.onWord?.(offset + ci, exact),
+        onEnd: () => h.onEnd?.(),
+        onFail: (why) => h.onFail?.(why),
       },
-      onWord: (ci, exact) => h.onWord?.(offset + ci, exact),
-      onEnd: () => h.onEnd?.(),
-      onFail: (why) => h.onFail?.(why),
-    }, rate);
+      rate,
+    );
   };
 
   const play = async (i: number) => {

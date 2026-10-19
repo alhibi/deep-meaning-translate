@@ -64,12 +64,16 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
               className="press-soft flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-start"
             >
               <span className="flex-1">
-                <span className="block text-[15px] text-foreground">{t(e === "gemini" ? "vGemini" : "vDevice")}</span>
+                <span className="block text-[15px] text-foreground">
+                  {t(e === "gemini" ? "vGemini" : "vDevice")}
+                </span>
                 <span className="block text-[12.5px] text-muted-foreground">
                   {t(e === "gemini" ? "vGeminiSub" : "vDeviceSub")}
                 </span>
               </span>
-              {p.engine === e ? <Check className="size-4 text-signal-text" strokeWidth={2} /> : null}
+              {p.engine === e ? (
+                <Check className="size-4 text-signal-text" strokeWidth={2} />
+              ) : null}
             </button>
           ))}
         </section>
@@ -90,7 +94,9 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
         {gem ? (
           <>
             <section className="space-y-2">
-              <h3 className="text-[12px] uppercase tracking-[0.08em] text-faint">{t("voiceQuality")}</h3>
+              <h3 className="text-[12px] uppercase tracking-[0.08em] text-faint">
+                {t("voiceQuality")}
+              </h3>
               <Segmented
                 label={t("voiceQuality")}
                 value={p.quality}
@@ -102,7 +108,9 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
               />
             </section>
             <section className="space-y-2">
-              <h3 className="text-[12px] uppercase tracking-[0.08em] text-faint">{t("voicePick")}</h3>
+              <h3 className="text-[12px] uppercase tracking-[0.08em] text-faint">
+                {t("voicePick")}
+              </h3>
               <div role="radiogroup" aria-label={t("voicePick")} className="grid grid-cols-2 gap-2">
                 {GEMINI_VOICES.map(([name, trait]) => (
                   <button
@@ -118,8 +126,12 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
                       p.voice === name ? "bg-card ring-1 ring-signal" : "bg-card/60"
                     }`}
                   >
-                    <span dir="ltr" className="block text-[14px] text-foreground">{name}</span>
-                    <span dir="ltr" className="block text-[11.5px] text-muted-foreground">{trait}</span>
+                    <span dir="ltr" className="block text-[14px] text-foreground">
+                      {name}
+                    </span>
+                    <span dir="ltr" className="block text-[11.5px] text-muted-foreground">
+                      {trait}
+                    </span>
                   </button>
                 ))}
               </div>

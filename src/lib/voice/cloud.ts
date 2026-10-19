@@ -57,11 +57,14 @@ const cache = new ClipCache();
 const inflight = new Map<string, Promise<Blob>>();
 let pausedUntil = 0;
 
-export const clipKey = (r: SpeakRequest) => [r.quality, r.voice, r.pace, r.lang, r.text].join("\u0001");
+export const clipKey = (r: SpeakRequest) =>
+  [r.quality, r.voice, r.pace, r.lang, r.text].join("\u0001");
 
 /** Whether Gemini should be tried right now (not paused by quota/config, online). */
 export function cloudAvailable() {
-  return Date.now() >= pausedUntil && (typeof navigator === "undefined" || navigator.onLine !== false);
+  return (
+    Date.now() >= pausedUntil && (typeof navigator === "undefined" || navigator.onLine !== false)
+  );
 }
 
 export function fetchClip(r: SpeakRequest): Promise<Blob> {
@@ -107,7 +110,10 @@ export function fetchClip(r: SpeakRequest): Promise<Blob> {
 }
 
 /** Ordered pieces under the server limit, split at sentence ends; the first is short for a fast start. */
-export function speechPieces(text: string, chunk: (t: string, max: number) => { text: string; offset: number }[]) {
+export function speechPieces(
+  text: string,
+  chunk: (t: string, max: number) => { text: string; offset: number }[],
+) {
   const first = chunk(text, 220)[0];
   if (!first) return [];
   const restStart = first.offset + first.text.length;
@@ -122,7 +128,9 @@ let silentUrl: string | null = null;
 /** A tiny silent clip played inside the tap so iOS/Android allow the later real playback. */
 export function silentClip() {
   if (!silentUrl && typeof URL !== "undefined") {
-    silentUrl = URL.createObjectURL(new Blob([pcmToWav(new Uint8Array(480))], { type: "audio/wav" }));
+    silentUrl = URL.createObjectURL(
+      new Blob([pcmToWav(new Uint8Array(480))], { type: "audio/wav" }),
+    );
   }
   return silentUrl ?? "";
 }

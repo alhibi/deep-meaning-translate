@@ -31,7 +31,10 @@ export const Route = createFileRoute("/api/speak")({
     handlers: {
       POST: async ({ request }) => {
         const fail = (kind: string, status: number, extra?: Record<string, string>) =>
-          Response.json({ ok: false, kind }, { status, headers: { "Cache-Control": "no-store", ...extra } });
+          Response.json(
+            { ok: false, kind },
+            { status, headers: { "Cache-Control": "no-store", ...extra } },
+          );
         let data;
         try {
           data = SpeakInput.parse(await request.json());
@@ -61,7 +64,11 @@ export const Route = createFileRoute("/api/speak")({
             const kind = kindForStatus(res.status);
             console.warn("[speak] gemini status", res.status, data.quality);
             const retry = res.headers.get("Retry-After");
-            return fail(kind, kind === "quota" ? 429 : kind === "input" ? 400 : 502, retry ? { "Retry-After": retry } : undefined);
+            return fail(
+              kind,
+              kind === "quota" ? 429 : kind === "input" ? 400 : 502,
+              retry ? { "Retry-After": retry } : undefined,
+            );
           }
           const audio = extractAudio(await res.json());
           if (!audio) return fail("provider", 502);

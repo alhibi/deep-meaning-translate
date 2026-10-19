@@ -107,7 +107,10 @@ export const ResultPanel = memo(function ResultPanel({
   const [noVoice, setNoVoice] = useState<false | "novoice" | "blocked">(false);
   const [spokenWord, setSpokenWord] = useState(0);
   const [voiceStarted, setVoiceStarted] = useState(false);
-  const [engineNote, setEngineNote] = useState<{ engine: "gemini" | "device"; reason?: string | undefined } | null>(null);
+  const [engineNote, setEngineNote] = useState<{
+    engine: "gemini" | "device";
+    reason?: string | undefined;
+  } | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const voicePrefs = useVoicePrefs();
   const syncTimer = useRef<number | null>(null);
@@ -127,10 +130,13 @@ export const ResultPanel = memo(function ResultPanel({
     stopSync();
     setSpeaking(false);
   }, [text]);
-  useEffect(() => () => {
-    stopSync();
-    stopSpeaking();
-  }, []);
+  useEffect(
+    () => () => {
+      stopSync();
+      stopSpeaking();
+    },
+    [],
+  );
 
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {
@@ -203,37 +209,42 @@ export const ResultPanel = memo(function ResultPanel({
     setVoiceStarted(false);
     setEngineNote(null);
     setSpeaking(true); // instant feedback; the glow starts with the voice
-    stopRef.current = speakTranslation(value, lang, {
-      onEngine: (engine, reason) => setEngineNote({ engine, reason }),
-      onStart: () => {
-        setVoiceStarted(true);
-        chunkAt = performance.now();
-        stopSync();
-        syncTimer.current = requestAnimationFrame(tickEstimate);
-      },
-      onWord: (ci, isExact) => {
-        if (isExact) {
-          exact = true;
-          stopSync();
-        } else {
+    stopRef.current = speakTranslation(
+      value,
+      lang,
+      {
+        onEngine: (engine, reason) => setEngineNote({ engine, reason }),
+        onStart: () => {
+          setVoiceStarted(true);
           chunkAt = performance.now();
-          chunkOffset = ci;
-        }
-        setSpokenWord(tokenAt(tokens, ci));
+          stopSync();
+          syncTimer.current = requestAnimationFrame(tickEstimate);
+        },
+        onWord: (ci, isExact) => {
+          if (isExact) {
+            exact = true;
+            stopSync();
+          } else {
+            chunkAt = performance.now();
+            chunkOffset = ci;
+          }
+          setSpokenWord(tokenAt(tokens, ci));
+        },
+        onEnd: () => {
+          stopSync();
+          setSpeaking(false);
+          stopRef.current = null;
+        },
+        onFail: (why) => {
+          stopSync();
+          setSpeaking(false);
+          stopRef.current = null;
+          setNoVoice(why === "novoice" ? "novoice" : "blocked");
+          setTimeout(() => setNoVoice(false), 3200);
+        },
       },
-      onEnd: () => {
-        stopSync();
-        setSpeaking(false);
-        stopRef.current = null;
-      },
-      onFail: (why) => {
-        stopSync();
-        setSpeaking(false);
-        stopRef.current = null;
-        setNoVoice(why === "novoice" ? "novoice" : "blocked");
-        setTimeout(() => setNoVoice(false), 3200);
-      },
-    }, prefs);
+      prefs,
+    );
   }, [lang, speaking]);
 
   const share = useCallback(() => {
@@ -395,14 +406,19 @@ export const ResultPanel = memo(function ResultPanel({
             </button>
           ) : null}
         </div>
-        <p aria-live="polite" className="min-h-0 text-[12.5px] leading-relaxed text-muted-foreground">
+        <p
+          aria-live="polite"
+          className="min-h-0 text-[12.5px] leading-relaxed text-muted-foreground"
+        >
           {speaking && engineNote ? (
             <span className="animate-fade mt-2 flex flex-wrap items-center gap-x-2">
               <span aria-hidden className="size-1 shrink-0 rotate-45 bg-signal" />
               {engineNote.reason
-                ? t((["quota", "offline", "paused", "config"].includes(engineNote.reason)
-                    ? `vFb_${engineNote.reason}`
-                    : "vFb_other") as Parameters<typeof t>[0])
+                ? t(
+                    (["quota", "offline", "paused", "config"].includes(engineNote.reason)
+                      ? `vFb_${engineNote.reason}`
+                      : "vFb_other") as Parameters<typeof t>[0],
+                  )
                 : !voiceStarted && engineNote.engine === "gemini"
                   ? t("voicePreparing")
                   : null}

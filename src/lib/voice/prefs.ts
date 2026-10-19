@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_VOICE, PACES, VOICE_NAMES, type GeminiVoice, type Pace, type VoiceQuality } from "./geminiVoice";
+import {
+  DEFAULT_VOICE,
+  PACES,
+  VOICE_NAMES,
+  type GeminiVoice,
+  type Pace,
+  type VoiceQuality,
+} from "./geminiVoice";
 
 /** Device-only voice settings. Validated on read; damaged values fall back to defaults. */
 export type VoiceEngine = "gemini" | "device";
@@ -10,15 +17,24 @@ export interface VoicePrefs {
   pace: Pace;
 }
 const KEY = "lingua.voice.v1";
-export const DEFAULT_VOICE_PREFS: VoicePrefs = { engine: "gemini", voice: DEFAULT_VOICE, quality: "best", pace: "normal" };
+export const DEFAULT_VOICE_PREFS: VoicePrefs = {
+  engine: "gemini",
+  voice: DEFAULT_VOICE,
+  quality: "best",
+  pace: "normal",
+};
 
 export function parseVoicePrefs(v: unknown): VoicePrefs {
   const p = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   return {
-    engine: p['engine'] === "device" ? "device" : "gemini",
-    voice: (VOICE_NAMES as readonly string[]).includes(p['voice'] as string) ? (p['voice'] as GeminiVoice) : DEFAULT_VOICE,
-    quality: p['quality'] === "fast" ? "fast" : "best",
-    pace: (PACES as readonly string[]).includes(p['pace'] as string) ? (p['pace'] as Pace) : "normal",
+    engine: p["engine"] === "device" ? "device" : "gemini",
+    voice: (VOICE_NAMES as readonly string[]).includes(p["voice"] as string)
+      ? (p["voice"] as GeminiVoice)
+      : DEFAULT_VOICE,
+    quality: p["quality"] === "fast" ? "fast" : "best",
+    pace: (PACES as readonly string[]).includes(p["pace"] as string)
+      ? (p["pace"] as Pace)
+      : "normal",
   };
 }
 

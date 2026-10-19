@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  SpeakInput, TTS_MODELS, buildInteraction, deliveryStyle, extractAudio, isWav, normalizeToWav,
-  pcmToWav, sanitizeTranscript, kindForStatus, base64ToBytes,
+  SpeakInput,
+  TTS_MODELS,
+  buildInteraction,
+  deliveryStyle,
+  extractAudio,
+  isWav,
+  normalizeToWav,
+  pcmToWav,
+  sanitizeTranscript,
+  kindForStatus,
+  base64ToBytes,
 } from "./geminiVoice";
 import { parseVoicePrefs } from "./prefs";
 import { ClipCache, speechPieces } from "./cloud";
@@ -11,7 +20,13 @@ describe("gemini voice", () => {
   it("uses gemini-3.8-flash-tts for best and flash-lite for fast", () => {
     expect(TTS_MODELS.best).toBe("gemini-3.8-flash-tts");
     expect(TTS_MODELS.fast).toBe("gemini-3.8-flash-lite-tts");
-    const body = buildInteraction({ text: "Hallo", lang: "de", voice: "Kore", quality: "fast", pace: "normal" });
+    const body = buildInteraction({
+      text: "Hallo",
+      lang: "de",
+      voice: "Kore",
+      quality: "fast",
+      pace: "normal",
+    });
     expect(body.model).toBe("gemini-3.8-flash-lite-tts");
     expect(body.generation_config.speech_config[0]!.voice).toBe("Kore");
     expect(body.response_format.mime_type).toBe("audio/wav");
@@ -36,12 +51,18 @@ describe("gemini voice", () => {
     expect(isWav(wav)).toBe(true);
     expect(new DataView(wav.buffer).getUint32(24, true)).toBe(24000);
     expect(normalizeToWav(wav, "audio/wav")).toBe(wav);
-    expect(isWav(normalizeToWav(new Uint8Array(new ArrayBuffer(100)), "audio/l16;rate=24000")!)).toBe(true);
+    expect(
+      isWav(normalizeToWav(new Uint8Array(new ArrayBuffer(100)), "audio/l16;rate=24000")!),
+    ).toBe(true);
     expect(normalizeToWav(new Uint8Array(new ArrayBuffer(100)), "audio/mpeg")).toBeNull();
   });
   it("reads the last audio block of the model output", () => {
     const b64 = btoa("abc");
-    const a = extractAudio({ steps: [{ type: "model_output", content: [{ type: "audio", data: b64, mime_type: "audio/wav" }] }] });
+    const a = extractAudio({
+      steps: [
+        { type: "model_output", content: [{ type: "audio", data: b64, mime_type: "audio/wav" }] },
+      ],
+    });
     expect(a?.data).toBe(b64);
     expect(new TextDecoder().decode(base64ToBytes(a!.data))).toBe("abc");
     expect(extractAudio({ steps: [] })).toBeNull();
@@ -52,8 +73,15 @@ describe("gemini voice", () => {
     expect(kindForStatus(500)).toBe("provider");
   });
   it("voice settings fall back to defaults when damaged", () => {
-    expect(parseVoicePrefs({ voice: "Nope", pace: 3, engine: "x" })).toEqual({ engine: "gemini", voice: "Kore", quality: "best", pace: "normal" });
-    expect(parseVoicePrefs({ voice: "Puck", quality: "fast", engine: "device", pace: "slow" }).voice).toBe("Puck");
+    expect(parseVoicePrefs({ voice: "Nope", pace: 3, engine: "x" })).toEqual({
+      engine: "gemini",
+      voice: "Kore",
+      quality: "best",
+      pace: "normal",
+    });
+    expect(
+      parseVoicePrefs({ voice: "Puck", quality: "fast", engine: "device", pace: "slow" }).voice,
+    ).toBe("Puck");
   });
   it("memory cache stays within item and size limits", () => {
     const c = new ClipCache(3, 100);
