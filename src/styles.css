@@ -139,7 +139,7 @@ html[data-theme="burgundy"] {
   --surface: color-mix(in oklab, var(--burgundy-base) 94%, #f3eee8);
   --card: color-mix(in oklab, var(--burgundy-base) 88%, #f3eee8);
   --foreground: oklch(0.95 0.012 5);
-  --muted-foreground: oklch(0.80 0.015 15);
+  --muted-foreground: oklch(0.84 0.015 15);
   --faint: oklch(0.72 0.018 15);
   --signal: oklch(0.84 0.075 85);
   --signal-text: oklch(0.89 0.06 85);
