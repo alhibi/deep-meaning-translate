@@ -15,7 +15,7 @@ vi.mock("./providers/deepseek.server", async (orig) => ({
   reviewTranslation: review,
 }));
 
-const req: TranslationRequest = { text: "Ich habe 3 Katzen.", source: "de", target: "ar", style: "natural" };
+const req: TranslationRequest = { text: "Ich habe 3 Katzen.", source: "de", target: "ar", style: "natural", brain: "luna" };
 const res = (translation: string): TranslationResult => ({
   sourceLanguage: "de",
   targetLanguage: "ar",
@@ -79,6 +79,26 @@ describe("two brains", () => {
   it("review is skipped entirely without a DeepSeek key", async () => {
     vi.stubEnv("DEEPSEEK_API_KEY", "");
     expect(await (await engine()).runRepair(req, res("عندي 3 قط."))).toBeNull();
+    expect(review).not.toHaveBeenCalled();
+  });
+});
+
+describe("model choice", () => {
+  const dsReq: TranslationRequest = { ...req, brain: undefined };
+  it("DeepSeek is the default writer; Luna is not called when it succeeds", async () => {
+    dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
+    const { result } = await (await engine()).runTranslation(dsReq);
+    expect(result.translation).toBe("لدي 3 قطط.");
+    expect(lunaTranslate).not.toHaveBeenCalled();
+  });
+  it("Luna takes over when DeepSeek fails", async () => {
+    dsTranslate.mockRejectedValue(new TranslationError("rate", "busy"));
+    lunaTranslate.mockResolvedValue(res("عندي 3 قطط."));
+    const { result } = await (await engine()).runTranslation(dsReq);
+    expect(result.translation).toBe("عندي 3 قطط.");
+  });
+  it("DeepSeek never reviews its own translation", async () => {
+    expect(await (await engine()).runRepair(dsReq, res("عندي 3 قط."))).toBeNull();
     expect(review).not.toHaveBeenCalled();
   });
 });
