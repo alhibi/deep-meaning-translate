@@ -109,18 +109,13 @@ export interface SpeakHandlers {
 let live: SpeechSynthesisUtterance | null = null;
 let session = 0;
 
-let audioEl: HTMLAudioElement | null = null;
-let audioUrl: string | null = null;
 let raf = 0;
+let stopCloud: (() => void) | null = null;
 function stopAudio() {
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
-  if (audioEl) {
-    audioEl.onended = audioEl.onerror = audioEl.onplaying = null;
-    audioEl.pause();
-  }
-  if (audioUrl) URL.revokeObjectURL(audioUrl);
-  audioUrl = null;
+  stopCloud?.();
+  stopCloud = null;
 }
 
 export function stopSpeaking() {
@@ -236,9 +231,22 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
 /** Keeps the reference observable for tests. */
 export const _liveUtterance = () => live;
 
+/** Rough speaking seconds per character, until real pieces teach the actual rate. */
+function secPerChar(lang: string, pace: VoicePrefs["pace"]) {
+  const base =
+    lang === "ar" || lang === "fa" || lang === "ur" || lang === "he"
+      ? 0.1
+      : lang === "zh" || lang === "ja"
+        ? 0.22
+        : 0.055;
+  return base * { slow: 1.3, normal: 1, fast: 0.85 }[pace];
+}
+
 /**
- * Speak a translation: Gemini voice when enabled and available, otherwise (or on any
- * failure) the device voice continues from the same place. Returns a stop function.
+ * Speak a translation: Gemini voice when enabled and available, streamed so it starts as
+ * soon as the first audio arrives; the next piece is fetched while the current one plays,
+ * and pieces join gaplessly. On any failure the device voice continues from the same place.
+ * Returns a stop function.
  */
 export function speakTranslation(
   text: string,
@@ -247,49 +255,80 @@ export function speakTranslation(
   prefs: VoicePrefs,
 ): () => void {
   const rate = PACE_RATE[prefs.pace];
-  if (
-    prefs.engine === "device" ||
-    typeof window === "undefined" ||
-    typeof Audio === "undefined" ||
-    !cloudAvailable()
-  ) {
+  const ctx = prefs.engine === "gemini" && cloudAvailable() ? unlockAudio() : null;
+  if (!ctx) {
     h.onEngine?.(
       "device",
-      prefs.engine === "device" ? undefined : navigator.onLine === false ? "offline" : "paused",
+      prefs.engine === "device"
+        ? undefined
+        : typeof navigator !== "undefined" && navigator.onLine === false
+          ? "offline"
+          : "paused",
     );
     return speak(text, lang, h, rate);
   }
   stopSpeaking();
   const id = session;
   const alive = () => id === session;
-  // Unlock playback inside the tap (mobile autoplay rules), before any await.
-  audioEl ??= new Audio();
-  const el = audioEl;
-  el.src = silentClip();
-  void el.play().catch(() => undefined);
-
   const pieces = speechPieces(text, chunkText);
-  const req = (i: number) => ({
-    text: pieces[i]!.text,
-    lang,
-    voice: prefs.voice,
-    quality: prefs.quality,
-    pace: prefs.pace,
-  });
+  const feeds: (Feed | undefined)[] = [];
+  const feed = (i: number) => {
+    if (i >= pieces.length) return undefined;
+    feeds[i] ??= new Feed({
+      text: pieces[i]!.text,
+      lang,
+      voice: prefs.voice,
+      quality: prefs.quality,
+      pace: prefs.pace,
+    }).start();
+    return feeds[i];
+  };
+  const player = new PcmPlayer(ctx);
+  // Timeline: where each piece starts/ends in the audio, to map playback onto characters.
+  const starts: number[] = [];
+  const ends: number[] = [];
   let started = false;
   let deviceStop: (() => void) | null = null;
   h.onEngine?.("gemini");
 
+  player.onStart = () => {
+    if (!alive()) return;
+    if (!started) {
+      started = true;
+      h.onStart?.();
+    }
+    const tickFn = () => {
+      if (!alive()) return;
+      const pos = player.position;
+      let i = 0;
+      while (i + 1 < starts.length && starts[i + 1]! <= pos) i++;
+      const p = pieces[i]!;
+      // Learned rate from finished pieces, else a per-language estimate.
+      let spc = secPerChar(lang, prefs.pace);
+      const doneChars = ends.reduce((n, _e, k) => n + pieces[k]!.text.length, 0);
+      if (ends.length && doneChars > 0) spc = ends[ends.length - 1]! / doneChars;
+      const dur =
+        ends[i] !== undefined
+          ? ends[i]! - starts[i]!
+          : Math.max(player.queuedSeconds - starts[i]!, p.text.length * spc);
+      const frac = Math.min(1, Math.max(0, (pos - (starts[i] ?? 0)) / dur));
+      h.onWord?.(p.offset + Math.floor(frac * p.text.length * 0.97), true);
+      raf = requestAnimationFrame(tickFn);
+    };
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tickFn);
+  };
+
   const fallback = (from: number, err: unknown) => {
     if (!alive()) return;
-    stopAudio();
+    player.stop();
+    feeds.forEach((f) => f?.abort());
+    if (raf) cancelAnimationFrame(raf);
     const kind = err instanceof CloudSpeakError ? err.kind : "provider";
     h.onEngine?.("device", kind);
     const offset = pieces[from]?.offset ?? 0;
-    const restText = text.slice(offset);
-    // Continue with the device voice from the unspoken part, keeping offsets in the full text.
     deviceStop = speak(
-      restText,
+      text.slice(offset),
       lang,
       {
         onStart: () => {
@@ -306,59 +345,39 @@ export function speakTranslation(
     );
   };
 
-  const play = async (i: number) => {
-    if (!alive()) return;
-    const piece = pieces[i];
-    if (!piece) {
-      stopAudio();
-      h.onEnd?.();
-      return;
-    }
-    let blob: Blob;
-    try {
-      blob = await fetchClip(req(i));
-    } catch (e) {
-      fallback(i, e);
-      return;
-    }
-    if (!alive()) return;
-    if (pieces[i + 1]) void fetchClip(req(i + 1)).catch(() => undefined); // prefetch the next piece
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-    audioUrl = URL.createObjectURL(blob);
-    el.src = audioUrl;
-    el.onplaying = () => {
-      if (!alive()) return;
-      if (!started) {
-        started = true;
-        h.onStart?.();
-      }
-      // Read-along: position in the clip mapped onto the characters of this piece.
-      const tickFn = () => {
-        if (!alive()) return;
-        const d = el.duration;
-        if (d && Number.isFinite(d)) {
-          const frac = Math.min(1, el.currentTime / d);
-          h.onWord?.(piece.offset + Math.floor(frac * piece.text.length * 0.97), true);
-        }
-        raf = requestAnimationFrame(tickFn);
-      };
-      if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(tickFn);
-    };
-    el.onended = () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
-      void play(i + 1);
-    };
-    el.onerror = () => fallback(i, new CloudSpeakError("provider"));
-    try {
-      await el.play();
-    } catch (e) {
-      if (!alive()) return;
-      fallback(i, (e as Error)?.name === "NotAllowedError" ? new CloudSpeakError("provider") : e);
-    }
+  stopCloud = () => {
+    player.stop();
+    feeds.forEach((f) => f?.abort());
   };
-  void play(0);
+
+  void (async () => {
+    for (let i = 0; i < pieces.length; i++) {
+      const f = feed(i)!;
+      feed(i + 1); // pipeline: the next piece generates while this one plays
+      starts[i] = player.queuedSeconds;
+      try {
+        for (let c = 0; ; c++) {
+          const chunk = await f.next(c);
+          if (!alive()) return;
+          if (!chunk) break;
+          player.push(chunk);
+        }
+      } catch (e) {
+        // Mid-piece failure: let what is already queued finish first? Simpler and clearer:
+        // the device voice resumes at this piece.
+        fallback(i, e);
+        return;
+      }
+      ends[i] = player.queuedSeconds;
+    }
+    await player.finish();
+    if (!alive()) return;
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    stopCloud = null;
+    h.onEnd?.();
+  })();
+
   return () => {
     if (deviceStop) deviceStop();
     if (alive()) stopSpeaking();

@@ -224,7 +224,11 @@ export function createSseAudioParser() {
       const line = buf.slice(0, nl).replace(/\r$/, "");
       buf = buf.slice(nl + 1);
       if (!line.startsWith("data:")) continue;
-      let ev: { event_type?: string; delta?: { type?: string; data?: string }; error?: { message?: string } };
+      let ev: {
+        event_type?: string;
+        delta?: { type?: string; data?: string };
+        error?: { message?: string };
+      };
       try {
         ev = JSON.parse(line.slice(5));
       } catch {

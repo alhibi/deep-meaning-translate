@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SpeakInput, buildInteraction, createSseAudioParser, kindForStatus } from "@/lib/voice/geminiVoice";
+import {
+  SpeakInput,
+  buildInteraction,
+  createSseAudioParser,
+  kindForStatus,
+} from "@/lib/voice/geminiVoice";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 

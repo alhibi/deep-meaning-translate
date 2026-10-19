@@ -9,7 +9,9 @@ let shared: AudioContext | null = null;
  */
 export function unlockAudio(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Ctx =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) return null;
   try {
     shared ??= new Ctx({ latencyHint: "interactive" });
@@ -72,7 +74,11 @@ export class PcmPlayer {
     if (!this.started && this.pending.length) this.begin();
     return new Promise((resolve) => {
       const check = () => {
-        if (this.stopped || !this.started || this.ctx.currentTime >= this.startAt + this.queued - 0.02)
+        if (
+          this.stopped ||
+          !this.started ||
+          this.ctx.currentTime >= this.startAt + this.queued - 0.02
+        )
           resolve();
         else setTimeout(check, 60);
       };
