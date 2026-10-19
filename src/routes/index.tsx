@@ -943,7 +943,7 @@ function Translator() {
           />
           <ShadowSheet
             loss={focusLoss}
-            sourceText={text}
+            sourceText={text.trim().replace(/\s+/gu, " ")}
             sourceLang={result?.sourceLanguage || source}
             translation={result?.translation ?? ""}
             targetLang={target}
@@ -954,7 +954,7 @@ function Translator() {
           <ShadowMap
             open={shadowMapOpen && shadowLosses.length > 0}
             losses={shadowLosses}
-            sourceText={text}
+            sourceText={text.trim().replace(/\s+/gu, " ")}
             sourceLang={result?.sourceLanguage || source}
             translation={result?.translation ?? ""}
             targetLang={target}
