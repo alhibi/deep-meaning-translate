@@ -27,11 +27,12 @@ async def main():
    await page.goto('http://localhost:8080')
    await page.evaluate("""()=>{localStorage.setItem('lingua.ui-locale','en');localStorage.setItem('lingua.prefs.v1',JSON.stringify({source:'ar',target:'de',style:'natural'}));localStorage.removeItem('lingua.voice.v2');}""")
    await page.reload()
+   await page.wait_for_timeout(1200)
    if await page.get_by_test_id('intro-enter').count():
     await page.get_by_test_id('intro-enter').click();await page.wait_for_timeout(1600)
    await page.get_by_role('textbox').first.fill('مرحبا كيف حالك اليوم؟')
    listen=page.get_by_role('button',name='Listen',exact=True)
-   await page.wait_for_timeout(5000);print(await page.locator('body').inner_text());await page.screenshot(path='/tmp/browser/voice-sync/debug.png');await listen.wait_for(timeout=15000); await page.wait_for_timeout(1800)
+   await listen.wait_for(timeout=15000); await page.wait_for_timeout(1800)
    assert len(speech)==1, speech
    await listen.click()
    await page.wait_for_timeout(1100)
