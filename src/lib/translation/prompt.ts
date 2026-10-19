@@ -1,9 +1,13 @@
 import type { Dialect, StyleOverride, TranslationRequest, TranslationResult } from "./types";
 
-const STYLE_GUIDANCE: Record<StyleOverride, string> = {
-  natural: "match the source register exactly",
-  formal: "polished and respectful but human (de: Sie; ar: refined MSA)",
-  casual: "as a native says it to a friend (de: du; ar: natural spoken phrasing), no added slang",
+/** Three clearly different voices: switching style must visibly change the wording. */
+export const STYLE_GUIDANCE: Record<StyleOverride, string> = {
+  natural:
+    "NATURAL — mirror the source's own register, no shift up or down; clear standard everyday wording (de: keep the source's du/Sie, default du for chat; ar: clean modern standard Arabic, light and simple, not stiff)",
+  formal:
+    "FORMAL — clearly elevated and courteous, as in a letter to an official or a client: de: Sie, full forms (es, habe), Konjunktiv courtesy (Könnten Sie…, Ich wäre Ihnen dankbar…), no contractions; ar: refined فصحى with courtesy (حضرتك، هل بإمكانكم، أكون ممتنًا، تفضّلوا), no dialect",
+  casual:
+    "CASUAL — clearly relaxed, how friends text: de: du, everyday contractions (hab, geht's, 'n, gern), short and loose, colloquial words (echt, kurz, mal) but no crude slang; ar: spoken dialect, never فصحى (Levantine unless a dialect is given: شو، بدّي، فيك، كتير، تسلم), short",
 };
 
 export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually ""),"situation":"chat"|"work"|"official"|"general","tags":{"kind":"word"|"phrase"|"sentence"|"text"|"idiom"|"slang"|"proverb","domain":"daily"|"work"|"study"|"social"|"feelings"|"travel"|"shopping"|"food"|"services"|"tech"|"health"|"culture"|"none","intent":"greet"|"ask"|"request"|"thank"|"apologize"|"feel"|"praise"|"complain"|"agree"|"describe"|"humor"|"none"}}`;
