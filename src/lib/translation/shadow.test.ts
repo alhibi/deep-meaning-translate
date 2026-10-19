@@ -47,6 +47,11 @@ describe("sentence shadow contract", () => {
     expect(parseShadow({ losses: [loss({ confidence: 0.55 })] }, SRC, TGT)!.losses).toHaveLength(1);
   });
 
+  it("a slight loss needs at least 0.7 confidence", () => {
+    expect(parseShadow({ losses: [loss({ severity: 1, confidence: 0.65 })] }, SRC, TGT)!.losses).toEqual([]);
+    expect(parseShadow({ losses: [loss({ severity: 1, confidence: 0.7 })] }, SRC, TGT)!.losses).toHaveLength(1);
+  });
+
   it("an honest empty reply means nothing essential was lost", () => {
     expect(parseShadow({ losses: [] }, SRC, TGT)).toEqual({ losses: [] });
     expect(parseShadow({}, SRC, TGT)).toBeNull();

@@ -45,6 +45,8 @@ export interface ShadowResult {
 
 export const MAX_LOSSES = 4;
 export const MIN_CONFIDENCE = 0.55;
+/** A slight loss must also be a confident one, or it is noise. */
+export const MIN_CONFIDENCE_SLIGHT = 0.7;
 export const MAX_SOURCE = 600;
 
 const RawLoss = z.object({
@@ -112,6 +114,7 @@ export function parseShadow(raw: unknown, source: string, translation: string): 
     const v = r.data;
     const confidence = Math.min(1, Math.max(0, v.confidence));
     if (!(confidence >= MIN_CONFIDENCE)) continue;
+    if (Math.round(v.severity) <= 1 && confidence < MIN_CONFIDENCE_SLIGHT) continue;
     const src = anchor(source, v.source_quote);
     const tgt = anchor(translation, v.target_quote);
     const explanation = v.explanation.trim().slice(0, 280);
