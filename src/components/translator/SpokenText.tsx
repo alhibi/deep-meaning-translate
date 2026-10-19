@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { tokenize } from "./streamingTokens";
 
 /**
@@ -12,7 +12,7 @@ export const SpokenText = memo(function SpokenText({
   text: string;
   current: number;
 }) {
-  const tokens = tokenize(text);
+  const tokens = useMemo(() => tokenize(text), [text]);
   return (
     <>
       {tokens.map((tok, i) =>
