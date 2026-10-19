@@ -11,6 +11,9 @@
  * back to the full text across chunks.
  */
 
+import { cloudAvailable, fetchClip, silentClip, speechPieces, CloudSpeakError } from "./voice/cloud";
+import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
+
 export const LOCALE: Record<string, string> = {
   ar: "ar-SA",
   de: "de-DE",
@@ -219,8 +222,6 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
 /** Keeps the reference observable for tests. */
 export const _liveUtterance = () => live;
 
-import { cloudAvailable, fetchClip, silentClip, speechPieces, CloudSpeakError } from "./voice/cloud";
-import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
 
 /**
  * Speak a translation: Gemini voice when enabled and available, otherwise (or on any
