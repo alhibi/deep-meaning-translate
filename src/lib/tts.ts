@@ -85,8 +85,11 @@ export type SpeakFailure = "unsupported" | "novoice" | "blocked";
 
 export interface SpeakHandlers {
   onStart?: () => void;
-  /** Exact character offset (in the full text) of the word being spoken now. */
-  onWord?: (charIndex: number) => void;
+  /**
+   * Character offset (in the full text) of the word being spoken now.
+   * exact = reported by the voice; false = only the start of a new chunk.
+   */
+  onWord?: (charIndex: number, exact: boolean) => void;
   onEnd?: () => void;
   onFail?: (why: SpeakFailure) => void;
 }
@@ -118,10 +121,8 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
     const voices = await voicesReady(synth);
     if (!alive()) return;
     const voice = useVoice ? pickVoice(voices, lang) : undefined;
-    if (useVoice && !voice && voices.length > 0 && !voices.some((v) => normLang(v.lang).startsWith(lang.slice(0, 2)))) {
-      // The device lists voices but none for this language — still try by locale;
-      // many engines (Google TTS on Android) can speak languages they don't list.
-    }
+    // No listed voice for the language: still try by locale — many engines
+    // (Google TTS on Android) speak languages they don't list.
     if (synth.speaking || synth.pending) {
       synth.cancel();
       await new Promise((r) => setTimeout(r, 80));
@@ -148,11 +149,11 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
           started = true;
           h.onStart?.();
         }
-        h.onWord?.(c.offset);
+        h.onWord?.(c.offset, false);
       };
       u.onboundary = (e) => {
         if (!alive() || (e.name && e.name !== "word")) return;
-        h.onWord?.(c.offset + e.charIndex);
+        h.onWord?.(c.offset + e.charIndex, true);
       };
       u.onend = () => {
         i++;
