@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import { saved, type SavedPhrase } from "@/lib/saved";
 import { isRtl, languageLabel } from "@/lib/translation/languages";
 import { useI18n } from "@/lib/i18n";
@@ -71,41 +71,7 @@ export const SavedSheet = memo(function SavedSheet({
         ) : (
           <ul>
             {entries.map((e) => (
-              <li key={e.id} className="flex items-start border-b border-border">
-                <button
-                  type="button"
-                  onClick={() => onPick(e)}
-                  className="min-w-0 flex-1 px-5 py-4 text-start transition-colors active:bg-muted"
-                >
-                  <span
-                    dir="ltr"
-                    className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground"
-                  >
-                    {languageLabel(e.source)} → {languageLabel(e.target)}
-                  </span>
-                  <span
-                    dir={isRtl(e.target) ? "rtl" : "ltr"}
-                    lang={e.target}
-                    className={`mt-1 block text-start text-[16px] leading-snug ${isRtl(e.target) ? "font-arabic" : ""}`}
-                  >
-                    {e.translated}
-                  </span>
-                  <span
-                    dir="auto"
-                    className="mt-0.5 line-clamp-2 block text-start text-[13px] text-muted-foreground"
-                  >
-                    {e.original}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saved.remove(e.id)}
-                  aria-label={t("remove")}
-                  className="press-soft me-2 mt-3 grid size-9 shrink-0 place-items-center rounded-full text-faint hover:text-foreground"
-                >
-                  <X className="size-4" strokeWidth={1.6} />
-                </button>
-              </li>
+              <SavedRow key={e.id} e={e} onPick={onPick} />
             ))}
           </ul>
         )}
@@ -192,5 +158,99 @@ function Review() {
         </button>
       </div>
     </div>
+  );
+}
+
+function SavedRow({ e, onPick }: { e: SavedPhrase; onPick: (p: SavedPhrase) => void }) {
+  const { t } = useI18n();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(e.translated);
+  const rtl = isRtl(e.target);
+
+  if (editing) {
+    const commit = () => {
+      saved.update(e.id, draft);
+      setEditing(false);
+    };
+    return (
+      <li className="border-b border-border px-5 py-4">
+        <textarea
+          autoFocus
+          value={draft}
+          aria-label={t("editPhrase")}
+          dir={rtl ? "rtl" : "ltr"}
+          lang={e.target}
+          maxLength={5000}
+          onChange={(ev) => setDraft(ev.target.value)}
+          onKeyDown={(ev) => {
+            if (ev.key === "Escape") setEditing(false);
+            if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) commit();
+          }}
+          className={`min-h-20 w-full resize-none rounded-xl border border-border bg-background p-3 text-[16px] leading-snug outline-none focus:border-signal ${rtl ? "font-arabic" : ""}`}
+        />
+        <div className="mt-2 flex justify-end gap-4 text-[13px]">
+          <button type="button" onClick={() => setEditing(false)} className="text-muted-foreground">
+            {t("editCancel")}
+          </button>
+          <button
+            type="button"
+            onClick={commit}
+            disabled={!draft.trim()}
+            className="font-medium text-signal-text disabled:opacity-40"
+          >
+            {t("editDone")}
+          </button>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-start border-b border-border">
+      <button
+        type="button"
+        onClick={() => onPick(e)}
+        className="min-w-0 flex-1 px-5 py-4 text-start transition-colors active:bg-muted"
+      >
+        <span
+          dir="ltr"
+          className="block text-start text-[11px] uppercase tracking-wide text-muted-foreground"
+        >
+          {languageLabel(e.source)} → {languageLabel(e.target)}
+        </span>
+        <span
+          dir={rtl ? "rtl" : "ltr"}
+          lang={e.target}
+          className={`mt-1 block text-start text-[16px] leading-snug ${rtl ? "font-arabic" : ""}`}
+        >
+          {e.translated}
+        </span>
+        <span
+          dir="auto"
+          className="mt-0.5 line-clamp-2 block text-start text-[13px] text-muted-foreground"
+        >
+          {e.original}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(e.translated);
+          setEditing(true);
+        }}
+        aria-label={t("editPhrase")}
+        className="press-soft mt-3 grid size-9 shrink-0 place-items-center rounded-full text-faint hover:text-foreground"
+      >
+        <Pencil className="size-[14px]" strokeWidth={1.6} />
+      </button>
+      <button
+        type="button"
+        onClick={() => saved.remove(e.id)}
+        aria-label={t("remove")}
+        className="press-soft me-2 mt-3 grid size-9 shrink-0 place-items-center rounded-full text-faint hover:text-foreground"
+      >
+        <X className="size-4" strokeWidth={1.6} />
+      </button>
+    </li>
   );
 }
