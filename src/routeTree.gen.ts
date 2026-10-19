@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LabRouteImport } from './routes/lab'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ApiTranslateStreamRouteImport } from './routes/api/translate-stream'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTranslateStreamRoute = ApiTranslateStreamRouteImport.update({
   id: '/api/translate-stream',
   path: '/api/translate-stream',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stats': typeof StatsRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stats': typeof StatsRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,28 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/lab': typeof LabRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stats': typeof StatsRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/lab' | '/sitemap.xml' | '/api/translate-stream'
+  fullPaths: '/' | '/lab' | '/sitemap.xml' | '/stats' | '/api/translate-stream'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/lab' | '/sitemap.xml' | '/api/translate-stream'
-  id: '__root__' | '/' | '/lab' | '/sitemap.xml' | '/api/translate-stream'
+  to: '/' | '/lab' | '/sitemap.xml' | '/stats' | '/api/translate-stream'
+  id:
+    | '__root__'
+    | '/'
+    | '/lab'
+    | '/sitemap.xml'
+    | '/stats'
+    | '/api/translate-stream'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LabRoute: typeof LabRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StatsRoute: typeof StatsRoute
   ApiTranslateStreamRoute: typeof ApiTranslateStreamRoute
 }
 
@@ -92,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/translate-stream': {
       id: '/api/translate-stream'
       path: '/api/translate-stream'
@@ -106,6 +129,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LabRoute: LabRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StatsRoute: StatsRoute,
   ApiTranslateStreamRoute: ApiTranslateStreamRoute,
 }
 export const routeTree = rootRouteImport

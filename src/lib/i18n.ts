@@ -6,15 +6,8 @@ export const LOCALE_SHORT: Record<Locale, string> = { ar: "ع", en: "EN", de: "D
 export const LOCALE_NAME: Record<Locale, string> = { ar: "العربية", en: "English", de: "Deutsch" };
 
 const en = {
-  recent: "Recent translations",
-  recentShort: "Recent",
-  closeRecent: "Close recent translations",
   close: "Close",
   clear: "Clear",
-  empty: "Nothing here yet.",
-  privacy:
-    "Recent translations, your draft and language choice are kept only on this device. Text is sent for translation and not stored on our side.",
-  forgetAll: "Delete everything on this device",
   placeholder: "Write something…",
   inputLabel: "Text to translate",
   clearText: "Clear text",
@@ -127,15 +120,8 @@ const en = {
 export type Key = keyof typeof en;
 
 const ar: Record<Key, string> = {
-  recent: "الترجمات الأخيرة",
-  recentShort: "الأخيرة",
-  closeRecent: "إغلاق الترجمات الأخيرة",
   close: "إغلاق",
   clear: "مسح",
-  empty: "لا شيء هنا بعد.",
-  privacy:
-    "تُحفظ الترجمات الأخيرة ومسوّدتك واختيار اللغة على هذا الجهاز فقط. يُرسل النص للترجمة ولا نحتفظ به.",
-  forgetAll: "حذف كل شيء من هذا الجهاز",
   placeholder: "اكتب شيئاً…",
   inputLabel: "النص المراد ترجمته",
   clearText: "مسح النص",
@@ -246,15 +232,8 @@ const ar: Record<Key, string> = {
 };
 
 const de: Record<Key, string> = {
-  recent: "Letzte Übersetzungen",
-  recentShort: "Zuletzt",
-  closeRecent: "Letzte Übersetzungen schließen",
   close: "Schließen",
   clear: "Leeren",
-  empty: "Noch nichts hier.",
-  privacy:
-    "Letzte Übersetzungen, dein Entwurf und deine Sprachwahl bleiben nur auf diesem Gerät. Text wird zur Übersetzung gesendet und bei uns nicht gespeichert.",
-  forgetAll: "Alles auf diesem Gerät löschen",
   placeholder: "Schreib etwas …",
   inputLabel: "Zu übersetzender Text",
   clearText: "Text löschen",

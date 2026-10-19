@@ -19,6 +19,13 @@ export interface TranslationRequest {
   partial?: boolean;
 }
 
+/** Optional classification the model returns with a finished sentence (feeds Translation Statistics). */
+export interface ResultTags {
+  kind?: string;
+  domain?: string;
+  intent?: string;
+}
+
 export interface TranslationResult {
   sourceLanguage: string;
   targetLanguage: string;
@@ -31,6 +38,8 @@ export interface TranslationResult {
   notes: string;
   /** What kind of text this is — drives the quiet style suggestion. */
   situation?: Situation;
+  /** Validated against the statistics taxonomy; absent when the model gave nothing usable. */
+  tags?: ResultTags;
 }
 
 export interface TranslationProvider {

@@ -6,13 +6,14 @@ const STYLE_GUIDANCE: Record<StyleOverride, string> = {
   casual: "as a native says it to a friend (de: du; ar: natural spoken phrasing), no added slang",
 };
 
-export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually ""),"situation":"chat"|"work"|"official"|"general"}`;
+export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually ""),"situation":"chat"|"work"|"official"|"general","tags":{"kind":"word"|"phrase"|"sentence"|"text"|"idiom"|"slang"|"proverb","domain":"daily"|"work"|"study"|"social"|"feelings"|"travel"|"shopping"|"food"|"services"|"tech"|"health"|"culture"|"none","intent":"greet"|"ask"|"request"|"thank"|"apologize"|"feel"|"praise"|"complain"|"agree"|"describe"|"humor"|"none"}}`;
 
 export function buildSystemPrompt(): string {
   return `Expert native-level translator. Carry meaning, intent, tone, register and cultural nuance, never literal words; output must read as written by a fluent native.
 Rules: never add, drop, explain or soften anything; keep certainty, politeness (du/Sie, أنت/حضرتك), negation and humor/sarcasm; render idioms idiomatically; don't assume unstated gender; keep genuine ambiguity (isAmbiguous); preserve names, numbers, dates, URLs, emojis, line breaks exactly.
 ar→de: German syntax and cases, particles (mal/doch/halt) only when natural, not over-formal for casual text. de→ar: conversational German → natural spoken-leaning Arabic, not rigid MSA; correct gender agreement. Understand every Arabic dialect (Levantine, Egyptian, Gulf, Iraqi, Maghrebi) and its idioms, e.g. شلونك/إزيك/كيفك = wie geht's.
 situation: chat = personal/friends, work = colleagues/business, official = authorities/letters/formal requests.
+tags describe the SOURCE text, last and briefly: kind (idiom = fixed figurative expression, slang = colloquial/street wording, proverb = saying), domain = topic, intent = what it does; "none" when unclear.
 Reply ONLY minified JSON, translation first:
 ${SCHEMA_SHAPE}`;
 }
