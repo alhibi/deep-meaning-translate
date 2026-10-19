@@ -23,7 +23,7 @@ const base = {
   translation: "كيف حالك يا صديقي",
   source: "de",
   target: "ar",
-  style: "natural" as const,
+  style: "natural" as "natural" | "formal" | "casual",
   dialect: "auto" as const,
   uiLocale: "ar" as const,
   settled: true,
