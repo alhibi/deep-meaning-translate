@@ -29,7 +29,7 @@ async def main():
             for theme in ["dark", "forest", "rose", "dark"]:
                 if len(backgrounds):
                     await button.click()
-                await page.wait_for_function("t => document.documentElement.dataset.theme === t", theme)
+                await page.wait_for_function("t => document.documentElement.dataset.theme === t", arg=theme)
                 await page.wait_for_timeout(850)
                 assert await button.get_attribute("data-theme-choice") == theme
                 assert await page.evaluate("getComputedStyle(document.documentElement).colorScheme") == "dark"
