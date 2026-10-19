@@ -121,6 +121,8 @@ export function checkSource(
     // Wrong writing system — certain. Name the most specific language we can.
     let suggest = family.includes(detected) ? detected : (family[0] ?? "");
     if (dom.script === "arabic" && !family.includes(detected)) suggest = arabicScriptLanguage(text).code;
+    // Latin text: name the language only with evidence; otherwise offer automatic detection.
+    if (dom.script === "latin" && !family.includes(detected)) suggest = guessLatin(text)?.code ?? "auto";
     return suggest ? { suggest, strong: true } : null;
   }
 

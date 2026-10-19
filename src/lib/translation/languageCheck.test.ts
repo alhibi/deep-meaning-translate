@@ -40,8 +40,7 @@ describe("source language check", () => {
     for (const [text, picked, expected] of wrong) {
       const m = checkSource(text, picked);
       expect(m?.strong, `${picked}: ${text}`).toBe(true);
-      // Latin text: the specific language comes from the model's detection; family is enough here.
-      if (expected !== "de") expect(m?.suggest, `${picked}: ${text}`).toBe(expected);
+      expect(m?.suggest, `${picked}: ${text}`).toBe(expected);
     }
   });
 
@@ -58,7 +57,8 @@ describe("source language check", () => {
 
   it("never warns on names, single words or mixed text it can't be sure about", () => {
     expect(checkSource("Mohammed", "de")).toBeNull();
-    expect(checkSource("Berlin", "ar")?.strong).toBe(true); // Latin letters can't be Arabic
+    // Latin letters can't be Arabic; without evidence for a language, offer detection.
+    expect(checkSource("Berlin", "ar")).toEqual({ suggest: "auto", strong: true });
     expect(checkSource("Ok", "en")).toBeNull();
     expect(checkSource("Hallo", "en")).toBeNull();
     expect(checkSource("123 !!", "en")).toBeNull();
