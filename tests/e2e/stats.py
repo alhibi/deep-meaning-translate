@@ -39,7 +39,7 @@ async def main():
         ctx = await browser.new_context(viewport={"width": 390, "height": 844})
         page = await ctx.new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
-        await page.goto(URL)
+        await page.goto(URL); await page.wait_for_timeout(1500)
         await page.evaluate("""() => { localStorage.clear(); localStorage.setItem('lingua.intro.seen.v1','1');
           localStorage.setItem('lingua.ui-locale','ar'); localStorage.setItem('lingua.theme.v1','dark') }""")
 
