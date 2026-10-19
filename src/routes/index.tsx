@@ -117,6 +117,7 @@ function Translator() {
   const [restored, setRestored] = useState(false);
   useEffect(() => {
     setEntries(history.list());
+    void persist.requestDurable();
     initServiceWorker();
     initLocale();
     const prefs = persist.prefs();
@@ -153,14 +154,30 @@ function Translator() {
     if (restored) persist.savePrefs({ source, target, style, dialect });
   }, [restored, source, target, style, dialect]);
 
+  // Debounced while typing, but flushed when the app is hidden or closed so the
+  // last keystrokes are never lost to the debounce window.
+  const sessionRef = useRef<Parameters<typeof persist.saveSession>[0]>(null);
   useEffect(() => {
     if (!restored) return;
-    const id = setTimeout(
-      () => persist.saveSession({ text, result: provisional ? null : raw, source, target, style }),
-      400,
-    );
+    const snapshot = { text, result: provisional ? null : raw, source, target, style };
+    sessionRef.current = snapshot;
+    const id = setTimeout(() => persist.saveSession(snapshot), 400);
     return () => clearTimeout(id);
   }, [restored, text, raw, provisional, source, target, style]);
+  useEffect(() => {
+    if (!restored) return;
+    const flush = () => {
+      if (document.visibilityState === "hidden" || !document.hasFocus())
+        persist.saveSession(sessionRef.current);
+    };
+    const onHide = () => persist.saveSession(sessionRef.current);
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, [restored]);
 
   const detected = raw?.sourceLanguage;
   // Same-language result (auto-detect hit the target): hold it back while we re-route.
@@ -302,11 +319,14 @@ function Translator() {
   }, []);
   const forgetAll = useCallback(() => {
     persist.clearAll();
+    saved.clear(); // also drops the in-memory phrasebook so nothing is re-written later
+    sessionRef.current = null;
     setEntries([]);
     setText("");
     closeHistory();
   }, [closeHistory]);
   const clearHistory = useCallback(() => setEntries(history.clear()), []);
+  const removeHistory = useCallback((id: string) => setEntries(history.remove(id)), []);
   const pickHistory = useCallback(
     (e: HistoryEntry) => {
       setText(e.original);
@@ -813,6 +833,7 @@ function Translator() {
             onClose={closeHistory}
             onPick={pickHistory}
             onClear={clearHistory}
+            onRemove={removeHistory}
             onForgetAll={forgetAll}
           />
         </SafeArea>
