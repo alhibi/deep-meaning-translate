@@ -641,7 +641,7 @@ function Translator() {
               ) : null}
               <button
                 type="button"
-                onClick={() => { speech.stop(); speechBase.current = ""; clear(); }}
+                onClick={() => { speech.cancel(); speechBase.current = ""; clear(); }}
                 aria-label={t("clearText")}
                 tabIndex={hasText ? 0 : -1}
                 className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${

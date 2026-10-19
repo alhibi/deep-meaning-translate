@@ -136,7 +136,11 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
     }
   }, [tokenFn]);
   const stop = useCallback(() => stopSession.current?.(), []);
-  return { supported, listening, starting, error, message, start: () => start(), stop,
+  const cancel = useCallback(() => {
+    generation.current++; active.current = false; dispose.current?.();
+    previous.current = ""; setStarting(false); setListening(false);
+  }, []);
+  return { supported, listening, starting, error, message, start: () => start(), stop, cancel,
     retry: () => start(true), dismiss: () => { setError(null); setMessage(null); },
     toggle: () => active.current ? stop() : void start() };
 }
