@@ -103,3 +103,37 @@ describe("gemini voice", () => {
     }
   });
 });
+
+import { createSseAudioParser, pcm16ToFloat } from "./geminiVoice";
+describe("streamed speech", () => {
+  it("decodes audio deltas even when events are split across network chunks", () => {
+    const parse = createSseAudioParser();
+    const ev = `event: step.delta\ndata: {"event_type":"step.delta","delta":{"type":"audio","data":"${btoa("\u0001\u0002\u0003\u0004")}"}}\n\n`;
+    const a = parse(ev.slice(0, 30));
+    const b = parse(ev.slice(30) + 'data: {"event_type":"interaction.completed"}\n');
+    expect(a.audio.length).toBe(0);
+    expect(Array.from(b.audio[0]!)).toEqual([1, 2, 3, 4]);
+    expect(b.done).toBe(true);
+  });
+  it("reports stream errors", () => {
+    expect(
+      createSseAudioParser()('data: {"event_type":"error","error":{"message":"x"}}\n').error,
+    ).toBe("x");
+  });
+  it("converts 16-bit PCM and carries an odd byte to the next chunk", () => {
+    const carry: number[] = [];
+    const f1 = pcm16ToFloat(new Uint8Array([0x00, 0x40, 0xff]), carry);
+    expect(f1.length).toBe(1);
+    expect(f1[0]).toBeCloseTo(0.5);
+    const f2 = pcm16ToFloat(new Uint8Array([0xbf]), carry);
+    expect(f2[0]).toBeCloseTo(-0.5, 2);
+  });
+  it("asks Google for raw PCM when streaming", () => {
+    const b = buildInteraction(
+      { text: "Hi", lang: "en", voice: "Kore", quality: "best", pace: "normal" },
+      true,
+    ) as { stream?: boolean; response_format: { mime_type: string } };
+    expect(b.stream).toBe(true);
+    expect(b.response_format.mime_type).toBe("audio/l16");
+  });
+});
