@@ -6,6 +6,8 @@ export const LOCALE_SHORT: Record<Locale, string> = { ar: "ع", en: "EN", de: "D
 export const LOCALE_NAME: Record<Locale, string> = { ar: "العربية", en: "English", de: "Deutsch" };
 
 const en = {
+  translatorTitle: "Meaning-first Arabic–German translator",
+  pairGuide: "Arabic–German translation",
   close: "Close",
   clear: "Clear",
   placeholder: "Write something…",
@@ -149,6 +151,8 @@ const en = {
 export type Key = keyof typeof en;
 
 const ar: Record<Key, string> = {
+  translatorTitle: "ترجمة عربية–ألمانية تهتم بالمعنى",
+  pairGuide: "الترجمة بين العربية والألمانية",
   close: "إغلاق",
   clear: "مسح",
   placeholder: "اكتب شيئاً…",
@@ -290,6 +294,8 @@ const ar: Record<Key, string> = {
 };
 
 const de: Record<Key, string> = {
+  translatorTitle: "Arabisch–Deutsch: sinngetreu übersetzen",
+  pairGuide: "Arabisch–Deutsch-Übersetzung",
   close: "Schließen",
   clear: "Leeren",
   placeholder: "Schreib etwas …",

@@ -12,3 +12,6 @@
 - [x] ElevenLabs streaming voice, timing, settings, prefetch and device fallback
 - [x] Verify ElevenLabs real Arabic/German playback, tests and smoke checks
 - [x] Complete Google Search Console verification and submit the existing sitemap
+- [ ] Fix persistent homepage heading and descriptive search metadata
+- [ ] Add linked Arabic–German translation guide with public sitemap inclusion
+- [ ] Verify SEO changes, unit tests and mobile smoke checks
