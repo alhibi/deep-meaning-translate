@@ -8,6 +8,9 @@ import {
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
+/** Until when the main TTS model's quota is known to be exhausted (per server instance). */
+let bestExhaustedUntil = 0;
+
 /** Coarse in-process throttle for speech, separate from translation. */
 const bucket = { tokens: 40, updated: Date.now() };
 function takeSpeechToken() {
@@ -61,18 +64,29 @@ export const Route = createFileRoute("/api/speak")({
           clearTimeout(timer);
           request.signal.removeEventListener("abort", onAbort);
         };
-        let res: Response;
-        try {
-          res = await fetch(ENDPOINT, {
+        const call = (quality: "best" | "fast") =>
+          fetch(ENDPOINT, {
             method: "POST",
             headers: {
               "x-goog-api-key": key,
               "Content-Type": "application/json",
               Accept: "text/event-stream",
             },
-            body: JSON.stringify(buildInteraction(data, true)),
+            body: JSON.stringify(buildInteraction({ ...data, quality }, true)),
             signal: ctrl.signal,
           });
+        let res: Response;
+        try {
+          // The main model's daily limit is used up: go straight to the light model.
+          const quality =
+            data.quality === "best" && Date.now() < bestExhaustedUntil ? "fast" : data.quality;
+          res = await call(quality);
+          if (res.status === 429 && quality === "best") {
+            const retry = Number(res.headers.get("Retry-After")) || 3600;
+            bestExhaustedUntil = Date.now() + retry * 1000;
+            console.warn("[speak] main voice model limit reached; using the light model");
+            res = await call("fast");
+          }
         } catch {
           cleanup();
           if (request.signal.aborted) return new Response(null, { status: 204 });
