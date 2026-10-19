@@ -4,3 +4,4 @@
 - [x] Mini dictionary button + window (meanings, forms, synonyms, model translation)
 - [x] Broad Arabic/German/dialect lexicon linked to model translation ranking
 - [x] Audit: validate restored prefs/session, flush draft on close, fix "forget all" leaving phrasebook in memory, edit saved phrases, delete single history items, request durable storage
+- [x] Two brains: DeepSeek V4.1 Flash reviewer + fallback
