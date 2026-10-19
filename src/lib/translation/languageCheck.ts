@@ -41,7 +41,10 @@ export function dominantScript(text: string): { script: Script; letters: number 
   }
   if (letters < 2) return null;
   // Japanese mixes kana with kanji: any kana makes it Japanese.
-  if ((counts.get("kana") ?? 0) > 0 && (counts.get("kana") ?? 0) + (counts.get("han") ?? 0) >= letters * 0.7)
+  if (
+    (counts.get("kana") ?? 0) > 0 &&
+    (counts.get("kana") ?? 0) + (counts.get("han") ?? 0) >= letters * 0.7
+  )
     return { script: "kana", letters };
   let best: Script | null = null;
   let n = 0;
@@ -61,14 +64,201 @@ function arabicScriptLanguage(text: string): { code: string; strong: boolean } {
 
 /** Very common short words; distinctive enough to separate the Latin-script languages. */
 const COMMON: Record<string, string[]> = {
-  de: ["ich", "nicht", "und", "ist", "das", "der", "die", "du", "wir", "bist", "mit", "auf", "ein", "eine", "zu", "es", "sie", "wie", "was", "wo", "geht", "habe", "heute", "morgen", "danke", "bitte", "auch", "noch", "aber", "dich", "mir", "mich"],
-  en: ["the", "and", "is", "you", "are", "i'm", "it's", "what", "where", "how", "this", "that", "with", "have", "not", "my", "your", "today", "tomorrow", "thanks", "please", "would", "can", "will", "do", "don't", "of"],
-  fr: ["je", "tu", "nous", "vous", "est", "les", "des", "une", "pas", "c'est", "très", "avec", "pour", "dans", "merci", "suis", "bonjour", "aujourd'hui", "oui", "mais", "qui", "que"],
-  es: ["el", "los", "las", "una", "es", "está", "estoy", "muy", "para", "con", "por", "que", "qué", "gracias", "hola", "hoy", "pero", "yo", "tú", "cómo", "dónde", "mañana"],
-  tr: ["ve", "bir", "bu", "ben", "sen", "çok", "değil", "mi", "ne", "nasıl", "nerede", "bugün", "yarın", "teşekkür", "var", "yok", "için", "ile", "merhaba"],
-  it: ["il", "che", "non", "sono", "è", "per", "una", "con", "molto", "grazie", "ciao", "oggi", "domani", "io", "come", "dove", "anche", "ma", "gli"],
-  nl: ["het", "een", "niet", "ik", "je", "jij", "wij", "zijn", "met", "voor", "dank", "vandaag", "morgen", "hoe", "waar", "maar", "ook", "dat", "van"],
-  pt: ["não", "que", "uma", "você", "estou", "muito", "obrigado", "obrigada", "hoje", "amanhã", "com", "para", "eu", "como", "onde", "mas", "também", "os", "é"],
+  de: [
+    "ich",
+    "nicht",
+    "und",
+    "ist",
+    "das",
+    "der",
+    "die",
+    "du",
+    "wir",
+    "bist",
+    "mit",
+    "auf",
+    "ein",
+    "eine",
+    "zu",
+    "es",
+    "sie",
+    "wie",
+    "was",
+    "wo",
+    "geht",
+    "habe",
+    "heute",
+    "morgen",
+    "danke",
+    "bitte",
+    "auch",
+    "noch",
+    "aber",
+    "dich",
+    "mir",
+    "mich",
+  ],
+  en: [
+    "the",
+    "and",
+    "is",
+    "you",
+    "are",
+    "i'm",
+    "it's",
+    "what",
+    "where",
+    "how",
+    "this",
+    "that",
+    "with",
+    "have",
+    "not",
+    "my",
+    "your",
+    "today",
+    "tomorrow",
+    "thanks",
+    "please",
+    "would",
+    "can",
+    "will",
+    "do",
+    "don't",
+    "of",
+  ],
+  fr: [
+    "je",
+    "tu",
+    "nous",
+    "vous",
+    "est",
+    "les",
+    "des",
+    "une",
+    "pas",
+    "c'est",
+    "très",
+    "avec",
+    "pour",
+    "dans",
+    "merci",
+    "suis",
+    "bonjour",
+    "aujourd'hui",
+    "oui",
+    "mais",
+    "qui",
+    "que",
+  ],
+  es: [
+    "el",
+    "los",
+    "las",
+    "una",
+    "es",
+    "está",
+    "estoy",
+    "muy",
+    "para",
+    "con",
+    "por",
+    "que",
+    "qué",
+    "gracias",
+    "hola",
+    "hoy",
+    "pero",
+    "yo",
+    "tú",
+    "cómo",
+    "dónde",
+    "mañana",
+  ],
+  tr: [
+    "ve",
+    "bir",
+    "bu",
+    "ben",
+    "sen",
+    "çok",
+    "değil",
+    "mi",
+    "ne",
+    "nasıl",
+    "nerede",
+    "bugün",
+    "yarın",
+    "teşekkür",
+    "var",
+    "yok",
+    "için",
+    "ile",
+    "merhaba",
+  ],
+  it: [
+    "il",
+    "che",
+    "non",
+    "sono",
+    "è",
+    "per",
+    "una",
+    "con",
+    "molto",
+    "grazie",
+    "ciao",
+    "oggi",
+    "domani",
+    "io",
+    "come",
+    "dove",
+    "anche",
+    "ma",
+    "gli",
+  ],
+  nl: [
+    "het",
+    "een",
+    "niet",
+    "ik",
+    "je",
+    "jij",
+    "wij",
+    "zijn",
+    "met",
+    "voor",
+    "dank",
+    "vandaag",
+    "morgen",
+    "hoe",
+    "waar",
+    "maar",
+    "ook",
+    "dat",
+    "van",
+  ],
+  pt: [
+    "não",
+    "que",
+    "uma",
+    "você",
+    "estou",
+    "muito",
+    "obrigado",
+    "obrigada",
+    "hoje",
+    "amanhã",
+    "com",
+    "para",
+    "eu",
+    "como",
+    "onde",
+    "mas",
+    "também",
+    "os",
+    "é",
+  ],
 };
 const MARKS: Record<string, RegExp> = {
   de: /[ßäöü]/u,
@@ -79,7 +269,9 @@ const MARKS: Record<string, RegExp> = {
 };
 
 /** Best Latin-script guess, only when the evidence clearly favours one language. */
-export function guessLatin(text: string): { code: string; score: number; scores: Record<string, number> } | null {
+export function guessLatin(
+  text: string,
+): { code: string; score: number; scores: Record<string, number> } | null {
   const words = text.toLowerCase().match(/[\p{L}']+/gu) ?? [];
   const scores: Record<string, number> = {};
   for (const [code, list] of Object.entries(COMMON)) {
@@ -120,14 +312,17 @@ export function checkSource(
   if (!family.includes(source)) {
     // Wrong writing system — certain. Name the most specific language we can.
     let suggest = family.includes(detected) ? detected : (family[0] ?? "");
-    if (dom.script === "arabic" && !family.includes(detected)) suggest = arabicScriptLanguage(text).code;
+    if (dom.script === "arabic" && !family.includes(detected))
+      suggest = arabicScriptLanguage(text).code;
     // Latin text: name the language only with evidence; otherwise offer automatic detection.
-    if (dom.script === "latin" && !family.includes(detected)) suggest = guessLatin(text)?.code ?? "auto";
+    if (dom.script === "latin" && !family.includes(detected))
+      suggest = guessLatin(text)?.code ?? "auto";
     return suggest ? { suggest, strong: true } : null;
   }
 
   // Same writing system: the model's own detection on a finished sentence is the best evidence.
-  if (detected && detected !== source && family.includes(detected)) return { suggest: detected, strong: false };
+  if (detected && detected !== source && family.includes(detected))
+    return { suggest: detected, strong: false };
   if (detected === source) return null;
 
   if (dom.script === "arabic") {

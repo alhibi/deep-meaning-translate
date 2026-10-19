@@ -24,7 +24,8 @@ const en = {
     "Each settled translation of one text into one language counts once. Re-opening or re-translating the same text never counts again; failed attempts and drafts never count.",
   d_words:
     "Words of the original text. A word is a run of letters or digits; apostrophes and hyphens inside a word keep it one word. Punctuation and emoji are not words. Arabic attached letters stay part of their word.",
-  d_pairs: "Distinct translation directions used. Arabic → German and German → Arabic are two pairs.",
+  d_pairs:
+    "Distinct translation directions used. Arabic → German and German → Arabic are two pairs.",
   d_days: "Calendar days, in this device's time zone, with at least one translation.",
   d_avg: "Words translated ÷ translations, in the visible period and filters.",
   vsPrev: "vs. previous {n} days",
@@ -56,7 +57,8 @@ const en = {
   ofVisible: "Shares are of the {n} translations shown.",
   estimated: "estimated",
   estimatedHint: "Estimated on this device from the wording; you can correct it.",
-  estimatedShare: "{n} of {total} are estimated on this device from the wording. Open a translation to correct it.",
+  estimatedShare:
+    "{n} of {total} are estimated on this device from the wording. Open a translation to correct it.",
   patterns: "Patterns",
   hide: "Hide",
   show: "Show",
@@ -67,7 +69,8 @@ const en = {
   i_topKind: "{label} make up {pct} of what you translate.",
   i_repeated: "Translated more than once:",
   i_times: "{n}×",
-  i_shift: "{label} went from {a} to {b} of your phrases between the first and second half of this period.",
+  i_shift:
+    "{label} went from {a} to {b} of your phrases between the first and second half of this period.",
   i_estimated: "{count} of {total} topics are estimated on this device.",
   recentTitle: "Translations",
   filters: "Filters",
@@ -111,7 +114,8 @@ const en = {
   period_empty: "No translations in this period or with these filters.",
   period_empty_cta: "Show all time",
   error_title: "Statistics couldn't be loaded",
-  error_body: "This browser is blocking storage on this device. Your translations were not changed.",
+  error_body:
+    "This browser is blocking storage on this device. Your translations were not changed.",
   error_retry: "Try again",
   write_fail: "The last change couldn't be saved on this device (storage full or blocked).",
   privacy:
@@ -150,7 +154,8 @@ const ar: Dict = {
     "تُحتسب كل ترجمة مكتملة لنص واحد إلى لغة واحدة مرة واحدة. إعادة فتح النص نفسه أو ترجمته من جديد لا تُحتسب مرة ثانية، ولا تُحتسب المحاولات الفاشلة أو المسودات.",
   d_words:
     "كلمات النص الأصلي. الكلمة سلسلة متصلة من الحروف أو الأرقام، والفاصلة العليا أو الشرطة داخلها لا تقسمها. علامات الترقيم والرموز التعبيرية ليست كلمات، والحروف العربية المتصلة تبقى جزءاً من كلمتها.",
-  d_pairs: "عدد اتجاهات الترجمة المستخدمة فعلاً. العربية ← الألمانية والألمانية ← العربية زوجان مختلفان.",
+  d_pairs:
+    "عدد اتجاهات الترجمة المستخدمة فعلاً. العربية ← الألمانية والألمانية ← العربية زوجان مختلفان.",
   d_days: "الأيام التقويمية، بتوقيت هذا الجهاز، التي فيها ترجمة واحدة على الأقل.",
   d_avg: "الكلمات المترجمة ÷ عدد الترجمات، ضمن الفترة والفلاتر الظاهرة.",
   vsPrev: "مقارنة بالأيام الـ{n} السابقة",
@@ -182,7 +187,8 @@ const ar: Dict = {
   ofVisible: "النسب من {n} ترجمة ظاهرة.",
   estimated: "تقديري",
   estimatedHint: "تصنيف تقديري على هذا الجهاز من صياغة النص، ويمكنك تصحيحه.",
-  estimatedShare: "{n} من {total} تصنيف تقديري على هذا الجهاز من صياغة النص. افتح أي ترجمة لتصحيحها.",
+  estimatedShare:
+    "{n} من {total} تصنيف تقديري على هذا الجهاز من صياغة النص. افتح أي ترجمة لتصحيحها.",
   patterns: "أنماط",
   hide: "إخفاء",
   show: "إظهار",
@@ -273,7 +279,8 @@ const de: Dict = {
     "Jede fertige Übersetzung eines Textes in eine Sprache zählt einmal. Erneutes Öffnen oder Übersetzen desselben Textes zählt nicht erneut; Fehlversuche und Entwürfe zählen nie.",
   d_words:
     "Wörter des Ausgangstextes. Ein Wort ist eine Folge von Buchstaben oder Ziffern; Apostroph oder Bindestrich im Wort trennen es nicht. Satzzeichen und Emojis sind keine Wörter. Angehängte arabische Buchstaben bleiben Teil ihres Wortes.",
-  d_pairs: "Tatsächlich genutzte Übersetzungsrichtungen. Arabisch → Deutsch und Deutsch → Arabisch sind zwei Paare.",
+  d_pairs:
+    "Tatsächlich genutzte Übersetzungsrichtungen. Arabisch → Deutsch und Deutsch → Arabisch sind zwei Paare.",
   d_days: "Kalendertage in der Zeitzone dieses Geräts mit mindestens einer Übersetzung.",
   d_avg: "Übersetzte Wörter ÷ Übersetzungen, im sichtbaren Zeitraum und Filter.",
   vsPrev: "ggü. den {n} Tagen davor",
@@ -305,7 +312,8 @@ const de: Dict = {
   ofVisible: "Anteile beziehen sich auf {n} angezeigte Übersetzungen.",
   estimated: "geschätzt",
   estimatedHint: "Auf diesem Gerät aus dem Wortlaut geschätzt; du kannst es korrigieren.",
-  estimatedShare: "{n} von {total} sind auf diesem Gerät aus dem Wortlaut geschätzt. Öffne eine Übersetzung, um sie zu korrigieren.",
+  estimatedShare:
+    "{n} von {total} sind auf diesem Gerät aus dem Wortlaut geschätzt. Öffne eine Übersetzung, um sie zu korrigieren.",
   patterns: "Muster",
   hide: "Ausblenden",
   show: "Einblenden",
@@ -316,7 +324,8 @@ const de: Dict = {
   i_topKind: "„{label}“ machen {pct} deiner Übersetzungen aus.",
   i_repeated: "Mehr als einmal übersetzt:",
   i_times: "{n}×",
-  i_shift: "„{label}“ ging zwischen erster und zweiter Hälfte des Zeitraums von {a} auf {b} deiner Sätze.",
+  i_shift:
+    "„{label}“ ging zwischen erster und zweiter Hälfte des Zeitraums von {a} auf {b} deiner Sätze.",
   i_estimated: "{count} von {total} Themen sind auf diesem Gerät geschätzt.",
   recentTitle: "Übersetzungen",
   filters: "Filter",
@@ -360,9 +369,11 @@ const de: Dict = {
   period_empty: "Keine Übersetzungen in diesem Zeitraum oder mit diesen Filtern.",
   period_empty_cta: "Gesamtzeitraum zeigen",
   error_title: "Statistik konnte nicht geladen werden",
-  error_body: "Dieser Browser blockiert den Speicher auf dem Gerät. Deine Übersetzungen wurden nicht verändert.",
+  error_body:
+    "Dieser Browser blockiert den Speicher auf dem Gerät. Deine Übersetzungen wurden nicht verändert.",
   error_retry: "Erneut versuchen",
-  write_fail: "Die letzte Änderung konnte auf diesem Gerät nicht gespeichert werden (Speicher voll oder blockiert).",
+  write_fail:
+    "Die letzte Änderung konnte auf diesem Gerät nicht gespeichert werden (Speicher voll oder blockiert).",
   privacy:
     "Die Statistik wird auf diesem Gerät aus deinen eigenen Übersetzungen berechnet. Dafür wird nichts gesendet.",
   forgetAll: "Alles auf diesem Gerät löschen",
@@ -377,22 +388,145 @@ const de: Dict = {
 /** Category names per dimension. Same ids in every locale; adding a category = one entry each. */
 const CAT = {
   en: {
-    kind: { word: "Single words", phrase: "Short phrases", sentence: "Full sentences", text: "Multi-sentence texts", idiom: "Idioms", slang: "Colloquial wording", proverb: "Proverbs & sayings" },
-    domain: { daily: "Daily life in Germany", work: "Work & jobs", study: "Study & learning", social: "Relationships & social", feelings: "Feelings & self", travel: "Travel & transport", shopping: "Shopping & money", food: "Food & restaurants", services: "Appointments & offices", tech: "Tech & internet", health: "Health & care", culture: "Culture & customs", none: "Unclassified" },
-    intent: { greet: "Greeting", ask: "Question", request: "Request & suggestion", thank: "Thanks", apologize: "Apology", feel: "Expressing feelings", praise: "Praise", complain: "Complaint", agree: "Yes / no", describe: "Describing", humor: "Humor", none: "Unclassified" },
-    register: { natural: "Natural", casual: "Casual", formal: "Formal", colloquial: "Colloquial", idiomatic: "Idiomatic" },
+    kind: {
+      word: "Single words",
+      phrase: "Short phrases",
+      sentence: "Full sentences",
+      text: "Multi-sentence texts",
+      idiom: "Idioms",
+      slang: "Colloquial wording",
+      proverb: "Proverbs & sayings",
+    },
+    domain: {
+      daily: "Daily life in Germany",
+      work: "Work & jobs",
+      study: "Study & learning",
+      social: "Relationships & social",
+      feelings: "Feelings & self",
+      travel: "Travel & transport",
+      shopping: "Shopping & money",
+      food: "Food & restaurants",
+      services: "Appointments & offices",
+      tech: "Tech & internet",
+      health: "Health & care",
+      culture: "Culture & customs",
+      none: "Unclassified",
+    },
+    intent: {
+      greet: "Greeting",
+      ask: "Question",
+      request: "Request & suggestion",
+      thank: "Thanks",
+      apologize: "Apology",
+      feel: "Expressing feelings",
+      praise: "Praise",
+      complain: "Complaint",
+      agree: "Yes / no",
+      describe: "Describing",
+      humor: "Humor",
+      none: "Unclassified",
+    },
+    register: {
+      natural: "Natural",
+      casual: "Casual",
+      formal: "Formal",
+      colloquial: "Colloquial",
+      idiomatic: "Idiomatic",
+    },
   },
   ar: {
-    kind: { word: "كلمات مفردة", phrase: "عبارات قصيرة", sentence: "جمل كاملة", text: "نصوص متعددة الجمل", idiom: "تعابير اصطلاحية", slang: "تعابير دارجة", proverb: "أمثال وتعابير ثقافية" },
-    domain: { daily: "الحياة اليومية في ألمانيا", work: "العمل والمهن", study: "الدراسة والتعلم", social: "العلاقات والتواصل", feelings: "المشاعر والتعبير الشخصي", travel: "السفر والتنقل", shopping: "التسوق والمال", food: "الطعام والمطاعم", services: "المواعيد والإجراءات", tech: "التقنية والإنترنت", health: "الصحة والعناية", culture: "الثقافة والعادات", none: "غير مصنّف" },
-    intent: { greet: "تحية وتعارف", ask: "سؤال واستفسار", request: "طلب واقتراح", thank: "شكر وتقدير", apologize: "اعتذار", feel: "تعبير عن المشاعر", praise: "إعجاب ومدح", complain: "شكوى أو اعتراض", agree: "موافقة ورفض", describe: "وصف حالة أو تجربة", humor: "دعابة", none: "غير مصنّف" },
-    register: { natural: "طبيعي", casual: "عفوي", formal: "رسمي", colloquial: "عامي", idiomatic: "اصطلاحي" },
+    kind: {
+      word: "كلمات مفردة",
+      phrase: "عبارات قصيرة",
+      sentence: "جمل كاملة",
+      text: "نصوص متعددة الجمل",
+      idiom: "تعابير اصطلاحية",
+      slang: "تعابير دارجة",
+      proverb: "أمثال وتعابير ثقافية",
+    },
+    domain: {
+      daily: "الحياة اليومية في ألمانيا",
+      work: "العمل والمهن",
+      study: "الدراسة والتعلم",
+      social: "العلاقات والتواصل",
+      feelings: "المشاعر والتعبير الشخصي",
+      travel: "السفر والتنقل",
+      shopping: "التسوق والمال",
+      food: "الطعام والمطاعم",
+      services: "المواعيد والإجراءات",
+      tech: "التقنية والإنترنت",
+      health: "الصحة والعناية",
+      culture: "الثقافة والعادات",
+      none: "غير مصنّف",
+    },
+    intent: {
+      greet: "تحية وتعارف",
+      ask: "سؤال واستفسار",
+      request: "طلب واقتراح",
+      thank: "شكر وتقدير",
+      apologize: "اعتذار",
+      feel: "تعبير عن المشاعر",
+      praise: "إعجاب ومدح",
+      complain: "شكوى أو اعتراض",
+      agree: "موافقة ورفض",
+      describe: "وصف حالة أو تجربة",
+      humor: "دعابة",
+      none: "غير مصنّف",
+    },
+    register: {
+      natural: "طبيعي",
+      casual: "عفوي",
+      formal: "رسمي",
+      colloquial: "عامي",
+      idiomatic: "اصطلاحي",
+    },
   },
   de: {
-    kind: { word: "Einzelwörter", phrase: "Kurze Wendungen", sentence: "Ganze Sätze", text: "Mehrsätzige Texte", idiom: "Redewendungen", slang: "Umgangssprache", proverb: "Sprichwörter" },
-    domain: { daily: "Alltag in Deutschland", work: "Arbeit & Beruf", study: "Lernen & Studium", social: "Beziehungen & Soziales", feelings: "Gefühle & Persönliches", travel: "Reisen & Verkehr", shopping: "Einkaufen & Geld", food: "Essen & Restaurants", services: "Termine & Ämter", tech: "Technik & Internet", health: "Gesundheit & Pflege", culture: "Kultur & Bräuche", none: "Nicht zugeordnet" },
-    intent: { greet: "Begrüßung", ask: "Frage", request: "Bitte & Vorschlag", thank: "Dank", apologize: "Entschuldigung", feel: "Gefühle ausdrücken", praise: "Lob", complain: "Beschwerde", agree: "Zustimmung & Ablehnung", describe: "Beschreibung", humor: "Humor", none: "Nicht zugeordnet" },
-    register: { natural: "Natürlich", casual: "Locker", formal: "Formell", colloquial: "Umgangssprachlich", idiomatic: "Idiomatisch" },
+    kind: {
+      word: "Einzelwörter",
+      phrase: "Kurze Wendungen",
+      sentence: "Ganze Sätze",
+      text: "Mehrsätzige Texte",
+      idiom: "Redewendungen",
+      slang: "Umgangssprache",
+      proverb: "Sprichwörter",
+    },
+    domain: {
+      daily: "Alltag in Deutschland",
+      work: "Arbeit & Beruf",
+      study: "Lernen & Studium",
+      social: "Beziehungen & Soziales",
+      feelings: "Gefühle & Persönliches",
+      travel: "Reisen & Verkehr",
+      shopping: "Einkaufen & Geld",
+      food: "Essen & Restaurants",
+      services: "Termine & Ämter",
+      tech: "Technik & Internet",
+      health: "Gesundheit & Pflege",
+      culture: "Kultur & Bräuche",
+      none: "Nicht zugeordnet",
+    },
+    intent: {
+      greet: "Begrüßung",
+      ask: "Frage",
+      request: "Bitte & Vorschlag",
+      thank: "Dank",
+      apologize: "Entschuldigung",
+      feel: "Gefühle ausdrücken",
+      praise: "Lob",
+      complain: "Beschwerde",
+      agree: "Zustimmung & Ablehnung",
+      describe: "Beschreibung",
+      humor: "Humor",
+      none: "Nicht zugeordnet",
+    },
+    register: {
+      natural: "Natürlich",
+      casual: "Locker",
+      formal: "Formell",
+      colloquial: "Umgangssprachlich",
+      idiomatic: "Idiomatisch",
+    },
   },
 } as const;
 
@@ -409,7 +543,11 @@ export function statsT(locale: Locale) {
   };
 }
 
-export function categoryLabel(locale: Locale, dim: "kind" | "domain" | "intent" | "register", id: string): string {
+export function categoryLabel(
+  locale: Locale,
+  dim: "kind" | "domain" | "intent" | "register",
+  id: string,
+): string {
   const table = CAT[locale]?.[dim] as Record<string, string> | undefined;
   return table?.[id] ?? (CAT.en[dim] as Record<string, string>)[id] ?? id;
 }

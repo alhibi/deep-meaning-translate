@@ -114,6 +114,7 @@ export const ResultPanel = memo(function ResultPanel({
   } | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const voicePrefs = useVoicePrefs();
+  const voiceLang = result?.targetLanguage || target;
   const syncTimer = useRef<number | null>(null);
   const stopSync = () => {
     if (syncTimer.current !== null) cancelAnimationFrame(syncTimer.current);
@@ -144,9 +145,9 @@ export const ResultPanel = memo(function ResultPanel({
     if (!text || provisional || pending || voicePrefs.engine !== "gemini") return;
     warmVoice();
     // Prepare the voice as soon as the translation settles, so Listen is instant.
-    const id = setTimeout(() => prefetchSpeech(text, lang, voicePrefs), 350);
+    const id = setTimeout(() => prefetchSpeech(text, voiceLang, voicePrefs), 350);
     return () => clearTimeout(id);
-  }, [text, provisional, pending, lang, voicePrefs]);
+  }, [text, provisional, pending, voiceLang, voicePrefs]);
 
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {

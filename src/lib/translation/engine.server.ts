@@ -83,7 +83,13 @@ export async function runReview(
   const { deepseekKey, reviewTranslation } = await import("./providers/deepseek.server");
   const key = deepseekKey();
   // DeepSeek never reviews its own writing.
-  if (!key || req.partial || effectiveBrain(req.brain ?? DEFAULT_BRAIN) === "deepseek" || !req.text.trim()) return null;
+  if (
+    !key ||
+    req.partial ||
+    effectiveBrain(req.brain ?? DEFAULT_BRAIN) === "deepseek" ||
+    !req.text.trim()
+  )
+    return null;
   try {
     const reviewed = await reviewTranslation(key, req, previous);
     if (!reviewed || norm(reviewed.translation) === norm(previous.translation)) return null;
