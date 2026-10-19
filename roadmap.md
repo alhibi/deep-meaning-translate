@@ -8,3 +8,4 @@
 - [x] Translation statistics page replacing history entry (local, real data)
 - [x] Wrong-source hint + model told source is a hint; verified 15 languages live
 - [x] Hardened device voice + read-along (exact word events, estimate fallback)
+- [x] Gemini TTS on the speaker button (voices, quality, speed, cache, device fallback)
