@@ -11,6 +11,18 @@ type Entry = { id: symbol; close: () => void; release: () => void };
 const stack: Entry[] = [];
 let ignorePops = 0;
 let afterPop: (() => void) | null = null;
+let settled: (() => void)[] = [];
+function flushSettled() {
+  if (ignorePops > 0 || stack.length > 0) return;
+  const list = settled;
+  settled = [];
+  for (const cb of list) cb();
+}
+/** Runs once no sheet is open and every history entry a sheet pushed is gone. */
+export function onSheetsSettled(cb: () => void) {
+  settled.push(cb);
+  flushSettled();
+}
 let installed = false;
 function install() {
   if (installed || typeof window === "undefined") return;
@@ -21,9 +33,11 @@ function install() {
       const cb = afterPop;
       afterPop = null;
       cb?.();
+      flushSettled();
       return;
     }
     stack.at(-1)?.close();
+    flushSettled();
   });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && stack.length) history.back();

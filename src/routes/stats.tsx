@@ -42,7 +42,7 @@ import { RecordList } from "@/components/stats/RecordList";
 import { RecordSheet } from "@/components/stats/RecordSheet";
 import { DetailSheet, type DetailSpec } from "@/components/stats/DetailSheet";
 import { FilterSheet } from "@/components/stats/FilterSheet";
-import { Sheet, leaveSheets } from "@/components/stats/Sheet";
+import { Sheet, leaveSheets, onSheetsSettled } from "@/components/stats/Sheet";
 
 interface StatsSearch extends Filters {
   range?: RangeId | undefined;
@@ -94,7 +94,12 @@ type Metric = "translations" | "words";
 type Kpi = "translations" | "words" | "pairs" | "days" | "avg";
 
 function StatsPage() {
-  const search = Route.useSearch();
+  const urlSearch = Route.useSearch();
+  // Period and filters live in state while sheets are open (each sheet owns a history
+  // entry), and are written to the address once they close — so Back and reload keep them.
+  const [search, setQuery] = useState<StatsSearch>(urlSearch);
+  const urlKey = JSON.stringify(urlSearch);
+  useEffect(() => setQuery(JSON.parse(urlKey) as StatsSearch), [urlKey]);
   const navigate = useNavigate({ from: "/stats" });
   const { locale, rtl } = useI18n();
   const dir = rtl ? "rtl" : "ltr";
@@ -152,19 +157,26 @@ function StatsPage() {
   const byId = useMemo(() => new Map(records.map((r) => [r.id, r])), [records]);
 
   /* ---------------- navigation state lives in the URL; Back keeps period and filters ---------------- */
-  const setSearch = useCallback(
-    (patch: Partial<StatsSearch>) =>
-      void navigate({
-        search: (prev: StatsSearch) => {
-          const next: Record<string, unknown> = { ...prev, ...patch };
-          for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
-          return next as StatsSearch;
-        },
-        replace: true,
-        resetScroll: false,
-      }),
-    [navigate],
-  );
+  const setSearch = useCallback((patch: Partial<StatsSearch>) => {
+    setQuery((prev) => {
+      const next: Record<string, unknown> = { ...prev, ...patch };
+      for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
+      return next as StatsSearch;
+    });
+  }, []);
+  const anyOpen = !!detail || !!recordId || filtersOpen || !!kpi;
+  const queryKey = JSON.stringify(search);
+  useEffect(() => {
+    if (anyOpen || queryKey === urlKey) return;
+    let live = true;
+    onSheetsSettled(() => {
+      if (live)
+        void navigate({ search: JSON.parse(queryKey) as StatsSearch, replace: true, resetScroll: false });
+    });
+    return () => {
+      live = false;
+    };
+  }, [anyOpen, queryKey, urlKey, navigate]);
   const setFilter = useCallback(
     (key: keyof Filters, value: string | undefined) => setSearch({ [key]: value }),
     [setSearch],
