@@ -16,6 +16,8 @@ export interface Prefs {
   style: StyleOverride;
   dialect?: Dialect;
   brain?: Brain;
+  /** Sentence shadow on/off (default on). */
+  shadow?: boolean;
 }
 export interface Session {
   text: string;
@@ -43,6 +45,7 @@ export function parsePrefs(v: unknown): Prefs | null {
   if (typeof p.dialect === "string" && DIALECTS.includes(p.dialect))
     out.dialect = p.dialect as Dialect;
   if (p.brain === "deepseek" || p.brain === "luna") out.brain = p.brain;
+  if (typeof p.shadow === "boolean") out.shadow = p.shadow;
   return out;
 }
 
