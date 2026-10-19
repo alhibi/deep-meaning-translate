@@ -99,15 +99,14 @@ export function useShadow(opts: {
   );
 
   /** Before a fix is applied: remember the other losses so they don't flicker away. */
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const prepareApply = useCallback((lossId: string, nextTranslation: string) => {
-    setState((s) => {
-      if (s.status === "ready")
-        carry.current = {
-          translation: nextTranslation.trim(),
-          losses: s.losses.filter((l) => l.id !== lossId),
-        };
-      return s;
-    });
+    const s = stateRef.current;
+    carry.current =
+      s.status === "ready"
+        ? { translation: nextTranslation.trim(), losses: s.losses.filter((l) => l.id !== lossId) }
+        : null;
   }, []);
 
   return { state, dismiss, prepareApply };
