@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { notifyCopied } from "@/lib/clipboardHint";
-import { BookOpen, Bookmark, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
+import { BookOpen, Bookmark, Flag, Check, Copy, RotateCw, Share2, Volume2 } from "lucide-react";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
@@ -84,6 +84,8 @@ export const ResultPanel = memo(function ResultPanel({
   idle,
   onDictionary,
   dictionaryReady,
+  onFlag,
+  flagLabel,
 }: {
   result: TranslationResult | null;
   pending: boolean;
@@ -100,6 +102,9 @@ export const ResultPanel = memo(function ResultPanel({
   /** Opens the mini dictionary; omitted when the text isn't a word/term. */
   onDictionary?: (() => void) | undefined;
   dictionaryReady?: boolean;
+  /** Opens the "inaccurate" marking window. */
+  onFlag?: () => void;
+  flagLabel?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const { t } = useI18n();
@@ -313,6 +318,11 @@ export const ResultPanel = memo(function ResultPanel({
                   className="absolute end-2.5 top-2.5 size-1.5 rounded-full bg-signal"
                 />
               ) : null}
+            </Action>
+          ) : null}
+          {onFlag ? (
+            <Action label={flagLabel ?? "Inaccurate"} onClick={onFlag}>
+              <Flag className="size-[18px]" strokeWidth={1.75} />
             </Action>
           ) : null}
           <span
