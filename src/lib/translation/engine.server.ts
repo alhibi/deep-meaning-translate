@@ -3,39 +3,87 @@ import type { TranslationProvider, TranslationRequest, TranslationResult } from 
 import { TranslationError } from "./types";
 import { verifyTranslation } from "./verify";
 
-/** Swap in another provider here without touching the UI or the server boundary. */
-function resolveProvider(): TranslationProvider {
+/**
+ * Two brains:
+ * - Luna (OpenCode) writes every translation — fastest first words.
+ * - DeepSeek V4.1 Flash reviews each finished sentence and takes over when Luna fails.
+ * Without DEEPSEEK_API_KEY the app runs on Luna alone, exactly as before.
+ */
+function luna(): TranslationProvider | null {
   const apiKey = process.env["OPENCODE_API_KEY"];
-  if (!apiKey)
-    throw new TranslationError("auth", "The translation provider is not configured yet.");
-  return createOpenCodeLunaProvider(apiKey);
+  return apiKey ? createOpenCodeLunaProvider(apiKey) : null;
+}
+async function deepseek(): Promise<TranslationProvider | null> {
+  const { deepseekKey, createDeepSeekProvider } = await import("./providers/deepseek.server");
+  const key = deepseekKey();
+  return key ? createDeepSeekProvider(key) : null;
 }
 
-/**
- * First pass only. Returned issues let the client show the translation immediately
- * and run the repair in the background instead of making the user wait for it.
- */
+/** Failures where the other brain can help; bad input or cancellation never fall back. */
+export const shouldFallBack = (err: unknown) =>
+  err instanceof TranslationError && err.kind !== "input";
+
+async function withFallback<T>(run: (p: TranslationProvider) => Promise<T>): Promise<T> {
+  const primary = luna();
+  if (primary) {
+    try {
+      return await run(primary);
+    } catch (err) {
+      const backup = shouldFallBack(err) ? await deepseek() : null;
+      if (!backup) throw err;
+      return run(backup);
+    }
+  }
+  const backup = await deepseek();
+  if (!backup)
+    throw new TranslationError("auth", "The translation provider is not configured yet.");
+  return run(backup);
+}
+
 export async function runTranslation(
   req: TranslationRequest,
 ): Promise<{ result: TranslationResult; issues: string[] }> {
-  const provider = resolveProvider();
-  const result = await provider.translate(req);
-  // Provisional (still-typing) text: speed wins; the final sentence gets the full check.
+  const result = await withFallback((p) => p.translate(req));
   const issues = req.partial ? [] : verifyTranslation(req, result);
   return { result, issues };
 }
 
-/** Background repair: returns an improved translation, or null when it is not better. */
+const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+
+/**
+ * Quiet second pass for a finished sentence. Deterministic problems (lost
+ * numbers, links) get a repair; otherwise the second brain reviews it.
+ * Returns null when nothing is clearly better.
+ */
 export async function runRepair(
   req: TranslationRequest,
   previous: TranslationResult,
 ): Promise<TranslationResult | null> {
   const issues = verifyTranslation(req, previous);
-  if (issues.length === 0) return null;
-  const provider = resolveProvider();
+  if (issues.length > 0) {
+    try {
+      const repaired = await withFallback((p) => p.repair(req, previous, issues));
+      return verifyTranslation(req, repaired).length < issues.length ? repaired : null;
+    } catch {
+      return null;
+    }
+  }
+  return runReview(req, previous);
+}
+
+export async function runReview(
+  req: TranslationRequest,
+  previous: TranslationResult,
+): Promise<TranslationResult | null> {
+  const { deepseekKey, reviewTranslation } = await import("./providers/deepseek.server");
+  const key = deepseekKey();
+  if (!key || req.partial || !req.text.trim()) return null;
   try {
-    const repaired = await provider.repair(req, previous, issues);
-    return verifyTranslation(req, repaired).length < issues.length ? repaired : null;
+    const reviewed = await reviewTranslation(key, req, previous);
+    if (!reviewed || norm(reviewed.translation) === norm(previous.translation)) return null;
+    // Never accept a "fix" that breaks a number, link or emoji the original kept.
+    if (verifyTranslation(req, reviewed).length > 0) return null;
+    return { ...previous, ...reviewed };
   } catch {
     return null;
   }

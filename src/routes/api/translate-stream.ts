@@ -29,19 +29,34 @@ export const Route = createFileRoute("/api/translate-stream")({
         }
         if (!takeToken()) return fail("rate", 429);
         const apiKey = process.env["OPENCODE_API_KEY"];
-        if (!apiKey) return fail("auth", 500);
 
         const { streamLiveTranslation, streamFullTranslation } =
           await import("@/lib/translation/providers/opencode.server");
         const { TranslationError } = await import("@/lib/translation/types");
         const started = Date.now();
         let deltas: AsyncGenerator<string>;
+        let brain = "luna";
+        const { mode, ...rest } = data;
+        const req = { ...rest, partial: mode !== "full" };
         try {
-          const { mode, ...req } = data;
-          deltas =
-            mode === "full"
-              ? await streamFullTranslation(apiKey, { ...req, partial: false }, request.signal)
-              : await streamLiveTranslation(apiKey, { ...req, partial: true }, request.signal);
+          try {
+            if (!apiKey) throw new TranslationError("auth", "Luna is not configured.");
+            deltas =
+              mode === "full"
+                ? await streamFullTranslation(apiKey, req, request.signal)
+                : await streamLiveTranslation(apiKey, req, request.signal);
+          } catch (err) {
+            // Second brain takes over when Luna is down, out of credit or rate limited.
+            const { shouldFallBack } = await import("@/lib/translation/engine.server");
+            const ds = await import("@/lib/translation/providers/deepseek.server");
+            const key = ds.deepseekKey();
+            if (request.signal.aborted || !key || !shouldFallBack(err)) throw err;
+            brain = "deepseek";
+            deltas =
+              mode === "full"
+                ? await ds.streamDeepSeekFull(key, req, request.signal)
+                : await ds.streamDeepSeekLive(key, req, request.signal);
+          }
         } catch (err) {
           // Cancelled by the app (newer text typed): end quietly, not an error.
           if (request.signal.aborted || (err as Error)?.name === "AbortError")
@@ -78,6 +93,7 @@ export const Route = createFileRoute("/api/translate-stream")({
                 JSON.stringify({
                   event: "translate_stream",
                   mode: data.mode,
+                  brain,
                   outcome,
                   ms: Date.now() - started,
                   chars: data.text.length,
