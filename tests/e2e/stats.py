@@ -68,7 +68,7 @@ async def main():
         check("4 ترجمة" in await dlg.inner_text(), "pair detail shows 4 de→ar translations")
         check(await dlg.locator("ul li button").count() == 4, "pair detail lists exactly those 4 translations")
         await dlg.get_by_role("button", name="فلترة بهذا").click()
-        await page.wait_for_timeout(500)
+        await page.wait_for_url(re.compile(r"pair=de(%3E|>)ar"), timeout=8000)
         check("pair=de%3Ear" in page.url or "pair=de>ar" in page.url, "filter is kept in the address (survives Back/reload)")
         check(" 4" in " " + (await kpi("الترجمات").first.inner_text()).replace("\n", " "), "KPI follows the pair filter (4)")
         check("ar>de" not in await page.inner_text("main") , "no raw ids leak into the page")
