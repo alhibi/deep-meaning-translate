@@ -6,31 +6,10 @@ import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
+import { speak as speakText, stopSpeaking } from "@/lib/tts";
 import { StreamingText } from "./StreamingText";
 import { SpokenText } from "./SpokenText";
 import { estimateChar, tokenAt, tokenize } from "./streamingTokens";
-
-const LOCALE: Record<string, string> = {
-  ar: "ar-SA",
-  de: "de-DE",
-  en: "en-US",
-  fr: "fr-FR",
-  es: "es-ES",
-  tr: "tr-TR",
-};
-
-/** Prefer a local, high-quality voice for the exact language; fall back gracefully. */
-function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
-  const voices = window.speechSynthesis.getVoices();
-  const matches = voices.filter((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase()));
-  const preferred = LOCALE[lang]?.toLowerCase();
-  return (
-    matches.find((v) => v.lang.toLowerCase() === preferred && v.localService) ??
-    matches.find((v) => v.lang.toLowerCase() === preferred) ??
-    matches.find((v) => v.localService) ??
-    matches[0]
-  );
-}
 
 /** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
 function sizeFor(len: number, rtl: boolean) {
@@ -113,7 +92,7 @@ export const ResultPanel = memo(function ResultPanel({
   const { t } = useI18n();
   const [speaking, setSpeaking] = useState(false);
   const [showAlt, setShowAlt] = useState(false);
-  const [noVoice, setNoVoice] = useState(false);
+  const [noVoice, setNoVoice] = useState<false | "novoice" | "blocked">(false);
   const [spokenWord, setSpokenWord] = useState(0);
   const syncTimer = useRef<number | null>(null);
   const stopSync = () => {
@@ -128,12 +107,14 @@ export const ResultPanel = memo(function ResultPanel({
   useEffect(() => {
     setShowAlt(false);
     setCopied(false);
-    if (typeof window !== "undefined" && "speechSynthesis" in window)
-      window.speechSynthesis.cancel();
+    stopSpeaking();
     stopSync();
     setSpeaking(false);
   }, [text]);
-  useEffect(() => () => stopSync(), []);
+  useEffect(() => () => {
+    stopSync();
+    stopSpeaking();
+  }, []);
 
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {
@@ -175,59 +156,64 @@ export const ResultPanel = memo(function ResultPanel({
   }, []);
 
   const lang = result?.targetLanguage || target;
+  const stopRef = useRef<(() => void) | null>(null);
   const speak = useCallback(() => {
-    if (!("speechSynthesis" in window)) return;
-    const synth = window.speechSynthesis;
-    if (synth.speaking || synth.pending) {
-      synth.cancel();
+    if (speaking) {
+      stopRef.current?.();
+      stopRef.current = null;
       stopSync();
       setSpeaking(false);
       return;
     }
-    const voice = pickVoice(lang);
-    if (!voice && synth.getVoices().length > 0) {
-      setNoVoice(true);
-      setTimeout(() => setNoVoice(false), 2200);
-      return;
-    }
-    const u = new SpeechSynthesisUtterance(textRef.current);
-    u.lang = voice?.lang ?? LOCALE[lang] ?? lang;
-    if (voice) u.voice = voice;
-    u.rate = 0.95;
-    const tokens = tokenize(textRef.current);
+    const value = textRef.current;
+    const tokens = tokenize(value);
     const rtlVoice = isRtl(lang);
-    // Precise mode: the voice reports each word as it says it. Until (unless) it
-    // does, an estimate from elapsed speaking time keeps the highlight moving.
-    let precise = false;
-    let started = 0;
+    const rate = 0.95;
+    // Read-along: exact word events when the voice sends them; otherwise an
+    // estimate from speaking time since the current chunk began.
+    let exact = false;
+    let chunkAt = 0;
+    let chunkOffset = 0;
     const tickEstimate = () => {
-      if (!precise && started) {
-        const c = estimateChar(performance.now() - started, u.rate, rtlVoice);
+      if (!exact) {
+        const c = chunkOffset + estimateChar(performance.now() - chunkAt, rate, rtlVoice);
         setSpokenWord(tokenAt(tokens, c));
       }
-      syncTimer.current = precise ? null : requestAnimationFrame(tickEstimate);
+      syncTimer.current = exact ? null : requestAnimationFrame(tickEstimate);
     };
-    u.onstart = () => {
-      started = performance.now();
-      setSpokenWord(0);
-      stopSync();
-      syncTimer.current = requestAnimationFrame(tickEstimate);
-    };
-    u.onboundary = (e) => {
-      if (e.name && e.name !== "word") return;
-      precise = true;
-      setSpokenWord(tokenAt(tokens, e.charIndex));
-    };
-    u.onend = u.onerror = () => {
-      stopSync();
-      setSpeaking(false);
-    };
+    setNoVoice(false);
     setSpokenWord(0);
-    synth.cancel();
-    synth.speak(u);
-    synth.resume(); // Chrome can leave the queue paused after a previous cancel.
-    setSpeaking(true);
-  }, [lang]);
+    setSpeaking(true); // instant feedback; the glow starts with the voice
+    stopRef.current = speakText(value, lang, {
+      onStart: () => {
+        chunkAt = performance.now();
+        stopSync();
+        syncTimer.current = requestAnimationFrame(tickEstimate);
+      },
+      onWord: (ci, isExact) => {
+        if (isExact) {
+          exact = true;
+          stopSync();
+        } else {
+          chunkAt = performance.now();
+          chunkOffset = ci;
+        }
+        setSpokenWord(tokenAt(tokens, ci));
+      },
+      onEnd: () => {
+        stopSync();
+        setSpeaking(false);
+        stopRef.current = null;
+      },
+      onFail: (why) => {
+        stopSync();
+        setSpeaking(false);
+        stopRef.current = null;
+        setNoVoice(why === "novoice" ? "novoice" : "blocked");
+        setTimeout(() => setNoVoice(false), 3200);
+      },
+    }, rate);
+  }, [lang, speaking]);
 
   const share = useCallback(() => {
     if (navigator.share) void navigator.share({ text: textRef.current }).catch(() => undefined);
@@ -371,14 +357,6 @@ export const ResultPanel = memo(function ResultPanel({
               <Flag className="size-[18px]" strokeWidth={1.75} />
             </Action>
           ) : null}
-          <span
-            aria-live="polite"
-            className={`ms-1 text-[12px] ${noVoice ? "text-muted-foreground" : "text-success"} transition-[opacity,transform] duration-200 ${
-              copied || noVoice ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
-            }`}
-          >
-            {noVoice ? t("noVoice") : ""}
-          </span>
           {error ? (
             <button
               type="button"
@@ -391,6 +369,14 @@ export const ResultPanel = memo(function ResultPanel({
             </button>
           ) : null}
         </div>
+        <p aria-live="polite" className="min-h-0 text-[12.5px] leading-relaxed text-muted-foreground">
+          {noVoice ? (
+            <span className="animate-fade mt-2 flex items-start gap-2">
+              <span aria-hidden className="mt-[0.55em] size-1 shrink-0 rotate-45 bg-warning" />
+              {noVoice === "novoice" ? t("noVoice") : t("voiceBlocked")}
+            </span>
+          ) : null}
+        </p>
       </div>
     );
   } else if (error) {

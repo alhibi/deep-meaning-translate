@@ -31,6 +31,8 @@ import { FlagSheet } from "@/components/translator/FlagSheet";
 import { useFlags } from "@/lib/flags";
 import { DEFAULT_BRAIN, effectiveBrain, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
+import { LanguageNotice } from "@/components/translator/LanguageNotice";
+import { checkSource } from "@/lib/translation/languageCheck";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
@@ -111,6 +113,12 @@ function Translator() {
     [source, target, style],
   );
 
+  // Text in another writing system than the picked source (Arabic typed with
+  // "English" chosen): the pick can't be right, so the model detects the language
+  // itself instead of being told something false. The user still gets a hint.
+  const scriptMismatch = text.trim() ? checkSource(text, source) : null;
+  const requestSource = scriptMismatch?.strong ? "auto" : source;
+
   const {
     result: raw,
     pending: rawPending,
@@ -121,7 +129,7 @@ function Translator() {
     prime,
   } = useTranslator({
     text,
-    source,
+    source: requestSource,
     target,
     style,
     dialect,
@@ -264,6 +272,16 @@ function Translator() {
   useEffect(() => {
     if (source === "auto" && arabicScript && target === "ar") setTarget("de");
   }, [source, arabicScript, target]);
+
+  // Gentle hint when the text isn't in the picked source language; the model's own
+  // detection on a finished sentence refines it for same-script languages.
+  const modelDetected = raw && !provisional && source !== "auto" ? raw.sourceLanguage : undefined;
+  const mismatch = text.trim() ? checkSource(text, source, modelDetected) : null;
+  const [langDismissed, setLangDismissed] = useState("");
+  const mismatchKey = mismatch ? `${source}>${mismatch.suggest}` : "";
+  useEffect(() => {
+    if (!text.trim()) setLangDismissed("");
+  }, [text]);
 
   // Picking the language already on the other side trades places instead of translating X→X.
   const chooseSource = useCallback(
@@ -729,6 +747,14 @@ function Translator() {
                 {t("live")}
               </span>
             </div>
+            {mismatch && langDismissed !== mismatchKey ? (
+              <LanguageNotice
+                mismatch={mismatch}
+                source={source}
+                onApply={() => (mismatch.suggest === "auto" ? setSource("auto") : chooseSource(mismatch.suggest))}
+                onDismiss={() => setLangDismissed(mismatchKey)}
+              />
+            ) : null}
             <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
 
             <div>
