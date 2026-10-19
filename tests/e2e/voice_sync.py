@@ -31,7 +31,7 @@ async def main():
     await page.get_by_test_id('intro-enter').click();await page.wait_for_timeout(1600)
    await page.get_by_role('textbox').first.fill('مرحبا كيف حالك اليوم؟')
    listen=page.get_by_role('button',name='Listen',exact=True)
-   await listen.wait_for(timeout=15000); await page.wait_for_timeout(1800)
+   await page.wait_for_timeout(5000);print(await page.locator('body').inner_text());await page.screenshot(path='/tmp/browser/voice-sync/debug.png');await listen.wait_for(timeout=15000); await page.wait_for_timeout(1800)
    assert len(speech)==1, speech
    await listen.click()
    await page.wait_for_timeout(1100)
