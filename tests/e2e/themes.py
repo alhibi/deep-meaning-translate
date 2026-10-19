@@ -24,34 +24,36 @@ async def main():
             await page.reload()
             button = page.get_by_role("button", name="الثيم اللوني التالي", exact=True)
             await button.wait_for()
-            assert await page.locator("html").get_attribute("data-theme") == "dark"
+            assert await page.locator("html").get_attribute("data-theme") == "light"
             backgrounds = []
-            for theme in ["dark", "forest", "rose", "dark"]:
+            for theme in ["light", "navy", "burgundy", "dark", "light"]:
                 if len(backgrounds):
                     await button.click()
                 await page.wait_for_function("t => document.documentElement.dataset.theme === t", arg=theme)
                 await page.wait_for_timeout(850)
                 assert await button.get_attribute("data-theme-choice") == theme
-                assert await page.evaluate("getComputedStyle(document.documentElement).colorScheme") == "dark"
+                assert await page.evaluate("getComputedStyle(document.documentElement).colorScheme") == ("light" if theme == "light" else "dark")
+                if theme == "burgundy":
+                    assert await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--burgundy-base').trim().toLowerCase()") == "#7b1b38"
                 assert await page.evaluate("document.documentElement.scrollWidth <= innerWidth")
                 backgrounds.append(await page.evaluate("getComputedStyle(document.body).backgroundColor"))
                 await page.screenshot(path=str(SHOTS / f"{width}-{theme}.png"))
-            assert len(set(backgrounds[:3])) == 3
+            assert len(set(backgrounds[:4])) == 4
             await button.click()
             await page.wait_for_timeout(850)
             await page.reload()
             await button.wait_for()
-            assert await page.locator("html").get_attribute("data-theme") == "forest"
+            assert await page.locator("html").get_attribute("data-theme") == "navy"
             await page.goto(URL + "/stats")
-            assert await page.locator("html").get_attribute("data-theme") == "forest"
+            assert await page.locator("html").get_attribute("data-theme") == "navy"
             await page.goto(URL)
             await button.wait_for()
             await button.evaluate("b => { b.click(); b.click(); b.click(); b.click(); b.click(); }")
             await page.wait_for_timeout(1200)
-            assert await page.locator("html").get_attribute("data-theme") == "dark"
-            assert await page.evaluate("localStorage.getItem('lingua.theme.v1')") == "dark"
+            assert await page.locator("html").get_attribute("data-theme") == "burgundy"
+            assert await page.evaluate("localStorage.getItem('lingua.theme.v1')") == "burgundy"
             assert not errors, errors
-            print(f"PASS {width}px: three dark colours, cycling, persistence, legacy migration, navigation, rapid clicks; no page errors")
+            print(f"PASS {width}px: restored light, navy, #7B1B38 burgundy, cycling, persistence, navigation, rapid clicks; no page errors")
             await context.close()
         await browser.close()
 
