@@ -884,3 +884,29 @@ textarea:focus-visible {
     display: none;
   }
 }
+
+/* Word-by-word arrival of streamed translations: only new or changed words animate. */
+@keyframes word-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateY(0.12em);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+.word-in {
+  display: inline-block;
+  white-space: pre-wrap;
+  animation: word-in 260ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-in {
+    animation: fade 120ms linear both;
+    filter: none;
+    transform: none;
+  }
+}

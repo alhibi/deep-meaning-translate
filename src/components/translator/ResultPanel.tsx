@@ -6,6 +6,7 @@ import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
+import { StreamingText } from "./StreamingText";
 
 const LOCALE: Record<string, string> = {
   ar: "ar-SA",
@@ -205,7 +206,7 @@ export const ResultPanel = memo(function ResultPanel({
             rtl ? "font-arabic font-medium" : "font-medium"
           } ${sizeFor(text.length, rtl)} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
         >
-          {text}
+          <StreamingText text={text} />
         </p>
 
         {result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
