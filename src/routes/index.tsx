@@ -817,7 +817,7 @@ function Translator() {
           <Link
             to="/arabic-german-translation"
             dir={uiRtl ? "rtl" : "ltr"}
-            className="mx-5 mt-5 self-start text-[13px] text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="sr-only"
           >
             {t("pairGuide")}
           </Link>
