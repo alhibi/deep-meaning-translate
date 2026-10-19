@@ -1,7 +1,21 @@
 import type { Situation, TranslationRequest, TranslationResult } from "./types";
 import { TranslationError } from "./types";
+import { isDomain, isIntent, isKind } from "../stats/taxonomy";
+
+/** Keeps only tag values the statistics taxonomy knows; anything else is dropped, never guessed. */
+export function parseTags(v: unknown): TranslationResult["tags"] {
+  if (!v || typeof v !== "object") return undefined;
+  const t = v as Record<string, unknown>;
+  const out: NonNullable<TranslationResult["tags"]> = {};
+  if (isKind(t["kind"])) out.kind = t["kind"];
+  if (isDomain(t["domain"])) out.domain = t["domain"];
+  if (isIntent(t["intent"])) out.intent = t["intent"];
+  return Object.keys(out).length ? out : undefined;
+}
 
 const SITUATIONS: Situation[] = ["chat", "work", "official", "general"];
+
+const withTags = (tags: TranslationResult["tags"]) => (tags ? { tags } : {});
 
 /** Parses the model's structured JSON reply. Shared by server and browser. */
 export function parseResult(raw: string, req: TranslationRequest): TranslationResult {
@@ -41,6 +55,7 @@ export function parseResult(raw: string, req: TranslationRequest): TranslationRe
     situation: SITUATIONS.includes(data["situation"] as Situation)
       ? (data["situation"] as Situation)
       : "general",
+    ...withTags(parseTags(data["tags"])),
   };
 }
 

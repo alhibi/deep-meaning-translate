@@ -5,3 +5,4 @@
 - [x] Broad Arabic/German/dialect lexicon linked to model translation ranking
 - [x] Audit: validate restored prefs/session, flush draft on close, fix "forget all" leaving phrasebook in memory, edit saved phrases, delete single history items, request durable storage
 - [x] Two brains: DeepSeek V4.1 Flash reviewer + fallback
+- [x] Translation statistics page replacing history entry (local, real data)

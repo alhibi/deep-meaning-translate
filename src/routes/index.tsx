@@ -1,12 +1,12 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Bookmark,
   ChevronDown,
   ClipboardPaste,
-  Clock3,
+  ChartNoAxesCombined,
   Mic,
   X,
 } from "lucide-react";
@@ -16,7 +16,6 @@ import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
 import { LanguageSheet } from "@/components/translator/LanguageSheet";
-import { HistorySheet } from "@/components/translator/HistorySheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
 import { Intro } from "@/components/Intro";
@@ -30,7 +29,9 @@ import { useLexicon } from "@/lib/translation/useLexicon";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
 import { DEFAULT_BRAIN, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
-import { history, type HistoryEntry } from "@/lib/history";
+import { history } from "@/lib/history";
+import { takePendingPick } from "@/lib/stats/useArchive";
+import { statsT } from "@/lib/stats/labels";
 import { persist } from "@/lib/persist";
 import { shouldShowIntro } from "@/lib/intro";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
@@ -67,8 +68,6 @@ function Translator() {
   const [source, setSource] = useState("auto");
   const [target, setTarget] = useState("de");
   const [style, setStyle] = useState<StyleOverride>("natural");
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [dialect, setDialect] = useState<Dialect>("auto");
   const [dialectOpen, setDialectOpen] = useState(false);
   const [brain, setBrain] = useState<Brain>(DEFAULT_BRAIN);
@@ -82,20 +81,30 @@ function Translator() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { canInstall, install } = useInstallPrompt();
 
+  // A restored draft re-shows its old translation: recorded quietly, never as a new use.
+  const quietRef = useRef<string | null>(null);
   const handleSuccess = useCallback(
     (result: TranslationResult, original: string, provisional: boolean) => {
-      if (provisional) return; // only settled thoughts become history
+      if (provisional) return; // only settled thoughts reach the archive
       if (lang2(result.sourceLanguage) === lang2(target)) return; // about to re-route
-      setEntries(
-        history.add({
+      if (!result.translation.trim()) return;
+      const quiet = quietRef.current !== null && quietRef.current === original.trim();
+      quietRef.current = null;
+      history.add(
+        {
           source: result.sourceLanguage || source,
           target,
           original,
           translated: result.translation,
-        }),
+          style,
+          formality: result.formality || undefined,
+          situation: result.situation,
+          tags: result.tags as Parameters<typeof history.add>[0]["tags"],
+        },
+        { quiet },
       );
     },
-    [source, target],
+    [source, target, style],
   );
 
   const {
@@ -119,7 +128,6 @@ function Translator() {
   // Boot: restore the device-local session, or open around text shared into the app.
   const [restored, setRestored] = useState(false);
   useEffect(() => {
-    setEntries(history.list());
     void persist.requestDurable();
     initServiceWorker();
     initLocale();
@@ -136,7 +144,15 @@ function Translator() {
       .filter(Boolean)
       .join("\n")
       .trim();
-    if (shared) {
+    const pick = takePendingPick();
+    if (pick && pick.target !== pick.source) {
+      // Opened from Translation Statistics: show that translation, not the old draft.
+      if (pick.source !== "auto") setSource(pick.source);
+      setTarget(pick.target);
+      submitNext();
+      quietRef.current = pick.original.trim();
+      setText(pick.original.slice(0, MAX_CHARS));
+    } else if (shared) {
       window.history.replaceState(null, "", "/");
       submitNext();
       setText(shared.slice(0, MAX_CHARS));
@@ -146,6 +162,7 @@ function Translator() {
         if (session.result)
           prime(session.text, session.source, session.target, session.style, session.result);
         submitNext();
+        quietRef.current = session.text.trim();
         setText(session.text);
       } else if (shouldShowIntro()) {
         setIntroOpen(true);
@@ -306,41 +323,6 @@ function Translator() {
     inputRef.current?.focus();
   }, []);
 
-  // Android back closes the sheet instead of leaving the app; the translator stays home.
-  const openHistory = useCallback(() => {
-    window.history.pushState({ sheet: "history" }, "");
-    setHistoryOpen(true);
-  }, []);
-  const closeHistory = useCallback(() => {
-    if (window.history.state?.sheet === "history") window.history.back();
-    else setHistoryOpen(false);
-  }, []);
-  useEffect(() => {
-    const onPop = () => setHistoryOpen(false);
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-  const forgetAll = useCallback(() => {
-    persist.clearAll();
-    saved.clear(); // also drops the in-memory phrasebook so nothing is re-written later
-    sessionRef.current = null;
-    setEntries([]);
-    setText("");
-    closeHistory();
-  }, [closeHistory]);
-  const clearHistory = useCallback(() => setEntries(history.clear()), []);
-  const removeHistory = useCallback((id: string) => setEntries(history.remove(id)), []);
-  const pickHistory = useCallback(
-    (e: HistoryEntry) => {
-      setText(e.original);
-      setSource(e.source);
-      setTarget(e.target);
-      submitNext();
-      closeHistory();
-    },
-    [submitNext, closeHistory],
-  );
-
   const { t, locale, rtl: uiRtl } = useI18n();
   const { lexicon, loading: lexiconLoading } = useLexicon({
     text,
@@ -409,7 +391,7 @@ function Translator() {
   // The name introduces itself on its own: once 4s after arrival, then a quiet
   // 16s rhythm — but only while the page rests (nothing written, no sheet open).
   useEffect(() => {
-    if (tagline || hasText || historyOpen || localeOpen || savedOpen || dialectOpen) return;
+    if (tagline || hasText || localeOpen || savedOpen || dialectOpen) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const delay = taglinePlayed.current ? 16000 : 4000;
     const id = setTimeout(() => {
@@ -417,7 +399,7 @@ function Translator() {
       playTagline();
     }, delay);
     return () => clearTimeout(id);
-  }, [tagline, hasText, historyOpen, localeOpen, savedOpen, dialectOpen, playTagline]);
+  }, [tagline, hasText, localeOpen, savedOpen, dialectOpen, playTagline]);
 
   const isSaved = !!result && !!savedList && !!saved.find(text, target);
   const toggleSave = useCallback(() => {
@@ -560,14 +542,13 @@ function Translator() {
             >
               <Bookmark className="size-[18px]" strokeWidth={1.75} />
             </button>
-            <button
-              type="button"
-              onClick={openHistory}
-              aria-label={t("recent")}
+            <Link
+              to="/stats"
+              aria-label={statsT(locale)("open")}
               className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
             >
-              <Clock3 className="size-[18px]" strokeWidth={1.75} />
-            </button>
+              <ChartNoAxesCombined className="size-[18px]" strokeWidth={1.75} />
+            </Link>
           </div>
         </header>
 
@@ -830,15 +811,6 @@ function Translator() {
             entries={savedList}
             onClose={() => setSavedOpen(false)}
             onPick={pickSaved}
-          />
-          <HistorySheet
-            open={historyOpen}
-            entries={entries}
-            onClose={closeHistory}
-            onPick={pickHistory}
-            onClear={clearHistory}
-            onRemove={removeHistory}
-            onForgetAll={forgetAll}
           />
         </SafeArea>
       </main>

@@ -62,7 +62,7 @@ async def main():
             check(await box.evaluate("e => getComputedStyle(e).direction") == want, "box direction follows the text after swap")
 
         # 3. Sheets open, stay open, close, and X never covers text.
-        for name in ["العبارات", "Saved", "Gespeichert", "الأخيرة", "Recent", "Verlauf"]:
+        for name in ["العبارات", "Saved", "Gespeichert"]:
             b = page.get_by_role("button", name=name, exact=False).first
             if not await b.count() or not await b.is_visible(): continue
             await b.click(); await page.wait_for_timeout(700)
@@ -76,6 +76,37 @@ async def main():
                 await page.get_by_role("dialog").first.locator("button[aria-label]").first.click(force=True)
                 await page.wait_for_timeout(600)
             check(await page.get_by_role("dialog").count() == 0, f"sheet '{name}' closes")
+
+        # 4. Translation Statistics replaced the history clock and counts the translation above.
+        await page.keyboard.press("Escape")
+        stats = page.locator("a[href='/stats']").first
+        check(await stats.count() == 1, "statistics entry is in the header")
+        check(await page.locator("header svg.lucide-clock-3").count() == 0, "old history clock is gone")
+        archived = json.loads(await page.evaluate("localStorage.getItem('lingua.history.v1') || '[]'"))
+        await stats.click(); await page.wait_for_url("**/stats**")
+        await page.locator("main ul li button").first.wait_for(timeout=15000)
+        check(await page.get_by_role("heading", level=1).count() == 1, "statistics page opens")
+        kpi = page.get_by_role("button", name="الترجمات").or_(page.get_by_role("button", name="Translations")).or_(page.get_by_role("button", name="Übersetzungen")).first
+        check(await kpi.count() > 0, "translation total card visible (no empty state after a translation)")
+        check(await page.evaluate("document.documentElement.scrollWidth") <= 390, "no horizontal overflow on statistics")
+        check(len(archived) > 0, "the settled translation was archived")
+        latest = archived[0]["original"] if archived else "__none__"
+        row = page.locator("main ul li button").filter(has_text=latest).first
+        check(await row.count() > 0, "the real translation is listed in statistics")
+        total = page.locator("main section button").first
+        check(str(len(archived)) in (await total.inner_text()), "translation total equals archived translations")
+        if await row.count():
+            await row.click(); await page.wait_for_timeout(600)
+            dlg = page.get_by_role("dialog").first
+            check(await dlg.count() == 1, "translation detail opens")
+            check(not await overlaps_text(page, dlg), "translation detail: X does not cover text")
+            await page.go_back(); await page.wait_for_timeout(500)
+            check(await page.get_by_role("dialog").count() == 0 and "/stats" in page.url, "Back closes the detail and stays on statistics")
+        await page.reload()
+        await page.locator("main ul li button").first.wait_for(timeout=15000)
+        check(await page.locator("main ul li button").filter(has_text=latest).count() > 0, "statistics persist after reload")
+        await page.locator("a[href='/']").first.click(); await page.wait_for_timeout(900)
+        check(await page.locator("textarea").count() == 1, "back to the translator")
 
         check(not errors, "zero page errors" + (f": {errors[:3]}" if errors else ""))
         await page.screenshot(path="/tmp/smoke.png")

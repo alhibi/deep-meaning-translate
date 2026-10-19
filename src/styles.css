@@ -86,6 +86,20 @@
   --shimmer: rgb(243 239 232 / 6%);
   --focus-surface: #1b1916;
   --elev-1: 0 1px 0 rgb(255 255 255 / 3%);
+  /* Data palette: Translation Statistics only. Flat, muted, one fixed hue per category. */
+  --cat-1: #d99579;
+  --cat-2: #89b4d2;
+  --cat-3: #99ba9d;
+  --cat-4: #b2a0dc;
+  --cat-5: #d6bc79;
+  --cat-6: #d98c91;
+  --cat-7: #7fb8b0;
+  --cat-8: #c4ac90;
+  --cat-9: #5f8fb4;
+  --cat-10: #8a78be;
+  --cat-11: #6f9a78;
+  --cat-12: #b0876a;
+  --cat-none: #57524c;
   color-scheme: dark;
 }
 
@@ -118,6 +132,19 @@ html.light {
   --input: rgb(28 24 21 / 12%);
   --shimmer: rgb(28 24 21 / 5%);
   --focus-surface: #fbf8f3;
+  --cat-1: #b86a4c;
+  --cat-2: #4e82a8;
+  --cat-3: #5e8a64;
+  --cat-4: #7d68b4;
+  --cat-5: #a68a3a;
+  --cat-6: #b65a62;
+  --cat-7: #3f8a80;
+  --cat-8: #94795a;
+  --cat-9: #34668c;
+  --cat-10: #5d4c96;
+  --cat-11: #436e4d;
+  --cat-12: #8a5e40;
+  --cat-none: #b8afa5;
   --elev-1: 0 1px 2px rgb(28 24 21 / 6%);
   color-scheme: light;
 }
@@ -849,4 +876,11 @@ textarea:focus-visible {
   opacity: 0.25;
   transform: scale(0.9);
   animation: core-breathe 1.2s ease-in-out infinite;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
