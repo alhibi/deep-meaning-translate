@@ -264,8 +264,10 @@ export function ShadowMap({
                       <Icon className="size-3" strokeWidth={1.75} aria-hidden />
                       {t(`sc_${l.category}`)}
                     </span>
-                    <span dir="auto" className="mt-0.5 block text-[13px] leading-relaxed text-muted-foreground">
-                      «{l.sourceQuote}» → «{l.targetQuote}»
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] leading-relaxed text-muted-foreground">
+                      <bdi dir={isRtl(sourceLang) ? "rtl" : "ltr"}>{l.sourceQuote}</bdi>
+                      <span aria-hidden className="text-faint">↔</span>
+                      <bdi dir={isRtl(targetLang) ? "rtl" : "ltr"}>{l.targetQuote}</bdi>
                     </span>
                   </span>
                 </button>
