@@ -27,6 +27,8 @@ import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
 import { useTranslator } from "@/lib/translation/useTranslator";
 import { useLexicon } from "@/lib/translation/useLexicon";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
+import { FlagSheet } from "@/components/translator/FlagSheet";
+import { useFlags } from "@/lib/flags";
 import { DEFAULT_BRAIN, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
 import { history } from "@/lib/history";
@@ -72,6 +74,8 @@ function Translator() {
   const [dialectOpen, setDialectOpen] = useState(false);
   const [brain, setBrain] = useState<Brain>(DEFAULT_BRAIN);
   const [savedOpen, setSavedOpen] = useState(false);
+  const [flagOpen, setFlagOpen] = useState(false);
+  const flagList = useFlags();
   const [introOpen, setIntroOpen] = useState(false);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
   const closeDialect = useCallback(() => setDialectOpen(false), []);
@@ -775,6 +779,8 @@ function Translator() {
                   }
                   onDictionary={lexicon || lexiconLoading ? openLex : undefined}
                   dictionaryReady={!!lexicon}
+                  onFlag={() => setFlagOpen(true)}
+                  flagLabel={{ ar: "غير دقيق", de: "Ungenau" }[locale as string] ?? "Inaccurate"}
                 />
               </SafeArea>
             </div>
@@ -805,6 +811,22 @@ function Translator() {
             value={lexicon}
             loading={lexiconLoading}
             onClose={closeLex}
+          />
+          <FlagSheet
+            open={flagOpen}
+            draft={
+              result
+                ? {
+                    source: result.sourceLanguage || source,
+                    target: result.targetLanguage || target,
+                    original: text,
+                    translated: result.translation,
+                    brain,
+                  }
+                : null
+            }
+            list={flagList}
+            onClose={() => setFlagOpen(false)}
           />
           <SavedSheet
             open={savedOpen}
