@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { DEFAULT_ELEVEN_VOICE, ELEVEN_VOICES } from "./elevenVoice";
 import {
   DEFAULT_VOICE,
   PACES,
@@ -9,25 +10,28 @@ import {
 } from "./geminiVoice";
 
 /** Device-only voice settings. Validated on read; damaged values fall back to defaults. */
-export type VoiceEngine = "gemini" | "device";
+export type VoiceEngine = "elevenlabs" | "gemini" | "device";
 export interface VoicePrefs {
   engine: VoiceEngine;
   voice: GeminiVoice;
   quality: VoiceQuality;
   pace: Pace;
+  elevenVoice: string;
 }
-const KEY = "lingua.voice.v1";
+const KEY = "lingua.voice.v2";
 export const DEFAULT_VOICE_PREFS: VoicePrefs = {
-  engine: "gemini",
+  engine: "elevenlabs",
   voice: DEFAULT_VOICE,
   quality: "best",
   pace: "normal",
+  elevenVoice: DEFAULT_ELEVEN_VOICE,
 };
 
 export function parseVoicePrefs(v: unknown): VoicePrefs {
   const p = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   return {
-    engine: p["engine"] === "device" ? "device" : "gemini",
+    engine: p["engine"] === "device" ? "device" : p["engine"] === "gemini" ? "gemini" : "elevenlabs",
+    elevenVoice: ELEVEN_VOICES.some(([id]) => id === p["elevenVoice"]) ? String(p["elevenVoice"]) : DEFAULT_ELEVEN_VOICE,
     voice: (VOICE_NAMES as readonly string[]).includes(p["voice"] as string)
       ? (p["voice"] as GeminiVoice)
       : DEFAULT_VOICE,
@@ -45,7 +49,12 @@ export function getVoicePrefs(): VoicePrefs {
   if (current) return current;
   if (typeof window === "undefined") return DEFAULT_VOICE_PREFS;
   try {
-    current = parseVoicePrefs(JSON.parse(localStorage.getItem(KEY) ?? "null"));
+    const saved = localStorage.getItem(KEY);
+    if (saved) current = parseVoicePrefs(JSON.parse(saved));
+    else {
+      const old = parseVoicePrefs(JSON.parse(localStorage.getItem("lingua.voice.v1") ?? "null"));
+      current = { ...old, engine: old.engine === "device" ? "device" : "elevenlabs" };
+    }
   } catch {
     current = DEFAULT_VOICE_PREFS;
   }
