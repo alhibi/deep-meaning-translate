@@ -6,7 +6,9 @@ import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
-import { speak as speakText, stopSpeaking } from "@/lib/tts";
+import { speakTranslation, stopSpeaking } from "@/lib/tts";
+import { getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
+import { VoiceSheet } from "./VoiceSheet";
 import { StreamingText } from "./StreamingText";
 import { SpokenText } from "./SpokenText";
 import { estimateChar, tokenAt, tokenize } from "./streamingTokens";
@@ -23,11 +25,13 @@ function sizeFor(len: number, rtl: boolean) {
 function Action({
   label,
   onClick,
+  onLongPress,
   active,
   children,
 }: {
   label: string;
   onClick: () => void;
+  onLongPress?: () => void;
   active?: boolean;
   children: React.ReactNode;
 }) {
@@ -35,6 +39,14 @@ function Action({
     <button
       type="button"
       onClick={onClick}
+      onContextMenu={
+        onLongPress
+          ? (e) => {
+              e.preventDefault();
+              onLongPress();
+            }
+          : undefined
+      }
       aria-label={label}
       aria-pressed={active}
       className="press relative grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
@@ -94,6 +106,10 @@ export const ResultPanel = memo(function ResultPanel({
   const [showAlt, setShowAlt] = useState(false);
   const [noVoice, setNoVoice] = useState<false | "novoice" | "blocked">(false);
   const [spokenWord, setSpokenWord] = useState(0);
+  const [voiceStarted, setVoiceStarted] = useState(false);
+  const [engineNote, setEngineNote] = useState<{ engine: "gemini" | "device"; reason?: string } | null>(null);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const voicePrefs = useVoicePrefs();
   const syncTimer = useRef<number | null>(null);
   const stopSync = () => {
     if (syncTimer.current !== null) cancelAnimationFrame(syncTimer.current);
@@ -168,7 +184,8 @@ export const ResultPanel = memo(function ResultPanel({
     const value = textRef.current;
     const tokens = tokenize(value);
     const rtlVoice = isRtl(lang);
-    const rate = 0.95;
+    const prefs = getVoicePrefs();
+    const rate = { slow: 0.8, normal: 0.95, fast: 1.1 }[prefs.pace];
     // Read-along: exact word events when the voice sends them; otherwise an
     // estimate from speaking time since the current chunk began.
     let exact = false;
@@ -183,9 +200,13 @@ export const ResultPanel = memo(function ResultPanel({
     };
     setNoVoice(false);
     setSpokenWord(0);
+    setVoiceStarted(false);
+    setEngineNote(null);
     setSpeaking(true); // instant feedback; the glow starts with the voice
-    stopRef.current = speakText(value, lang, {
+    stopRef.current = speakTranslation(value, lang, {
+      onEngine: (engine, reason) => setEngineNote({ engine, reason }),
       onStart: () => {
+        setVoiceStarted(true);
         chunkAt = performance.now();
         stopSync();
         syncTimer.current = requestAnimationFrame(tickEstimate);
@@ -212,7 +233,7 @@ export const ResultPanel = memo(function ResultPanel({
         setNoVoice(why === "novoice" ? "novoice" : "blocked");
         setTimeout(() => setNoVoice(false), 3200);
       },
-    }, rate);
+    }, prefs);
   }, [lang, speaking]);
 
   const share = useCallback(() => {
@@ -233,7 +254,7 @@ export const ResultPanel = memo(function ResultPanel({
             rtl ? "font-arabic font-medium" : "font-medium"
           } ${sizeFor(text.length, rtl)} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
         >
-          {speaking ? (
+          {speaking && voiceStarted ? (
             <SpokenText text={text} current={spokenWord} />
           ) : (
             <StreamingText text={text} />
@@ -317,9 +338,14 @@ export const ResultPanel = memo(function ResultPanel({
             </span>
             {copied ? t("copied") : t("copyShort")}
           </button>
-          <Action label={speaking ? t("stop") : t("listen")} onClick={speak} active={speaking}>
+          <Action
+            label={speaking ? t("stop") : t("listen")}
+            onClick={speak}
+            onLongPress={() => setVoiceOpen(true)}
+            active={speaking}
+          >
             <Volume2
-              className={`size-[18px] ${speaking ? "animate-breathe text-signal-text" : ""}`}
+              className={`size-[18px] ${speaking ? (voiceStarted ? "animate-breathe text-signal-text" : "animate-pulse text-signal-text") : ""}`}
               strokeWidth={1.75}
             />
           </Action>
@@ -370,6 +396,25 @@ export const ResultPanel = memo(function ResultPanel({
           ) : null}
         </div>
         <p aria-live="polite" className="min-h-0 text-[12.5px] leading-relaxed text-muted-foreground">
+          {speaking && engineNote ? (
+            <span className="animate-fade mt-2 flex flex-wrap items-center gap-x-2">
+              <span aria-hidden className="size-1 shrink-0 rotate-45 bg-signal" />
+              {engineNote.reason
+                ? t((["quota", "offline", "paused", "config"].includes(engineNote.reason)
+                    ? `vFb_${engineNote.reason}`
+                    : "vFb_other") as Parameters<typeof t>[0])
+                : !voiceStarted && engineNote.engine === "gemini"
+                  ? t("voicePreparing")
+                  : null}
+              <button
+                type="button"
+                onClick={() => setVoiceOpen(true)}
+                className="press-soft text-faint underline decoration-border-strong underline-offset-4"
+              >
+                {engineNote.engine === "gemini" ? `Gemini · ${voicePrefs.voice}` : t("vDevice")}
+              </button>
+            </span>
+          ) : null}
           {noVoice ? (
             <span className="animate-fade mt-2 flex items-start gap-2">
               <span aria-hidden className="mt-[0.55em] size-1 shrink-0 rotate-45 bg-warning" />
@@ -420,6 +465,7 @@ export const ResultPanel = memo(function ResultPanel({
       <span className="sr-only" aria-live="polite">
         {announce}
       </span>
+      <VoiceSheet open={voiceOpen} onClose={() => setVoiceOpen(false)} />
     </div>
   );
 });
