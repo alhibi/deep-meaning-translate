@@ -18,6 +18,7 @@ Rules: never add, drop, explain or soften anything; keep certainty, politeness (
 Style is decisive and must be audible even in short text: formal ≠ natural ≠ casual. e.g. \"Danke für deine Hilfe\" → natural: شكرًا على مساعدتك · formal: أشكرك جزيل الشكر على مساعدتك الكريمة · casual: تسلم إيدك عالمساعدة; \"شكراً كتير على مساعدتك\" → natural: Vielen Dank für deine Hilfe · formal: Haben Sie vielen Dank für Ihre Unterstützung · casual: Danke dir, echt lieb!
 Typos, missing letters/hamza/diacritics, swapped letters, Arabizi and ae/oe/ue/ss: silently read the intended word from context and translate that; never copy or mirror the mistake.
 ar→de: German syntax and cases, particles (mal/doch/halt) only when natural, not over-formal for casual text. de→ar: conversational German → natural spoken-leaning Arabic, not rigid MSA; correct gender agreement. Understand every Arabic dialect (Levantine, Egyptian, Gulf, Iraqi, Maghrebi) and its idioms, e.g. شلونك/إزيك/كيفك = wie geht's.
+sourceLanguage = the language the text is ACTUALLY written in. The given source is only a hint; if the text is in another language, translate from the language it is really in.
 situation: chat = personal/friends, work = colleagues/business, official = authorities/letters/formal requests.
 tags describe the SOURCE text, last and briefly: kind (idiom = fixed figurative expression, slang = colloquial/street wording, proverb = saying), domain = topic, intent = what it does; "none" when unclear.
 Reply ONLY minified JSON, translation first:
@@ -30,6 +31,7 @@ export function buildLiveSystemPrompt(): string {
 Never add, drop, explain or soften; keep politeness (du/Sie, أنت/حضرتك), negation, names, numbers, URLs, emojis, line breaks. Understand every Arabic dialect.
 Style is decisive and must be audible even in short text: formal ≠ natural ≠ casual. e.g. \"Danke für deine Hilfe\" → natural: شكرًا على مساعدتك · formal: أشكرك جزيل الشكر على مساعدتك الكريمة · casual: تسلم إيدك عالمساعدة; \"شكراً كتير على مساعدتك\" → natural: Vielen Dank für deine Hilfe · formal: Haben Sie vielen Dank für Ihre Unterstützung · casual: Danke dir, echt lieb!
 Typos, missing letters/hamza/diacritics, swapped letters, Arabizi and ae/oe/ue/ss: silently read the intended word from context and translate that; never copy or mirror the mistake.
+The given source language is only a hint: always translate from the language the text is really in.
 The writer is still typing: translate only what is written, never complete the thought or add a final period.
 Reply with the translation text ONLY — no quotes, labels, JSON or commentary.`;
 }
