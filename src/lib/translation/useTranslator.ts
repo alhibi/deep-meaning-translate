@@ -98,6 +98,8 @@ export function useTranslator(opts: {
   const style = opts.style;
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const brain: Brain = opts.brain ?? DEFAULT_BRAIN;
+  const brainRef = useRef(brain);
+  brainRef.current = brain;
   const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
   const callRepair = useServerFn(repairTranslation);
 
@@ -431,7 +433,7 @@ export function useTranslator(opts: {
   /** Seed a known result (e.g. restored session) so it shows without a new request. */
   const prime = useCallback(
     (raw: string, s: string, t: string, st: StyleOverride, value: TranslationResult) => {
-      cache.current.set(keyOf(normalize(raw), s, t, st), {
+      cache.current.set(keyOf(normalize(raw), s, t, `${st}@${brainRef.current}`), {
         result: value,
         at: Date.now(),
         provisional: false,
