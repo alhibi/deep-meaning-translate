@@ -115,7 +115,10 @@ export function createDeepSeekProvider(apiKey: string): TranslationProvider {
   return {
     id: "deepseek",
     async translate(req, signal) {
-      return parseResult(await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal), req);
+      return parseResult(
+        await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal),
+        req,
+      );
     },
     async repair(req, previous, issues, signal) {
       const raw = await call(
