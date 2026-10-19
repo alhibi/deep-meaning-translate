@@ -15,7 +15,11 @@ export const Route = createFileRoute("/api/translate-stream")({
       // Warm-up: resolve and open the connection to the provider so the first real
       // translation skips DNS/TLS setup. Sends no text and no credentials.
       GET: async () => {
-        await fetch("https://opencode.ai/zen/go/v1/models", { method: "HEAD" }).catch(() => {});
+        // Both brains, in parallel: whichever writes (or falls back) is already connected.
+        await Promise.all([
+          fetch("https://opencode.ai/zen/go/v1/models", { method: "HEAD" }).catch(() => {}),
+          fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {}),
+        ]);
         return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
       },
       POST: async ({ request }) => {

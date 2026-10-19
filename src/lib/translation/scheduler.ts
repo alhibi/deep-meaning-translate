@@ -68,13 +68,13 @@ export function delayFor(opts: {
 
   let d: number;
   if (SENTENCE_END.test(normalized) || /\n$/.test(raw)) d = 40;
-  else if (SOFT_BOUNDARY.test(raw)) d = 120;
-  else if (/\s$/.test(raw)) d = 150;
-  else d = 300; // mid-word: most likely still typing
+  else if (SOFT_BOUNDARY.test(raw)) d = 90;
+  else if (/\s$/.test(raw)) d = 110;
+  else d = 240; // mid-word: most likely still typing
 
-  if (avg < 160) d += 80; // fast typist — wait for the real pause
+  if (avg < 160) d += 60; // fast typist — wait for the real pause
   if (!hasResult && wordCount(normalized) < 2 && !SENTENCE_END.test(normalized))
-    d = Math.max(d, 400);
+    d = Math.max(d, 320);
   if (normalized.length > 600) d += 120;
   if (typeof navigator !== "undefined" && slowConnection()) d += 250;
   return d;
