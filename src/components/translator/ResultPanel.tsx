@@ -6,7 +6,7 @@ import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { tick } from "@/lib/haptics";
 import { useI18n } from "@/lib/i18n";
-import { speakTranslation, stopSpeaking } from "@/lib/tts";
+import { prefetchSpeech, speakTranslation, stopSpeaking } from "@/lib/tts";
 import { PACE_RATE, getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
 import { VoiceSheet } from "./VoiceSheet";
 import { warmVoice } from "@/lib/voice/cloud";
@@ -141,8 +141,12 @@ export const ResultPanel = memo(function ResultPanel({
 
   // A settled translation may be listened to: open the path to the voice service (free, once).
   useEffect(() => {
-    if (text && !provisional && !pending && voicePrefs.engine === "gemini") warmVoice();
-  }, [text, provisional, pending, voicePrefs.engine]);
+    if (!text || provisional || pending || voicePrefs.engine !== "gemini") return;
+    warmVoice();
+    // Prepare the voice as soon as the translation settles, so Listen is instant.
+    const id = setTimeout(() => prefetchSpeech(text, lang, voicePrefs), 350);
+    return () => clearTimeout(id);
+  }, [text, provisional, pending, lang, voicePrefs]);
 
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {

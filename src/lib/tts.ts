@@ -11,7 +11,7 @@
  * back to the full text across chunks.
  */
 
-import { cloudAvailable, speechPieces, CloudSpeakError, Feed } from "./voice/cloud";
+import { cloudAvailable, speechPieces, CloudSpeakError, getFeed } from "./voice/cloud";
 import { PcmPlayer, unlockAudio } from "./voice/pcmPlayer";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
 
@@ -269,13 +269,13 @@ export function speakTranslation(
   const feeds: (Feed | undefined)[] = [];
   const feed = (i: number) => {
     if (i >= pieces.length) return undefined;
-    feeds[i] ??= new Feed({
+    feeds[i] ??= getFeed({
       text: pieces[i]!.text,
       lang,
       voice: prefs.voice,
       quality: prefs.quality,
       pace: prefs.pace,
-    }).start();
+    });
     return feeds[i];
   };
   const player = new PcmPlayer(ctx);
@@ -317,7 +317,6 @@ export function speakTranslation(
   const fallback = (from: number, err: unknown) => {
     if (!alive()) return;
     player.stop();
-    feeds.forEach((f) => f?.abort());
     if (raf) cancelAnimationFrame(raf);
     const kind = err instanceof CloudSpeakError ? err.kind : "provider";
     h.onEngine?.("device", kind);
@@ -342,7 +341,6 @@ export function speakTranslation(
 
   stopCloud = () => {
     player.stop();
-    feeds.forEach((f) => f?.abort());
   };
 
   void (async () => {
@@ -377,4 +375,14 @@ export function speakTranslation(
     if (deviceStop) deviceStop();
     if (alive()) stopSpeaking();
   };
+}
+
+/**
+ * Prepare a settled translation's voice in the background so Listen plays instantly.
+ * Every piece is requested; a later tap joins the running streams or hits the cache.
+ */
+export function prefetchSpeech(text: string, lang: string, prefs: VoicePrefs) {
+  if (prefs.engine !== "gemini" || !text.trim() || !cloudAvailable()) return;
+  for (const p of speechPieces(text, chunkText))
+    getFeed({ text: p.text, lang, voice: prefs.voice, quality: prefs.quality, pace: prefs.pace });
 }

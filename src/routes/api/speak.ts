@@ -9,10 +9,10 @@ import {
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
 /** Coarse in-process throttle for speech, separate from translation. */
-const bucket = { tokens: 12, updated: Date.now() };
+const bucket = { tokens: 40, updated: Date.now() };
 function takeSpeechToken() {
   const now = Date.now();
-  bucket.tokens = Math.min(12, bucket.tokens + ((now - bucket.updated) / 1000) * 0.3);
+  bucket.tokens = Math.min(40, bucket.tokens + ((now - bucket.updated) / 1000) * 1.5);
   bucket.updated = now;
   if (bucket.tokens < 1) return false;
   bucket.tokens -= 1;
