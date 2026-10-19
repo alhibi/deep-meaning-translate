@@ -278,8 +278,10 @@ export function useTranslator(opts: {
             cache.current.delete(cache.current.keys().next().value as string);
           shown.current = token;
           commit(key, res.result, prov, norm);
-          if (res.needsRepair) {
-            // Shown already; improve it quietly and swap only if still on screen.
+          if (!prov) {
+            // Shown already. Finished sentences get a quiet second look (repair for
+            // lost numbers/links, otherwise the second brain's review); the result is
+            // swapped in only if it is still on screen.
             void callRepair({ data: { request: data, previous: res.result } })
               .then((r) => {
                 if (!r?.result || committedKey.current !== key) return;
