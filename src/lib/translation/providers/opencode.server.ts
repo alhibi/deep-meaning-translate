@@ -9,6 +9,7 @@ import type { TranslationProvider, TranslationRequest, TranslationResult } from 
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { parseLexicon, type LexiconResult } from "../lexicon";
+import { providerFetch } from "./request.server";
 
 const BASE = "https://opencode.ai/zen/go/v1";
 const DEFAULT_MODEL = "gpt-6-luna";
@@ -60,24 +61,19 @@ async function send(
   if (signal?.aborted) throw cancelled();
   // Own controller: a caller disconnect aborts the upstream fetch without letting
   // undici's internal AbortError escape as an unhandled runtime error.
-  const ctrl = new AbortController();
-  const onAbort = () => ctrl.abort();
-  signal?.addEventListener("abort", onAbort, { once: true });
   let res: Response;
   try {
-    res = await fetch(`${BASE}/responses`, {
+    res = await providerFetch(`${BASE}/responses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
         "x-opencode-session": SESSION,
       },
-      signal: ctrl.signal,
       body: JSON.stringify(body),
-    });
+    }, signal);
   } catch (err) {
-    signal?.removeEventListener("abort", onAbort);
-    if (ctrl.signal.aborted || (err as Error)?.name === "AbortError") throw cancelled();
+    if (signal?.aborted || (err as Error)?.name === "AbortError") throw cancelled();
     throw new TranslationError("network", "Could not reach the translation provider.");
   }
 
