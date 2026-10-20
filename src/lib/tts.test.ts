@@ -31,6 +31,21 @@ describe("device voice", () => {
 });
 
 describe("device playback session", () => {
+  it("does not retry or fail after an end event with no start event", async () => {
+    vi.useFakeTimers();
+    const utterances: SpeechSynthesisUtterance[] = [];
+    const synth = { speaking: false, pending: false, paused: false, getVoices: () => [{ lang: "de-DE", name: "de", localService: true }], cancel: vi.fn(), speak: (u: SpeechSynthesisUtterance) => utterances.push(u) };
+    vi.stubGlobal("speechSynthesis", synth);
+    vi.stubGlobal("SpeechSynthesisUtterance", class { constructor(public text: string) {} });
+    const end = vi.fn(); const fail = vi.fn();
+    speak("Hallo", "de", { onEnd: end, onFail: fail });
+    await Promise.resolve();
+    utterances[0]?.onend?.({} as SpeechSynthesisEvent);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(end).toHaveBeenCalledTimes(1);
+    expect(fail).not.toHaveBeenCalled();
+    expect(utterances).toHaveLength(1);
+  });
   afterEach(() => {
     stopSpeaking();
     vi.unstubAllGlobals();

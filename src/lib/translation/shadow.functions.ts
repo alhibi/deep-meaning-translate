@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { takeToken } from "./throttle";
+import { getRequest } from "@tanstack/react-start/server";
+import { clientAddress, sameOrigin } from "../requestSafety";
 
 const ShadowInput = z.object({
   text: z.string().trim().min(1).max(600),
@@ -17,7 +19,8 @@ export const analyzeShadow = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ShadowInput.parse(input))
   .handler(async ({ data }): Promise<{ shadow: import("./shadow").ShadowResult | null }> => {
     const sh = await import("./shadow");
-    if (!sh.isShadowCandidate(data.text) || !takeToken()) return { shadow: null };
+    const request = getRequest();
+    if (!sh.isShadowCandidate(data.text) || !sameOrigin(request) || !takeToken(clientAddress(request))) return { shadow: null };
     const ds = await import("./providers/deepseek.server");
     const key = ds.deepseekKey();
     if (!key) return { shadow: null };

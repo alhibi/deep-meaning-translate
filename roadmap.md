@@ -22,3 +22,6 @@
 - [x] Connect AssemblyAI dictation securely, verify multilingual streaming, real Arabic/German browser transcription, cancellation, duplicate prevention, unit tests and app smoke checks
 - [x] Sentence Shadow: settled-only loss analysis, ink/hit layers, card with apply/undo, map, toggle, live 30-sentence eval (26/30), unit + e2e tests
 - [x] Softer, smaller Copy action: tinted pill instead of solid fill; verified both themes, copy flow test, smoke checks
+- [x] Adversarial audit: reproduce translation isolation, voice/dictation races, storage and random-interaction defects; add focused regressions
+- [x] Verify audit repairs with full unit suite, browser smoke, branched interactions, audible-clock checks and one real translation; record evidence and limits in AUDIT.md
+- [ ] Deployment-wide abuse/concurrency protection and load testing — requires a hosting-edge/shared limiter and an explicit paid-provider load-test budget; process-local tests do not establish production scale

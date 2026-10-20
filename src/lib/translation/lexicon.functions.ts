@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { takeToken } from "./throttle";
+import { getRequest } from "@tanstack/react-start/server";
+import { clientAddress, sameOrigin } from "../requestSafety";
 
 const LexiconInput = z.object({
   text: z.string().trim().min(1).max(72),
@@ -16,7 +18,8 @@ export const lookupLexicon = createServerFn({ method: "POST" })
   .handler(
     async ({ data }): Promise<{ ok: true; lexicon: import("./lexicon").LexiconResult | null }> => {
       const { isLexiconCandidate } = await import("./lexicon");
-      if (!isLexiconCandidate(data.text) || !takeToken()) return { ok: true, lexicon: null };
+      const request = getRequest();
+      if (!isLexiconCandidate(data.text) || !sameOrigin(request) || !takeToken(clientAddress(request))) return { ok: true, lexicon: null };
       // Luna is paused: the dictionary runs on DeepSeek.
       const ds = await import("./providers/deepseek.server");
       const key = ds.deepseekKey();

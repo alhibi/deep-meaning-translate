@@ -10,6 +10,7 @@ import type { TranslationProvider, TranslationRequest, TranslationResult } from 
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { textDeltas } from "./opencode.server";
+import { providerFetch } from "./request.server";
 
 /**
  * Second brain: DeepSeek V4.1 Flash on DeepSeek's own OpenAI-compatible API.
@@ -35,15 +36,11 @@ async function send(
 ): Promise<Response> {
   const cancelled = () => Object.assign(new Error("cancelled"), { name: "AbortError" });
   if (signal?.aborted) throw cancelled();
-  const ctrl = new AbortController();
-  const onAbort = () => ctrl.abort();
-  signal?.addEventListener("abort", onAbort, { once: true });
   let res: Response;
   try {
-    res = await fetch(`${BASE}/chat/completions`, {
+    res = await providerFetch(`${BASE}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      signal: ctrl.signal,
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
         stream,
@@ -56,10 +53,9 @@ async function send(
           { role: "user", content: user },
         ],
       }),
-    });
+    }, signal);
   } catch (err) {
-    signal?.removeEventListener("abort", onAbort);
-    if (ctrl.signal.aborted || (err as Error)?.name === "AbortError") throw cancelled();
+    if (signal?.aborted || (err as Error)?.name === "AbortError") throw cancelled();
     throw new TranslationError("network", "Could not reach DeepSeek.");
   }
   if (!res.ok) {

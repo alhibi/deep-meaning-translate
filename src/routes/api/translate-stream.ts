@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { InputSchema } from "@/lib/translation/translate.functions";
 import { takeToken } from "@/lib/translation/throttle";
 import { z } from "zod";
+import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
 
 const StreamInput = InputSchema.extend({
   mode: z.enum(["live", "full"]).optional().default("live"),
@@ -21,14 +22,20 @@ export const Route = createFileRoute("/api/translate-stream")({
       },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number) =>
-          Response.json({ ok: false, kind }, { status });
+          Response.json({ ok: false, kind }, { status, headers: { "Cache-Control": "no-store" } });
+        if (!sameOrigin(request)) return fail("input", 403);
+        if (!takeToken(clientAddress(request))) return fail("rate", 429);
         let data;
         try {
-          data = StreamInput.parse(await request.json());
+          data = StreamInput.parse(await boundedJson(request));
         } catch {
           return fail("input", 400);
         }
-        if (!takeToken()) return fail("rate", 429);
+        const upstream = new AbortController();
+        const abort = () => upstream.abort();
+        request.signal.addEventListener("abort", abort, { once: true });
+        if (request.signal.aborted) abort();
+        const cleanup = () => request.signal.removeEventListener("abort", abort);
         const apiKey = process.env["OPENCODE_API_KEY"];
 
         const { streamLiveTranslation, streamFullTranslation } =
@@ -44,15 +51,15 @@ export const Route = createFileRoute("/api/translate-stream")({
           luna: () => {
             if (!apiKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
             return mode === "full"
-              ? streamFullTranslation(apiKey, req, request.signal)
-              : streamLiveTranslation(apiKey, req, request.signal);
+              ? streamFullTranslation(apiKey, req, upstream.signal)
+              : streamLiveTranslation(apiKey, req, upstream.signal);
           },
           deepseek: () => {
             const key = ds.deepseekKey();
             if (!key) throw new TranslationError("auth", "DeepSeek is not configured.");
             return mode === "full"
-              ? ds.streamDeepSeekFull(key, req, request.signal)
-              : ds.streamDeepSeekLive(key, req, request.signal);
+              ? ds.streamDeepSeekFull(key, req, upstream.signal)
+              : ds.streamDeepSeekLive(key, req, upstream.signal);
           },
         } as const;
         let brain: keyof typeof brains = effectiveBrain(data.brain);
@@ -66,6 +73,7 @@ export const Route = createFileRoute("/api/translate-stream")({
             deltas = await brains[brain]();
           }
         } catch (err) {
+          cleanup();
           // Cancelled by the app (newer text typed): end quietly, not an error.
           if (request.signal.aborted || (err as Error)?.name === "AbortError")
             return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
@@ -84,7 +92,7 @@ export const Route = createFileRoute("/api/translate-stream")({
               // The app cancels outdated translations on purpose; a dropped
               // connection is normal, not a server error — end quietly.
               const cancelled =
-                request.signal.aborted ||
+                upstream.signal.aborted ||
                 (err as Error)?.name === "AbortError" ||
                 (err as Error)?.message === "aborted";
               outcome = cancelled ? "cancelled" : "stream_error";
@@ -96,6 +104,7 @@ export const Route = createFileRoute("/api/translate-stream")({
                 }
               } else controller.error(err);
             } finally {
+              cleanup();
               // Privacy: metrics only — never the text.
               console.info(
                 JSON.stringify({
@@ -110,6 +119,8 @@ export const Route = createFileRoute("/api/translate-stream")({
             }
           },
           cancel() {
+            upstream.abort();
+            cleanup();
             void deltas.return(undefined).catch(() => {});
           },
         });

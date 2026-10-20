@@ -52,6 +52,35 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("useTranslator", () => {
+  it("invalidates a pending reply and retry after deletion to one character", async () => {
+    let finish: (value: unknown) => void = () => {};
+    const success = vi.fn();
+    call.mockImplementation(() => new Promise(r => { finish = r; }));
+    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), { initialProps: opts("Hallo.") });
+    await flush(300);
+    rerender(opts("H"));
+    finish({ ok: true, result: result("قديم") });
+    await flush(300);
+    expect(h.current.result).toBeNull();
+    expect(success).not.toHaveBeenCalled();
+    act(() => h.current.retry());
+    await flush(300);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+  it("ignores an obsolete repair while newer input is pending", async () => {
+    let finish: (value: unknown) => void = () => {};
+    const success = vi.fn();
+    repairCall.mockImplementation(() => new Promise(r => { finish = r; }));
+    call.mockResolvedValueOnce({ ok: true, result: result("أولى") }).mockImplementation(() => new Promise(() => {}));
+    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), { initialProps: opts("Ich habe 3 Katzen.") });
+    await flush(500);
+    rerender(opts("Etwas Neues."));
+    await flush(500);
+    finish({ ok: true, result: result("إصلاح قديم") });
+    await flush(20);
+    expect(h.current.result?.translation).toBe("أولى");
+    expect(success).toHaveBeenCalledTimes(1);
+  });
   it("settles a live result once typing pauses (action buttons appear)", async () => {
     call.mockResolvedValue({ ok: true, result: result("مرحبا") });
     const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo Welt") });

@@ -42,6 +42,19 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("useLexicon", () => {
+  it("uses translation context in lookup identity and cache", async () => {
+    lookup.mockImplementation(({ data }) => Promise.resolve({ ok: true, lexicon: entry(data.translation) }));
+    const { result, rerender } = renderHook((p) => useLexicon(p), { initialProps: { ...opts("bank"), translation: "مصرف" } });
+    await flush(400);
+    rerender({ ...opts("bank"), translation: "ضفة" });
+    await flush(400);
+    expect(result.current.lexicon?.sourceTerm).toBe("ضفة");
+    expect(lookup).toHaveBeenCalledTimes(2);
+    rerender({ ...opts("bank"), translation: "مصرف" });
+    await flush(400);
+    expect(result.current.lexicon?.sourceTerm).toBe("مصرف");
+    expect(lookup).toHaveBeenCalledTimes(2);
+  });
   it("waits for a settled short term and skips sentences", async () => {
     lookup.mockResolvedValue({ ok: true, lexicon: entry("sorcerer") });
     const { result, rerender } = renderHook((p) => useLexicon(p), {

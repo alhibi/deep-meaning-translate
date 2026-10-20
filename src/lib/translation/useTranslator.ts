@@ -289,7 +289,7 @@ export function useTranslator(opts: {
             // swapped in only if it is still on screen.
             void callRepair({ data: { request: data, previous: res.result } })
               .then((r) => {
-                if (!r?.result || committedKey.current !== key) return;
+                if (!r?.result || committedKey.current !== key || current.current.key !== key || token !== latest.current) return;
                 const c = cache.current.get(key);
                 if (c) c.result = r.result;
                 setResult(r.result);
@@ -342,7 +342,7 @@ export function useTranslator(opts: {
     }
 
     const norm = normalize(text);
-    if (!norm) {
+    if (!worthTranslating(norm)) {
       shown.current = ++latest.current;
       shownLen.current = 0;
       dropLingering();
@@ -350,15 +350,13 @@ export function useTranslator(opts: {
       inflight.current?.ctrl.abort();
       inflight.current = null;
       committedKey.current = null;
+      current.current = { norm: "", key: "", provisional: false };
       deliberate.current = false;
       setResult(null);
       setError(null);
       setProvisional(false);
-      setPhase("EMPTY");
-      return;
-    }
-    if (!worthTranslating(norm)) {
-      setPhase("TYPING");
+      setStreaming(false);
+      setPhase(norm ? "TYPING" : "EMPTY");
       return;
     }
 
@@ -475,6 +473,9 @@ export function useTranslator(opts: {
 
   useEffect(
     () => () => {
+      shown.current = ++latest.current;
+      current.current = { norm: "", key: "", provisional: false };
+      committedKey.current = null;
       inflight.current?.ctrl.abort();
       dropLingering();
       clearRetry();

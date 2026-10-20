@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
+import { sameOrigin } from "./requestSafety";
 
 export const assemblyToken = createServerFn({ method: "POST" }).handler(async () => {
   setResponseHeader("Cache-Control", "no-store");
   const request = getRequest();
-  const origin = request.headers.get("Origin");
   // Intentionally public app, matching translation: this blocks cross-site browser spending, not bots.
-  if (origin && origin !== new URL(request.url).origin) return { ok: false as const, message: "Cross-site microphone requests are not allowed.", status: 403 };
+  if (!sameOrigin(request)) return { ok: false as const, message: "Cross-site microphone requests are not allowed.", status: 403 };
   const key = process.env["ASSEMBLYAI_API_KEY"];
   if (!key) return { ok: false as const, message: "AssemblyAI is not configured.", status: 503 };
   try {

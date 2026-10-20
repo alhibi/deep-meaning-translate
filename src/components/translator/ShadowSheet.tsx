@@ -21,9 +21,12 @@ function Shell({
 }) {
   const { t, rtl } = useI18n();
   const pushed = useRef(false);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!open) return;
-    window.history.pushState({ sheet: "shadow" }, "");
+    // Map → detail is one sheet session; reuse its entry before deferred cleanup.
+    if (exitTimer.current) clearTimeout(exitTimer.current);
+    if (window.history.state?.sheet !== "shadow") window.history.pushState({ sheet: "shadow" }, "");
     pushed.current = true;
     const onPop = () => {
       pushed.current = false;
@@ -38,13 +41,15 @@ function Shell({
       stopSpeaking();
       if (pushed.current) {
         pushed.current = false;
-        window.history.back();
+        exitTimer.current = setTimeout(() => {
+          if (!document.querySelector("[data-shadow-shell]")) window.history.back();
+        }, 0);
       }
     };
   }, [open, onClose]);
   if (!open || typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-50" dir={rtl ? "rtl" : "ltr"} role="dialog" aria-modal="true" aria-label={label}>
+    <div data-shadow-shell className="fixed inset-0 z-50" dir={rtl ? "rtl" : "ltr"} role="dialog" aria-modal="true" aria-label={label}>
       <div onClick={onClose} className="animate-sheet-scrim absolute inset-0 bg-background/70" />
       <div className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[78dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
         <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4">

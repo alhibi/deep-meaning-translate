@@ -381,7 +381,8 @@ function Translator() {
   const shadowLosses = shadowState.status === "ready" ? shadowState.losses : [];
   const [shadowFocus, setShadowFocus] = useState<string | null>(null);
   const [shadowMapOpen, setShadowMapOpen] = useState(false);
-  const [undo, setUndo] = useState<{ prev: typeof applied } | null>(null);
+  const [undo, setUndo] = useState<{ prev: typeof applied; original: string; base: string; target: string; style: string } | null>(null);
+  const validUndo = undo && undo.original === text && undo.base === baseResult?.translation && undo.target === target && undo.style === style ? undo : null;
   const focusLoss = shadowLosses.find((l) => l.id === shadowFocus) ?? null;
   useEffect(() => {
     if (!undo) return;
@@ -411,20 +412,20 @@ function Translator() {
       const restore = loss.restores[index];
       if (!baseResult || !result || !restore) return;
       prepareApply(loss.id, restore.text);
-      setUndo({ prev: applied });
+      setUndo({ prev: applied, original: text, base: baseResult.translation, target, style });
       setApplied({ base: baseResult.translation, original: text, text: restore.text });
       archiveFix(restore.text);
       setShadowFocus(null);
       tick();
     },
-    [baseResult, result, applied, text, prepareApply, archiveFix],
+    [baseResult, result, applied, text, prepareApply, archiveFix, target, style],
   );
   const undoShadow = useCallback(() => {
-    if (!undo) return;
-    setApplied(undo.prev);
-    archiveFix(undo.prev?.text ?? baseResult?.translation ?? "");
+    if (!validUndo) return;
+    setApplied(validUndo.prev);
+    archiveFix(validUndo.prev?.text ?? baseResult?.translation ?? "");
     setUndo(null);
-  }, [undo, archiveFix, baseResult]);
+  }, [validUndo, archiveFix, baseResult]);
   const keepShadow = useCallback(
     (loss: Loss) => {
       dismissShadow(loss.id);
@@ -893,13 +894,13 @@ function Translator() {
                       : null
                   }
                   shadowSummary={
-                    undo || shadowState.status === "loading" || shadowState.status === "ready" ? (
+                    validUndo || shadowState.status === "loading" || shadowState.status === "ready" ? (
                       <ShadowSummary
                         status={shadowState.status === "ready" ? "ready" : "loading"}
                         losses={shadowLosses}
                         onPick={pickShadow}
                         onMap={() => setShadowMapOpen(true)}
-                        undo={undo ? { onUndo: undoShadow } : null}
+                        undo={validUndo ? { onUndo: undoShadow } : null}
                       />
                     ) : null
                   }

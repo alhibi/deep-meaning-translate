@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ElevenInput, elevenBody } from "@/lib/voice/elevenVoice";
 import { kindForStatus } from "@/lib/voice/geminiVoice";
+import { boundedJson, sameOrigin } from "@/lib/requestSafety";
 
 export const Route = createFileRoute("/api/eleven-speak")({
   staticData: { sitemap: false },
@@ -17,11 +18,10 @@ export const Route = createFileRoute("/api/eleven-speak")({
           );
         // The app has no user accounts. This same-origin endpoint is intentionally public,
         // like translation/Gemini; Origin checks prevent cross-site browser spending, not bots.
-        const origin = request.headers.get("Origin");
-        if (origin && origin !== new URL(request.url).origin) return fail("input", 403);
+        if (!sameOrigin(request)) return fail("input", 403);
         let data;
         try {
-          data = ElevenInput.parse(await request.json());
+          data = ElevenInput.parse(await boundedJson(request));
         } catch {
           return fail("input", 400);
         }

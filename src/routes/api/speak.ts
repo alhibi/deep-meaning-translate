@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
+import { createLimiter } from "@/lib/translation/throttle";
 import {
   SpeakInput,
   buildInteraction,
@@ -12,15 +14,7 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions"
 let bestExhaustedUntil = 0;
 
 /** Coarse in-process throttle for speech, separate from translation. */
-const bucket = { tokens: 40, updated: Date.now() };
-function takeSpeechToken() {
-  const now = Date.now();
-  bucket.tokens = Math.min(40, bucket.tokens + ((now - bucket.updated) / 1000) * 1.5);
-  bucket.updated = now;
-  if (bucket.tokens < 1) return false;
-  bucket.tokens -= 1;
-  return true;
-}
+const takeSpeechToken = createLimiter(40, 1.5);
 
 /**
  * Speaks a translation with Gemini TTS, streamed: raw 16-bit 24 kHz mono PCM is forwarded
@@ -42,19 +36,21 @@ export const Route = createFileRoute("/api/speak")({
             { ok: false, kind },
             { status, headers: { "Cache-Control": "no-store", ...extra } },
           );
+        if (!sameOrigin(request)) return fail("input", 403);
+        if (!takeSpeechToken(clientAddress(request))) return fail("rate", 429, { "Retry-After": "5" });
         let data;
         try {
-          data = SpeakInput.parse(await request.json());
+          data = SpeakInput.parse(await boundedJson(request));
         } catch {
           return fail("input", 400);
         }
-        if (!takeSpeechToken()) return fail("rate", 429, { "Retry-After": "5" });
         const key = process.env["GEMINI_API_KEY"];
         if (!key) return fail("config", 503);
 
         const ctrl = new AbortController();
         const onAbort = () => ctrl.abort();
         request.signal.addEventListener("abort", onAbort);
+        if (request.signal.aborted) onAbort();
         let timedOut = false;
         const timer = setTimeout(() => {
           timedOut = true;
@@ -85,6 +81,7 @@ export const Route = createFileRoute("/api/speak")({
             const retry = Number(res.headers.get("Retry-After")) || 3600;
             bestExhaustedUntil = Date.now() + retry * 1000;
             console.warn("[speak] main voice model limit reached; using the light model");
+            await res.body?.cancel();
             res = await call("fast");
           }
         } catch {
@@ -93,6 +90,7 @@ export const Route = createFileRoute("/api/speak")({
           return fail(timedOut ? "timeout" : "network", timedOut ? 504 : 502);
         }
         if (!res.ok || !res.body) {
+          await res.body?.cancel();
           cleanup();
           const kind = kindForStatus(res.status);
           console.warn("[speak] gemini status", res.status, data.quality);
@@ -107,22 +105,25 @@ export const Route = createFileRoute("/api/speak")({
         const reader = res.body.getReader();
         const dec = new TextDecoder();
         const parse = createSseAudioParser();
+        let completed = false;
         const body = new ReadableStream<Uint8Array>({
           async pull(controller) {
             try {
               for (;;) {
                 const { value, done } = await reader.read();
                 if (done) {
+                  const final = parse(dec.decode() + "\n");
+                  completed ||= !!final.done;
+                  if (final.error || !completed) throw new Error("provider");
+                  for (const a of final.audio) controller.enqueue(a);
                   cleanup();
                   controller.close();
                   return;
                 }
                 const out = parse(dec.decode(value, { stream: true }));
+                completed ||= !!out.done;
                 if (out.error) {
-                  console.warn("[speak] stream error");
-                  cleanup();
-                  controller.error(new Error("provider"));
-                  return;
+                  throw new Error("provider");
                 }
                 if (out.audio.length) {
                   for (const a of out.audio) controller.enqueue(a);
@@ -130,6 +131,8 @@ export const Route = createFileRoute("/api/speak")({
                 }
               }
             } catch {
+              ctrl.abort();
+              void reader.cancel().catch(() => {});
               cleanup();
               // Cancelled by the app: end quietly.
               if (request.signal.aborted) controller.close();
@@ -139,6 +142,7 @@ export const Route = createFileRoute("/api/speak")({
           cancel() {
             cleanup();
             ctrl.abort();
+            void reader.cancel().catch(() => {});
           },
         });
         return new Response(body, {

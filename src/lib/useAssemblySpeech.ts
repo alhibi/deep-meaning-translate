@@ -94,8 +94,10 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
       if (!current() || closing) { cleanup(); return; }
       context = new AudioContext({ sampleRate: 16000 });
       await context.resume();
+      if (!current() || closing) { cleanup(); return; }
       const blob = URL.createObjectURL(new Blob([processor], { type: "text/javascript" }));
       try { await context.audioWorklet.addModule(blob); } finally { URL.revokeObjectURL(blob); }
+      if (!current() || closing) { cleanup(); return; }
       const session = await tokenFn();
       if (!current() || closing) { cleanup(); return; }
       if (!session.ok) { fail("failed", session.message); return; }
@@ -124,7 +126,8 @@ export function useAssemblySpeech(opts: { lang: string; onText: (text: string, f
           if (!result) { fail("failed"); return; }
           previous.current = [base, result.text].filter(Boolean).join(" ");
           cb.current.onText(previous.current, result.final);
-          if (closing && result.final) { ws?.send(JSON.stringify({ type: "Terminate" })); finish(); }
+          // Finalized older turns can arrive while the flushed audio is still being
+          // processed. Only server Termination or bounded shutdown ends stopping.
         } else if (data.type === "Termination") finish();
         else if (data.type === "Error" || data.error) fail("failed", typeof data.error === "string" ? data.error : "AssemblyAI could not transcribe the audio.");
       };
