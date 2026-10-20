@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { getRequest } from "@tanstack/react-start/server";
+import { clientAddress, sameOrigin } from "../requestSafety";
 
 import { takeToken } from "./throttle";
 
@@ -25,7 +27,9 @@ export type TranslateResponse =
 export const translate = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<TranslateResponse> => {
-    if (!takeToken()) return { ok: false, kind: "rate" };
+    const request = getRequest();
+    if (!sameOrigin(request)) return { ok: false, kind: "input" };
+    if (!takeToken(clientAddress(request))) return { ok: false, kind: "rate" };
     const { runTranslation } = await import("./engine.server");
     const { TranslationError } = await import("./types");
     const started = Date.now();
@@ -74,7 +78,8 @@ export const repairTranslation = createServerFn({ method: "POST" })
   )
   .handler(
     async ({ data }): Promise<{ ok: true; result: import("./types").TranslationResult | null }> => {
-      if (!takeToken()) return { ok: true, result: null };
+      const request = getRequest();
+      if (!sameOrigin(request) || !takeToken(clientAddress(request))) return { ok: true, result: null };
       const { runRepair } = await import("./engine.server");
       const started = Date.now();
       const result = await runRepair(

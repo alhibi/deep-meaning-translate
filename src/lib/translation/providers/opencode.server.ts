@@ -114,32 +114,37 @@ export async function* textDeltas(body: ReadableStream<Uint8Array>): AsyncGenera
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
+  let completed = false;
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
+      buf += done ? decoder.decode() + "\n" : decoder.decode(value, { stream: true });
       let nl: number;
       while ((nl = buf.indexOf("\n")) !== -1) {
         const line = buf.slice(0, nl).trim();
         buf = buf.slice(nl + 1);
         if (!line.startsWith("data:")) continue;
         const data = line.slice(5).trim();
-        if (!data || data === "[DONE]") continue;
+        if (!data) continue;
+        if (data === "[DONE]") { completed = true; continue; }
         try {
           const evt = JSON.parse(data);
           if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string")
             yield evt.delta;
           else if (typeof evt?.choices?.[0]?.delta?.content === "string")
             yield evt.choices[0].delta.content;
-          else if (evt?.type === "response.failed" || evt?.type === "error")
+          else if (evt?.type === "response.completed") completed = true;
+          else if (evt?.error || evt?.type === "response.failed" || evt?.type === "response.incomplete" || evt?.type === "error")
             throw new TranslationError("provider", "The provider stream failed.");
         } catch (err) {
           if (err instanceof TranslationError) throw err;
         }
       }
+      if (done) break;
     }
+    if (!completed) throw new TranslationError("provider", "Incomplete provider stream.");
   } finally {
+    void reader.cancel().catch(() => {});
     reader.releaseLock();
   }
 }
