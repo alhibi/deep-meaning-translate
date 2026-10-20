@@ -147,6 +147,8 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
   const chunks = chunkText(text);
   let started = false;
   let retried = false;
+  let completed = false;
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
 
   const run = async (useVoice: boolean) => {
     if (wasActive) await new Promise((r) => setTimeout(r, 80));
@@ -164,9 +166,11 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
 
     let i = 0;
     const next = () => {
-      if (!alive()) return;
+      if (!alive() || completed) return;
       const c = chunks[i];
       if (!c) {
+        completed = true;
+        clearTimeout(watchdog);
         live = null;
         h.onEnd?.();
         return;
@@ -210,8 +214,8 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
     next();
 
     // Watchdog: nothing started within 2.5 s.
-    setTimeout(() => {
-      if (!alive() || started) return;
+    watchdog = setTimeout(() => {
+      if (!alive() || started || completed) return;
       if (synth.speaking) {
         // Speaking but the engine never announced it: run the read-along anyway.
         started = true;

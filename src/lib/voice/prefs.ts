@@ -51,15 +51,16 @@ const subs = new Set<() => void>();
 export function getVoicePrefs(): VoicePrefs {
   if (current) return current;
   if (typeof window === "undefined") return DEFAULT_VOICE_PREFS;
-  try {
-    const saved = localStorage.getItem(KEY);
-    if (saved) current = parseVoicePrefs(JSON.parse(saved));
-    else {
-      const old = parseVoicePrefs(JSON.parse(localStorage.getItem("lingua.voice.v1") ?? "null"));
-      current = { ...old, engine: old.engine === "device" ? "device" : "elevenlabs" };
-    }
-  } catch {
-    current = DEFAULT_VOICE_PREFS;
+  const read = (key: string): unknown => {
+    try { return JSON.parse(localStorage.getItem(key) ?? "null"); } catch { return null; }
+  };
+  const stored = read(KEY);
+  if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+    current = parseVoicePrefs(stored);
+  } else {
+    const old = parseVoicePrefs(read("lingua.voice.v1"));
+    current = { ...old, engine: old.engine === "device" ? "device" : "elevenlabs" };
+    try { localStorage.setItem(KEY, JSON.stringify(current)); } catch { /* unavailable */ }
   }
   return current;
 }

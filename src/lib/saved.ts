@@ -124,7 +124,7 @@ export const saved = {
 function subscribe(fn: () => void) {
   listeners.add(fn);
   const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY) {
+    if (e.key === KEY || e.key === null) {
       cache = null;
       fn();
     }

@@ -33,7 +33,7 @@ export function useLexicon(opts: {
     setLoading(false);
     if (!settled || !isLexiconCandidate(normalized)) return;
 
-    const key = `${source}|${target}|${uiLocale}|${dialect}|${normalized.toLocaleLowerCase()}`;
+    const key = JSON.stringify([source, target, uiLocale, dialect, normalized, translation]);
     if (cache.current.has(key)) {
       setLexicon(cache.current.get(key) ?? null);
       return;
@@ -70,10 +70,8 @@ export function useLexicon(opts: {
         });
     }, 260);
 
-    return () => clearTimeout(id);
-    // translation is context only; it doesn't change while settled.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, source, target, uiLocale, settled, dialect, lookup]);
+    return () => { clearTimeout(id); generation.current++; };
+  }, [text, source, target, uiLocale, settled, dialect, lookup, translation]);
 
   return { lexicon, loading };
 }

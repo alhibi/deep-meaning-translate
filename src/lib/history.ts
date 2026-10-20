@@ -51,6 +51,9 @@ const NEW_USE_AFTER = 30 * 60_000;
 /** A sentence that grows while typing within this window is the same thought. */
 const GROW_WINDOW = 3 * 60_000;
 
+const validDate = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 8.64e15;
+
 function cleanTags(v: unknown): EntryTags | undefined {
   if (!v || typeof v !== "object") return undefined;
   const t = v as Record<string, unknown>;
@@ -73,7 +76,7 @@ export function isEntry(v: unknown): v is HistoryEntry {
     typeof e.translated === "string" &&
     typeof e.target === "string" &&
     typeof e.source === "string" &&
-    Number.isFinite(e.createdAt)
+    validDate(e.createdAt)
   );
 }
 
@@ -88,7 +91,7 @@ export function sanitizeEntry(e: HistoryEntry): HistoryEntry {
     createdAt: e.createdAt,
   };
   if (e.v === 2) out.v = 2;
-  if (typeof e.updatedAt === "number" && Number.isFinite(e.updatedAt)) out.updatedAt = e.updatedAt;
+  if (validDate(e.updatedAt)) out.updatedAt = e.updatedAt;
   if (typeof e.uses === "number" && Number.isInteger(e.uses) && e.uses >= 1) out.uses = e.uses;
   if (typeof e.style === "string") out.style = e.style;
   if (typeof e.formality === "string") out.formality = e.formality;
