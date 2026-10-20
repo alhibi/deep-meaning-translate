@@ -904,9 +904,6 @@ textarea:focus-visible {
     transform: none;
   }
 }
-[dir="rtl"] .word-in {
-  --whirl-dir: -1;
-}
 .word-in {
   display: inline-block;
   white-space: pre-wrap;
