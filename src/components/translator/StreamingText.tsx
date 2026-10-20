@@ -21,7 +21,7 @@ export const StreamingText = memo(function StreamingText({ text }: { text: strin
     <>
       {tokens.map((tok, i) => {
         if (i < keep || /^\s+$/.test(tok)) return <span key={nextKeys[i]}>{tok}</span>;
-        const delay = Math.min(fresh++, 8) * 35;
+        const delay = Math.min(fresh++, 10) * 45;
         return (
           <span key={nextKeys[i]} className="word-in" style={{ animationDelay: `${delay}ms` }}>
             {tok}

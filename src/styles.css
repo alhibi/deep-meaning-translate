@@ -886,22 +886,31 @@ textarea:focus-visible {
 }
 
 /* Word-by-word arrival of streamed translations: only new or changed words animate. */
+/* Ink settling: each word rises out of a soft blur, briefly warm, then cools into text. */
 @keyframes word-in {
-  from {
+  0% {
     opacity: 0;
-    filter: blur(3px);
-    transform: translateY(0.12em);
+    filter: blur(5px);
+    transform: translateY(0.28em) scale(0.97);
+    color: var(--signal-text, currentColor);
   }
-  to {
+  45% {
+    opacity: 0.85;
+    filter: blur(0.6px);
+    color: color-mix(in oklab, var(--signal-text, currentColor) 45%, currentColor);
+  }
+  100% {
     opacity: 1;
     filter: blur(0);
     transform: none;
+    color: inherit;
   }
 }
 .word-in {
   display: inline-block;
   white-space: pre-wrap;
-  animation: word-in 260ms var(--ease-out) both;
+  will-change: opacity, transform, filter;
+  animation: word-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
   .word-in {
