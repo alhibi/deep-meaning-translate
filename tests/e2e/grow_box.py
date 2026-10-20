@@ -15,7 +15,7 @@ async def run(p,reduced):
  page=await ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
  async def tr(r):
   if r.request.method=='GET': await r.fulfill(status=204);return
-  d=r.request.post_data_json;t=TR.get(d['text'],'Ok.')
+  d=r.request.post_data_json;t=TR[LONG] if len(d['text'])>40 else TR[SHORT]
   v={'translation':t,'sourceLanguage':'ar','targetLanguage':d['target'],'tone':'neutral','formality':'neutral','confidence':1,'isAmbiguous':False,'alternativeTranslations':[],'notes':''}
   await r.fulfill(content_type='text/plain',body=json.dumps(v) if d['mode']=='full' else t)
  await page.route('**/api/translate-stream',tr)
@@ -39,7 +39,7 @@ async def run(p,reduced):
  if reduced: check(max(abs(s) for s in steps)>100 if steps else False,f'{tag}: resizes instantly without animation')
  else:
   check(len(steps)>=10,f'{tag}: growth spread over {len(steps)} frames (smooth, not a jump)')
-  check(max(steps)<0.6*(end[1]-h0),f'{tag}: largest single-frame step {max(steps):.0f}px')
+  check(bool(steps) and max(steps)<0.6*(end[1]-h0),f'{tag}: largest single-frame step {max(steps or [0]):.0f}px')
   check(top-end[1]<0.08*end[1],f'{tag}: overshoot {top-end[1]:.0f}px stays subtle')
   check(any(x[3] for x in grow),f'{tag}: glow line shows while growing')
  se=fin(shrink);check(abs(se[1]-se[2])<1 and se[1]<end[1]-150,f'{tag}: shrinks back and fits ({se[1]:.0f}px)')
