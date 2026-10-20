@@ -951,7 +951,8 @@ textarea:focus-visible {
   animation: word-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .word-in {
+  .word-in,
+  [dir="rtl"] .word-in {
     animation: fade 120ms linear both;
     filter: none;
     transform: none;
