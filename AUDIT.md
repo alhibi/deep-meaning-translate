@@ -17,7 +17,7 @@
 - `tests/e2e/adversarial.py`: **0 failures**, deterministic 50-action sequences in each of two independent browser contexts (424×758 English and 1280×1800 Arabic), plus shadow apply/readback, map-to-detail, archive integrity, stale Undo, single-character invalidation and overflow checks. Provider replies are intercepted fixtures, not real model output.
 - `tests/e2e/voice_sync.py`: both viewports passed playable synthetic PCM, known word timing, Stop, replay, no duplicate synthesis, no overflow and no runtime errors. This proves the browser playback path, not real provider pronunciation.
 - One real DeepSeek German→Arabic flow passed: generic sentence, number 10 preserved, result read back through the UI and found in the local archive. No real concurrent provider load was generated.
-- Latest automatic build record: **build OK** at 2026-10-20T10:59:28Z. Later changes were test/document files only.
+- Latest checked automatic build record: **build OK** at 2026-10-20T11:08:57Z.
 
 ## Limits and unresolved checks
 
