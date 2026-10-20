@@ -90,6 +90,16 @@ export class Feed {
     w.forEach((f) => f());
   }
   private ctrl = new AbortController();
+  private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  private idle: ReturnType<typeof setTimeout> | undefined;
+  private armTimeout() {
+    clearTimeout(this.idle);
+    this.idle = setTimeout(() => {
+      this.ctrl.abort("timeout");
+      void this.reader?.cancel().catch(() => {});
+      this.fail(new CloudSpeakError("timeout"));
+    }, 15_000);
+  }
   constructor(private r: CloudRequest) {}
 
   start() {
@@ -98,6 +108,7 @@ export class Feed {
     if (hit) {
       this.timing = alignments.get(hit) ?? [];
       void hit.arrayBuffer().then((b) => {
+        if (this.error) return;
         this.chunks.push(new Uint8Array(b));
         this.end();
       });
@@ -108,7 +119,7 @@ export class Feed {
       return this;
     }
     // No first audio within 15 s → give up so the device voice can take over.
-    const firstByte = setTimeout(() => this.ctrl.abort("timeout"), 15_000);
+    this.armTimeout();
     void (async () => {
       let res: Response;
       try {
@@ -119,14 +130,12 @@ export class Feed {
           signal: this.ctrl.signal,
         });
       } catch {
-        clearTimeout(firstByte);
         this.fail(
           new CloudSpeakError(this.ctrl.signal.reason === "timeout" ? "timeout" : "offline"),
         );
         return;
       }
       if (!res.ok || !res.body) {
-        clearTimeout(firstByte);
         const body = (await res.json().catch(() => null)) as { kind?: SpeakErrorKind } | null;
         const kind = body?.kind ?? "provider";
         const retry = Number(res.headers.get("Retry-After")) || 0;
@@ -138,6 +147,8 @@ export class Feed {
         return;
       }
       const reader = res.body.getReader();
+      this.reader = reader;
+      if (this.error) { void reader.cancel().catch(() => {}); return; }
       const parse = isEleven(this.r) ? elevenParser() : null;
       const decoder = new TextDecoder();
       const accept = (value: Uint8Array, final = false) => {
@@ -147,7 +158,7 @@ export class Feed {
             if (p.audio.length) this.chunks.push(p.audio);
           }
         } else if (value.length) this.chunks.push(value);
-        if (this.chunks.length) clearTimeout(firstByte);
+        if (value.length) this.armTimeout();
         this.wake();
       };
       try {
@@ -170,11 +181,10 @@ export class Feed {
               : "provider";
         this.ctrl.abort("provider");
         void reader.cancel().catch(() => {});
-        clearTimeout(firstByte);
         this.fail(new CloudSpeakError(kind));
         return;
       }
-      clearTimeout(firstByte);
+      if (this.error) return;
       const bytes = this.chunks.reduce((n, c) => n + c.length, 0);
       if (bytes < 64) {
         this.fail(new CloudSpeakError("provider"));
@@ -199,13 +209,17 @@ export class Feed {
   }
   abort() {
     this.ctrl.abort("stop");
+    void this.reader?.cancel().catch(() => {});
+    this.fail(new CloudSpeakError("network"));
   }
   private end() {
+    clearTimeout(this.idle);
     this.done = true;
     this.wake();
   }
   private fail(e: CloudSpeakError) {
     if (this.error || this.done) return;
+    clearTimeout(this.idle);
     this.error = e;
     this.wake();
   }
