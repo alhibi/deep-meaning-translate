@@ -1,6 +1,18 @@
 @import "tailwindcss" source(none);
 @source "../src";
 
+/*
+ * Typography is self-hosted (fontsource, woff2, same origin): no third-party origin in
+ * the critical path, no external request before first paint, and the fonts work offline
+ * with the rest of the app shell. Weights are limited to the ones the design uses.
+ */
+@import "@fontsource-variable/geist/index.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/instrument-serif/400-italic.css";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
@@ -41,9 +53,9 @@
   --color-signal-soft: var(--signal-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-arabic: "IBM Plex Sans Arabic", "Geist", sans-serif;
+  --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "IBM Plex Sans Arabic", "Geist Variable", sans-serif;
 }
 
 /*
@@ -67,7 +79,8 @@
   --secondary-foreground: #f3efe8;
   --muted: #1e1b18;
   --muted-foreground: #a7a19a;
-  --faint: #6f6a64;
+  /* Quiet text still clears WCAG AA (4.5:1) on background and surface. */
+  --faint: #8a847d;
   /* Signal: appears only where attention is required. */
   --signal: #c97a5a;
   --signal-text: #dd9169; /* signal used as text/lines on dark: 4.5:1+ */
@@ -118,7 +131,8 @@ html.light {
   --secondary-foreground: #1c1815;
   --muted: #efe9df;
   --muted-foreground: #5c554e;
-  --faint: #857d75;
+  /* Quiet text still clears WCAG AA (4.5:1) on background and cards. */
+  --faint: #6a635c;
   --signal: #b0603c;
   --signal-text: #9c4f2d;
   --signal-foreground: #fff8f2;
@@ -207,13 +221,34 @@ html.theme-fade *::after {
   }
   /* Literary serif, reserved for the tagline only. */
   .font-literary {
-    font-family: "Instrument Serif", "Geist", serif;
+    font-family: "Instrument Serif", "Geist Variable", serif;
   }
 
   textarea,
   input,
   button {
     font: inherit;
+  }
+}
+
+/* Keyboard-first entry: invisible until it is focused, then a real, reachable button. */
+@utility skip-link {
+  position: fixed;
+  inset-inline-start: 50%;
+  top: 0.75rem;
+  z-index: 200;
+  translate: -50% -200%;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 13px;
+  font-weight: 500;
+  transition: translate 180ms var(--ease-out);
+  &:focus-visible {
+    translate: -50% 0;
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
   }
 }
 

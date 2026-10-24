@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import type { LexiconResult } from "@/lib/translation/lexicon";
 import { LexiconPanel } from "./LexiconPanel";
 
@@ -18,6 +19,7 @@ export function LexiconSheet({
   onClose: () => void;
 }) {
   const { t, rtl } = useI18n();
+  const sheetRef = useRef<HTMLDivElement>(null);
   const pushed = useRef(false);
 
   useEffect(() => {
@@ -41,11 +43,14 @@ export function LexiconSheet({
     };
   }, [open, onClose]);
 
+  useFocusTrap(open, sheetRef);
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50"
+      ref={sheetRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 outline-none"
       dir={rtl ? "rtl" : "ltr"}
       role="dialog"
       aria-modal="true"

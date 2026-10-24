@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Search, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { tick } from "@/lib/haptics";
 
 export interface PickerItem {
@@ -50,6 +51,8 @@ export function LanguageSheet({
   const [drag, setDrag] = useState(0);
   const startY = useRef<number | null>(null);
   const pushed = useRef(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(mounted && !closing, sheetRef);
 
   const localized = useMemo(() => {
     let dn: Intl.DisplayNames | null = null;
@@ -198,7 +201,9 @@ export function LanguageSheet({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50"
+      ref={sheetRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 outline-none"
       dir={rtl ? "rtl" : "ltr"}
       role="dialog"
       aria-modal="true"

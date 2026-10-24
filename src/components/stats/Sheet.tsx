@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 /**
  * Bottom sheet for Statistics. Sheets can stack (a translation opened from a category);
@@ -77,6 +78,7 @@ export function Sheet({
   footer?: ReactNode;
 }) {
   const closeRef = useRef(onClose);
+  const sheetRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   closeRef.current = onClose;
 
@@ -107,6 +109,8 @@ export function Sheet({
       }
     };
   }, [open]);
+
+  useFocusTrap(open, sheetRef);
 
   if (!open || typeof document === "undefined") return null;
   return createPortal(

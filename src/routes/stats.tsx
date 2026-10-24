@@ -49,30 +49,7 @@ import { RecordSheet } from "@/components/stats/RecordSheet";
 import { DetailSheet, type DetailSpec } from "@/components/stats/DetailSheet";
 import { FilterSheet } from "@/components/stats/FilterSheet";
 import { Sheet, leaveSheets, onSheetsSettled } from "@/components/stats/Sheet";
-
-interface StatsSearch extends Filters {
-  range?: RangeId | undefined;
-  from?: string | undefined;
-  to?: string | undefined;
-}
-
-/** Only well-formed values survive the URL; anything else is dropped, never trusted. */
-function parseSearch(s: Record<string, unknown>): StatsSearch {
-  const out: StatsSearch = {};
-  const range = s["range"],
-    from = s["from"],
-    to = s["to"],
-    pair = s["pair"],
-    lang = s["lang"];
-  if (RANGES.includes(range as RangeId)) out.range = range as RangeId;
-  if (isDayKey(from)) out.from = from;
-  if (isDayKey(to)) out.to = to;
-  if (typeof pair === "string" && /^([a-z]{2}|auto)>[a-z]{2}$/.test(pair)) out.pair = pair;
-  if (typeof lang === "string" && /^([a-z]{2}|auto)$/.test(lang)) out.lang = lang;
-  for (const d of ["kind", "domain", "intent", "register"] as Dimension[])
-    if (isDimensionValue(d, s[d])) out[d] = s[d] as string;
-  return out;
-}
+import { parseSearch, type StatsSearch } from "@/lib/stats/search";
 
 export const Route = createFileRoute("/stats")({
   staticData: { sitemap: false },

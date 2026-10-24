@@ -1,8 +1,9 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { saved, type SavedPhrase } from "@/lib/saved";
 import { isRtl, languageLabel } from "@/lib/translation/languages";
 import { useI18n } from "@/lib/i18n";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 /** Personal phrasebook with a quiet flashcard review. */
 export const SavedSheet = memo(function SavedSheet({
@@ -17,18 +18,23 @@ export const SavedSheet = memo(function SavedSheet({
   onPick: (p: SavedPhrase) => void;
 }) {
   const { t } = useI18n();
+  const sheetRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<"list" | "review">("list");
   // Closed sheet reopens in list mode. Adjusted while rendering (React's own pattern)
   // instead of in an effect, so the review screen is never painted for a closed sheet.
   if (!open && mode !== "list") setMode("list");
+  useFocusTrap(open, sheetRef);
+
   if (!open) return null;
 
   return (
     <div
+      ref={sheetRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label={t("savedTitle")}
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20"
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20 outline-none"
     >
       <button type="button" aria-label={t("close")} className="flex-1" onClick={onClose} />
       <div className="animate-rise max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">

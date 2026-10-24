@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Volume2, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 import { isRtl } from "@/lib/translation/languages";
 import type { Loss, Span } from "@/lib/translation/shadow";
 import { speakTranslation, stopSpeaking } from "@/lib/tts";
@@ -21,7 +22,9 @@ function Shell({
 }) {
   const { t, rtl } = useI18n();
   const pushed = useRef(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useFocusTrap(open, sheetRef);
   useEffect(() => {
     if (!open) return;
     // Map → detail is one sheet session; reuse its entry before deferred cleanup.
@@ -47,11 +50,14 @@ function Shell({
       }
     };
   }, [open, onClose]);
+  useFocusTrap(open, sheetRef);
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     <div
+      ref={sheetRef}
+      tabIndex={-1}
       data-shadow-shell
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-50 outline-none"
       dir={rtl ? "rtl" : "ltr"}
       role="dialog"
       aria-modal="true"

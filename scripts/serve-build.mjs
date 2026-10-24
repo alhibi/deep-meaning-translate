@@ -73,7 +73,8 @@ const server = createServer(async (req, res) => {
     // The worker expects the Cloudflare execution context: `waitUntil` keeps work alive
     // after the response; there is nothing to keep alive in a preview, so it drains.
     const waitUntil = (promise) => void Promise.resolve(promise).catch(() => {});
-    const response = staticHit ?? (await handler.fetch(request, {}, { waitUntil, context: { waitUntil } }));
+    const response =
+      staticHit ?? (await handler.fetch(request, {}, { waitUntil, context: { waitUntil } }));
 
     res.statusCode = response.status;
     for (const [key, value] of response.headers) {

@@ -69,8 +69,45 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://fluently.today/" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:locale", content: "en" },
+      { property: "og:locale:alternate", content: "ar" },
+      { property: "og:locale:alternate", content: "de" },
+      {
+        name: "keywords",
+        content:
+          "Arabic German translator, ترجمة عربية ألمانية, Arabisch Deutsch Übersetzer, meaning-based translation, Arabic dialects",
+      },
+      { name: "robots", content: "index, follow, max-image-preview:large" },
     ],
     links: [{ rel: "canonical", href: "https://fluently.today/" }],
+    // Structured data: what this is, who it is for, what it costs (nothing).
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "today",
+          url: "https://fluently.today/",
+          applicationCategory: "UtilitiesApplication",
+          operatingSystem: "Any (web, installable PWA)",
+          description:
+            "Meaning-first translation between Arabic and German: tone, register, dialect and idiom are carried across, not word-for-word replaced.",
+          inLanguage: ["ar", "de", "en"],
+          isAccessibleForFree: true,
+          offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+          featureList: [
+            "Natural, formal and casual wording",
+            "Arabic dialects: Levantine, Egyptian, Gulf, Iraqi, Maghrebi, Standard",
+            "Text to speech with word-level read-along",
+            "Screenless dictation",
+            "Sentence shadow: what a translation may have lost",
+            "Private, on-device archive and phrasebook",
+          ],
+          publisher: { "@type": "Organization", name: "today", url: "https://fluently.today/" },
+        }),
+      },
+    ],
   }),
   component: Translator,
 });
@@ -574,6 +611,9 @@ function Translator() {
   return (
     <>
       {introOpen ? <Intro onComplete={() => setIntroOpen(false)} /> : null}
+      <a href="#composer" className="skip-link">
+        {t("skipToInput")}
+      </a>
       <main className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background">
         <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
           <button
@@ -709,6 +749,7 @@ function Translator() {
           <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
             <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
               <textarea
+                id="composer"
                 ref={inputRef}
                 value={text}
                 onChange={onInput}
