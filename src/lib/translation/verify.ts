@@ -1,8 +1,48 @@
 import type { TranslationRequest, TranslationResult } from "./types";
 
 const URL_RE = /https?:\/\/[^\s)]+/g;
-const NUM_RE = /\d+(?:[.,]\d+)*/g;
+/** Digits in either script: an Arabic translation may write ٣٥ where German wrote 35. */
+const NUM_RE = /[0-9\u0660-\u0669\u06F0-\u06F9]+(?:[.,][0-9\u0660-\u0669\u06F0-\u06F9]+)*/g;
 const EMOJI_RE = /\p{Extended_Pictographic}/gu;
+
+/**
+ * Numbers that may legitimately change shape between Arabic and German:
+ * Western digits (0-9) and Arabic-Indic digits (٠-٩ / ۰-۹) are both used in Arabic
+ * text, and either may appear in the translation of the other.
+ */
+const DIGIT_MAP: Record<string, string> = {
+  "٠": "0",
+  "١": "1",
+  "٢": "2",
+  "٣": "3",
+  "٤": "4",
+  "٥": "5",
+  "٦": "6",
+  "٧": "7",
+  "٨": "8",
+  "٩": "9",
+  "۰": "0",
+  "۱": "1",
+  "۲": "2",
+  "۳": "3",
+  "۴": "4",
+  "۵": "5",
+  "۶": "6",
+  "۷": "7",
+  "۸": "8",
+  "۹": "9",
+};
+
+/**
+ * Arabic punctuation a faithful translation keeps (، ؛ ؟).
+ * Deliberately not global: a global regex carries `lastIndex` between `.test()` calls
+ * and would make the same input pass and fail on alternating requests.
+ */
+const ARABIC_PUNCT = /[،؛؟]/u;
+
+function normalizedDigits(value: string): string {
+  return value.replace(/[٠-٩۰-۹]/g, (d) => DIGIT_MAP[d] ?? d).replace(/[.,]/g, "");
+}
 
 function multiset(list: string[]): Map<string, number> {
   const m = new Map<string, number>();
@@ -21,8 +61,65 @@ function missing(src: string[], out: string[]): string[] {
 }
 
 /**
- * Lightweight, deterministic post-generation checks. Never surfaced to the user;
- * a failure triggers one repair pass in the provider layer.
+ * Capitalised words are the cheapest reliable signal for a name in German, and a
+ * dropped name is one of the worst silent failures a translator can make. German
+ * capitalises every noun, so only multi-syllable words that look like names count,
+ * and words the app itself knows (language names, weekdays, months) are excluded.
+ */
+const NAME_STOPWORDS = new Set([
+  "Ich",
+  "Du",
+  "Er",
+  "Sie",
+  "Es",
+  "Wir",
+  "Ihr",
+  "Der",
+  "Die",
+  "Das",
+  "Ein",
+  "Eine",
+  "Heute",
+  "Morgen",
+  "Gestern",
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag",
+  "Sonntag",
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+  "Deutsch",
+  "Deutschland",
+  "Arabisch",
+  "Bitte",
+  "Danke",
+  "Hallo",
+  "Guten",
+  "Sehr",
+  "Aber",
+]);
+
+export function nameCandidates(text: string): string[] {
+  const words = text.match(/\b[\p{Lu}][\p{L}'’-]{2,}\b/gu) ?? [];
+  return [...new Set(words)].filter((w) => !NAME_STOPWORDS.has(w));
+}
+
+/**
+ * Lightweight, deterministic checks. Never surfaced to the user; a failure triggers
+ * one quiet repair pass, and only a repair that clears more issues than it creates
+ * is ever shown.
  */
 export function verifyTranslation(req: TranslationRequest, res: TranslationResult): string[] {
   const issues: string[] = [];
@@ -38,13 +135,21 @@ export function verifyTranslation(req: TranslationRequest, res: TranslationResul
   if (lostUrls.length) issues.push(`URLs dropped or altered: ${lostUrls.join(", ")}`);
 
   const lostNums = missing(
-    (src.match(NUM_RE) ?? []).map((n) => n.replace(/[.,]/g, "")),
-    (out.match(NUM_RE) ?? []).map((n) => n.replace(/[.,]/g, "")),
+    (src.match(NUM_RE) ?? []).map(normalizedDigits),
+    (out.match(NUM_RE) ?? []).map(normalizedDigits),
   );
   if (lostNums.length) issues.push(`Numbers missing from the translation: ${lostNums.join(", ")}`);
 
   const lostEmoji = missing(src.match(EMOJI_RE) ?? [], out.match(EMOJI_RE) ?? []);
   if (lostEmoji.length) issues.push(`Emojis dropped: ${lostEmoji.join(" ")}`);
+
+  // Names: kept verbatim in either script. A name may be transliterated into Arabic,
+  // so only a name with no trace at all is reported — never a spelling difference.
+  const names = nameCandidates(src);
+  const lowerOut = out.toLocaleLowerCase();
+  const lostNames = names.filter((name) => !lowerOut.includes(name.toLocaleLowerCase()));
+  if (lostNames.length && req.source !== "ar" && req.target !== "ar")
+    issues.push(`Names may have been dropped or changed: ${lostNames.join(", ")}`);
 
   const srcLines = src.trim().split(/\n{2,}/).length;
   const outLines = out.trim().split(/\n{2,}/).length;
@@ -58,6 +163,24 @@ export function verifyTranslation(req: TranslationRequest, res: TranslationResul
 
   if (/^(translation|übersetzung|ترجمة)\s*[:：]/i.test(out.trim()))
     issues.push("The translation contains a label prefix instead of plain text.");
+
+  // The model is told never to explain; a trailing "Note:" block is a silent change of
+  // register that also breaks read-along highlighting.
+  if (/(^|\n)\s*(note|hinweis|ملاحظة)\s*[:：]/i.test(out))
+    issues.push("The translation contains an explanation that the source did not have.");
+
+  // Question and exclamation marks carry intent; losing them changes the sentence type.
+  const srcAsks = (src.match(/[?？؟]/g) ?? []).length;
+  const outAsks = (out.match(/[?？؟]/g) ?? []).length;
+  if (srcAsks > 0 && outAsks === 0 && src.length < 300)
+    issues.push("The question mark was dropped; the sentence type changed.");
+
+  // Arabic punctuation should survive into Arabic output, and must not leak into German,
+  // where it is simply wrong.
+  if (req.target === "ar" && ARABIC_PUNCT.test(src) && !ARABIC_PUNCT.test(out))
+    issues.push("Arabic punctuation (، ؛ ؟) was replaced or dropped.");
+  if (req.target !== "ar" && ARABIC_PUNCT.test(out))
+    issues.push("Arabic punctuation appeared in non-Arabic text.");
 
   return issues;
 }

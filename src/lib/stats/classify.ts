@@ -9,7 +9,7 @@ import type { Domain, Intent, Kind, Register } from "./taxonomy";
  * one word ("geht's", "E-Mail"). Punctuation, emoji and spaces are never words.
  * Arabic attached clitics (و، ال، ـها) stay part of their word, as written.
  */
-const WORD = /[\p{L}\p{M}\p{N}]+(?:['’\-][\p{L}\p{M}\p{N}]+)*/gu;
+const WORD = /[\p{L}\p{M}\p{N}]+(?:['’-][\p{L}\p{M}\p{N}]+)*/gu;
 
 export function countWords(text: string): number {
   return text.match(WORD)?.length ?? 0;

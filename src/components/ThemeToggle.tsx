@@ -15,11 +15,7 @@ export function ThemeToggle({ label }: { label: string }) {
       }}
       className="press relative grid size-11 place-items-center overflow-hidden rounded-full text-muted-foreground hover:text-foreground"
     >
-      <Palette
-        aria-hidden="true"
-        className="size-[18px]"
-        strokeWidth={1.75}
-      />
+      <Palette aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
     </button>
   );
 }

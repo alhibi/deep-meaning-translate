@@ -10,7 +10,12 @@ import { Sheet } from "./Sheet";
 import type { Fmt } from "./format";
 
 const DIMS: Dimension[] = ["kind", "domain", "intent", "register"];
-const DIM_LABEL = { kind: "f_kind", domain: "f_domain", intent: "f_intent", register: "f_register" } as const;
+const DIM_LABEL = {
+  kind: "f_kind",
+  domain: "f_domain",
+  intent: "f_intent",
+  register: "f_register",
+} as const;
 
 /**
  * One translation: both texts, its date, and all four classification layers —
@@ -108,11 +113,19 @@ export function RecordSheet({
       {r ? (
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl bg-card p-4">
-            <p dir={isRtl(r.source) ? "rtl" : "ltr"} lang={r.source} className="whitespace-pre-wrap text-start text-[16px] leading-relaxed">
+            <p
+              dir={isRtl(r.source) ? "rtl" : "ltr"}
+              lang={r.source}
+              className="whitespace-pre-wrap text-start text-[16px] leading-relaxed"
+            >
               {r.original}
             </p>
             <div className="my-3 border-t border-border" />
-            <p dir={isRtl(r.target) ? "rtl" : "ltr"} lang={r.target} className="whitespace-pre-wrap text-start text-[16px] leading-relaxed text-muted-foreground">
+            <p
+              dir={isRtl(r.target) ? "rtl" : "ltr"}
+              lang={r.target}
+              className="whitespace-pre-wrap text-start text-[16px] leading-relaxed text-muted-foreground"
+            >
               {r.translated}
             </p>
           </div>
@@ -127,12 +140,23 @@ export function RecordSheet({
               return (
                 <li key={d} className="border-b border-border py-2.5 last:border-b-0">
                   <div className="flex items-center gap-2">
-                    <span className="w-20 shrink-0 text-[12px] text-muted-foreground">{t(DIM_LABEL[d])}</span>
-                    <span className="size-2 rounded-[3px]" style={{ background: colorOf(d, value) }} />
+                    <span className="w-20 shrink-0 text-[12px] text-muted-foreground">
+                      {t(DIM_LABEL[d])}
+                    </span>
+                    <span
+                      className="size-2 rounded-[3px]"
+                      style={{ background: colorOf(d, value) }}
+                    />
                     <span className="min-w-0 flex-1 truncate text-[14px]">
                       {categoryLabel(locale, d, value)}
-                      {origin === "local" ? <span className="ms-1.5 text-[11px] text-faint">· {t("estimated")}</span> : null}
-                      {origin === "user" ? <span className="ms-1.5 text-[11px] text-signal-text">· {t("yourFix")}</span> : null}
+                      {origin === "local" ? (
+                        <span className="ms-1.5 text-[11px] text-faint">· {t("estimated")}</span>
+                      ) : null}
+                      {origin === "user" ? (
+                        <span className="ms-1.5 text-[11px] text-signal-text">
+                          · {t("yourFix")}
+                        </span>
+                      ) : null}
                     </span>
                     <button
                       type="button"
@@ -158,7 +182,10 @@ export function RecordSheet({
                             value === v ? "border-border-strong bg-card" : "border-border"
                           }`}
                         >
-                          <span className="size-1.5 rounded-full" style={{ background: colorOf(d, v) }} />
+                          <span
+                            className="size-1.5 rounded-full"
+                            style={{ background: colorOf(d, v) }}
+                          />
                           {categoryLabel(locale, d, v)}
                         </button>
                       ))}

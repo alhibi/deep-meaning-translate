@@ -22,7 +22,16 @@ export const Route = createFileRoute("/api/translate-stream")({
       },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number) =>
-          Response.json({ ok: false, kind }, { status, headers: { "Cache-Control": "no-store" } });
+          Response.json(
+            { ok: false, kind },
+            {
+              status,
+              headers: {
+                "Cache-Control": "no-store",
+                ...(kind === "rate" ? { "Retry-After": "2" } : {}),
+              },
+            },
+          );
         if (!sameOrigin(request)) return fail("input", 403);
         if (!takeToken(clientAddress(request))) return fail("rate", 429);
         let data;
@@ -40,7 +49,8 @@ export const Route = createFileRoute("/api/translate-stream")({
 
         const { streamLiveTranslation, streamFullTranslation } =
           await import("@/lib/translation/providers/opencode.server");
-        const { TranslationError, LUNA_ENABLED, effectiveBrain } = await import("@/lib/translation/types");
+        const { TranslationError, LUNA_ENABLED, effectiveBrain } =
+          await import("@/lib/translation/types");
         const started = Date.now();
         let deltas: AsyncGenerator<string>;
         const { mode, ...rest } = data;
@@ -49,7 +59,8 @@ export const Route = createFileRoute("/api/translate-stream")({
         const { shouldFallBack } = await import("@/lib/translation/engine.server");
         const brains = {
           luna: () => {
-            if (!apiKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
+            if (!apiKey || !LUNA_ENABLED)
+              throw new TranslationError("auth", "Luna is not configured.");
             return mode === "full"
               ? streamFullTranslation(apiKey, req, upstream.signal)
               : streamLiveTranslation(apiKey, req, upstream.signal);

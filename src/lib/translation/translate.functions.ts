@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getRequest } from "@tanstack/react-start/server";
 import { clientAddress, sameOrigin } from "../requestSafety";
 
-import { takeToken } from "./throttle";
+import { takeRepairToken, takeToken } from "./throttle";
 
 const MAX_CHARS = 5000;
 
@@ -79,7 +79,8 @@ export const repairTranslation = createServerFn({ method: "POST" })
   .handler(
     async ({ data }): Promise<{ ok: true; result: import("./types").TranslationResult | null }> => {
       const request = getRequest();
-      if (!sameOrigin(request) || !takeToken(clientAddress(request))) return { ok: true, result: null };
+      if (!sameOrigin(request) || !takeRepairToken(clientAddress(request)))
+        return { ok: true, result: null };
       const { runRepair } = await import("./engine.server");
       const started = Date.now();
       const result = await runRepair(

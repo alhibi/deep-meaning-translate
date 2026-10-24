@@ -103,7 +103,11 @@ export function changedSpan(prev: string, next: string): Span {
 const overlaps = (x: Span, y: Span) => x.start < y.end && y.start < x.end;
 
 /** Validates and re-anchors a raw model reply. Returns `{losses: []}` for an honest "nothing lost". */
-export function parseShadow(raw: unknown, source: string, translation: string): ShadowResult | null {
+export function parseShadow(
+  raw: unknown,
+  source: string,
+  translation: string,
+): ShadowResult | null {
   const list = (raw as { losses?: unknown } | null)?.losses;
   if (!Array.isArray(list)) return null;
   const out: Loss[] = [];
@@ -126,7 +130,11 @@ export function parseShadow(raw: unknown, source: string, translation: string): 
       if (!text || text === translation.trim() || seen.has(text)) continue;
       if (text.length > translation.length * 2 + 80) continue;
       seen.add(text);
-      restores.push({ text, note: rs.note.trim().slice(0, 140), changed: changedSpan(translation, text) });
+      restores.push({
+        text,
+        note: rs.note.trim().slice(0, 140),
+        changed: changedSpan(translation, text),
+      });
       if (restores.length === 3) break;
     }
     const severity = Math.min(3, Math.max(1, Math.round(v.severity))) as 1 | 2 | 3;
@@ -217,7 +225,11 @@ export function shadowUserPrompt(i: {
 }
 
 /** Extracts JSON from a model reply and validates it. */
-export function readShadowReply(raw: string, source: string, translation: string): ShadowResult | null {
+export function readShadowReply(
+  raw: string,
+  source: string,
+  translation: string,
+): ShadowResult | null {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
   if (start === -1 || end === -1) return null;

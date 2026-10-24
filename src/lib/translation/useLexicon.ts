@@ -4,6 +4,7 @@ import type { Locale } from "@/lib/i18n";
 import type { Dialect } from "./types";
 import { isLexiconCandidate, type LexiconResult } from "./lexicon";
 import { lookupLexicon } from "./lexicon.functions";
+import { enqueueEnrichment } from "./enrichment";
 
 const CACHE_LIMIT = 40;
 
@@ -29,6 +30,7 @@ export function useLexicon(opts: {
   useEffect(() => {
     const token = ++generation.current;
     const normalized = text.trim().replace(/\s+/gu, " ");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     setLexicon(null);
     setLoading(false);
     if (!settled || !isLexiconCandidate(normalized)) return;
@@ -42,16 +44,20 @@ export function useLexicon(opts: {
     const id = setTimeout(() => {
       if (token !== generation.current) return;
       setLoading(true);
-      void lookup({
-        data: {
-          text: normalized,
-          source,
-          target,
-          uiLocale,
-          ...(translation ? { translation } : {}),
-          dialect,
-        },
-      })
+      // The dictionary is quiet work: it shares one paced door with the shadow so a
+      // settled sentence never fires three model calls at once.
+      void enqueueEnrichment(() =>
+        lookup({
+          data: {
+            text: normalized,
+            source,
+            target,
+            uiLocale,
+            ...(translation ? { translation } : {}),
+            dialect,
+          },
+        }),
+      )
         .then((response) => {
           if (token !== generation.current) return;
           const value = response?.ok ? response.lexicon : null;
@@ -70,7 +76,11 @@ export function useLexicon(opts: {
         });
     }, 260);
 
-    return () => { clearTimeout(id); generation.current++; };
+    return () => {
+      clearTimeout(id);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- key already encodes these values (and the ref is a generation token, not a node)
+      generation.current++;
+    };
   }, [text, source, target, uiLocale, settled, dialect, lookup, translation]);
 
   return { lexicon, loading };

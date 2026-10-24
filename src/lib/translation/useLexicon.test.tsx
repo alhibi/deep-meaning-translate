@@ -5,6 +5,7 @@ const lookup = vi.fn();
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => lookup }));
 vi.mock("./lexicon.functions", () => ({ lookupLexicon: {} }));
 const { useLexicon } = await import("./useLexicon");
+const { resetEnrichmentQueueForTests } = await import("./enrichment");
 
 const entry = (sourceTerm: string) => ({
   sourceTerm,
@@ -38,13 +39,19 @@ const flush = async (ms: number) => act(async () => void (await vi.advanceTimers
 beforeEach(() => {
   vi.useFakeTimers();
   lookup.mockReset();
+  // Quiet work goes through a shared queue; each test starts from an empty one.
+  resetEnrichmentQueueForTests(0, 250);
 });
 afterEach(() => vi.useRealTimers());
 
 describe("useLexicon", () => {
   it("uses translation context in lookup identity and cache", async () => {
-    lookup.mockImplementation(({ data }) => Promise.resolve({ ok: true, lexicon: entry(data.translation) }));
-    const { result, rerender } = renderHook((p) => useLexicon(p), { initialProps: { ...opts("bank"), translation: "مصرف" } });
+    lookup.mockImplementation(({ data }) =>
+      Promise.resolve({ ok: true, lexicon: entry(data.translation) }),
+    );
+    const { result, rerender } = renderHook((p) => useLexicon(p), {
+      initialProps: { ...opts("bank"), translation: "مصرف" },
+    });
     await flush(400);
     rerender({ ...opts("bank"), translation: "ضفة" });
     await flush(400);

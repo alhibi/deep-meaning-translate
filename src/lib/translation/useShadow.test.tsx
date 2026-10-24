@@ -5,6 +5,7 @@ const analyze = vi.fn();
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => analyze }));
 vi.mock("./shadow.functions", () => ({ analyzeShadow: {} }));
 const { useShadow, SHADOW_DELAY } = await import("./useShadow");
+const { resetEnrichmentQueueForTests } = await import("./enrichment");
 
 const L = (id: string, quote: string) => ({
   id,
@@ -34,6 +35,8 @@ const flush = async (ms: number) => act(async () => void (await vi.advanceTimers
 beforeEach(() => {
   vi.useFakeTimers();
   analyze.mockReset();
+  // Quiet work goes through a shared queue; each test starts from an empty one.
+  resetEnrichmentQueueForTests(0, 250);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -99,6 +102,10 @@ describe("useShadow", () => {
     await flush(SHADOW_DELAY + 10);
     act(() => result.current.prepareApply("a", "ما أخبارك يا صديقي"));
     rerender({ ...base, translation: "ما أخبارك يا صديقي" });
-    expect(result.current.state).toMatchObject({ status: "ready", carried: true, losses: [{ id: "b" }] });
+    expect(result.current.state).toMatchObject({
+      status: "ready",
+      carried: true,
+      losses: [{ id: "b" }],
+    });
   });
 });

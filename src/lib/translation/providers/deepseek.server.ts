@@ -38,22 +38,26 @@ async function send(
   if (signal?.aborted) throw cancelled();
   let res: Response;
   try {
-    res = await providerFetch(`${BASE}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: DEEPSEEK_MODEL,
-        stream,
-        thinking: { type: "disabled" },
-        temperature: 0.3,
-        max_tokens: 4096,
-        ...(json ? { response_format: { type: "json_object" } } : {}),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }),
-    }, signal);
+    res = await providerFetch(
+      `${BASE}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: DEEPSEEK_MODEL,
+          stream,
+          thinking: { type: "disabled" },
+          temperature: 0.3,
+          max_tokens: 4096,
+          ...(json ? { response_format: { type: "json_object" } } : {}),
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+        }),
+      },
+      signal,
+    );
   } catch (err) {
     if (signal?.aborted || (err as Error)?.name === "AbortError") throw cancelled();
     throw new TranslationError("network", "Could not reach DeepSeek.");

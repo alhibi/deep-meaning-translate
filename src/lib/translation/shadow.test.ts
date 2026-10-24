@@ -18,7 +18,9 @@ const loss = (o: Record<string, unknown> = {}) => ({
   source_quote: "يا حسرتاه",
   target_quote: "Schade",
   explanation: "الحزن العميق صار أسفاً عادياً.",
-  restores: [{ text: "Ach, wie bitter, dass es vorbei ist, hoffentlich sehen wir uns", note: "أقوى" }],
+  restores: [
+    { text: "Ach, wie bitter, dass es vorbei ist, hoffentlich sehen wir uns", note: "أقوى" },
+  ],
   ...o,
 });
 
@@ -38,8 +40,12 @@ describe("sentence shadow contract", () => {
   });
 
   it("drops a loss whose quote is not in the translation", () => {
-    expect(parseShadow({ losses: [loss({ target_quote: "Leider" })] }, SRC, TGT)!.losses).toEqual([]);
-    expect(parseShadow({ losses: [loss({ source_quote: "مرحبا" })] }, SRC, TGT)!.losses).toEqual([]);
+    expect(parseShadow({ losses: [loss({ target_quote: "Leider" })] }, SRC, TGT)!.losses).toEqual(
+      [],
+    );
+    expect(parseShadow({ losses: [loss({ source_quote: "مرحبا" })] }, SRC, TGT)!.losses).toEqual(
+      [],
+    );
   });
 
   it("hides findings below 0.55 confidence", () => {
@@ -48,8 +54,12 @@ describe("sentence shadow contract", () => {
   });
 
   it("a slight loss needs at least 0.7 confidence", () => {
-    expect(parseShadow({ losses: [loss({ severity: 1, confidence: 0.65 })] }, SRC, TGT)!.losses).toEqual([]);
-    expect(parseShadow({ losses: [loss({ severity: 1, confidence: 0.7 })] }, SRC, TGT)!.losses).toHaveLength(1);
+    expect(
+      parseShadow({ losses: [loss({ severity: 1, confidence: 0.65 })] }, SRC, TGT)!.losses,
+    ).toEqual([]);
+    expect(
+      parseShadow({ losses: [loss({ severity: 1, confidence: 0.7 })] }, SRC, TGT)!.losses,
+    ).toHaveLength(1);
   });
 
   it("an honest empty reply means nothing essential was lost", () => {
@@ -61,19 +71,25 @@ describe("sentence shadow contract", () => {
     const words = ["Schade", "dass", "vorbei", "hoffentlich", "sehen", "uns"];
     const many = words.map((w, i) => loss({ target_quote: w, severity: 1 + (i % 3) }));
     expect(parseShadow({ losses: many }, SRC, TGT)!.losses).toHaveLength(4);
-    const over = [loss({ severity: 1 }), loss({ target_quote: "Schade, dass", severity: 3, category: "warmth" })];
+    const over = [
+      loss({ severity: 1 }),
+      loss({ target_quote: "Schade, dass", severity: 3, category: "warmth" }),
+    ];
     const r = parseShadow({ losses: over }, SRC, TGT)!;
     expect(r.losses).toHaveLength(1);
     expect(r.losses[0]!.category).toBe("warmth");
   });
 
   it("drops restores identical to the current translation, keeps at most three", () => {
-    const restores = [TGT, "A b c", "A b c", "D e f", "G h i", "J k l"].map((text) => ({ text, note: "" }));
-    expect(parseShadow({ losses: [loss({ restores })] }, SRC, TGT)!.losses[0]!.restores.map((r) => r.text)).toEqual([
-      "A b c",
-      "D e f",
-      "G h i",
-    ]);
+    const restores = [TGT, "A b c", "A b c", "D e f", "G h i", "J k l"].map((text) => ({
+      text,
+      note: "",
+    }));
+    expect(
+      parseShadow({ losses: [loss({ restores })] }, SRC, TGT)!.losses[0]!.restores.map(
+        (r) => r.text,
+      ),
+    ).toEqual(["A b c", "D e f", "G h i"]);
   });
 
   it("clamps severity to 1–3 and rejects unknown categories", () => {
@@ -92,7 +108,11 @@ describe("sentence shadow contract", () => {
   });
 
   it("carries untouched losses into an edited translation", () => {
-    const r = parseShadow({ losses: [loss(), loss({ target_quote: "hoffentlich", category: "culture" })] }, SRC, TGT)!;
+    const r = parseShadow(
+      { losses: [loss(), loss({ target_quote: "hoffentlich", category: "culture" })] },
+      SRC,
+      TGT,
+    )!;
     const next = "Ach, wie bitter, dass es vorbei ist, hoffentlich sehen wir uns";
     const kept = carryLosses(r.losses, next, r.losses[0]!.id);
     expect(kept.map((l) => l.category)).toEqual(["culture"]);
@@ -107,7 +127,9 @@ describe("sentence shadow contract", () => {
   });
 
   it("reads JSON wrapped in prose and survives garbage", () => {
-    expect(readShadowReply(`ok ${JSON.stringify({ losses: [loss()] })} done`, SRC, TGT)!.losses).toHaveLength(1);
+    expect(
+      readShadowReply(`ok ${JSON.stringify({ losses: [loss()] })} done`, SRC, TGT)!.losses,
+    ).toHaveLength(1);
     expect(readShadowReply("not json", SRC, TGT)).toBeNull();
   });
 });

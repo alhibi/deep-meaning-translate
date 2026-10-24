@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { takeToken } from "./throttle";
+import { takeEnrichmentToken } from "./throttle";
 import { getRequest } from "@tanstack/react-start/server";
 import { clientAddress, sameOrigin } from "../requestSafety";
 
@@ -20,12 +20,22 @@ export const analyzeShadow = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ shadow: import("./shadow").ShadowResult | null }> => {
     const sh = await import("./shadow");
     const request = getRequest();
-    if (!sh.isShadowCandidate(data.text) || !sameOrigin(request) || !takeToken(clientAddress(request))) return { shadow: null };
+    if (
+      !sh.isShadowCandidate(data.text) ||
+      !sameOrigin(request) ||
+      !takeEnrichmentToken(clientAddress(request))
+    )
+      return { shadow: null };
     const ds = await import("./providers/deepseek.server");
     const key = ds.deepseekKey();
     if (!key) return { shadow: null };
     try {
-      const raw = await ds.call(key, sh.SHADOW_SYSTEM, sh.shadowUserPrompt(data), AbortSignal.timeout(15000));
+      const raw = await ds.call(
+        key,
+        sh.SHADOW_SYSTEM,
+        sh.shadowUserPrompt(data),
+        AbortSignal.timeout(15000),
+      );
       return { shadow: sh.readShadowReply(raw, data.text, data.translation) };
     } catch {
       return { shadow: null };

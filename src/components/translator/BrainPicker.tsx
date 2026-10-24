@@ -18,7 +18,10 @@ export const BrainPicker = memo(function BrainPicker({
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
-  const select = useCallback((c: string) => onChange(c === "luna" && LUNA_ENABLED ? "luna" : "deepseek"), [onChange]);
+  const select = useCallback(
+    (c: string) => onChange(c === "luna" && LUNA_ENABLED ? "luna" : "deepseek"),
+    [onChange],
+  );
   return (
     <>
       <button
@@ -37,7 +40,11 @@ export const BrainPicker = memo(function BrainPicker({
         title={t("model")}
         searchable={false}
         plain
-        items={ORDER.map((b) => ({ code: b, native: NAMES[b], name: b === "luna" && !LUNA_ENABLED ? t("soon") : t(`m_${b}`) }))}
+        items={ORDER.map((b) => ({
+          code: b,
+          native: NAMES[b],
+          name: b === "luna" && !LUNA_ENABLED ? t("soon") : t(`m_${b}`),
+        }))}
         value={value}
         onSelect={select}
         onClose={close}

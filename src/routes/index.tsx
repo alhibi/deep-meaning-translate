@@ -1,6 +1,6 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Bookmark,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
+import { AppHeader } from "@/components/translator/AppHeader";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
@@ -32,10 +33,18 @@ import type { Loss } from "@/lib/translation/shadow";
 import { ShadowSummary } from "@/components/translator/SentenceShadow";
 import { ShadowMap, ShadowSheet } from "@/components/translator/ShadowSheet";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
-import { DEFAULT_BRAIN, effectiveBrain, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
+import {
+  DEFAULT_BRAIN,
+  effectiveBrain,
+  type Brain,
+  type Dialect,
+  StyleOverride,
+  TranslationResult,
+} from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
 import { LanguageNotice } from "@/components/translator/LanguageNotice";
 import { checkSource } from "@/lib/translation/languageCheck";
+import { styleSuggestion } from "@/lib/translation/suggestion";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
@@ -62,8 +71,45 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://fluently.today/" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:locale", content: "en" },
+      { property: "og:locale:alternate", content: "ar" },
+      { property: "og:locale:alternate", content: "de" },
+      {
+        name: "keywords",
+        content:
+          "Arabic German translator, ترجمة عربية ألمانية, Arabisch Deutsch Übersetzer, meaning-based translation, Arabic dialects",
+      },
+      { name: "robots", content: "index, follow, max-image-preview:large" },
     ],
     links: [{ rel: "canonical", href: "https://fluently.today/" }],
+    // Structured data: what this is, who it is for, what it costs (nothing).
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "today",
+          url: "https://fluently.today/",
+          applicationCategory: "UtilitiesApplication",
+          operatingSystem: "Any (web, installable PWA)",
+          description:
+            "Meaning-first translation between Arabic and German: tone, register, dialect and idiom are carried across, not word-for-word replaced.",
+          inLanguage: ["ar", "de", "en"],
+          isAccessibleForFree: true,
+          offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+          featureList: [
+            "Natural, formal and casual wording",
+            "Arabic dialects: Levantine, Egyptian, Gulf, Iraqi, Maghrebi, Standard",
+            "Text to speech with word-level read-along",
+            "Screenless dictation",
+            "Sentence shadow: what a translation may have lost",
+            "Private, on-device archive and phrasebook",
+          ],
+          publisher: { "@type": "Organization", name: "today", url: "https://fluently.today/" },
+        }),
+      },
+    ],
   }),
   component: Translator,
 });
@@ -147,6 +193,7 @@ function Translator() {
     initLocale();
     const prefs = persist.prefs();
     if (prefs) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setSource(prefs.source);
       setTarget(prefs.target);
       setStyle(prefs.style);
@@ -228,10 +275,15 @@ function Translator() {
   const [applied, setApplied] = useState<{ base: string; original: string; text: string } | null>(
     null,
   );
-  const result =
-    baseResult && applied && applied.base === baseResult.translation && applied.original === text
-      ? { ...baseResult, translation: applied.text }
-      : baseResult;
+  // Memoised: `result` feeds five callbacks below, and a fresh object on every render
+  // would recreate them (and re-render every memoised child) even for unrelated input.
+  const result = useMemo(
+    () =>
+      baseResult && applied && applied.base === baseResult.translation && applied.original === text
+        ? { ...baseResult, translation: applied.text }
+        : baseResult,
+    [baseResult, applied, text],
+  );
   const pending = rawPending || rerouting || (staleTarget && !!text.trim());
 
   // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
@@ -272,6 +324,7 @@ function Translator() {
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
     if (source === "auto" && detected && detected === target) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setTarget(
         detected === "ar" ? "de" : detected === "de" ? "ar" : target === "de" ? "ar" : "de",
       );
@@ -281,6 +334,7 @@ function Translator() {
   // Arabic script is unambiguous: route before the first request instead of after a wasted one.
   const arabicScript = text.trim() ? startsRtl(text) : false;
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (source === "auto" && arabicScript && target === "ar") setTarget("de");
   }, [source, arabicScript, target]);
 
@@ -291,6 +345,7 @@ function Translator() {
   const [langDismissed, setLangDismissed] = useState("");
   const mismatchKey = mismatch ? `${source}>${mismatch.suggest}` : "";
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (!text.trim()) setLangDismissed("");
   }, [text]);
 
@@ -367,7 +422,11 @@ function Translator() {
     dialect,
   });
   const shadowSettled = !!result && !provisional && !pending && !error;
-  const { state: shadowState, dismiss: dismissShadow, prepareApply } = useShadow({
+  const {
+    state: shadowState,
+    dismiss: dismissShadow,
+    prepareApply,
+  } = useShadow({
     text,
     translation: result?.translation ?? "",
     source: result?.sourceLanguage || source,
@@ -381,8 +440,21 @@ function Translator() {
   const shadowLosses = shadowState.status === "ready" ? shadowState.losses : [];
   const [shadowFocus, setShadowFocus] = useState<string | null>(null);
   const [shadowMapOpen, setShadowMapOpen] = useState(false);
-  const [undo, setUndo] = useState<{ prev: typeof applied; original: string; base: string; target: string; style: string } | null>(null);
-  const validUndo = undo && undo.original === text && undo.base === baseResult?.translation && undo.target === target && undo.style === style ? undo : null;
+  const [undo, setUndo] = useState<{
+    prev: typeof applied;
+    original: string;
+    base: string;
+    target: string;
+    style: string;
+  } | null>(null);
+  const validUndo =
+    undo &&
+    undo.original === text &&
+    undo.base === baseResult?.translation &&
+    undo.target === target &&
+    undo.style === style
+      ? undo
+      : null;
   const focusLoss = shadowLosses.find((l) => l.id === shadowFocus) ?? null;
   useEffect(() => {
     if (!undo) return;
@@ -436,6 +508,7 @@ function Translator() {
   const [lexOpen, setLexOpen] = useState(false);
   const openLex = useCallback(() => setLexOpen(true), []);
   const closeLex = useCallback(() => setLexOpen(false), []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
   useEffect(() => setLexOpen(false), [text]);
   const hasClip = useClipboardHint();
 
@@ -450,7 +523,8 @@ function Translator() {
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
   const toggleMic = useCallback(() => {
-    if (!speech.listening && !speech.starting) speechBase.current = inputRef.current?.value.trim() ?? "";
+    if (!speech.listening && !speech.starting)
+      speechBase.current = inputRef.current?.value.trim() ?? "";
     tick();
     speech.toggle();
   }, [speech]);
@@ -523,15 +597,11 @@ function Translator() {
   );
 
   // Situation detection → one quiet suggestion, only when it disagrees with the chosen style.
-  const sit = result?.situation;
   const suggestKey = `${text.trim()}|${style}`;
+  const proposed = result ? styleSuggestion({ situation: result.situation, style }) : null;
   const suggestion =
-    result && dismissedFor !== suggestKey
-      ? (sit === "official" || sit === "work") && style !== "formal"
-        ? { label: t(sit === "official" ? "sit_official" : "sit_work"), next: "formal" as const }
-        : sit === "chat" && style === "formal"
-          ? { label: t("sit_chat"), next: "casual" as const }
-          : null
+    proposed && dismissedFor !== suggestKey
+      ? { label: t(proposed.key), next: proposed.next }
       : null;
 
   const today = restored && !hasText ? (savedList.length ? saved.ofTheDay() : null) : null;
@@ -539,118 +609,23 @@ function Translator() {
   return (
     <>
       {introOpen ? <Intro onComplete={() => setIntroOpen(false)} /> : null}
+      <a href="#composer" className="skip-link">
+        {t("skipToInput")}
+      </a>
       <main className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background">
-        <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
-          <button
-            type="button"
-            onClick={toggleTagline}
-            aria-expanded={tagline}
-            className="press-soft -ms-2 inline-flex items-center gap-2 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
-          >
-            {/* Signature mark: a small clay diamond that spins into the gust. */}
-            <span
-              aria-hidden
-              className="grid size-2 shrink-0 place-items-center transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
-              style={{
-                transform: tagline ? "rotate(225deg) scale(0.7)" : "rotate(0deg) scale(1)",
-                opacity: tagline ? 0.55 : 1,
-              }}
-            >
-              <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
-            </span>
-            {/* Storm swap: the outgoing word is swept away (blur + skew + stretch) while the incoming one condenses out of the blur — overlapped, never a pause. */}
-            <span className="relative block h-[19px]">
-              <span
-                aria-hidden
-                className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]"
-              >
-                say it naturally.
-              </span>
-              <span
-                aria-hidden={tagline}
-                className="block origin-left whitespace-nowrap text-start leading-[19px] will-change-[transform,filter,opacity] rtl:origin-right"
-                style={{
-                  transition: tagline
-                    ? "transform 480ms cubic-bezier(0.7,0,0.84,0), filter 420ms cubic-bezier(0.5,0,0.75,0), opacity 460ms cubic-bezier(0.5,0,0.75,0), letter-spacing 480ms cubic-bezier(0.7,0,0.84,0)"
-                    : "transform 760ms cubic-bezier(0.16,1,0.3,1) 140ms, filter 700ms cubic-bezier(0.16,1,0.3,1) 140ms, opacity 520ms ease-out 140ms, letter-spacing 760ms cubic-bezier(0.16,1,0.3,1) 140ms",
-                  transform: tagline ? "translateX(55%) skewX(-24deg) scaleX(1.35)" : "none",
-                  filter: tagline ? "blur(9px)" : "blur(0)",
-                  opacity: tagline ? 0 : 1,
-                  letterSpacing: tagline ? "0.45em" : "-0.01em",
-                }}
-              >
-                today
-              </span>
-              <span
-                aria-hidden={!tagline}
-                className="font-literary absolute inset-0 block origin-left whitespace-nowrap text-start text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground will-change-[transform,filter,opacity] rtl:origin-right"
-                style={{
-                  transition: tagline
-                    ? "transform 820ms cubic-bezier(0.16,1,0.3,1) 120ms, filter 760ms cubic-bezier(0.16,1,0.3,1) 120ms, opacity 560ms ease-out 120ms"
-                    : "transform 460ms cubic-bezier(0.7,0,0.84,0), filter 400ms cubic-bezier(0.5,0,0.75,0), opacity 440ms cubic-bezier(0.5,0,0.75,0)",
-                  transform: tagline ? "none" : "translateX(-18%) skewX(16deg) scaleX(1.2)",
-                  filter: tagline ? "blur(0)" : "blur(10px)",
-                  opacity: tagline ? 1 : 0,
-                }}
-              >
-                say it naturally.
-              </span>
-            </span>
-          </button>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setLocaleOpen(true)}
-              aria-haspopup="dialog"
-              aria-label={t("uiLanguage")}
-              className="press-soft grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground"
-            >
-              <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>
-                {LOCALE_SHORT[locale]}
-              </span>
-            </button>
-            <LanguageSheet
-              open={localeOpen}
-              title={t("uiLanguage")}
-              searchable={false}
-              items={LOCALES.map((l) => ({
-                code: l,
-                native: LOCALE_NAME[l],
-                name: LOCALE_NAME[l],
-                rtl: l === "ar",
-              }))}
-              value={locale}
-              onSelect={(c) => setLocale(c as typeof locale)}
-              onClose={closeLocale}
-            />
-            {canInstall ? (
-              <button
-                type="button"
-                onClick={() => void install()}
-                className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] text-muted-foreground"
-              >
-                <ArrowDownToLine className="size-3.5" strokeWidth={1.75} />
-                {t("install")}
-              </button>
-            ) : null}
-            <ThemeToggle label={t("theme")} />
-            <button
-              type="button"
-              onClick={() => setSavedOpen(true)}
-              aria-label={t("savedTitle")}
-              className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-            >
-              <Bookmark className="size-[18px]" strokeWidth={1.75} />
-            </button>
-            <Link
-              to="/stats"
-              aria-label={statsT(locale)("open")}
-              className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-            >
-              <ChartNoAxesCombined className="size-[18px]" strokeWidth={1.75} />
-            </Link>
-          </div>
-        </header>
+        <AppHeader
+          tagline={tagline}
+          onToggleTagline={toggleTagline}
+          locale={locale}
+          onLocaleSelect={(l) => setLocale(l)}
+          localeOpen={localeOpen}
+          onOpenLocale={() => setLocaleOpen(true)}
+          onCloseLocale={closeLocale}
+          canInstall={canInstall}
+          onInstall={() => void install()}
+          onOpenSaved={() => setSavedOpen(true)}
+          savedLabel={t("savedTitle")}
+        />
 
         <div
           ref={scrollRef}
@@ -674,6 +649,7 @@ function Translator() {
           <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
             <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
               <textarea
+                id="composer"
                 ref={inputRef}
                 value={text}
                 onChange={onInput}
@@ -703,6 +679,7 @@ function Translator() {
                       : "text-[22px] leading-[1.45] tracking-[-0.015em]"
                   }`}
                 >
+                  {/* eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered */}
                   {(() => {
                     const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
                     return text
@@ -718,7 +695,11 @@ function Translator() {
               ) : null}
               <button
                 type="button"
-                onClick={() => { speech.cancel(); speechBase.current = ""; clear(); }}
+                onClick={() => {
+                  speech.cancel();
+                  speechBase.current = "";
+                  clear();
+                }}
                 aria-label={t("clearText")}
                 tabIndex={hasText ? 0 : -1}
                 className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${
@@ -759,15 +740,16 @@ function Translator() {
                       aria-live="polite"
                     >
                       <span className="break-words">
-                        {speech.message ?? t(
-                          speech.error === "denied"
-                            ? "micDenied"
-                            : speech.error === "nospeech"
-                              ? "micNoSpeech"
-                              : speech.error === "nomic"
-                                ? "micNoDevice"
-                                : "micFailed",
-                        )}
+                        {speech.message ??
+                          t(
+                            speech.error === "denied"
+                              ? "micDenied"
+                              : speech.error === "nospeech"
+                                ? "micNoSpeech"
+                                : speech.error === "nomic"
+                                  ? "micNoDevice"
+                                  : "micFailed",
+                          )}
                       </span>
                       {speech.error !== "denied" ? (
                         <button
@@ -832,7 +814,9 @@ function Translator() {
               <LanguageNotice
                 mismatch={mismatch}
                 source={source}
-                onApply={() => (mismatch.suggest === "auto" ? setSource("auto") : chooseSource(mismatch.suggest))}
+                onApply={() =>
+                  mismatch.suggest === "auto" ? setSource("auto") : chooseSource(mismatch.suggest)
+                }
                 onDismiss={() => setLangDismissed(mismatchKey)}
               />
             ) : null}
@@ -894,7 +878,9 @@ function Translator() {
                       : null
                   }
                   shadowSummary={
-                    validUndo || shadowState.status === "loading" || shadowState.status === "ready" ? (
+                    validUndo ||
+                    shadowState.status === "loading" ||
+                    shadowState.status === "ready" ? (
                       <ShadowSummary
                         status={shadowState.status === "ready" ? "ready" : "loading"}
                         losses={shadowLosses}
@@ -908,13 +894,23 @@ function Translator() {
               </SafeArea>
             </div>
           </div>
-          <Link
-            to="/arabic-german-translation"
+          {/* Public pages reachable for keyboard and search, without adding chrome to the translator. */}
+          <nav
             dir={uiRtl ? "rtl" : "ltr"}
-            className="sr-only"
+            aria-label={t("pairGuide")}
+            className="flex items-center justify-center gap-4 pb-1 text-[11px] text-faint"
           >
-            {t("pairGuide")}
-          </Link>
+            <Link
+              to="/arabic-german-translation"
+              className="press-soft underline-offset-4 hover:underline"
+            >
+              {t("pairGuide")}
+            </Link>
+            <span aria-hidden className="size-1 rotate-45 rounded-[1px] bg-border-strong" />
+            <Link to="/privacy" className="press-soft underline-offset-4 hover:underline">
+              {t("privacy")}
+            </Link>
+          </nav>
         </div>
         <div className="h-3 pad-safe-bottom" />
 

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArabicGermanTranslationRouteImport } from './routes/arabic-german-translation'
 import { Route as LabRouteImport } from './routes/lab'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ApiElevenSpeakRouteImport } from './routes/api/eleven-speak'
@@ -31,6 +32,11 @@ const ArabicGermanTranslationRoute = ArabicGermanTranslationRouteImport.update({
 const LabRoute = LabRouteImport.update({
   id: '/lab',
   path: '/lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
+  '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
+  '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
+  '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/arabic-german-translation'
     | '/lab'
+    | '/privacy'
     | '/sitemap.xml'
     | '/stats'
     | '/api/eleven-speak'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/arabic-german-translation'
     | '/lab'
+    | '/privacy'
     | '/sitemap.xml'
     | '/stats'
     | '/api/eleven-speak'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/arabic-german-translation'
     | '/lab'
+    | '/privacy'
     | '/sitemap.xml'
     | '/stats'
     | '/api/eleven-speak'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArabicGermanTranslationRoute: typeof ArabicGermanTranslationRoute
   LabRoute: typeof LabRoute
+  PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
   ApiElevenSpeakRoute: typeof ApiElevenSpeakRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/lab'
       fullPath: '/lab'
       preLoaderRoute: typeof LabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArabicGermanTranslationRoute: ArabicGermanTranslationRoute,
   LabRoute: LabRoute,
+  PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
   ApiElevenSpeakRoute: ApiElevenSpeakRoute,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 /**
  * Bottom sheet for Statistics. Sheets can stack (a translation opened from a category);
@@ -77,6 +78,8 @@ export function Sheet({
   footer?: ReactNode;
 }) {
   const closeRef = useRef(onClose);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   closeRef.current = onClose;
 
   useEffect(() => {
@@ -107,9 +110,17 @@ export function Sheet({
     };
   }, [open]);
 
+  useFocusTrap(open, sheetRef);
+
   if (!open || typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-50" dir={dir} role="dialog" aria-modal="true" aria-label={label}>
+    <div
+      className="fixed inset-0 z-50"
+      dir={dir}
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+    >
       <div onClick={onClose} className="animate-sheet-scrim absolute inset-0 bg-background/70" />
       <div className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[86dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
         <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2 pt-4">

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <!--
+    First visit with no connection: the app shell has never been cached, so the service
+    worker serves this page instead of a browser error. Self-contained by design — no
+    external requests, no framework, nothing that could itself fail to load.
+    The interface language comes from the browser, in the few words needed to explain
+    the situation and offer the one useful action.
+  -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline — today</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#12100F" />
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: #12100f;
+        --fg: #f3efe8;
+        --muted: #a7a19a;
+        --signal: #c97a5a;
+        --edge: rgb(243 239 232 / 12%);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f3ec;
+          --fg: #1c1815;
+          --muted: #5c554e;
+          --signal: #b0603c;
+          --edge: rgb(28 24 21 / 14%);
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 2rem 1.5rem max(2rem, env(safe-area-inset-bottom));
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          400 16px/1.6 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 26rem;
+      }
+      .mark {
+        width: 10px;
+        height: 10px;
+        margin: 0 auto 1.75rem;
+        background: var(--signal);
+        transform: rotate(45deg);
+        border-radius: 1.5px;
+      }
+      h1 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 0 0 0.6rem;
+      }
+      p {
+        margin: 0 0 1.75rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      button {
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--fg);
+        background: transparent;
+        border: 1px solid var(--edge);
+        border-radius: 999px;
+        padding: 0.7rem 1.4rem;
+        cursor: pointer;
+        transition:
+          transform 120ms ease,
+          border-color 200ms ease;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--signal);
+        outline-offset: 3px;
+      }
+      [dir="rtl"] h1,
+      [dir="rtl"] p {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true"></div>
+      <h1 data-i18n="title">You're offline</h1>
+      <p data-i18n="body">
+        Your text is safe. The page will load as soon as the connection is back.
+      </p>
+      <button type="button" onclick="location.reload()" data-i18n="action">Try again</button>
+    </main>
+    <script>
+      // Pick the browser's language; no storage, no network.
+      (function () {
+        var copy = {
+          ar: {
+            dir: "rtl",
+            title: "أنت غير متصل",
+            body: "نصّك في أمان. ستفتح الصفحة بمجرد عودة الاتصال.",
+            action: "حاول مجددًا",
+          },
+          de: {
+            dir: "ltr",
+            title: "Du bist offline",
+            body: "Dein Text ist sicher. Die Seite öffnet sich, sobald die Verbindung zurück ist.",
+            action: "Erneut versuchen",
+          },
+          en: {
+            dir: "ltr",
+            title: "You're offline",
+            body: "Your text is safe. The page will load as soon as the connection is back.",
+            action: "Try again",
+          },
+        };
+        var lang = (navigator.language || "en").slice(0, 2);
+        var pack = copy[lang] || copy.en;
+        document.documentElement.lang = copy[lang] ? lang : "en";
+        document.documentElement.dir = pack.dir;
+        var nodes = document.querySelectorAll("[data-i18n]");
+        for (var i = 0; i < nodes.length; i++) {
+          nodes[i].textContent = pack[nodes[i].getAttribute("data-i18n")];
+        }
+      })();
+    </script>
+  </body>
+</html>

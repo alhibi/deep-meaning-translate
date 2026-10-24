@@ -6,7 +6,13 @@
 import { call, deepseekKey } from "../../src/lib/translation/providers/deepseek.server";
 import { readShadowReply, SHADOW_SYSTEM, shadowUserPrompt } from "../../src/lib/translation/shadow";
 
-type Case = { text: string; source: string; target: string; style?: string; expect: "loss" | "none" };
+type Case = {
+  text: string;
+  source: string;
+  target: string;
+  style?: string;
+  expect: "loss" | "none";
+};
 const CASES: Case[] = [
   { text: "يا حسرتاه على اللي فات", source: "ar", target: "de", expect: "loss" },
   { text: "إن شاء الله بخلص الشغل بكرا", source: "ar", target: "de", expect: "loss" },
@@ -22,15 +28,36 @@ const CASES: Case[] = [
   { text: "Na, du alter Schlawiner, wie läuft's?", source: "de", target: "ar", expect: "loss" },
   { text: "Das ist nicht mein Bier, ehrlich gesagt", source: "de", target: "ar", expect: "loss" },
   { text: "Ich drücke dir ganz fest die Daumen", source: "de", target: "ar", expect: "none" },
-  { text: "Sie haben das wirklich ganz toll gemacht, Frau Müller", source: "de", target: "ar", style: "casual", expect: "loss" },
+  {
+    text: "Sie haben das wirklich ganz toll gemacht, Frau Müller",
+    source: "de",
+    target: "ar",
+    style: "casual",
+    expect: "loss",
+  },
   { text: "Morgenstund hat Gold im Mund", source: "de", target: "ar", expect: "loss" },
-  { text: "Super, jetzt regnet es auch noch. Genau mein Tag.", source: "de", target: "ar", expect: "loss" },
+  {
+    text: "Super, jetzt regnet es auch noch. Genau mein Tag.",
+    source: "de",
+    target: "ar",
+    expect: "loss",
+  },
   { text: "Mir ist das alles einfach zu viel gerade", source: "de", target: "ar", expect: "none" },
   { text: "Kannst du mir bitte das Salz geben?", source: "de", target: "ar", expect: "none" },
   { text: "Der Zug fährt um acht Uhr ab", source: "de", target: "ar", expect: "none" },
   { text: "Ich habe morgen einen Termin beim Arzt", source: "de", target: "ar", expect: "none" },
-  { text: "Die Wohnung hat drei Zimmer und einen Balkon", source: "de", target: "ar", expect: "none" },
-  { text: "Bitte schicken Sie mir die Rechnung per E-Mail", source: "de", target: "ar", expect: "none" },
+  {
+    text: "Die Wohnung hat drei Zimmer und einen Balkon",
+    source: "de",
+    target: "ar",
+    expect: "none",
+  },
+  {
+    text: "Bitte schicken Sie mir die Rechnung per E-Mail",
+    source: "de",
+    target: "ar",
+    expect: "none",
+  },
   { text: "القطار يغادر الساعة الثامنة صباحاً", source: "ar", target: "de", expect: "none" },
   { text: "أريد أن أفتح حساباً في البنك", source: "ar", target: "de", expect: "none" },
   { text: "الاجتماع غداً في الساعة العاشرة", source: "ar", target: "de", expect: "none" },
@@ -42,7 +69,9 @@ const CASES: Case[] = [
 
 const key = deepseekKey();
 if (!key) throw new Error("DEEPSEEK_API_KEY missing");
-let correct = 0, falseFlag = 0, missed = 0;
+let correct = 0,
+  falseFlag = 0,
+  missed = 0;
 for (const c of CASES) {
   const style = c.style ?? "natural";
   const tr = await call(
@@ -50,11 +79,16 @@ for (const c of CASES) {
     `You are a professional ${c.source}→${c.target} translator. Translate the meaning naturally in a ${style} style. Return JSON {"t":"..."}.`,
     c.text,
   );
-  let translation = "";
+  let translation: string;
   try {
-    translation = String(JSON.parse(tr.slice(tr.indexOf("{"), tr.lastIndexOf("}") + 1)).t ?? "").trim();
+    translation = String(
+      JSON.parse(tr.slice(tr.indexOf("{"), tr.lastIndexOf("}") + 1)).t ?? "",
+    ).trim();
   } catch {
-    translation = tr.replace(/^[\s\S]*?"t"\s*:\s*"/, "").replace(/"\s*}\s*$/, "").trim();
+    translation = tr
+      .replace(/^[\s\S]*?"t"\s*:\s*"/, "")
+      .replace(/"\s*}\s*$/, "")
+      .trim();
   }
   if (!translation) {
     console.log(`SKIP (no translation) ${c.text}`);
@@ -63,7 +97,14 @@ for (const c of CASES) {
   const raw = await call(
     key,
     SHADOW_SYSTEM,
-    shadowUserPrompt({ text: c.text, translation, source: c.source, target: c.target, style, uiLocale: "ar" }),
+    shadowUserPrompt({
+      text: c.text,
+      translation,
+      source: c.source,
+      target: c.target,
+      style,
+      uiLocale: "ar",
+    }),
   );
   const r = readShadowReply(raw, c.text, translation);
   const got = r && r.losses.length ? "loss" : "none";
@@ -72,7 +113,11 @@ for (const c of CASES) {
   else missed++;
   console.log(
     `${got === c.expect ? "OK  " : "MISS"} [${c.expect}→${got}] ${c.text} ⇒ ${translation}` +
-      (r?.losses.length ? `\n      ${r.losses.map((l) => `${l.category}/${l.severity} «${l.targetQuote}» ${l.restores.length}r`).join(" | ")}` : ""),
+      (r?.losses.length
+        ? `\n      ${r.losses.map((l) => `${l.category}/${l.severity} «${l.targetQuote}» ${l.restores.length}r`).join(" | ")}`
+        : ""),
   );
 }
-console.log(`\nRESULT ${correct}/${CASES.length} correct · ${falseFlag} incorrectly flagged · ${missed} missed`);
+console.log(
+  `\nRESULT ${correct}/${CASES.length} correct · ${falseFlag} incorrectly flagged · ${missed} missed`,
+);

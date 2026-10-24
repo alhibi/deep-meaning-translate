@@ -163,6 +163,7 @@ export function useSpeech(opts: {
   const [perm, setPerm] = useState<Perm>("unknown");
   const rec = useRef<Recognition | null>(null);
   const cb = useRef(opts);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   cb.current = opts;
   // Session memory survives restarts, so a dropped connection never loses what was said.
   const said = useRef("");
@@ -170,6 +171,7 @@ export function useSpeech(opts: {
   const retries = useRef(0);
   const heard = useRef(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
   useEffect(() => setSupported(!!ctor()), []);
   useEffect(
     () => () => {
@@ -194,6 +196,7 @@ export function useSpeech(opts: {
     return () => status?.removeEventListener("change", sync);
   }, []);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (perm === "granted" && error === "denied") setError(null);
   }, [perm, error]);
 
@@ -240,6 +243,7 @@ export function useSpeech(opts: {
       const transient = failed === null || TRANSIENT.has(failed) || failed === "no-speech";
       if (wanted.current && transient && retries.current < MAX_RETRIES && failed !== "no-speech") {
         retries.current++;
+        // eslint-disable-next-line react-hooks/immutability -- ref-held timers/controllers are mutable by design
         setTimeout(() => wanted.current && launch(), 250 * retries.current);
         return;
       }

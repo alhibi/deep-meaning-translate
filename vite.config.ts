@@ -21,11 +21,11 @@ export default defineConfig({
         injectRegister: null, // src/lib/pwa.ts is the only registrar
         manifest: false, // served from public/manifest.webmanifest
         filename: "sw.js",
-        outDir: "dist/client", // serve sw.js from the public client root
+        outDir: ".output/public", // the deployed client root — sw.js must live where the server serves it
         devOptions: { enabled: false },
         workbox: {
-          globPatterns: ["**/*.{js,css,woff2,png,svg,ico,webmanifest}"],
-          navigateFallback: null,
+          globPatterns: ["**/*.{js,css,woff2,png,svg,ico,webmanifest,html}"],
+          navigateFallback: "/offline.html", // first visit with no connection still shows the brand, not a browser error
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,

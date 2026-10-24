@@ -82,7 +82,10 @@ export const TimelineChart = memo(function TimelineChart({
       {!compact ? (
         <div className="mt-2.5 flex gap-[3px] text-[10.5px] tabular-nums text-faint">
           {buckets.map((b, i) => (
-            <span key={b.key} className="min-w-0 flex-1 overflow-visible whitespace-nowrap text-center">
+            <span
+              key={b.key}
+              className="min-w-0 flex-1 overflow-visible whitespace-nowrap text-center"
+            >
               {i % labelEvery === 0 ? fmt.bucketShort(b.from, granularity) : ""}
             </span>
           ))}
@@ -152,7 +155,9 @@ export const Donut = memo(function Donut({
       </svg>
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
         <div>
-          <div className="text-[26px] font-semibold leading-none tracking-tight tabular-nums">{center}</div>
+          <div className="text-[26px] font-semibold leading-none tracking-tight tabular-nums">
+            {center}
+          </div>
           <div className="mt-1 text-[11px] text-muted-foreground">{caption}</div>
         </div>
       </div>
@@ -199,7 +204,10 @@ export const BarList = memo(function BarList({
             }`}
           >
             <span className="flex items-baseline gap-2">
-              <span className="size-2 shrink-0 translate-y-[-1px] rounded-[3px]" style={{ background: r.color }} />
+              <span
+                className="size-2 shrink-0 translate-y-[-1px] rounded-[3px]"
+                style={{ background: r.color }}
+              />
               <span className="min-w-0 flex-1 truncate text-[14px] text-foreground">
                 {r.label}
                 {r.estimated && estimatedLabel ? (
@@ -241,7 +249,11 @@ export const StackBar = memo(function StackBar({
 }) {
   return (
     <div>
-      <div role="img" aria-label={label} className="flex h-3 gap-[2px] overflow-hidden rounded-full">
+      <div
+        role="img"
+        aria-label={label}
+        className="flex h-3 gap-[2px] overflow-hidden rounded-full"
+      >
         {rows.map((r) => (
           <span
             key={r.id}

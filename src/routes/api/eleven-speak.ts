@@ -1,12 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ElevenInput, elevenBody } from "@/lib/voice/elevenVoice";
 import { kindForStatus } from "@/lib/voice/geminiVoice";
-import { boundedJson, sameOrigin } from "@/lib/requestSafety";
+import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
+import { takeSpeechToken } from "@/lib/translation/throttle";
 
 export const Route = createFileRoute("/api/eleven-speak")({
   staticData: { sitemap: false },
   server: {
     handlers: {
+      // Warm-up: open DNS/TLS to ElevenLabs before the first Listen tap. No key, no text.
+      GET: async () => {
+        await fetch("https://api.elevenlabs.io/v1/models", { method: "HEAD" }).catch(() => {});
+        return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+      },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number, retry?: string | null) =>
           Response.json(
@@ -19,6 +25,8 @@ export const Route = createFileRoute("/api/eleven-speak")({
         // The app has no user accounts. This same-origin endpoint is intentionally public,
         // like translation/Gemini; Origin checks prevent cross-site browser spending, not bots.
         if (!sameOrigin(request)) return fail("input", 403);
+        // Speech synthesis is the most expensive call in the app: it needs its own budget.
+        if (!takeSpeechToken(clientAddress(request))) return fail("rate", 429, "5");
         let data;
         try {
           data = ElevenInput.parse(await boundedJson(request));

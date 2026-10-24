@@ -4,5 +4,27 @@ import { fileURLToPath } from "node:url";
 // Standalone test config: keeps the app's Vite plugins (SSR, PWA) out of unit tests.
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  test: { environment: "jsdom", include: ["src/**/*.test.{ts,tsx}"] },
+  test: {
+    environment: "jsdom",
+    include: ["src/**/*.test.{ts,tsx}"],
+    setupFiles: ["src/test/setup.ts"],
+    // A shared jsdom is created once per worker instead of once per file: the suite runs
+    // several times faster with no loss of isolation between tests inside a file.
+    pool: "vmThreads",
+    coverage: {
+      provider: "v8",
+      // Code only: a stylesheet (and the markdown notes) would fail the reporter's parser
+      // and print a PARSE_ERROR on every run.
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.*", "src/test/**", "src/routeTree.gen.ts"],
+      // Floors, not targets: they stop silent regression, and are ratcheted up as the
+      // untested surfaces (routes, stats UI, speech) gain tests.
+      thresholds: {
+        lines: 48,
+        statements: 46,
+        functions: 39,
+        branches: 39,
+      },
+    },
+  },
 });

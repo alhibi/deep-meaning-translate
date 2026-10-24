@@ -11,10 +11,15 @@ describe("saved phrases", () => {
     const { saved, useSaved } = await import("./saved");
     saved.toggle({ source: "de", target: "ar", original: "Alt", translated: "قديم" });
     const { result, unmount } = renderHook(() => useSaved());
-    act(() => { localStorage.clear(); window.dispatchEvent(new StorageEvent("storage", { key: null })); });
+    act(() => {
+      localStorage.clear();
+      window.dispatchEvent(new StorageEvent("storage", { key: null }));
+    });
     expect(result.current).toEqual([]);
-    act(() => { saved.toggle({ source: "de", target: "ar", original: "Neu", translated: "جديد" }); });
-    expect(saved.list().map(p => p.original)).toEqual(["Neu"]);
+    act(() => {
+      saved.toggle({ source: "de", target: "ar", original: "Neu", translated: "جديد" });
+    });
+    expect(saved.list().map((p) => p.original)).toEqual(["Neu"]);
     unmount();
   });
   it("saves, finds and toggles off", async () => {
@@ -40,10 +45,21 @@ describe("saved phrases", () => {
 
 describe("history", () => {
   it("rejects timestamps outside the Date range and removes invalid update dates", async () => {
-    localStorage.setItem("lingua.history.v1", JSON.stringify([
-      { id: "bad", source: "de", target: "ar", original: "A", translated: "ب", createdAt: 1e20 },
-      { id: "good", source: "de", target: "ar", original: "A", translated: "ب", createdAt: 1, updatedAt: 1e20 },
-    ]));
+    localStorage.setItem(
+      "lingua.history.v1",
+      JSON.stringify([
+        { id: "bad", source: "de", target: "ar", original: "A", translated: "ب", createdAt: 1e20 },
+        {
+          id: "good",
+          source: "de",
+          target: "ar",
+          original: "A",
+          translated: "ب",
+          createdAt: 1,
+          updatedAt: 1e20,
+        },
+      ]),
+    );
     const { history } = await import("./history");
     expect(history.list()).toHaveLength(1);
     expect(history.list()[0]?.id).toBe("good");
