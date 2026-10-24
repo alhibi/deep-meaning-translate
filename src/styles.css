@@ -133,12 +133,19 @@ html.light {
   --muted-foreground: #5c554e;
   /* Quiet text still clears WCAG AA (4.5:1) on background and cards. */
   --faint: #6a635c;
-  --signal: #b0603c;
+  /*
+   * Clay was #b0603c until the contrast gate measured it. Three of its uses are
+   * *text*, and all three failed AA on paper: white ink on the signal fill 4.35:1,
+   * success 4.05:1, warning 4.47:1. Deepening the clay a single step fixes all of
+   * them at once (4.75 / 4.76 / 4.89) and keeps the hue — this is the same colour,
+   * not a new one. scripts/check-contrast.mjs now holds the line.
+   */
+  --signal: #a95a36;
   --signal-text: #9c4f2d;
   --signal-foreground: #fff8f2;
-  --signal-soft: rgb(176 96 60 / 13%);
-  --success: #2c8660;
-  --warning: #9a6519;
+  --signal-soft: rgb(169 90 54 / 13%);
+  --success: #247a55;
+  --warning: #91600f;
   --destructive: #b54444;
   --destructive-foreground: #fff8f2;
   --border: rgb(28 24 21 / 9%);
@@ -163,9 +170,98 @@ html.light {
   color-scheme: light;
 }
 
-/* Theme switch: circular spread (View Transitions) or soft cross-fade fallback. */
-::view-transition-old(root),
+/*
+ * Vivid: the same system, turned up.
+ *
+ * Clay is warm and quiet on purpose. This palette is for the person who finds that too
+ * soft — a cool near-black with an electric violet signal. It is deliberately *not* a
+ * different design language: every token below has the same role it has in the other
+ * two, so no component needs a single conditional. Same rules, louder values.
+ *
+ * All 15 text pairs and the focus indicator are verified to WCAG AA by
+ * `node scripts/check-contrast.mjs`; adding a token here without running it will fail
+ * the build rather than ship a palette with an unreadable caption.
+ */
+html.vivid {
+  --background: #08080c;
+  --foreground: #f2f3f8;
+  --surface: #0e0f15;
+  --card: #14161e;
+  --card-foreground: #f2f3f8;
+  --popover: #14161e;
+  --popover-foreground: #f2f3f8;
+  --primary: #f2f3f8;
+  --primary-foreground: #08080c;
+  --secondary: #191c25;
+  --secondary-foreground: #f2f3f8;
+  --muted: #191c25;
+  --muted-foreground: #a2a7ba;
+  /* Quiet text still clears WCAG AA (4.5:1) on background and cards: 6.22 / 5.62. */
+  --faint: #8a8fa3;
+  /* Signal: the same single-accent rule as clay, only electric instead of earthen. */
+  --signal: #8b7bff;
+  --signal-text: #b0a4ff; /* signal as text/lines on dark: 9.14:1 */
+  --signal-foreground: #0b0a12; /* near-black ink on violet: 5.98:1 */
+  --signal-soft: rgb(139 123 255 / 16%);
+  --success: #57d9a3;
+  --warning: #e0b352;
+  --destructive: #f2789f;
+  --destructive-foreground: #0b0a12;
+  --border: rgb(242 243 248 / 8%);
+  --border-strong: rgb(242 243 248 / 16%);
+  --input: rgb(242 243 248 / 11%);
+  --ring: var(--signal);
+  --shimmer: rgb(242 243 248 / 7%);
+  --focus-surface: #101219;
+  /* Cool near-black needs a touch more lift than clay to read as elevation. */
+  --elev-1: 0 1px 0 rgb(255 255 255 / 5%);
+  /* Data palette: same twelve categories, re-tuned for a cool ground. */
+  --cat-1: #b39aff;
+  --cat-2: #7fb8ff;
+  --cat-3: #86e0b4;
+  --cat-4: #d0a0ff;
+  --cat-5: #e6cd7f;
+  --cat-6: #ff9db6;
+  --cat-7: #7fe0d4;
+  --cat-8: #c4b49a;
+  --cat-9: #6fa8e8;
+  --cat-10: #a98cf0;
+  --cat-11: #6fd6a0;
+  --cat-12: #b09ae0;
+  --cat-none: #4d5162;
+  color-scheme: dark;
+}
+
+/*
+ * View Transitions: one mechanism, two distinct movements.
+ *
+ * Navigating between routes crosses over — the outgoing page lets go a little before
+ * the incoming one is fully there, which is what makes a route change feel like moving
+ * through the app rather than replacing it. Switching theme *spreads* from the point
+ * the person touched, and drives its own clip-path animation, so while it owns the root
+ * pseudo-elements the default fade has to be suppressed or the two fight.
+ *
+ * `html.theme-reveal` is added for exactly the lifetime of that transition
+ * (`src/lib/theme.ts`); nothing else ever carries it.
+ */
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+  }
+}
+::view-transition-old(root) {
+  animation: vt-out 180ms var(--ease-soft) both;
+}
 ::view-transition-new(root) {
+  animation: vt-in 260ms var(--ease-out) both;
+}
+html.theme-reveal::view-transition-old(root),
+html.theme-reveal::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
@@ -264,6 +360,12 @@ html.theme-fade *::after {
 :root {
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  /*
+   * A spring that overshoots once and settles. Reserved for things that *arrive* —
+   * the action row under a fresh translation, a sheet lifting into place — never for
+   * continuous state, where an overshoot reads as a glitch rather than as weight.
+   */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes rise {
@@ -428,7 +530,13 @@ html.theme-fade *::after {
     transition-duration: 40ms;
   }
   &:focus-visible {
-    outline: 2px solid color-mix(in oklab, var(--ring) 55%, transparent);
+    outline: 2px solid var(--ring);
+    /* Solid, not the 55% tint this used to be: a focus indicator is the one place
+     * where subtlety is a defect. Measured against WCAG 1.4.11 (3:1 for non-text
+     * UI), the tint gave 2.55:1 clay dark, 2.06:1 paper light, 2.53:1 vivid —
+     * a keyboard user could not find the control they were on. Solid clears it
+     * with margin in all three (5.24 / 4.51 / 5.48 on card).
+     * scripts/check-contrast.mjs now fails the build if it drops back below 3:1. */
     outline-offset: 2px;
   }
 }
@@ -443,7 +551,7 @@ html.theme-fade *::after {
   }
   &:focus-within:has(:focus-visible),
   &:focus-visible {
-    outline: 2px solid color-mix(in oklab, var(--ring) 55%, transparent);
+    outline: 2px solid var(--ring); /* see the note in @utility press */
     outline-offset: 2px;
   }
 }
@@ -1042,6 +1150,12 @@ html.light {
   --shadow-ink-1: color-mix(in oklab, #6b3f28 34%, transparent);
   --shadow-ink-2: color-mix(in oklab, #6b3f28 50%, transparent);
   --shadow-ink-3: color-mix(in oklab, #8a4322 66%, transparent);
+}
+/* The shadow's glow follows the theme's signal, so a loss reads the same in all three. */
+html.vivid {
+  --shadow-ink-1: color-mix(in oklab, #8b7bff 40%, transparent);
+  --shadow-ink-2: color-mix(in oklab, #8b7bff 58%, transparent);
+  --shadow-ink-3: color-mix(in oklab, #b0a4ff 76%, transparent);
 }
 .shadow-ink,
 .shadow-hits {

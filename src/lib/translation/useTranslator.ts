@@ -8,6 +8,7 @@ import { DEFAULT_BRAIN, type Brain } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
 import { streamTranslate, warmTranslation } from "./stream";
+import { memoryGet, memorySet } from "./memory";
 
 export type ErrorKind =
   "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
@@ -191,6 +192,23 @@ export function useTranslator(opts: {
       }
       if (hit) cache.current.delete(key); // expired
 
+      // Device memory: a sentence settled in an earlier session returns with no
+      // request at all. Only settled text is ever stored, so a hit is a final answer.
+      const stored = memoryGet(key);
+      if (stored) {
+        cache.current.set(key, { result: stored, at: Date.now(), provisional: false });
+        shown.current = ++latest.current;
+        dropLingering();
+        if (inflight.current) {
+          inflight.current.ctrl.abort();
+          inflight.current = null;
+          metrics.cancel();
+        }
+        metrics.cacheHit();
+        commit(key, stored, false, norm);
+        return;
+      }
+
       if (isOffline()) {
         setError("offline");
         setPhase("OFFLINE");
@@ -295,6 +313,10 @@ export function useTranslator(opts: {
             cache.current.delete(cache.current.keys().next().value as string);
           shown.current = token;
           commit(key, res.result, prov, norm);
+          // Only a settled, verified answer is remembered. A provisional stream is
+          // plain text that never went through `verify`, so storing it would let an
+          // unchecked reading answer for this sentence forever after.
+          if (!prov) memorySet(key, res.result);
           if (!prov) {
             // Shown already. Finished sentences get a quiet second look (repair for
             // lost numbers/links, otherwise the second brain's review); the result is
@@ -310,6 +332,9 @@ export function useTranslator(opts: {
                   return;
                 const c = cache.current.get(key);
                 if (c) c.result = r.result;
+                // The repaired reading supersedes the stored one, so a later session
+                // gets the corrected text rather than the pre-repair draft.
+                memorySet(key, r.result);
                 setResult(r.result);
                 successRef.current?.(r.result, norm, prov);
               })

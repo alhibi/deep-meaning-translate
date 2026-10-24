@@ -10,26 +10,44 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("clay dark and light themes", () => {
-  it("keeps exactly two choices and cycles between them", () => {
-    expect(THEMES).toEqual(["dark", "light"]);
+describe("the three themes", () => {
+  it("cycles clay dark → paper light → vivid and back", () => {
+    expect(THEMES).toEqual(["dark", "light", "vivid"]);
     expect(nextTheme("dark")).toBe("light");
-    expect(nextTheme("light")).toBe("dark");
+    expect(nextTheme("light")).toBe("vivid");
+    expect(nextTheme("vivid")).toBe("dark");
   });
 
-  it("validates saved choices, dropping removed themes and corrupted values", () => {
+  it("validates saved choices, dropping retired themes and corrupted values", () => {
     for (const value of [null, "garbage", {}, 1]) expect(parseTheme(value)).toBe("dark");
     expect(parseTheme("light")).toBe("light");
+    expect(parseTheme("vivid")).toBe("vivid");
+    // navy and burgundy shipped once and were removed: an old preference must land on
+    // a palette that exists, not on a half-applied one.
     for (const value of ["navy", "burgundy", "forest", "rose"])
       expect(parseTheme(value)).toBe("dark");
   });
 
-  it("restores light and dark choices before paint, including removed themes", () => {
-    for (const value of ["dark", "navy", "burgundy", "forest", "rose", "light", "corrupt"]) {
+  it("restores every saved choice before paint, including retired themes", () => {
+    for (const value of [
+      "dark",
+      "navy",
+      "burgundy",
+      "forest",
+      "rose",
+      "light",
+      "vivid",
+      "corrupt",
+    ]) {
       localStorage.setItem(THEME_KEY, value);
       new Function(THEME_BOOT)();
-      expect(document.documentElement.dataset["theme"]).toBe(parseTheme(value));
+      const expected = parseTheme(value);
+      expect(document.documentElement.dataset["theme"]).toBe(expected);
+      // vivid is a dark palette: the UA colour scheme follows dark, as does clay dark.
       expect(document.documentElement.style.colorScheme).toBe(value === "light" ? "light" : "dark");
+      // The class name is the theme name, so the stylesheet needs no mapping table.
+      expect(document.documentElement.classList.contains(expected)).toBe(true);
+      expect(document.documentElement.classList.length).toBe(1);
     }
   });
 
@@ -40,12 +58,33 @@ describe("clay dark and light themes", () => {
       result.current.toggle(1, 1);
       result.current.toggle(1, 1);
     });
+    expect(result.current.theme).toBe("vivid");
+    expect(localStorage.getItem(THEME_KEY)).toBe("vivid");
+    expect(document.documentElement.dataset["theme"]).toBe("vivid");
+    act(() => {
+      result.current.toggle(1, 1);
+    });
     expect(result.current.theme).toBe("dark");
-    expect(localStorage.getItem(THEME_KEY)).toBe("dark");
-    expect(document.documentElement.dataset["theme"]).toBe("dark");
-    act(() => result.current.toggle(1, 1));
+    act(() => {
+      result.current.toggle(1, 1);
+    });
     expect(result.current.theme).toBe("light");
-    act(() => result.current.toggle(1, 1));
-    expect(result.current.theme).toBe("dark");
+  });
+
+  it("applies the vivid class and leaves no stale theme class behind", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    document.documentElement.classList.add("light");
+    const { result } = renderHook(() => useTheme());
+    act(() => {
+      result.current.toggle(1, 1);
+    });
+    expect(result.current.theme).toBe("light");
+    act(() => {
+      result.current.toggle(1, 1);
+    });
+    expect(result.current.theme).toBe("vivid");
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.classList.contains("vivid")).toBe(true);
   });
 });

@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "check:pwa": "node scripts/check-pwa.mjs",
-    "verify": "npm run typecheck && npm run lint -- --max-warnings 0 && npm run test",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "verify": "npm run typecheck && npm run lint -- --max-warnings 0 && npm run test && npm run check:contrast",
     "og": "node scripts/make-og.mjs",
     "format:check": "prettier --check ."
   },

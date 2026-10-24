@@ -1,6 +1,15 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowDownToLine,
   Bookmark,
@@ -16,11 +25,9 @@ import { AppHeader } from "@/components/translator/AppHeader";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
-import { LanguageSheet } from "@/components/translator/LanguageSheet";
 import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
-import { Intro } from "@/components/Intro";
-import { tick } from "@/lib/haptics";
+import { feel } from "@/lib/feel";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { joinSpeech } from "@/lib/speech";
 import { useAssemblySpeech } from "@/lib/useAssemblySpeech";
@@ -31,8 +38,6 @@ import { useLexicon } from "@/lib/translation/useLexicon";
 import { useShadow } from "@/lib/translation/useShadow";
 import type { Loss } from "@/lib/translation/shadow";
 import { ShadowSummary } from "@/components/translator/SentenceShadow";
-import { ShadowMap, ShadowSheet } from "@/components/translator/ShadowSheet";
-import { LexiconSheet } from "@/components/translator/LexiconSheet";
 import {
   DEFAULT_BRAIN,
   effectiveBrain,
@@ -51,6 +56,27 @@ import { statsT } from "@/lib/stats/labels";
 import { persist } from "@/lib/persist";
 import { shouldShowIntro } from "@/lib/intro";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
+
+/*
+ * Sheets and the first-run intro are all closed on first paint, so they are loaded on
+ * demand instead of sitting in the entry chunk. `Suspense` renders nothing while a
+ * sheet arrives, which is exactly what an unopened sheet looks like anyway. The chunks
+ * are hashed and precached with the rest of the shell, so this costs an offline user
+ * nothing either.
+ */
+const LanguageSheet = lazy(() =>
+  import("@/components/translator/LanguageSheet").then((m) => ({ default: m.LanguageSheet })),
+);
+const ShadowSheet = lazy(() =>
+  import("@/components/translator/ShadowSheet").then((m) => ({ default: m.ShadowSheet })),
+);
+const ShadowMap = lazy(() =>
+  import("@/components/translator/ShadowSheet").then((m) => ({ default: m.ShadowMap })),
+);
+const LexiconSheet = lazy(() =>
+  import("@/components/translator/LexiconSheet").then((m) => ({ default: m.LexiconSheet })),
+);
+const Intro = lazy(() => import("@/components/Intro").then((m) => ({ default: m.Intro })));
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
@@ -488,7 +514,7 @@ function Translator() {
       setApplied({ base: baseResult.translation, original: text, text: restore.text });
       archiveFix(restore.text);
       setShadowFocus(null);
-      tick();
+      feel.confirm();
     },
     [baseResult, result, applied, text, prepareApply, archiveFix, target, style],
   );
@@ -525,11 +551,11 @@ function Translator() {
   const toggleMic = useCallback(() => {
     if (!speech.listening && !speech.starting)
       speechBase.current = inputRef.current?.value.trim() ?? "";
-    tick();
+    feel.tap();
     speech.toggle();
   }, [speech]);
   const retryMic = useCallback(() => {
-    tick();
+    feel.tap();
     speech.retry(); // keeps both the typed text and what was already heard
   }, [speech]);
   const [tagline, setTagline] = useState(false);
@@ -608,7 +634,11 @@ function Translator() {
 
   return (
     <>
-      {introOpen ? <Intro onComplete={() => setIntroOpen(false)} /> : null}
+      {introOpen ? (
+        <Suspense fallback={null}>
+          <Intro onComplete={() => setIntroOpen(false)} />
+        </Suspense>
+      ) : null}
       <a href="#composer" className="skip-link">
         {t("skipToInput")}
       </a>
@@ -901,13 +931,18 @@ function Translator() {
             className="flex items-center justify-center gap-4 pb-1 text-[11px] text-faint"
           >
             <Link
+              viewTransition
               to="/arabic-german-translation"
               className="press-soft underline-offset-4 hover:underline"
             >
               {t("pairGuide")}
             </Link>
             <span aria-hidden className="size-1 rotate-45 rounded-[1px] bg-border-strong" />
-            <Link to="/privacy" className="press-soft underline-offset-4 hover:underline">
+            <Link
+              viewTransition
+              to="/privacy"
+              className="press-soft underline-offset-4 hover:underline"
+            >
               {t("privacy")}
             </Link>
           </nav>
@@ -915,55 +950,57 @@ function Translator() {
         <div className="h-3 pad-safe-bottom" />
 
         <SafeArea silent>
-          <LanguageSheet
-            open={dialectOpen}
-            title={t("dialect")}
-            searchable={false}
-            plain
-            items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map(
-              (d) => ({
-                code: d,
-                native: t(`d_${d}`),
-                name: t(`d_${d}`),
-                rtl: true,
-              }),
-            )}
-            value={dialect}
-            onSelect={selectDialect}
-            onClose={closeDialect}
-          />
-          <ShadowSheet
-            loss={focusLoss}
-            sourceText={text.trim().replace(/\s+/gu, " ")}
-            sourceLang={result?.sourceLanguage || source}
-            translation={result?.translation ?? ""}
-            targetLang={target}
-            onApply={applyShadow}
-            onKeep={keepShadow}
-            onClose={closeShadow}
-          />
-          <ShadowMap
-            open={shadowMapOpen && shadowLosses.length > 0}
-            losses={shadowLosses}
-            sourceText={text.trim().replace(/\s+/gu, " ")}
-            sourceLang={result?.sourceLanguage || source}
-            translation={result?.translation ?? ""}
-            targetLang={target}
-            onPick={pickShadow}
-            onClose={closeShadowMap}
-          />
-          <LexiconSheet
-            open={lexOpen}
-            value={lexicon}
-            loading={lexiconLoading}
-            onClose={closeLex}
-          />
-          <SavedSheet
-            open={savedOpen}
-            entries={savedList}
-            onClose={() => setSavedOpen(false)}
-            onPick={pickSaved}
-          />
+          <Suspense fallback={null}>
+            <LanguageSheet
+              open={dialectOpen}
+              title={t("dialect")}
+              searchable={false}
+              plain
+              items={(["auto", "msa", "levant", "egypt", "gulf", "iraq", "maghreb"] as const).map(
+                (d) => ({
+                  code: d,
+                  native: t(`d_${d}`),
+                  name: t(`d_${d}`),
+                  rtl: true,
+                }),
+              )}
+              value={dialect}
+              onSelect={selectDialect}
+              onClose={closeDialect}
+            />
+            <ShadowSheet
+              loss={focusLoss}
+              sourceText={text.trim().replace(/\s+/gu, " ")}
+              sourceLang={result?.sourceLanguage || source}
+              translation={result?.translation ?? ""}
+              targetLang={target}
+              onApply={applyShadow}
+              onKeep={keepShadow}
+              onClose={closeShadow}
+            />
+            <ShadowMap
+              open={shadowMapOpen && shadowLosses.length > 0}
+              losses={shadowLosses}
+              sourceText={text.trim().replace(/\s+/gu, " ")}
+              sourceLang={result?.sourceLanguage || source}
+              translation={result?.translation ?? ""}
+              targetLang={target}
+              onPick={pickShadow}
+              onClose={closeShadowMap}
+            />
+            <LexiconSheet
+              open={lexOpen}
+              value={lexicon}
+              loading={lexiconLoading}
+              onClose={closeLex}
+            />
+            <SavedSheet
+              open={savedOpen}
+              entries={savedList}
+              onClose={() => setSavedOpen(false)}
+              onPick={pickSaved}
+            />
+          </Suspense>
         </SafeArea>
       </main>
     </>

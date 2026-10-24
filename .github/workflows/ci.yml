@@ -41,6 +41,9 @@ jobs:
         env:
           CI: true
 
+      - name: Contrast (every theme clears WCAG AA)
+        run: npm run check:contrast
+
       - name: Production build
         run: npm run build
 

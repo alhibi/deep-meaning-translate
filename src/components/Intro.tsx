@@ -2,7 +2,7 @@ import { ArrowDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { markIntroSeen } from "@/lib/intro";
 import { useI18n } from "@/lib/i18n";
-import { tick } from "@/lib/haptics";
+import { feel } from "@/lib/feel";
 
 export function Intro({ onComplete }: { onComplete: () => void }) {
   const { t, rtl } = useI18n();
@@ -18,7 +18,7 @@ export function Intro({ onComplete }: { onComplete: () => void }) {
 
   function enter() {
     if (leaving) return;
-    tick();
+    feel.confirm();
     markIntroSeen();
     setLeaving(true);
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

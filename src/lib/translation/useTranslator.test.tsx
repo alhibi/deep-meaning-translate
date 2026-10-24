@@ -37,6 +37,7 @@ const result = (translation: string): TranslationResult => ({
 });
 
 const { useTranslator } = await import("./useTranslator");
+const { memoryClear } = await import("./memory");
 const opts = (text: string) => ({ text, source: "de", target: "ar", style: "natural" as const });
 const flush = async (ms: number) => {
   await act(async () => {
@@ -48,8 +49,17 @@ beforeEach(() => {
   vi.useFakeTimers();
   call.mockReset();
   repairCall.mockReset();
+  // Device memory outlives a render on purpose — that is the feature. jsdom shares
+  // localStorage across tests in a file, so without this a sentence settled by one
+  // test would answer the next one from storage and the network path would never run.
+  memoryClear();
+  localStorage.clear();
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  memoryClear();
+  localStorage.clear();
+  vi.useRealTimers();
+});
 
 describe("useTranslator", () => {
   it("invalidates a pending reply and retry after deletion to one character", async () => {

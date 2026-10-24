@@ -6,7 +6,7 @@ import { ShadowHits, ShadowInk } from "./SentenceShadow";
 import type { TranslationResult } from "@/lib/translation/types";
 import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
-import { tick } from "@/lib/haptics";
+import { feel } from "@/lib/feel";
 import { useI18n } from "@/lib/i18n";
 import { prefetchSpeech, speakTranslation, stopSpeaking } from "@/lib/tts";
 import { PACE_RATE, getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
@@ -162,6 +162,22 @@ export const ResultPanel = memo(function ResultPanel({
     return () => clearTimeout(id);
   }, [text, provisional, pending, voiceLang, voicePrefs]);
 
+  /**
+   * The signature moment: a live stream becoming a settled answer.
+   *
+   * It fires on the *transition*, not on the state. That distinction is the whole
+   * design: a session restored from storage opens already settled, and nothing arrived
+   * there, so it must stay silent — while the moment a provisional stream hardens into
+   * a final translation is exactly when the app should say "here it is" in the hand.
+   * A realtime refinement therefore never counts, and a reload never counts.
+   */
+  const wasLive = useRef(false);
+  useEffect(() => {
+    const live = !text || provisional || pending;
+    if (wasLive.current && !live) feel.arrive();
+    wasLive.current = live;
+  }, [text, provisional, pending]);
+
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {
     if (!text || provisional || pending) return;
@@ -183,7 +199,7 @@ export const ResultPanel = memo(function ResultPanel({
     const done = () => {
       setCopied(true);
       notifyCopied();
-      tick();
+      feel.confirm();
     };
     const fallback = () => {
       // Plain-text fallback: exact characters and line breaks, no formatting.
@@ -385,9 +401,9 @@ export const ResultPanel = memo(function ResultPanel({
         ) : null}
 
         <div
-          className={`-ms-0.5 mt-5 flex items-center transition-[opacity,transform] duration-300 ${
+          className={`-ms-0.5 mt-5 flex items-center transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
             provisional || pending
-              ? "pointer-events-none translate-y-1 opacity-0"
+              ? "pointer-events-none translate-y-2 opacity-0"
               : "translate-y-0 opacity-100"
           }`}
         >
@@ -427,7 +443,7 @@ export const ResultPanel = memo(function ResultPanel({
               label={isSaved ? t("unsave") : t("save")}
               onClick={() => {
                 onSave();
-                tick();
+                feel.confirm();
               }}
               active={!!isSaved}
             >
