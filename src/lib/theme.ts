@@ -1,20 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const THEMES = ["dark", "light"] as const;
+export const THEMES = ["dark", "light", "vivid"] as const;
 export type Theme = (typeof THEMES)[number];
 export const THEME_KEY = "lingua.theme.v1";
 
-/** Only clay dark and light exist; every other saved value falls back to clay dark. */
+/**
+ * Three themes and only three: clay dark, paper light, and `vivid` — a cool near-black
+ * with an electric signal, for the person who finds the calm palette too quiet.
+ *
+ * Every other saved value falls back to clay dark. That includes the retired navy and
+ * burgundy themes: an old preference must land on a palette that exists, not on a
+ * half-applied one.
+ */
 export function parseTheme(value: unknown): Theme {
-  return value === "light" ? "light" : "dark";
+  return value === "light" ? "light" : value === "vivid" ? "vivid" : "dark";
 }
 
 export function nextTheme(theme: Theme): Theme {
   return THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length] ?? "dark";
 }
 
-/** Shared validation runs before paint, retaining saved light and defaulting the rest to clay dark. */
-export const THEME_BOOT = `(function(){var t="dark";try{var s=localStorage.getItem("${THEME_KEY}");t=s===null?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(${parseTheme.toString()})(s);}catch(e){}var d=document.documentElement;d.classList.remove("light","dark");d.classList.add(t==="light"?"light":"dark");d.dataset.theme=t;d.style.colorScheme=t==="light"?"light":"dark";})();`;
+/**
+ * Shared validation runs before paint, so no visit ever flashes the wrong palette.
+ * The class name *is* the theme name (`dark` / `light` / `vivid`), which keeps this
+ * boot script and the CSS in `styles.css` from drifting apart — there is no mapping
+ * table here that the stylesheet has to agree with.
+ */
+export const THEME_BOOT = `(function(){var P=${parseTheme.toString()};var t="dark";try{var s=localStorage.getItem("${THEME_KEY}");t=s===null?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):P(s);}catch(e){}var d=document.documentElement;d.classList.remove("dark","light","vivid");d.classList.add(t);d.dataset.theme=t;d.style.colorScheme=t==="light"?"light":"dark";})();`;
 
 function current(): Theme {
   return parseTheme(document.documentElement.dataset["theme"]);
@@ -22,9 +34,11 @@ function current(): Theme {
 
 function apply(t: Theme) {
   const d = document.documentElement;
-  d.classList.remove("light", "dark");
-  d.classList.add(t === "light" ? "light" : "dark");
+  d.classList.remove("dark", "light", "vivid");
+  d.classList.add(t);
   d.dataset["theme"] = t;
+  // `vivid` is a dark palette: form controls, scrollbars and the UA colour scheme
+  // all follow the dark branch, exactly as they do for clay dark.
   d.style.colorScheme = t === "light" ? "light" : "dark";
   const color = getComputedStyle(d).getPropertyValue("--background").trim();
   document
@@ -64,6 +78,7 @@ export function useTheme() {
     const doc = document as Document & {
       startViewTransition?: (cb: () => void) => {
         ready: Promise<void>;
+        finished: Promise<void>;
         skipTransition: () => void;
       };
     };
@@ -80,6 +95,13 @@ export function useTheme() {
     const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
     const vt = doc.startViewTransition(run);
     activeTransition.current = vt;
+    // Route navigation fades across; the theme *spreads*. Both use the same root
+    // pseudo-elements, so the reveal marks the document while it owns them —
+    // otherwise one of the two would be left with no animation at all.
+    document.documentElement.classList.add("theme-reveal");
+    void vt.finished
+      .catch(() => {})
+      .then(() => document.documentElement.classList.remove("theme-reveal"));
     void vt.ready
       .then(() => {
         if (activeTransition.current !== vt) return;

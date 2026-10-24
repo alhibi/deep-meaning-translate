@@ -768,17 +768,23 @@ cp .env.example .env # add at least DEEPSEEK_API_KEY
 npm run dev          # http://localhost:8080
 ```
 
-### The four gates
+### The five gates
 
 Every push and pull request runs exactly these, and nothing merges while one is red:
 
 ```sh
 npm run typecheck        # tsc --noEmit
 npm run lint             # eslint — zero errors, zero warnings
-npm run test             # vitest — 225 tests, coverage floors enforced
+npm run test             # vitest — 273 tests, coverage floors enforced
+npm run check:contrast   # every theme clears WCAG AA, computed from styles.css
 npm run build            # production build + security headers + PWA check
-npm run verify           # typecheck + lint + tests in one go
+npm run verify           # typecheck + lint + tests + contrast in one go
 ```
+
+The contrast gate exists because three real failures were hiding in the paper light
+palette — white ink on the signal fill at 4.35:1, success text at 4.05:1, warning text
+at 4.47:1 — and all of them looked fine. A palette is an argument that has to be
+settled by arithmetic, not by eye.
 
 ### Production preview
 
@@ -791,12 +797,13 @@ npm run build && npm run preview   # http://localhost:8080
 
 ### Other scripts
 
-| Script              | What it does                                                         |
-| ------------------- | -------------------------------------------------------------------- |
-| `npm run og`        | Regenerates `public/og.png` from the product's own fonts and palette |
-| `npm run check:pwa` | Fails if the service worker stops precaching the app shell           |
-| `npm run test:e2e`  | Phone-sized browser checks (`tests/e2e/*.py`, needs Playwright)      |
-| `npm run format`    | Prettier across the repository                                       |
+| Script                   | What it does                                                         |
+| ------------------------ | -------------------------------------------------------------------- |
+| `npm run og`             | Regenerates `public/og.png` from the product's own fonts and palette |
+| `npm run check:pwa`      | Fails if the service worker stops precaching the app shell           |
+| `npm run check:contrast` | Fails if any theme drops a text or focus pair below WCAG AA          |
+| `npm run test:e2e`       | Phone-sized browser checks (`tests/e2e/*.py`, needs Playwright)      |
+| `npm run format`         | Prettier across the repository                                       |
 
 ### Where things live
 

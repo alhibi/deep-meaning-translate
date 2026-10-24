@@ -1,7 +1,7 @@
 import { memo, useCallback, useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import { LANGUAGES, TARGET_LANGUAGES, isRtl, languageLabel } from "@/lib/translation/languages";
-import { tick } from "@/lib/haptics";
+import { feel } from "@/lib/feel";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSheet, pushRecent, readRecent, type PickerItem } from "./LanguageSheet";
 
@@ -99,7 +99,7 @@ export const LanguageBar = memo(function LanguageBar({
   const [swapped, setSwapped] = useState(0);
   const swap = useCallback(() => {
     setSwapped((n) => n + 1);
-    tick();
+    feel.swap();
     onSwap();
   }, [onSwap]);
 

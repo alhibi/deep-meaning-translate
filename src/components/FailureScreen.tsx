@@ -41,6 +41,7 @@ export function NotFoundScreen() {
       </h1>
       <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">{t("notFoundBody")}</p>
       <Link
+        viewTransition
         to="/"
         className="press mt-6 inline-flex items-center gap-2 rounded-full bg-signal px-5 py-2.5 text-[13px] font-medium text-signal-foreground"
       >

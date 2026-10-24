@@ -87,6 +87,7 @@ export function AppHeader({
           <Bookmark className="size-[18px]" strokeWidth={1.75} />
         </button>
         <Link
+          viewTransition
           to="/stats"
           aria-label={statsT(locale)("open")}
           className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Check, Search, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { tick } from "@/lib/haptics";
+import { feel } from "@/lib/feel";
 
 export interface PickerItem {
   code: string;
@@ -118,7 +118,7 @@ export function LanguageSheet({
 
   const pick = useCallback(
     (code: string) => {
-      tick();
+      feel.tap();
       onSelect(code);
       onClose();
     },

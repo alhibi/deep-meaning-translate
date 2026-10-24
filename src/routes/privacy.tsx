@@ -134,10 +134,11 @@ function PrivacyPage() {
       className="mx-auto min-h-[100dvh] max-w-2xl px-5 pb-14 text-foreground pad-safe-top"
     >
       <header className="flex items-center justify-between border-b border-border py-3">
-        <Link to="/" className="text-[16px] font-semibold">
+        <Link viewTransition to="/" className="text-[16px] font-semibold">
           today
         </Link>
         <Link
+          viewTransition
           to="/"
           className="press-soft inline-flex min-h-11 items-center gap-2 text-[14px] text-muted-foreground hover:text-foreground"
         >

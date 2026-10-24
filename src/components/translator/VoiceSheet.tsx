@@ -3,7 +3,8 @@ import { Sheet } from "@/components/stats/Sheet";
 import { useI18n, type Key } from "@/lib/i18n";
 import { GEMINI_VOICES, PACES } from "@/lib/voice/geminiVoice";
 import { setVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
-import { tick } from "@/lib/haptics";
+import { FeelSection } from "./FeelSection";
+import { feel } from "@/lib/feel";
 import { ELEVEN_VOICES } from "@/lib/voice/elevenVoice";
 import { VoiceButton } from "@/components/VoiceButton";
 
@@ -28,7 +29,7 @@ function Segmented<T extends string>({
           aria-checked={value === o.v}
           onClick={() => {
             onChange(o.v);
-            tick();
+            feel.tap();
           }}
           className={`press-soft h-9 flex-1 rounded-full px-3 text-[13px] transition-colors ${
             value === o.v ? "bg-signal text-signal-foreground font-medium" : "text-muted-foreground"
@@ -57,6 +58,7 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
       title={<h2 className="text-[17px] font-semibold tracking-tight">{t("voiceSettings")}</h2>}
     >
       <div className="space-y-6 pb-4">
+        <FeelSection />
         <section className="space-y-2">
           {(["elevenlabs", "gemini", "device"] as const).map((e) => (
             <VoiceButton
@@ -131,7 +133,7 @@ export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => vo
                       if (eleven) setVoicePrefs({ elevenVoice: name });
                       else if (GEMINI_VOICES.some(([v]) => v === name))
                         setVoicePrefs({ voice: name as typeof p.voice });
-                      tick();
+                      feel.tap();
                     }}
                     className={`press-soft rounded-xl px-3 py-2 text-start ${
                       (eleven ? p.elevenVoice : p.voice) === name

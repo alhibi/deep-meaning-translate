@@ -242,6 +242,7 @@ function StatsPage() {
   const header = (
     <header className="flex items-center gap-1 px-2 pt-2">
       <Link
+        viewTransition
         to="/"
         aria-label={t("back")}
         className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
@@ -269,6 +270,7 @@ function StatsPage() {
     body = (
       <Calm title={t("empty_title")} text={t("empty_body")} mark>
         <Link
+          viewTransition
           to="/"
           className="press inline-flex h-11 items-center rounded-full bg-primary px-6 text-[14px] font-medium text-primary-foreground"
         >
