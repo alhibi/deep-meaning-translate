@@ -58,6 +58,39 @@ async function fromPublic(pathname) {
   }
 }
 
+/**
+ * The deployment applies `_headers` at the edge; locally we replay the same rules so a
+ * preview shows what production will show (and so a header regression is visible here).
+ */
+const rules = [];
+try {
+  const text = await readFile(join(publicDir, "_headers"), "utf8");
+  for (const block of text.split(/\n(?=\S)/)) {
+    const lines = block
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("#"));
+    if (!lines.length) continue;
+    const [pattern, ...rest] = lines;
+    if (!pattern) continue;
+    const headers = {};
+    for (const line of rest) {
+      const index = line.indexOf(":");
+      if (index > 0) headers[line.slice(0, index).trim()] = line.slice(index + 1).trim();
+    }
+    const source = pattern.replace(/[.]/g, "\\.").replace(/\*\*/g, ".*").replace(/\*/g, ".*");
+    rules.push({ re: new RegExp(`^${source}$`), headers });
+  }
+} catch {
+  /* no _headers file: nothing to replay */
+}
+
+function headersFor(pathname) {
+  const merged = {};
+  for (const rule of rules) if (rule.re.test(pathname)) Object.assign(merged, rule.headers);
+  return merged;
+}
+
 const { default: handler } = await import(pathToFileURL(serverEntry).href);
 
 const server = createServer(async (req, res) => {
@@ -69,7 +102,8 @@ const server = createServer(async (req, res) => {
       body: ["GET", "HEAD"].includes(req.method ?? "GET") ? undefined : req,
       duplex: "half",
     });
-    const staticHit = req.method === "GET" ? await fromPublic(new URL(url).pathname) : null;
+    const pathname = new URL(url).pathname;
+    const staticHit = req.method === "GET" ? await fromPublic(pathname) : null;
     // The worker expects the Cloudflare execution context: `waitUntil` keeps work alive
     // after the response; there is nothing to keep alive in a preview, so it drains.
     const waitUntil = (promise) => void Promise.resolve(promise).catch(() => {});
@@ -80,6 +114,9 @@ const server = createServer(async (req, res) => {
     for (const [key, value] of response.headers) {
       if (key.toLowerCase() === "content-encoding") continue; // fetch already decoded it
       res.setHeader(key, value);
+    }
+    for (const [key, value] of Object.entries(headersFor(pathname))) {
+      if (!res.hasHeader(key)) res.setHeader(key, value);
     }
     if (!response.body) return res.end();
     const reader = response.body.getReader();

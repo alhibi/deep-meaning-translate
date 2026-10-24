@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,6 +8,7 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
 
 - Everything read back from device storage goes through a validator (parsePrefs/parseSession/isPhrase/isEntry) mirroring the server input schema — corrupted or stale data must never reach the server or crash the UI.
@@ -23,3 +25,14 @@
 - Sentence Shadow (`src/lib/translation/shadow*.ts`, `useShadow.ts`): runs only on settled translations, the model quotes fragments and all offsets are re-anchored locally (unanchorable findings dropped), and applied fixes are a display overlay keyed to the exact model translation that also updates history/saved — why: a shadow must never point at nothing, never flicker while typing, and one apply path keeps Copy/voice/archive consistent.
 - Raw paid-service requests share bounded JSON and same-origin checks in requestSafety.ts; translation admission is keyed by trusted proxy client address, with bounded process-local state — why: oversized inputs and one runaway client must not block unrelated users; deployment-wide bot protection still belongs at the hosting edge.
 - Provider streams require their protocol completion event before being committed or cached; cancelling a response aborts its upstream request, and cloud feeds bound inactivity — why: truncated audio/text and disconnected consumers must not silently become successful results or hang forever.
+
+- Zero-tolerance gates: `tsc`, `eslint --max-warnings 0`, `vitest` and `vite build` run in CI on every branch (`.github/workflows/ci.yml`). `react-hooks/*` findings that are deliberate carry an inline reason; never delete a disable comment without replacing the pattern.
+- Typography is self-hosted (`@fontsource*` imported in `src/styles.css`). Never add a font CDN: the shell must render correctly offline and without a third-party origin in the critical path.
+- The service worker precaches the app shell into `.output/public` (`outDir`) and falls back to `/offline.html`. `scripts/check-pwa.mjs` fails the build if the precache empties — a worker that caches nothing cannot open the app offline.
+- Security headers are generated after the build (`scripts/build-headers.mjs`) because the platform rewrites `_headers` last. CSP allows inline scripts only because TanStack streams per-route hydration data; every other vector is closed (no third-party script, no framing, no `<base>`, no cross-origin forms).
+- Rate limits are per purpose (`takeToken` translation, `takeEnrichmentToken` dictionary/shadow, `takeRepairToken` silent second pass, `takeSpeechToken` cloud voice). Never let background work spend the typing budget, and never surface a rate message for a live request while someone is still typing.
+- Dialogs own their focus: every sheet uses `useFocusTrap` (focus in, Tab wraps, focus returns to the opener) and is `role="dialog" aria-modal`. New overlays must do the same.
+- Failure surfaces are product surfaces: the 404 and error screens (`src/components/FailureScreen.tsx`) and the last-resort page (`src/lib/error-page.ts`) are translated, calm and self-contained. No status codes or stack traces are shown to a person.
+- Time is an external system: read "today" through `useTodayKey()` (a `useSyncExternalStore`), never `Date.now()` during render — the statistics page must roll over at midnight without a reload.
+- Verification is deterministic and quiet: `verify.ts` checks numbers in both numeral systems, names (skipping paths where transliteration is correct), question marks, Arabic punctuation and invented explanations. A repair is only shown if it clears more issues than it creates.
+- Public pages (`/arabic-german-translation`, `/privacy`) are linked from the translator's footer and included in the sitemap; `/stats` stays private (`noindex`) and out of the sitemap.

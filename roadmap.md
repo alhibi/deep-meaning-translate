@@ -25,3 +25,12 @@
 - [x] Adversarial audit: reproduce translation isolation, voice/dictation races, storage and random-interaction defects; add focused regressions
 - [x] Verify audit repairs with full unit suite, browser smoke, branched interactions, audible-clock checks and one real translation; record evidence and limits in AUDIT.md
 - [ ] Deployment-wide abuse/concurrency protection and load testing — requires a hosting-edge/shared limiter and an explicit paid-provider load-test budget; process-local tests do not establish production scale
+- [x] Quality pass: zero lint/type errors, CI gates on every push, 225 tests, shared jsdom (6× faster suite)
+- [x] PWA repaired: shell precached into the served output, translated offline page, fonts self-hosted and precached
+- [x] Security: CSP/HSTS/frame/referrer/COOP/Permissions headers, per-purpose rate limits, `/api/eleven-speak` limited
+- [x] Accessibility: focus traps in every sheet, WCAG AA quiet text, keyboard skip-link, translated 404 and error screens
+- [x] Premium surface: generated social card, JSON-LD, `og:image`/`og:locale`, public privacy page in the sitemap
+- [x] Deeper verification: Arabic-Indic digits, dropped names, lost question marks, Arabic punctuation, invented notes
+- [x] Working production preview (`npm run preview`) that replays `_headers` from the real worker build
+- [ ] Live-provider evidence: run `tests/eval/shadow_eval.ts` and a 20-sentence manual set in both directions with a real key
+- [ ] Wire the Python e2e suite into CI (needs a browser action) and add a distributed limiter at the hosting edge

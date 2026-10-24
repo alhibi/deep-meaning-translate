@@ -994,9 +994,23 @@ function Translator() {
               </SafeArea>
             </div>
           </div>
-          <Link to="/arabic-german-translation" dir={uiRtl ? "rtl" : "ltr"} className="sr-only">
-            {t("pairGuide")}
-          </Link>
+          {/* Public pages reachable for keyboard and search, without adding chrome to the translator. */}
+          <nav
+            dir={uiRtl ? "rtl" : "ltr"}
+            aria-label={t("pairGuide")}
+            className="flex items-center justify-center gap-4 pb-1 text-[11px] text-faint"
+          >
+            <Link
+              to="/arabic-german-translation"
+              className="press-soft underline-offset-4 hover:underline"
+            >
+              {t("pairGuide")}
+            </Link>
+            <span aria-hidden className="size-1 rotate-45 rounded-[1px] bg-border-strong" />
+            <Link to="/privacy" className="press-soft underline-offset-4 hover:underline">
+              {t("privacy")}
+            </Link>
+          </nav>
         </div>
         <div className="h-3 pad-safe-bottom" />
 
