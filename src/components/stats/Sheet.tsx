@@ -122,7 +122,7 @@ export function Sheet({
       aria-label={label}
     >
       <div onClick={onClose} className="animate-sheet-scrim absolute inset-0 bg-background/70" />
-      <div className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[86dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
+      <div className="animate-sheet-in elev-sheet absolute inset-x-0 bottom-0 mx-auto flex max-h-[86dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
         <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2 pt-4">
           <div className="min-w-0 flex-1">{title}</div>
           <button

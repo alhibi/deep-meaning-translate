@@ -33,4 +33,7 @@
 - [x] Deeper verification: Arabic-Indic digits, dropped names, lost question marks, Arabic punctuation, invented notes
 - [x] Working production preview (`npm run preview`) that replays `_headers` from the real worker build
 - [ ] Live-provider evidence: run `tests/eval/shadow_eval.ts` and a 20-sentence manual set in both directions with a real key
-- [ ] Wire the Python e2e suite into CI (needs a browser action) and add a distributed limiter at the hosting edge
+- [x] Wire the smoke e2e into CI: a browser job builds the app, serves the production preview on :8080 and runs `tests/e2e/smoke.py` on every push
+- [ ] Wire the remaining Python e2e scripts (themes, stats, shadow, voice) into CI once the smoke job has a green track record, and add a distributed limiter at the hosting edge
+- [x] Premium calm pass: streamed words settle quietly (no skew/spin/letter-spacing), the speech keyframe collision removed, the wordmark performs once instead of every 16s, canvas/sheet elevation tokens in both themes, no overshoot bounce in the growing result panel
+- [x] Long-term guards: bundle budget enforced in CI (`scripts/check-bundle.mjs`), Dependabot weekly grouped updates for npm and actions

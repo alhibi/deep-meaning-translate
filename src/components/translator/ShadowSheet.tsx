@@ -64,7 +64,7 @@ function Shell({
       aria-label={label}
     >
       <div onClick={onClose} className="animate-sheet-scrim absolute inset-0 bg-background/70" />
-      <div className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[78dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
+      <div className="animate-sheet-in elev-sheet absolute inset-x-0 bottom-0 mx-auto flex max-h-[78dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
         <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4">
           <h2 className="flex min-w-0 items-center gap-2 truncate text-[15px] font-semibold text-foreground">
             <span aria-hidden className="shadow-clear" />

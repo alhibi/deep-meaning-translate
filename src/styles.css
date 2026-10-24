@@ -99,6 +99,10 @@
   --shimmer: rgb(243 239 232 / 6%);
   --focus-surface: #1b1916;
   --elev-1: 0 1px 0 rgb(255 255 255 / 3%);
+  /* Elevation: one quiet lift for the writing canvas, one for sheets above the scrim.
+     Shadows stay warm and diffuse — depth you feel, not decoration you notice. */
+  --elev-canvas: 0 1px 0 rgb(255 255 255 / 3%), 0 24px 60px -28px rgb(0 0 0 / 60%);
+  --elev-sheet: 0 -24px 60px -24px rgb(0 0 0 / 55%);
   /* Data palette: Translation Statistics only. Flat, muted, one fixed hue per category. */
   --cat-1: #d99579;
   --cat-2: #89b4d2;
@@ -160,6 +164,8 @@ html.light {
   --cat-12: #8a5e40;
   --cat-none: #b8afa5;
   --elev-1: 0 1px 2px rgb(28 24 21 / 6%);
+  --elev-canvas: 0 1px 2px rgb(28 24 21 / 5%), 0 24px 60px -30px rgb(107 63 40 / 28%);
+  --elev-sheet: 0 -24px 60px -24px rgb(107 63 40 / 30%);
   color-scheme: light;
 }
 
@@ -250,6 +256,15 @@ html.theme-fade *::after {
     outline: 2px solid var(--signal);
     outline-offset: 2px;
   }
+}
+
+@utility elev-canvas {
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-canvas);
+}
+
+@utility elev-sheet {
+  box-shadow: var(--elev-sheet);
 }
 
 @utility pad-safe-top {
@@ -805,7 +820,7 @@ textarea:focus-visible {
 }
 
 /* ---------- Voice: soft clay orb, words condense from blur ---------- */
-@keyframes word-in {
+@keyframes speech-word-in {
   from {
     opacity: 0;
     filter: blur(6px);
@@ -847,7 +862,7 @@ textarea:focus-visible {
 }
 .speech-word {
   display: inline;
-  animation: word-in 420ms var(--ease-out) both;
+  animation: speech-word-in 420ms var(--ease-out) both;
 }
 .mic-orb .mic-core,
 .mic-orb .mic-halo {
@@ -920,74 +935,30 @@ textarea:focus-visible {
   }
 }
 
-/* Word-by-word arrival of streamed translations: only new or changed words animate. */
-/* Flash whirlwind: each word whips in out of a dense haze, skewed and spun,
-   its letters drawn together from the spread, a faint warm trail fading as it snaps clear. */
+/* Word-by-word arrival of streamed translations: only new or changed words animate.
+   The arrival is deliberately quiet — a word condenses out of a slight blur and
+   settles 3px into place. No skew, spin, letter-spacing or text-shadow: geometry
+   never moves, so the reading line stays perfectly still while text streams in,
+   and the same motion reads identically in LTR and RTL. */
 @keyframes word-in {
-  0% {
+  from {
     opacity: 0;
-    filter: blur(10px);
-    letter-spacing: 0.35em;
-    text-shadow: -0.5em 0 0.6em color-mix(in oklab, var(--signal-text) 55%, transparent);
-    transform: translateX(-0.6em) translateY(0.2em) rotate(-8deg) skewX(-18deg) scale(1.15);
+    filter: blur(4px);
+    transform: translateY(3px);
   }
-  40% {
-    opacity: 0.75;
-    filter: blur(3px);
-    letter-spacing: 0.06em;
-    text-shadow: -0.15em 0 0.4em color-mix(in oklab, var(--signal-text) 30%, transparent);
-  }
-  70% {
-    opacity: 1;
-    filter: blur(0.5px);
-    letter-spacing: 0;
-    transform: translateX(0.05em) rotate(0.8deg) skewX(3deg) scale(0.995);
-  }
-  100% {
+  to {
     opacity: 1;
     filter: blur(0);
-    letter-spacing: normal;
-    text-shadow: none;
-    transform: none;
-  }
-}
-[dir="rtl"] .word-in {
-  animation-name: word-in-rtl;
-}
-@keyframes word-in-rtl {
-  0% {
-    opacity: 0;
-    filter: blur(10px);
-    text-shadow: 0.5em 0 0.6em color-mix(in oklab, var(--signal-text) 55%, transparent);
-    transform: translateX(0.6em) translateY(0.2em) rotate(8deg) skewX(18deg) scale(1.15);
-  }
-  40% {
-    opacity: 0.75;
-    filter: blur(3px);
-    text-shadow: 0.15em 0 0.4em color-mix(in oklab, var(--signal-text) 30%, transparent);
-  }
-  70% {
-    opacity: 1;
-    filter: blur(0.5px);
-    transform: translateX(-0.05em) rotate(-0.8deg) skewX(-3deg) scale(0.995);
-  }
-  100% {
-    opacity: 1;
-    filter: blur(0);
-    text-shadow: none;
     transform: none;
   }
 }
 .word-in {
   display: inline-block;
   white-space: pre-wrap;
-  backface-visibility: hidden;
-  will-change: opacity, transform, filter;
-  animation: word-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: word-in 260ms var(--ease-out) both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .word-in,
-  [dir="rtl"] .word-in {
+  .word-in {
     animation: fade 120ms linear both;
     filter: none;
     transform: none;
@@ -1218,11 +1189,12 @@ html.light {
   }
 }
 
-/* Translation area grows downward like a breath: springy expand, quick settle, soft leading edge. */
+/* Translation area grows downward like a breath: one calm ease-out, no overshoot —
+   a bouncing panel reads as playful; a settling one reads as premium. */
 .grow-box {
   position: relative;
   overflow: hidden;
-  transition: height 460ms cubic-bezier(0.34, 1.32, 0.5, 1);
+  transition: height 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .grow-box:not(.is-growing) {
   transition-duration: 260ms;

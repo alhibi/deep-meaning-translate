@@ -37,7 +37,7 @@ export const SavedSheet = memo(function SavedSheet({
       className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20 outline-none"
     >
       <button type="button" aria-label={t("close")} className="flex-1" onClick={onClose} />
-      <div className="animate-rise max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">
+      <div className="animate-rise elev-sheet max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-3">
           <div className="flex items-center gap-4 text-[13px]">
             <button

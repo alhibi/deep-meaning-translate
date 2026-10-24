@@ -542,7 +542,7 @@ function Translator() {
     }
   }, []);
   useEffect(() => clearTaglineTimer, [clearTaglineTimer]);
-  // Play one full gust: the storm sweep in, hold, then hand the name back.
+  // Play one full swap: the line fades in, holds, then hands the name back.
   const playTagline = useCallback(() => {
     clearTaglineTimer();
     setTagline(true);
@@ -562,16 +562,19 @@ function Translator() {
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
   const rtlInput = text.trim() ? startsRtl(text) : uiRtl;
   const hasText = text.length > 0;
-  // The name introduces itself on its own: once 4s after arrival, then a quiet
-  // 16s rhythm — but only while the page rests (nothing written, no sheet open).
+  // The name introduces itself exactly once, 4s after arrival — and only while
+  // the page rests (nothing written, no sheet open). After that the mark stays
+  // still; a brand that keeps performing on a loop stops reading as premium
+  // and starts reading as decoration competing with the user's text. Tapping
+  // the wordmark replays it on demand.
   useEffect(() => {
+    if (taglinePlayed.current) return;
     if (tagline || hasText || localeOpen || savedOpen || dialectOpen) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const delay = taglinePlayed.current ? 16000 : 4000;
     const id = setTimeout(() => {
       taglinePlayed.current = true;
       playTagline();
-    }, delay);
+    }, 4000);
     return () => clearTimeout(id);
   }, [tagline, hasText, localeOpen, savedOpen, dialectOpen, playTagline]);
 
@@ -646,7 +649,7 @@ function Translator() {
           />
 
           {/* One canvas: source writing surface, a live seam, then the result. */}
-          <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
+          <div className="elev-canvas mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
             <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
               <textarea
                 id="composer"

@@ -1,7 +1,8 @@
 name: CI
 
 # Every push and pull request runs the same gates a developer runs locally:
-# types, lint (zero warnings), unit tests, production build, PWA integrity.
+# types, lint (zero warnings), unit tests, production build, PWA integrity,
+# bundle budget — plus a real-browser smoke pass over the production build.
 on:
   push:
     branches: ["**"]
@@ -46,3 +47,53 @@ jobs:
 
       - name: PWA integrity (new build is precached)
         run: node scripts/check-pwa.mjs
+
+      - name: Bundle budget (payload may not silently grow)
+        run: node scripts/check-bundle.mjs
+
+  e2e:
+    name: Browser smoke (production build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install playwright
+          python3 -m playwright install --with-deps chromium
+
+      - name: Production build
+        run: npm run build
+
+      - name: Serve the production build
+        run: |
+          npm run preview &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/ > /dev/null && break
+            sleep 2
+          done
+          curl -sf http://localhost:8080/ > /dev/null
+
+      - name: Phone-sized smoke check (faked provider replies, zero cost)
+        run: python3 tests/e2e/smoke.py
+
+      - name: Upload screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-smoke
+          path: /tmp/smoke.png
+          if-no-files-found: ignore

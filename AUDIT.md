@@ -32,6 +32,14 @@
 - Production preview: `/` 200 · `/privacy` 200 · `/arabic-german-translation` 200 · `/sitemap.xml` 200 (3 URLs) · `/offline.html` 200 · unknown path 404.
 - API probes against the built server: no key → `502 auth`; `Origin: https://evil.example` → `403`; 20,000 characters → `400`; the 31st request in a burst → `429`.
 
+## Premium-calm and long-term-stability pass — 2026-10-24 (follow-up)
+
+Premium here means quality, visual craft and long-term stability — not monetisation.
+
+- **Motion calmed to product grade.** Streamed words no longer arrive as a skewed, spinning, letter-spaced whirlwind with a text-shadow trail (geometry moved while reading, `will-change` on every word): they condense from a 4px blur over a 3px settle, identical in LTR and RTL. The duplicate `@keyframes word-in` collision is gone — spoken dictation words use their own `speech-word-in`. The wordmark swap is a blur cross-fade (no skewX/scaleX/letter-spacing), the signature diamond turns a quarter-turn and rests, and the page plays the introduction **once** instead of every 16 s forever. The result panel's growth lost its overshoot bounce (`0.34, 1.32` spring → one ease-out).
+- **Elevation is now a system.** `--elev-canvas` / `--elev-sheet` tokens (warm, diffuse, per theme) applied to the writing canvas, statistics cards and every bottom sheet; components still never hardcode shadows.
+- **Stability guards made continuous.** `scripts/check-bundle.mjs` enforces a gzip budget (JS total 245 KB, largest chunk 140 KB, CSS 16 KB) in CI after every build; a CI `e2e` job now renders the real production build in Chromium and runs `tests/e2e/smoke.py` on every push; Dependabot proposes grouped weekly npm/actions updates. Invariants recorded in `AGENTS.md`.
+
 ## Limits — what is still not proven
 
 - **No live translation, speech or dictation was executed in this pass**: the environment has no provider keys. Prompt, parsing, verification and routing are reviewed and unit-tested; their linguistic quality is **not** measured here. `tests/eval/shadow_eval.ts` plus a 20-sentence manual set (dialect, pun, proper name, number, joke) in both directions is the required next evidence.

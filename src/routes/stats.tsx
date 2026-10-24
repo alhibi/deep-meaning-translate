@@ -751,7 +751,9 @@ function Panel({
   action?: ReactNode;
 }) {
   return (
-    <section className={`animate-fade rounded-[22px] bg-surface p-4 pt-3.5 ${className}`}>
+    <section
+      className={`animate-fade rounded-[22px] bg-surface elev-canvas p-4 pt-3.5 ${className}`}
+    >
       <div className="mb-2.5 flex min-h-8 items-center justify-between gap-2 px-1">
         <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
         {action}
@@ -786,7 +788,7 @@ function KpiCard({
     <button
       type="button"
       onClick={onClick}
-      className={`press-soft flex min-h-[104px] flex-col justify-between rounded-[20px] bg-surface p-4 text-start ${className}`}
+      className={`press-soft flex min-h-[104px] flex-col justify-between rounded-[20px] bg-surface elev-canvas p-4 text-start ${className}`}
     >
       <span className="text-[12.5px] text-muted-foreground">{label}</span>
       <span className="mt-3 flex items-baseline gap-1.5">
@@ -1286,7 +1288,7 @@ function Calm({
 }) {
   return (
     <div
-      className={`animate-fade mx-5 flex flex-col items-center text-center ${small ? "mt-8 gap-4 py-8" : "mt-10 gap-5 rounded-[26px] bg-surface px-6 py-14"}`}
+      className={`animate-fade mx-5 flex flex-col items-center text-center ${small ? "mt-8 gap-4 py-8" : "mt-10 gap-5 rounded-[26px] bg-surface elev-canvas px-6 py-14"}`}
     >
       {mark ? (
         <svg width="76" height="44" viewBox="0 0 76 44" aria-hidden className="text-faint">

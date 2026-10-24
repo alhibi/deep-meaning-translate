@@ -218,7 +218,7 @@ export function LanguageSheet({
           transform: drag ? `translateY(${drag}px)` : undefined,
           transition: drag ? "none" : undefined,
         }}
-        className={`absolute inset-x-0 bottom-0 mx-auto flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface ${
+        className={`absolute inset-x-0 bottom-0 mx-auto flex max-h-[82dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface elev-sheet ${
           closing ? "animate-sheet-out" : "animate-sheet-in"
         }`}
       >
