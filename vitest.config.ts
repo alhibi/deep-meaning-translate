@@ -13,15 +13,17 @@ export default defineConfig({
     pool: "vmThreads",
     coverage: {
       provider: "v8",
-      include: ["src/**"],
+      // Code only: a stylesheet (and the markdown notes) would fail the reporter's parser
+      // and print a PARSE_ERROR on every run.
+      include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/**/*.test.*", "src/test/**", "src/routeTree.gen.ts"],
       // Floors, not targets: they stop silent regression, and are ratcheted up as the
       // untested surfaces (routes, stats UI, speech) gain tests.
       thresholds: {
-        lines: 45,
-        statements: 43,
-        functions: 38,
-        branches: 36,
+        lines: 48,
+        statements: 46,
+        functions: 39,
+        branches: 39,
       },
     },
   },

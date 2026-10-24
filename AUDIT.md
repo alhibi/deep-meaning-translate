@@ -6,8 +6,8 @@
 
 - `tsc --noEmit`: **0 errors**.
 - `eslint . --max-warnings 0`: **0 errors, 0 warnings** (was 514 errors / 45 warnings). Real defects fixed: an impure `Date.now()` during render, render-phase `setState` in effects, a memoisation gap that recreated five callbacks every render, useless escapes in the prompt literals, and a dead assignment. The remaining 35 React Compiler diagnostics were converted to explicit, reasoned `eslint-disable-next-line` comments — never silenced silently.
-- `vitest`: **225 passed, 4 skipped**, 39 files, ~4s (was 26s: the suite now shares one jsdom per worker).
-- `vite build` + `scripts/check-pwa.mjs`: precache **32 entries**, 12 self-hosted font files, no source maps shipped.
+- `vitest`: **240 passed, 4 skipped**, 42 files, ~5s (was 26s: the suite now shares one jsdom per worker).
+- `vite build` + `scripts/check-pwa.mjs`: precache **33 entries**, 12 self-hosted font files, no source maps shipped.
 - CI added (`.github/workflows/ci.yml`): install → types → lint(0 warnings) → tests → build → PWA integrity on every push and pull request.
 
 ### Product fixes
@@ -22,10 +22,13 @@
 - **SEO/social**: a generated 1200×630 `og.png` in the product's own fonts and palette, `og:image`/`twitter:image`, `WebApplication` JSON-LD, `og:locale`, and a public `/privacy` page in the sitemap.
 - **Verification** (`verify.ts`) now also covers Arabic-Indic digits, dropped names, lost question marks, Arabic punctuation in the wrong output and invented explanations — with no false alarm when Arabic transliterates a name.
 - **Preview**: `npm run preview` runs the real production bundle on Node (the build targets a worker), replaying `_headers`. Previously `vite preview` returned **500** on every route.
+- **Background cost**: a settled sentence used to fire three model calls at once (dictionary + shadow + review). The two enrichment calls now pass through one paced, failure-isolated, time-bounded queue (`src/lib/translation/enrichment.ts`): start-to-start serialisation, a 140 ms gap between quiet requests, and an 8 s hang timeout that releases the door instead of freezing it for the session.
+- **Composition**: the top bar and the animated wordmark moved out of the page into `AppHeader`/`Wordmark`; the style suggestion became a pure, unit-tested function; `src/routes/index.tsx` lost the markup and logic that could be tested on its own.
 
 ## Evidence
 
-- Unit suite: **225 passed, 4 skipped**, 39 files. New coverage for the focus trap, per-purpose limiting, the statistics URL parser, the day store, the fallback pages and the PWA registrar.
+- Unit suite: **240 passed, 4 skipped**, 42 files. New coverage for the focus trap, per-purpose limiting, the statistics URL parser, the day store, the fallback pages, the PWA registrar, the style suggestion, the top bar and the background-work queue.
+- Coverage (v8): statements 49.5%, branches 40.6%, functions 40.6%, lines 51.4% — floors raised to 46/39/39/48 so this cannot silently regress. The stylesheet is excluded from the coverage glob, which removes a PARSE_ERROR the reporter used to print on every run.
 - Production preview: `/` 200 · `/privacy` 200 · `/arabic-german-translation` 200 · `/sitemap.xml` 200 (3 URLs) · `/offline.html` 200 · unknown path 404.
 - API probes against the built server: no key → `502 auth`; `Origin: https://evil.example` → `403`; 20,000 characters → `400`; the 31st request in a burst → `429`.
 

@@ -4,6 +4,7 @@ import type { Locale } from "@/lib/i18n";
 import type { Dialect } from "./types";
 import { isLexiconCandidate, type LexiconResult } from "./lexicon";
 import { lookupLexicon } from "./lexicon.functions";
+import { enqueueEnrichment } from "./enrichment";
 
 const CACHE_LIMIT = 40;
 
@@ -43,16 +44,20 @@ export function useLexicon(opts: {
     const id = setTimeout(() => {
       if (token !== generation.current) return;
       setLoading(true);
-      void lookup({
-        data: {
-          text: normalized,
-          source,
-          target,
-          uiLocale,
-          ...(translation ? { translation } : {}),
-          dialect,
-        },
-      })
+      // The dictionary is quiet work: it shares one paced door with the shadow so a
+      // settled sentence never fires three model calls at once.
+      void enqueueEnrichment(() =>
+        lookup({
+          data: {
+            text: normalized,
+            source,
+            target,
+            uiLocale,
+            ...(translation ? { translation } : {}),
+            dialect,
+          },
+        }),
+      )
         .then((response) => {
           if (token !== generation.current) return;
           const value = response?.ok ? response.lexicon : null;

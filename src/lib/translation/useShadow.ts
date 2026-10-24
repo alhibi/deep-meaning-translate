@@ -4,6 +4,7 @@ import type { Locale } from "@/lib/i18n";
 import type { Dialect, StyleOverride } from "./types";
 import { carryLosses, isShadowCandidate, type Loss, type ShadowResult } from "./shadow";
 import { analyzeShadow } from "./shadow.functions";
+import { enqueueEnrichment } from "./enrichment";
 
 const CACHE_LIMIT = 30;
 /** The shadow falls only after the translation has rested — never while typing. */
@@ -60,17 +61,20 @@ export function useShadow(opts: {
     const id = setTimeout(() => {
       if (token !== generation.current) return;
       if (!c) setState({ status: "loading" });
-      void analyze({
-        data: {
-          text: normalized,
-          translation,
-          source,
-          target,
-          style,
-          uiLocale,
-          dialect,
-        },
-      })
+      // Shares the paced background door with the dictionary: one quiet request at a time.
+      void enqueueEnrichment(() =>
+        analyze({
+          data: {
+            text: normalized,
+            translation,
+            source,
+            target,
+            style,
+            uiLocale,
+            dialect,
+          },
+        }),
+      )
         .then((res) => {
           if (token !== generation.current) return;
           const value = res?.shadow ?? null;

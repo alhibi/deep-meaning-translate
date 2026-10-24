@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
+import { AppHeader } from "@/components/translator/AppHeader";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
@@ -43,6 +44,7 @@ import {
 import { BrainPicker } from "@/components/translator/BrainPicker";
 import { LanguageNotice } from "@/components/translator/LanguageNotice";
 import { checkSource } from "@/lib/translation/languageCheck";
+import { styleSuggestion } from "@/lib/translation/suggestion";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
@@ -595,15 +597,11 @@ function Translator() {
   );
 
   // Situation detection → one quiet suggestion, only when it disagrees with the chosen style.
-  const sit = result?.situation;
   const suggestKey = `${text.trim()}|${style}`;
+  const proposed = result ? styleSuggestion({ situation: result.situation, style }) : null;
   const suggestion =
-    result && dismissedFor !== suggestKey
-      ? (sit === "official" || sit === "work") && style !== "formal"
-        ? { label: t(sit === "official" ? "sit_official" : "sit_work"), next: "formal" as const }
-        : sit === "chat" && style === "formal"
-          ? { label: t("sit_chat"), next: "casual" as const }
-          : null
+    proposed && dismissedFor !== suggestKey
+      ? { label: t(proposed.key), next: proposed.next }
       : null;
 
   const today = restored && !hasText ? (savedList.length ? saved.ofTheDay() : null) : null;
@@ -615,117 +613,19 @@ function Translator() {
         {t("skipToInput")}
       </a>
       <main className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background">
-        <header className="flex items-center justify-between px-5 pad-safe-top pb-1">
-          <button
-            type="button"
-            onClick={toggleTagline}
-            aria-expanded={tagline}
-            className="press-soft -ms-2 inline-flex items-center gap-2 rounded-full px-2 py-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground"
-          >
-            {/* Signature mark: a small clay diamond that spins into the gust. */}
-            <span
-              aria-hidden
-              className="grid size-2 shrink-0 place-items-center transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
-              style={{
-                transform: tagline ? "rotate(225deg) scale(0.7)" : "rotate(0deg) scale(1)",
-                opacity: tagline ? 0.55 : 1,
-              }}
-            >
-              <span className="size-1.5 rotate-45 rounded-[1.5px] bg-signal" />
-            </span>
-            {/* Storm swap: the outgoing word is swept away (blur + skew + stretch) while the incoming one condenses out of the blur — overlapped, never a pause. */}
-            <span className="relative block h-[19px]">
-              <span
-                aria-hidden
-                className="font-literary block h-0 overflow-hidden whitespace-nowrap text-start text-[16px] italic lowercase leading-[19px]"
-              >
-                say it naturally.
-              </span>
-              <span
-                aria-hidden={tagline}
-                className="block origin-left whitespace-nowrap text-start leading-[19px] will-change-[transform,filter,opacity] rtl:origin-right"
-                style={{
-                  transition: tagline
-                    ? "transform 480ms cubic-bezier(0.7,0,0.84,0), filter 420ms cubic-bezier(0.5,0,0.75,0), opacity 460ms cubic-bezier(0.5,0,0.75,0), letter-spacing 480ms cubic-bezier(0.7,0,0.84,0)"
-                    : "transform 760ms cubic-bezier(0.16,1,0.3,1) 140ms, filter 700ms cubic-bezier(0.16,1,0.3,1) 140ms, opacity 520ms ease-out 140ms, letter-spacing 760ms cubic-bezier(0.16,1,0.3,1) 140ms",
-                  transform: tagline ? "translateX(55%) skewX(-24deg) scaleX(1.35)" : "none",
-                  filter: tagline ? "blur(9px)" : "blur(0)",
-                  opacity: tagline ? 0 : 1,
-                  letterSpacing: tagline ? "0.45em" : "-0.01em",
-                }}
-              >
-                today
-              </span>
-              <span
-                aria-hidden={!tagline}
-                className="font-literary absolute inset-0 block origin-left whitespace-nowrap text-start text-[16px] font-normal italic lowercase leading-[19px] tracking-[0.01em] text-muted-foreground will-change-[transform,filter,opacity] rtl:origin-right"
-                style={{
-                  transition: tagline
-                    ? "transform 820ms cubic-bezier(0.16,1,0.3,1) 120ms, filter 760ms cubic-bezier(0.16,1,0.3,1) 120ms, opacity 560ms ease-out 120ms"
-                    : "transform 460ms cubic-bezier(0.7,0,0.84,0), filter 400ms cubic-bezier(0.5,0,0.75,0), opacity 440ms cubic-bezier(0.5,0,0.75,0)",
-                  transform: tagline ? "none" : "translateX(-18%) skewX(16deg) scaleX(1.2)",
-                  filter: tagline ? "blur(0)" : "blur(10px)",
-                  opacity: tagline ? 1 : 0,
-                }}
-              >
-                say it naturally.
-              </span>
-            </span>
-          </button>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setLocaleOpen(true)}
-              aria-haspopup="dialog"
-              aria-label={t("uiLanguage")}
-              className="press-soft grid h-9 min-w-9 place-items-center rounded-full px-2 text-[12px] font-medium tracking-wide text-muted-foreground"
-            >
-              <span aria-hidden className={locale === "ar" ? "font-arabic text-[14px]" : ""}>
-                {LOCALE_SHORT[locale]}
-              </span>
-            </button>
-            <LanguageSheet
-              open={localeOpen}
-              title={t("uiLanguage")}
-              searchable={false}
-              items={LOCALES.map((l) => ({
-                code: l,
-                native: LOCALE_NAME[l],
-                name: LOCALE_NAME[l],
-                rtl: l === "ar",
-              }))}
-              value={locale}
-              onSelect={(c) => setLocale(c as typeof locale)}
-              onClose={closeLocale}
-            />
-            {canInstall ? (
-              <button
-                type="button"
-                onClick={() => void install()}
-                className="press-soft animate-fade inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] text-muted-foreground"
-              >
-                <ArrowDownToLine className="size-3.5" strokeWidth={1.75} />
-                {t("install")}
-              </button>
-            ) : null}
-            <ThemeToggle label={t("theme")} />
-            <button
-              type="button"
-              onClick={() => setSavedOpen(true)}
-              aria-label={t("savedTitle")}
-              className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-            >
-              <Bookmark className="size-[18px]" strokeWidth={1.75} />
-            </button>
-            <Link
-              to="/stats"
-              aria-label={statsT(locale)("open")}
-              className="press grid size-11 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-            >
-              <ChartNoAxesCombined className="size-[18px]" strokeWidth={1.75} />
-            </Link>
-          </div>
-        </header>
+        <AppHeader
+          tagline={tagline}
+          onToggleTagline={toggleTagline}
+          locale={locale}
+          onLocaleSelect={(l) => setLocale(l)}
+          localeOpen={localeOpen}
+          onOpenLocale={() => setLocaleOpen(true)}
+          onCloseLocale={closeLocale}
+          canInstall={canInstall}
+          onInstall={() => void install()}
+          onOpenSaved={() => setSavedOpen(true)}
+          savedLabel={t("savedTitle")}
+        />
 
         <div
           ref={scrollRef}

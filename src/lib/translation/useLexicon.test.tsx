@@ -5,6 +5,7 @@ const lookup = vi.fn();
 vi.mock("@tanstack/react-start", () => ({ useServerFn: () => lookup }));
 vi.mock("./lexicon.functions", () => ({ lookupLexicon: {} }));
 const { useLexicon } = await import("./useLexicon");
+const { resetEnrichmentQueueForTests } = await import("./enrichment");
 
 const entry = (sourceTerm: string) => ({
   sourceTerm,
@@ -38,6 +39,8 @@ const flush = async (ms: number) => act(async () => void (await vi.advanceTimers
 beforeEach(() => {
   vi.useFakeTimers();
   lookup.mockReset();
+  // Quiet work goes through a shared queue; each test starts from an empty one.
+  resetEnrichmentQueueForTests(0, 250);
 });
 afterEach(() => vi.useRealTimers());
 
