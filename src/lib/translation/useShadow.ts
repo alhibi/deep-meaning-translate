@@ -10,8 +10,7 @@ const CACHE_LIMIT = 30;
 export const SHADOW_DELAY = 600;
 
 export type ShadowState =
-  | { status: "off" | "idle" | "loading" }
-  | { status: "ready"; losses: Loss[]; carried?: boolean };
+  { status: "off" | "idle" | "loading" } | { status: "ready"; losses: Loss[]; carried?: boolean };
 
 export function useShadow(opts: {
   text: string;
@@ -36,6 +35,7 @@ export function useShadow(opts: {
   const normalized = text.trim().replace(/\s+/gu, " ");
   const key = `${source}|${target}|${style}|${dialect}|${uiLocale}|${normalized}|${translation}`;
   const keyRef = useRef(key);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   keyRef.current = key;
 
   const visible = useCallback((k: string, r: ShadowResult | null): ShadowState => {
@@ -46,8 +46,10 @@ export function useShadow(opts: {
 
   useEffect(() => {
     const token = ++generation.current;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (!enabled) return setState({ status: "off" });
-    if (!settled || !translation || !isShadowCandidate(normalized)) return setState({ status: "idle" });
+    if (!settled || !translation || !isShadowCandidate(normalized))
+      return setState({ status: "idle" });
     if (cache.current.has(key)) return setState(visible(key, cache.current.get(key) ?? null));
     // Just applied a fix: the untouched losses stay visible while the rest is re-checked.
     const c = carry.current;
@@ -84,22 +86,23 @@ export function useShadow(opts: {
         });
     }, SHADOW_DELAY);
     return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key already encodes these values (and the ref is a generation token, not a node)
   }, [key, enabled, settled, analyze, visible]);
 
   /** "Keep as is": hides one loss for this exact sentence. */
-  const dismiss = useCallback(
-    (id: string) => {
-      const k = keyRef.current;
-      const set = dismissed.current.get(k) ?? new Set<string>();
-      set.add(id);
-      dismissed.current.set(k, set);
-      setState((s) => (s.status === "ready" ? { ...s, losses: s.losses.filter((l) => l.id !== id) } : s));
-    },
-    [],
-  );
+  const dismiss = useCallback((id: string) => {
+    const k = keyRef.current;
+    const set = dismissed.current.get(k) ?? new Set<string>();
+    set.add(id);
+    dismissed.current.set(k, set);
+    setState((s) =>
+      s.status === "ready" ? { ...s, losses: s.losses.filter((l) => l.id !== id) } : s,
+    );
+  }, []);
 
   /** Before a fix is applied: remember the other losses so they don't flicker away. */
   const stateRef = useRef(state);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   stateRef.current = state;
   const prepareApply = useCallback((lossId: string, nextTranslation: string) => {
     const s = stateRef.current;

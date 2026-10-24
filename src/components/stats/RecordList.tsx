@@ -85,11 +85,18 @@ export const RecordList = memo(function RecordList({
                 className="press-soft flex w-full flex-col gap-1 py-3 text-start"
               >
                 <span className="flex items-center gap-2 text-[11px] text-faint">
-                  <span className="size-1.5 rounded-full" style={{ background: colorOf("domain", r.domain) }} />
+                  <span
+                    className="size-1.5 rounded-full"
+                    style={{ background: colorOf("domain", r.domain) }}
+                  />
                   <span className="truncate">{categoryLabel(locale, "domain", r.domain)}</span>
                   <span aria-hidden>·</span>
                   <span className="shrink-0">{fmt.pair(r.pair)}</span>
-                  {r.uses > 1 ? <span className="ms-auto shrink-0 tabular-nums">{t("i_times", { n: r.uses })}</span> : null}
+                  {r.uses > 1 ? (
+                    <span className="ms-auto shrink-0 tabular-nums">
+                      {t("i_times", { n: r.uses })}
+                    </span>
+                  ) : null}
                 </span>
                 <span
                   dir={isRtl(r.source) ? "rtl" : "ltr"}

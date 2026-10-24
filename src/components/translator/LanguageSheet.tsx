@@ -72,6 +72,7 @@ export function LanguageSheet({
   // Mount / unmount with exit animation
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setMounted(true);
       setClosing(false);
       setQuery("");

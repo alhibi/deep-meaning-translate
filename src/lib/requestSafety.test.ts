@@ -15,24 +15,56 @@ describe("request admission", () => {
     for (let i = 0; i < 3000; i++) expect(take(String(i))).toBe(true);
   });
   it("rejects cross-site browser spending and accepts the app origin", () => {
-    expect(sameOrigin(new Request("https://fluently.today/api/speak", { headers: { Origin: "https://evil.example" } }))).toBe(false);
-    expect(sameOrigin(new Request("https://fluently.today/api/speak", { headers: { Origin: "https://fluently.today" } }))).toBe(true);
+    expect(
+      sameOrigin(
+        new Request("https://fluently.today/api/speak", {
+          headers: { Origin: "https://evil.example" },
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      sameOrigin(
+        new Request("https://fluently.today/api/speak", {
+          headers: { Origin: "https://fluently.today" },
+        }),
+      ),
+    ).toBe(true);
   });
   it("cancels oversized chunked JSON without relying on Content-Length", async () => {
     let sent = false;
     let cancelled = false;
     const body = new ReadableStream<Uint8Array>({
-      pull(c) { if (!sent) { sent = true; c.enqueue(new TextEncoder().encode('"' + "x".repeat(1025))); } },
-      cancel() { cancelled = true; },
+      pull(c) {
+        if (!sent) {
+          sent = true;
+          c.enqueue(new TextEncoder().encode('"' + "x".repeat(1025)));
+        }
+      },
+      cancel() {
+        cancelled = true;
+      },
     });
-    const request = new Request("https://fluently.today/api/speak", { method: "POST", body, duplex: "half" } as RequestInit);
+    const request = new Request("https://fluently.today/api/speak", {
+      method: "POST",
+      body,
+      duplex: "half",
+    } as RequestInit);
     await expect(boundedJson(request, 1024)).rejects.toThrow("input");
     expect(cancelled).toBe(true);
   });
   it("reads split Unicode JSON without damaging Arabic", async () => {
     const bytes = new TextEncoder().encode(JSON.stringify({ text: "مرحباً" }));
-    const body = new ReadableStream<Uint8Array>({ start(c) { for (const byte of bytes) c.enqueue(new Uint8Array([byte])); c.close(); } });
-    const request = new Request("https://fluently.today", { method: "POST", body, duplex: "half" } as RequestInit);
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        for (const byte of bytes) c.enqueue(new Uint8Array([byte]));
+        c.close();
+      },
+    });
+    const request = new Request("https://fluently.today", {
+      method: "POST",
+      body,
+      duplex: "half",
+    } as RequestInit);
     expect(await boundedJson(request)).toEqual({ text: "مرحباً" });
   });
 });

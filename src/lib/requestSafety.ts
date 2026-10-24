@@ -26,12 +26,18 @@ export async function boundedJson(request: Request, maxBytes = 96 * 1024): Promi
 
 export function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("Origin");
-  return (!origin || origin === new URL(request.url).origin) &&
-    request.headers.get("Sec-Fetch-Site") !== "cross-site";
+  return (
+    (!origin || origin === new URL(request.url).origin) &&
+    request.headers.get("Sec-Fetch-Site") !== "cross-site"
+  );
 }
 
 /** Proxy-provided identity only; never keep translation text in admission state. */
 export function clientAddress(request: Request): string {
-  return request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Real-IP") ??
-    request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ?? "unidentified";
+  return (
+    request.headers.get("CF-Connecting-IP") ??
+    request.headers.get("X-Real-IP") ??
+    request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ??
+    "unidentified"
+  );
 }

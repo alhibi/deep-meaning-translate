@@ -7,7 +7,10 @@ import { Sheet } from "./Sheet";
 import type { Fmt } from "./format";
 
 type Key = keyof Filters;
-const SECTIONS: { key: Key; label: "f_pair" | "f_lang" | "f_kind" | "f_domain" | "f_intent" | "f_register" }[] = [
+const SECTIONS: {
+  key: Key;
+  label: "f_pair" | "f_lang" | "f_kind" | "f_domain" | "f_intent" | "f_register";
+}[] = [
   { key: "pair", label: "f_pair" },
   { key: "lang", label: "f_lang" },
   { key: "kind", label: "f_kind" },
@@ -63,7 +66,11 @@ export function FilterSheet({
   );
 
   const name = (key: Key, id: string) =>
-    key === "pair" ? fmt.pair(id) : key === "lang" ? fmt.langName(id) : categoryLabel(locale, key, id);
+    key === "pair"
+      ? fmt.pair(id)
+      : key === "lang"
+        ? fmt.langName(id)
+        : categoryLabel(locale, key, id);
   const color = (key: Key, id: string) =>
     key === "pair" ? pairColor(id) : key === "lang" ? "var(--faint)" : colorOf(key, id);
 
@@ -100,10 +107,15 @@ export function FilterSheet({
                       aria-pressed={on}
                       onClick={() => onChange(s.key, on ? undefined : o.id)}
                       className={`press-soft inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] ${
-                        on ? "border-signal bg-signal-soft text-foreground" : "border-border text-foreground"
+                        on
+                          ? "border-signal bg-signal-soft text-foreground"
+                          : "border-border text-foreground"
                       }`}
                     >
-                      <span className="size-1.5 rounded-full" style={{ background: color(s.key, o.id) }} />
+                      <span
+                        className="size-1.5 rounded-full"
+                        style={{ background: color(s.key, o.id) }}
+                      />
                       {name(s.key, o.id)}
                       <span className="tabular-nums text-muted-foreground">{fmt.num(o.count)}</span>
                     </button>

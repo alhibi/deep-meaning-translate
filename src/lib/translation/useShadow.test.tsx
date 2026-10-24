@@ -99,6 +99,10 @@ describe("useShadow", () => {
     await flush(SHADOW_DELAY + 10);
     act(() => result.current.prepareApply("a", "ما أخبارك يا صديقي"));
     rerender({ ...base, translation: "ما أخبارك يا صديقي" });
-    expect(result.current.state).toMatchObject({ status: "ready", carried: true, losses: [{ id: "b" }] });
+    expect(result.current.state).toMatchObject({
+      status: "ready",
+      carried: true,
+      losses: [{ id: "b" }],
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
-import { createLimiter } from "@/lib/translation/throttle";
+import { takeSpeechToken } from "@/lib/translation/throttle";
 import {
   SpeakInput,
   buildInteraction,
@@ -12,9 +12,6 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions"
 
 /** Until when the main TTS model's quota is known to be exhausted (per server instance). */
 let bestExhaustedUntil = 0;
-
-/** Coarse in-process throttle for speech, separate from translation. */
-const takeSpeechToken = createLimiter(40, 1.5);
 
 /**
  * Speaks a translation with Gemini TTS, streamed: raw 16-bit 24 kHz mono PCM is forwarded
@@ -37,7 +34,8 @@ export const Route = createFileRoute("/api/speak")({
             { status, headers: { "Cache-Control": "no-store", ...extra } },
           );
         if (!sameOrigin(request)) return fail("input", 403);
-        if (!takeSpeechToken(clientAddress(request))) return fail("rate", 429, { "Retry-After": "5" });
+        if (!takeSpeechToken(clientAddress(request)))
+          return fail("rate", 429, { "Retry-After": "5" });
         let data;
         try {
           data = SpeakInput.parse(await boundedJson(request));

@@ -1,5 +1,5 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "today-translator",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -7,12 +7,14 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "preview": "vite preview",
+    "preview": "node scripts/serve-build.mjs",
     "lint": "eslint .",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "python3 tests/e2e/smoke.py",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:pwa": "node scripts/check-pwa.mjs",
+    "verify": "npm run typecheck && npm run lint -- --max-warnings 0 && npm run test"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -53,5 +55,11 @@
   },
   "engines": {
     "node": ">=22.12"
+  },
+  "description": "Meaning-first Arabic–German translator: tone, dialect and nuance preserved, private by design.",
+  "homepage": "https://fluently.today",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alhibi/deep-meaning-translate.git"
   }
 }

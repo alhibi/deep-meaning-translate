@@ -43,8 +43,12 @@ afterEach(() => vi.useRealTimers());
 
 describe("useLexicon", () => {
   it("uses translation context in lookup identity and cache", async () => {
-    lookup.mockImplementation(({ data }) => Promise.resolve({ ok: true, lexicon: entry(data.translation) }));
-    const { result, rerender } = renderHook((p) => useLexicon(p), { initialProps: { ...opts("bank"), translation: "مصرف" } });
+    lookup.mockImplementation(({ data }) =>
+      Promise.resolve({ ok: true, lexicon: entry(data.translation) }),
+    );
+    const { result, rerender } = renderHook((p) => useLexicon(p), {
+      initialProps: { ...opts("bank"), translation: "مصرف" },
+    });
     await flush(400);
     rerender({ ...opts("bank"), translation: "ضفة" });
     await flush(400);

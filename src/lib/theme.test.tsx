@@ -20,7 +20,8 @@ describe("clay dark and light themes", () => {
   it("validates saved choices, dropping removed themes and corrupted values", () => {
     for (const value of [null, "garbage", {}, 1]) expect(parseTheme(value)).toBe("dark");
     expect(parseTheme("light")).toBe("light");
-    for (const value of ["navy", "burgundy", "forest", "rose"]) expect(parseTheme(value)).toBe("dark");
+    for (const value of ["navy", "burgundy", "forest", "rose"])
+      expect(parseTheme(value)).toBe("dark");
   });
 
   it("restores light and dark choices before paint, including removed themes", () => {

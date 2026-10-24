@@ -1,6 +1,6 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Bookmark,
@@ -32,7 +32,14 @@ import type { Loss } from "@/lib/translation/shadow";
 import { ShadowSummary } from "@/components/translator/SentenceShadow";
 import { ShadowMap, ShadowSheet } from "@/components/translator/ShadowSheet";
 import { LexiconSheet } from "@/components/translator/LexiconSheet";
-import { DEFAULT_BRAIN, effectiveBrain, type Brain, type Dialect, StyleOverride, TranslationResult } from "@/lib/translation/types";
+import {
+  DEFAULT_BRAIN,
+  effectiveBrain,
+  type Brain,
+  type Dialect,
+  StyleOverride,
+  TranslationResult,
+} from "@/lib/translation/types";
 import { BrainPicker } from "@/components/translator/BrainPicker";
 import { LanguageNotice } from "@/components/translator/LanguageNotice";
 import { checkSource } from "@/lib/translation/languageCheck";
@@ -147,6 +154,7 @@ function Translator() {
     initLocale();
     const prefs = persist.prefs();
     if (prefs) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setSource(prefs.source);
       setTarget(prefs.target);
       setStyle(prefs.style);
@@ -228,10 +236,15 @@ function Translator() {
   const [applied, setApplied] = useState<{ base: string; original: string; text: string } | null>(
     null,
   );
-  const result =
-    baseResult && applied && applied.base === baseResult.translation && applied.original === text
-      ? { ...baseResult, translation: applied.text }
-      : baseResult;
+  // Memoised: `result` feeds five callbacks below, and a fresh object on every render
+  // would recreate them (and re-render every memoised child) even for unrelated input.
+  const result = useMemo(
+    () =>
+      baseResult && applied && applied.base === baseResult.translation && applied.original === text
+        ? { ...baseResult, translation: applied.text }
+        : baseResult,
+    [baseResult, applied, text],
+  );
   const pending = rawPending || rerouting || (staleTarget && !!text.trim());
 
   // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
@@ -272,6 +285,7 @@ function Translator() {
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
     if (source === "auto" && detected && detected === target) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setTarget(
         detected === "ar" ? "de" : detected === "de" ? "ar" : target === "de" ? "ar" : "de",
       );
@@ -281,6 +295,7 @@ function Translator() {
   // Arabic script is unambiguous: route before the first request instead of after a wasted one.
   const arabicScript = text.trim() ? startsRtl(text) : false;
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (source === "auto" && arabicScript && target === "ar") setTarget("de");
   }, [source, arabicScript, target]);
 
@@ -291,6 +306,7 @@ function Translator() {
   const [langDismissed, setLangDismissed] = useState("");
   const mismatchKey = mismatch ? `${source}>${mismatch.suggest}` : "";
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (!text.trim()) setLangDismissed("");
   }, [text]);
 
@@ -367,7 +383,11 @@ function Translator() {
     dialect,
   });
   const shadowSettled = !!result && !provisional && !pending && !error;
-  const { state: shadowState, dismiss: dismissShadow, prepareApply } = useShadow({
+  const {
+    state: shadowState,
+    dismiss: dismissShadow,
+    prepareApply,
+  } = useShadow({
     text,
     translation: result?.translation ?? "",
     source: result?.sourceLanguage || source,
@@ -381,8 +401,21 @@ function Translator() {
   const shadowLosses = shadowState.status === "ready" ? shadowState.losses : [];
   const [shadowFocus, setShadowFocus] = useState<string | null>(null);
   const [shadowMapOpen, setShadowMapOpen] = useState(false);
-  const [undo, setUndo] = useState<{ prev: typeof applied; original: string; base: string; target: string; style: string } | null>(null);
-  const validUndo = undo && undo.original === text && undo.base === baseResult?.translation && undo.target === target && undo.style === style ? undo : null;
+  const [undo, setUndo] = useState<{
+    prev: typeof applied;
+    original: string;
+    base: string;
+    target: string;
+    style: string;
+  } | null>(null);
+  const validUndo =
+    undo &&
+    undo.original === text &&
+    undo.base === baseResult?.translation &&
+    undo.target === target &&
+    undo.style === style
+      ? undo
+      : null;
   const focusLoss = shadowLosses.find((l) => l.id === shadowFocus) ?? null;
   useEffect(() => {
     if (!undo) return;
@@ -436,6 +469,7 @@ function Translator() {
   const [lexOpen, setLexOpen] = useState(false);
   const openLex = useCallback(() => setLexOpen(true), []);
   const closeLex = useCallback(() => setLexOpen(false), []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
   useEffect(() => setLexOpen(false), [text]);
   const hasClip = useClipboardHint();
 
@@ -450,7 +484,8 @@ function Translator() {
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
   const toggleMic = useCallback(() => {
-    if (!speech.listening && !speech.starting) speechBase.current = inputRef.current?.value.trim() ?? "";
+    if (!speech.listening && !speech.starting)
+      speechBase.current = inputRef.current?.value.trim() ?? "";
     tick();
     speech.toggle();
   }, [speech]);
@@ -703,6 +738,7 @@ function Translator() {
                       : "text-[22px] leading-[1.45] tracking-[-0.015em]"
                   }`}
                 >
+                  {/* eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered */}
                   {(() => {
                     const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
                     return text
@@ -718,7 +754,11 @@ function Translator() {
               ) : null}
               <button
                 type="button"
-                onClick={() => { speech.cancel(); speechBase.current = ""; clear(); }}
+                onClick={() => {
+                  speech.cancel();
+                  speechBase.current = "";
+                  clear();
+                }}
                 aria-label={t("clearText")}
                 tabIndex={hasText ? 0 : -1}
                 className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${
@@ -759,15 +799,16 @@ function Translator() {
                       aria-live="polite"
                     >
                       <span className="break-words">
-                        {speech.message ?? t(
-                          speech.error === "denied"
-                            ? "micDenied"
-                            : speech.error === "nospeech"
-                              ? "micNoSpeech"
-                              : speech.error === "nomic"
-                                ? "micNoDevice"
-                                : "micFailed",
-                        )}
+                        {speech.message ??
+                          t(
+                            speech.error === "denied"
+                              ? "micDenied"
+                              : speech.error === "nospeech"
+                                ? "micNoSpeech"
+                                : speech.error === "nomic"
+                                  ? "micNoDevice"
+                                  : "micFailed",
+                          )}
                       </span>
                       {speech.error !== "denied" ? (
                         <button
@@ -832,7 +873,9 @@ function Translator() {
               <LanguageNotice
                 mismatch={mismatch}
                 source={source}
-                onApply={() => (mismatch.suggest === "auto" ? setSource("auto") : chooseSource(mismatch.suggest))}
+                onApply={() =>
+                  mismatch.suggest === "auto" ? setSource("auto") : chooseSource(mismatch.suggest)
+                }
                 onDismiss={() => setLangDismissed(mismatchKey)}
               />
             ) : null}
@@ -894,7 +937,9 @@ function Translator() {
                       : null
                   }
                   shadowSummary={
-                    validUndo || shadowState.status === "loading" || shadowState.status === "ready" ? (
+                    validUndo ||
+                    shadowState.status === "loading" ||
+                    shadowState.status === "ready" ? (
                       <ShadowSummary
                         status={shadowState.status === "ready" ? "ready" : "loading"}
                         losses={shadowLosses}
@@ -908,11 +953,7 @@ function Translator() {
               </SafeArea>
             </div>
           </div>
-          <Link
-            to="/arabic-german-translation"
-            dir={uiRtl ? "rtl" : "ltr"}
-            className="sr-only"
-          >
+          <Link to="/arabic-german-translation" dir={uiRtl ? "rtl" : "ltr"} className="sr-only">
             {t("pairGuide")}
           </Link>
         </div>

@@ -148,7 +148,10 @@ export class Feed {
       }
       const reader = res.body.getReader();
       this.reader = reader;
-      if (this.error) { void reader.cancel().catch(() => {}); return; }
+      if (this.error) {
+        void reader.cancel().catch(() => {});
+        return;
+      }
       const parse = isEleven(this.r) ? elevenParser() : null;
       const decoder = new TextDecoder();
       const accept = (value: Uint8Array, final = false) => {

@@ -1,0 +1,48 @@
+name: CI
+
+# Every push and pull request runs the same gates a developer runs locally:
+# types, lint (zero warnings), unit tests, production build, PWA integrity.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Types · Lint · Tests · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint (zero warnings allowed)
+        run: npm run lint -- --max-warnings 0
+
+      - name: Unit tests
+        run: npm run test
+        env:
+          CI: true
+
+      - name: Production build
+        run: npm run build
+
+      - name: PWA integrity (new build is precached)
+        run: node scripts/check-pwa.mjs

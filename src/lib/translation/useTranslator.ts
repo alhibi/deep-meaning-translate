@@ -99,6 +99,7 @@ export function useTranslator(opts: {
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const brain: Brain = opts.brain ?? DEFAULT_BRAIN;
   const brainRef = useRef(brain);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   brainRef.current = brain;
   const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
   const callRepair = useServerFn(repairTranslation);
@@ -142,10 +143,13 @@ export function useTranslator(opts: {
   const lastParams = useRef("");
   const current = useRef({ norm: "", key: "", provisional: false });
   const hasResult = useRef(false);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   hasResult.current = !!result;
   const resultRef = useRef<TranslationResult | null>(null);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   resultRef.current = result;
   const successRef = useRef(onSuccess);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   successRef.current = onSuccess;
 
   const clearRetry = () => {
@@ -220,12 +224,20 @@ export function useTranslator(opts: {
 
       const fail = (kind: ErrorKind) => {
         metrics.error(kind);
+        // A throttled *live* request is not the user's problem: they are mid-word, and
+        // the settled sentence will be translated on its own pause. Never interrupt typing
+        // with a rate message — keep what is on screen and stay quiet.
+        if (kind === "rate" && prov) {
+          setPhase(hasResult.current ? "COMPLETE" : "READY");
+          return;
+        }
         const transient = kind === "rate" || kind === "network" || kind === "provider";
         if (transient && attempt === 0) {
           metrics.retry();
           setPhase("RETRYING");
           retryTimer.current = setTimeout(
             () => {
+              // eslint-disable-next-line react-hooks/immutability -- ref-held timers/controllers are mutable by design
               if (token === latest.current) void run(norm, key, prov, 1);
             },
             kind === "rate" ? 2500 : 1200,
@@ -289,7 +301,13 @@ export function useTranslator(opts: {
             // swapped in only if it is still on screen.
             void callRepair({ data: { request: data, previous: res.result } })
               .then((r) => {
-                if (!r?.result || committedKey.current !== key || current.current.key !== key || token !== latest.current) return;
+                if (
+                  !r?.result ||
+                  committedKey.current !== key ||
+                  current.current.key !== key ||
+                  token !== latest.current
+                )
+                  return;
                 const c = cache.current.get(key);
                 if (c) c.result = r.result;
                 setResult(r.result);
@@ -352,6 +370,7 @@ export function useTranslator(opts: {
       committedKey.current = null;
       current.current = { norm: "", key: "", provisional: false };
       deliberate.current = false;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setResult(null);
       setError(null);
       setProvisional(false);
@@ -409,6 +428,7 @@ export function useTranslator(opts: {
   const busy = phase === "TRANSLATING" || phase === "UPDATING" || phase === "RETRYING";
   useEffect(() => {
     if (!busy) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setShowPending(false);
       return;
     }
@@ -442,8 +462,10 @@ export function useTranslator(opts: {
 
   // Resume automatically once the connection is back.
   const retryRef = useRef(retry);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   retryRef.current = retry;
   const phaseRef = useRef(phase);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   phaseRef.current = phase;
   useEffect(() => {
     const onOnline = () => {

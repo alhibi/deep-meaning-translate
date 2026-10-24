@@ -40,6 +40,7 @@ export function useTheme() {
   useEffect(() => {
     const t = current();
     selected.current = t;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     setTheme(t);
     apply(t);
     return () => activeTransition.current?.skipTransition();
@@ -61,7 +62,10 @@ export function useTheme() {
     };
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const doc = document as Document & {
-      startViewTransition?: (cb: () => void) => { ready: Promise<void>; skipTransition: () => void };
+      startViewTransition?: (cb: () => void) => {
+        ready: Promise<void>;
+        skipTransition: () => void;
+      };
     };
     if (reduce) {
       run();
@@ -76,17 +80,21 @@ export function useTheme() {
     const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
     const vt = doc.startViewTransition(run);
     activeTransition.current = vt;
-    void vt.ready.then(() => {
-      if (activeTransition.current !== vt) return;
-      document.documentElement.animate(
-        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
-        {
-          duration: 720,
-          easing: "cubic-bezier(0.65, 0, 0.35, 1)",
-          pseudoElement: "::view-transition-new(root)",
-        },
-      );
-    }).catch(() => { /* Interrupted reveals still apply the most recent choice. */ });
+    void vt.ready
+      .then(() => {
+        if (activeTransition.current !== vt) return;
+        document.documentElement.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+          {
+            duration: 720,
+            easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+      })
+      .catch(() => {
+        /* Interrupted reveals still apply the most recent choice. */
+      });
   }, []);
 
   return { theme, toggle };

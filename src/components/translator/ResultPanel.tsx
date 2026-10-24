@@ -132,9 +132,11 @@ export const ResultPanel = memo(function ResultPanel({
   const [announce, setAnnounce] = useState("");
   const text = result?.translation ?? "";
   const textRef = useRef(text);
+  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   textRef.current = text;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     setShowAlt(false);
     setCopied(false);
     playback.current++;
@@ -168,7 +170,7 @@ export const ResultPanel = memo(function ResultPanel({
       clearTimeout(id);
       setAnnounce("");
     };
-  }, [text, provisional, pending]);
+  }, [text, provisional, pending, t]);
 
   useEffect(() => {
     if (!copied) return;
@@ -447,7 +449,11 @@ export const ResultPanel = memo(function ResultPanel({
             </Action>
           ) : null}
           {onToggleShadow ? (
-            <Action label={shadowOn ? t("shOff") : t("shOn")} onClick={onToggleShadow} active={!!shadowOn}>
+            <Action
+              label={shadowOn ? t("shOff") : t("shOn")}
+              onClick={onToggleShadow}
+              active={!!shadowOn}
+            >
               <Contrast
                 className={`size-[18px] transition-opacity ${shadowOn ? "opacity-100" : "opacity-50"}`}
                 strokeWidth={1.75}

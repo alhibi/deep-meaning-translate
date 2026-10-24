@@ -9,18 +9,31 @@ describe("AssemblyAI dictation", () => {
       expect(url.hostname).toBe("streaming.assemblyai.com");
       expect(url.searchParams.get("language_codes")).toBe(JSON.stringify([lang.slice(0, 2)]));
     }
-    expect(new URL(assemblyUrl("test-session", "auto")).searchParams.has("language_codes")).toBe(false);
+    expect(new URL(assemblyUrl("test-session", "auto")).searchParams.has("language_codes")).toBe(
+      false,
+    );
   });
   it("replaces interim turns without deleting intentional repetitions", () => {
     const turns = new Map<number, string>();
     assemblyText(turns, { type: "Turn", turn_order: 0, transcript: "لا", end_of_turn: false });
-    expect(assemblyText(turns, { type: "Turn", turn_order: 0, transcript: "لا لا", end_of_turn: true })?.text).toBe("لا لا");
-    expect(assemblyText(turns, { type: "Turn", turn_order: 1, transcript: "لا لا", end_of_turn: true })?.text).toBe("لا لا لا لا");
-    expect(assemblyText(turns, { type: "Turn", turn_order: 0, transcript: "لا، لا!", end_of_turn: true })?.text).toBe("لا، لا! لا لا");
+    expect(
+      assemblyText(turns, { type: "Turn", turn_order: 0, transcript: "لا لا", end_of_turn: true })
+        ?.text,
+    ).toBe("لا لا");
+    expect(
+      assemblyText(turns, { type: "Turn", turn_order: 1, transcript: "لا لا", end_of_turn: true })
+        ?.text,
+    ).toBe("لا لا لا لا");
+    expect(
+      assemblyText(turns, { type: "Turn", turn_order: 0, transcript: "لا، لا!", end_of_turn: true })
+        ?.text,
+    ).toBe("لا، لا! لا لا");
   });
   it("rejects corrupted provider events without modifying recognized text", () => {
     const turns = new Map([[0, "Hallo"]]);
-    expect(assemblyText(turns, { type: "Turn", turn_order: -1, transcript: {}, end_of_turn: true })).toBeNull();
+    expect(
+      assemblyText(turns, { type: "Turn", turn_order: -1, transcript: {}, end_of_turn: true }),
+    ).toBeNull();
     expect([...turns.values()]).toEqual(["Hallo"]);
   });
 });

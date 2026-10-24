@@ -63,15 +63,19 @@ async function send(
   // undici's internal AbortError escape as an unhandled runtime error.
   let res: Response;
   try {
-    res = await providerFetch(`${BASE}/responses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "x-opencode-session": SESSION,
+    res = await providerFetch(
+      `${BASE}/responses`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "x-opencode-session": SESSION,
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    }, signal);
+      signal,
+    );
   } catch (err) {
     if (signal?.aborted || (err as Error)?.name === "AbortError") throw cancelled();
     throw new TranslationError("network", "Could not reach the translation provider.");
@@ -122,7 +126,10 @@ export async function* textDeltas(body: ReadableStream<Uint8Array>): AsyncGenera
         if (!line.startsWith("data:")) continue;
         const data = line.slice(5).trim();
         if (!data) continue;
-        if (data === "[DONE]") { completed = true; continue; }
+        if (data === "[DONE]") {
+          completed = true;
+          continue;
+        }
         try {
           const evt = JSON.parse(data);
           if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string")
@@ -130,7 +137,12 @@ export async function* textDeltas(body: ReadableStream<Uint8Array>): AsyncGenera
           else if (typeof evt?.choices?.[0]?.delta?.content === "string")
             yield evt.choices[0].delta.content;
           else if (evt?.type === "response.completed") completed = true;
-          else if (evt?.error || evt?.type === "response.failed" || evt?.type === "response.incomplete" || evt?.type === "error")
+          else if (
+            evt?.error ||
+            evt?.type === "response.failed" ||
+            evt?.type === "response.incomplete" ||
+            evt?.type === "error"
+          )
             throw new TranslationError("provider", "The provider stream failed.");
         } catch (err) {
           if (err instanceof TranslationError) throw err;

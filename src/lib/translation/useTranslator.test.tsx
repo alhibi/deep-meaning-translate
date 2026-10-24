@@ -55,8 +55,15 @@ describe("useTranslator", () => {
   it("invalidates a pending reply and retry after deletion to one character", async () => {
     let finish: (value: unknown) => void = () => {};
     const success = vi.fn();
-    call.mockImplementation(() => new Promise(r => { finish = r; }));
-    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), { initialProps: opts("Hallo.") });
+    call.mockImplementation(
+      () =>
+        new Promise((r) => {
+          finish = r;
+        }),
+    );
+    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts("Hallo."),
+    });
     await flush(300);
     rerender(opts("H"));
     finish({ ok: true, result: result("قديم") });
@@ -70,9 +77,18 @@ describe("useTranslator", () => {
   it("ignores an obsolete repair while newer input is pending", async () => {
     let finish: (value: unknown) => void = () => {};
     const success = vi.fn();
-    repairCall.mockImplementation(() => new Promise(r => { finish = r; }));
-    call.mockResolvedValueOnce({ ok: true, result: result("أولى") }).mockImplementation(() => new Promise(() => {}));
-    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), { initialProps: opts("Ich habe 3 Katzen.") });
+    repairCall.mockImplementation(
+      () =>
+        new Promise((r) => {
+          finish = r;
+        }),
+    );
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("أولى") })
+      .mockImplementation(() => new Promise(() => {}));
+    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts("Ich habe 3 Katzen."),
+    });
     await flush(500);
     rerender(opts("Etwas Neues."));
     await flush(500);

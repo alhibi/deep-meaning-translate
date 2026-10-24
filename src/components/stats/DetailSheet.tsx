@@ -74,7 +74,8 @@ export function DetailSheet({
 
   const label = (d: Dimension | "pair", id: string) =>
     d === "pair" ? fmt.pair(id) : categoryLabel(locale, d, id);
-  const color = (d: Dimension | "pair", id: string) => (d === "pair" ? pairColor(id) : colorOf(d, id));
+  const color = (d: Dimension | "pair", id: string) =>
+    d === "pair" ? pairColor(id) : colorOf(d, id);
 
   return (
     <Sheet
@@ -87,12 +88,18 @@ export function DetailSheet({
         spec ? (
           <div>
             <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
-              {spec.color ? <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: spec.color }} /> : null}
+              {spec.color ? (
+                <span
+                  className="size-2.5 shrink-0 rounded-[3px]"
+                  style={{ background: spec.color }}
+                />
+              ) : null}
               <span className="min-w-0 truncate">{spec.title}</span>
             </h2>
             <p className="mt-1 text-[12.5px] tabular-nums text-muted-foreground">
               {records.length === 1 ? t("countOne") : t("count", { n: fmt.num(records.length) })} ·{" "}
-              {t("wordsN", { n: fmt.num(words) })} · {t("pctOfVisible", { pct: fmt.pct(share(records.length, visibleTotal)) })}
+              {t("wordsN", { n: fmt.num(words) })} ·{" "}
+              {t("pctOfVisible", { pct: fmt.pct(share(records.length, visibleTotal)) })}
             </p>
           </div>
         ) : null
@@ -138,9 +145,14 @@ export function DetailSheet({
                         key={s.id}
                         className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-card px-2.5 text-[12px]"
                       >
-                        <span className="size-1.5 rounded-full" style={{ background: color(d, s.id) }} />
+                        <span
+                          className="size-1.5 rounded-full"
+                          style={{ background: color(d, s.id) }}
+                        />
                         {label(d, s.id)}
-                        <span className="tabular-nums text-muted-foreground">{fmt.num(s.count)}</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {fmt.num(s.count)}
+                        </span>
                       </span>
                     ))}
                   </div>

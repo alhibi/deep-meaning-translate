@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { saved, type SavedPhrase } from "@/lib/saved";
 import { isRtl, languageLabel } from "@/lib/translation/languages";
@@ -18,9 +18,9 @@ export const SavedSheet = memo(function SavedSheet({
 }) {
   const { t } = useI18n();
   const [mode, setMode] = useState<"list" | "review">("list");
-  useEffect(() => {
-    if (!open) setMode("list");
-  }, [open]);
+  // Closed sheet reopens in list mode. Adjusted while rendering (React's own pattern)
+  // instead of in an effect, so the review screen is never painted for a closed sheet.
+  if (!open && mode !== "list") setMode("list");
   if (!open) return null;
 
   return (

@@ -133,6 +133,7 @@ export function ShadowSummary({
   const press = useRef<number | null>(null);
   const empty = status === "ready" && losses.length === 0;
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     setNoneVisible(true);
     if (!empty) return;
     const id = setTimeout(() => setNoneVisible(false), 2600);

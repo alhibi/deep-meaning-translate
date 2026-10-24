@@ -29,6 +29,7 @@ export function useLexicon(opts: {
   useEffect(() => {
     const token = ++generation.current;
     const normalized = text.trim().replace(/\s+/gu, " ");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     setLexicon(null);
     setLoading(false);
     if (!settled || !isLexiconCandidate(normalized)) return;
@@ -70,7 +71,11 @@ export function useLexicon(opts: {
         });
     }, 260);
 
-    return () => { clearTimeout(id); generation.current++; };
+    return () => {
+      clearTimeout(id);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- key already encodes these values (and the ref is a generation token, not a node)
+      generation.current++;
+    };
   }, [text, source, target, uiLocale, settled, dialect, lookup, translation]);
 
   return { lexicon, loading };
