@@ -48,6 +48,30 @@ describe("deterministic checks a native reader would notice", () => {
     expect(issues.join(" ")).toContain("Numbers");
   });
 
+  it("catches a number whose value changed, not just one whose digits vanished", () => {
+    // 1,5 → 15 keeps every digit but multiplies the amount by ten.
+    const issues = verifyTranslation(
+      req("Es kostet 1,5 Millionen", "de", "ar"),
+      res("يكلف 15 مليوناً"),
+    );
+    expect(issues.join(" ")).toContain("Numbers");
+  });
+
+  it("accepts the same number re-formatted for the other language", () => {
+    // German thousands point → English thousands comma: formatting, not a change.
+    expect(
+      verifyTranslation(req("Es kostet 1.000 Euro", "de", "en"), res("It costs 1,000 euros")),
+    ).toEqual([]);
+    // Thousands and decimals together, re-punctuated.
+    expect(
+      verifyTranslation(req("Es kostet 1.000,50 Euro", "de", "en"), res("It costs 1,000.50 euros")),
+    ).toEqual([]);
+    // A trailing decimal zero is formatting too: 1,50 = 1,5.
+    expect(
+      verifyTranslation(req("Es kostet 1,5 Euro", "de", "en"), res("It costs 1.50 euros")),
+    ).toEqual([]);
+  });
+
   it("flags a dropped name in a Latin-script pair", () => {
     const issues = verifyTranslation(
       req("Frau Müller kommt morgen", "de", "en"),

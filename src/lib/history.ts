@@ -106,6 +106,7 @@ export function sanitizeEntry(e: HistoryEntry): HistoryEntry {
 export type HistoryStatus = "ok" | "unavailable";
 let status: HistoryStatus = "ok";
 let lastWriteOk = true;
+let lastEvicted = 0;
 let cache: HistoryEntry[] | null = null;
 const listeners = new Set<() => void>();
 
@@ -144,14 +145,48 @@ function current(): HistoryEntry[] {
   return cache;
 }
 
+/**
+ * localStorage is shared and finite. Two failures must be told apart, because they
+ * mean different things to the person:
+ * - the archive outgrew the quota: shed the oldest rows and keep saving the rest;
+ * - the device refuses even one row (storage blocked): keep it in memory and say so.
+ * The one outcome that must never happen is a write that pretends to have succeeded
+ * while the row was silently dropped — that is how an archive stops being permanent.
+ */
+const SOFT_LIMIT = 2_400_000; // serialized characters: leaves room for the phrasebook, voice and memory stores
+const SHED_RATIO = 0.1;
+
+function shed(rows: HistoryEntry[]): HistoryEntry[] {
+  return rows.slice(0, Math.max(1, rows.length - Math.ceil(rows.length * SHED_RATIO)));
+}
+
 function write(entries: HistoryEntry[]): HistoryEntry[] {
-  const next = entries.slice(0, HISTORY_LIMIT);
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-    lastWriteOk = true;
-  } catch {
-    lastWriteOk = false; // storage full or blocked — the in-memory list still reflects reality
+  let next = entries.slice(0, HISTORY_LIMIT);
+  let json = JSON.stringify(next);
+  let evicted = 0;
+  // Bound the synchronous write first: at the quota every save is both slow and doomed.
+  while (json.length > SOFT_LIMIT && next.length > 1) {
+    const before = next.length;
+    next = shed(next);
+    evicted += before - next.length;
+    json = JSON.stringify(next);
   }
+  let saved = false;
+  for (let attempt = 0; attempt < 64; attempt++) {
+    try {
+      window.localStorage.setItem(KEY, json);
+      saved = true;
+      break;
+    } catch {
+      if (next.length <= 1) break;
+      const before = next.length;
+      next = shed(next);
+      evicted += before - next.length;
+      json = JSON.stringify(next);
+    }
+  }
+  lastWriteOk = saved;
+  lastEvicted = evicted;
   cache = next;
   emit();
   return next;
@@ -184,6 +219,8 @@ export const history = {
   list: (): HistoryEntry[] => current(),
   status: (): HistoryStatus => (current(), status),
   lastWriteOk: () => lastWriteOk,
+  /** Rows dropped from the oldest end by the most recent save to fit the device quota. */
+  lastEvicted: () => lastEvicted,
   subscribe(fn: () => void) {
     listeners.add(fn);
     return () => void listeners.delete(fn);

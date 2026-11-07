@@ -22,6 +22,7 @@ import {
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { AppHeader } from "@/components/translator/AppHeader";
+import { Intro } from "@/components/Intro";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
@@ -54,15 +55,18 @@ import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
 import { persist } from "@/lib/persist";
-import { shouldShowIntro } from "@/lib/intro";
+import { introPending, releaseIntroGate } from "@/lib/intro";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 /*
- * Sheets and the first-run intro are all closed on first paint, so they are loaded on
- * demand instead of sitting in the entry chunk. `Suspense` renders nothing while a
- * sheet arrives, which is exactly what an unopened sheet looks like anyway. The chunks
- * are hashed and precached with the rest of the shell, so this costs an offline user
- * nothing either.
+ * Sheets are closed on first paint, so they are loaded on demand instead of sitting in
+ * the entry chunk. `Suspense` renders nothing while a sheet arrives, which is exactly
+ * what an unopened sheet looks like anyway. Their chunks are hashed and precached with
+ * the rest of the shell, so this costs an offline user nothing either.
+ *
+ * The intro is the exception, and deliberately so: it is server-rendered, because a
+ * lazy overlay meant a first visit painted the translator and then covered it — and the
+ * cover was the page's largest element. CSS (the pre-paint gate) decides its visibility.
  */
 const LanguageSheet = lazy(() =>
   import("@/components/translator/LanguageSheet").then((m) => ({ default: m.LanguageSheet })),
@@ -76,7 +80,6 @@ const ShadowMap = lazy(() =>
 const LexiconSheet = lazy(() =>
   import("@/components/translator/LexiconSheet").then((m) => ({ default: m.LexiconSheet })),
 );
-const Intro = lazy(() => import("@/components/Intro").then((m) => ({ default: m.Intro })));
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
@@ -153,6 +156,12 @@ function Translator() {
   const [shadowOn, setShadowOn] = useState(true);
   const [savedOpen, setSavedOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
+  /** Mounted from the first paint; CSS decides whether this visit sees it. */
+  const [introMounted, setIntroMounted] = useState(true);
+  const finishIntro = useCallback(() => {
+    setIntroMounted(false);
+    setIntroOpen(false);
+  }, []);
   // Stable handlers: the sheet re-subscribes (and pops history) whenever onClose changes identity.
   const closeDialect = useCallback(() => setDialectOpen(false), []);
   const selectDialect = useCallback((c: string) => setDialect(c as Dialect), []);
@@ -218,6 +227,11 @@ function Translator() {
     initServiceWorker();
     initLocale();
     const prefs = persist.prefs();
+    // The same values the translator will use after restoring, resolved *now*: state
+    // setters below are asynchronous, so reading them back for the cache key would
+    // prime a key the first request can never find.
+    const bootDialect: Dialect = prefs?.dialect ?? "auto";
+    const bootBrain: Brain = effectiveBrain(prefs?.brain ?? DEFAULT_BRAIN);
     if (prefs) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setSource(prefs.source);
@@ -233,6 +247,10 @@ function Translator() {
       .join("\n")
       .trim();
     const pick = takePendingPick();
+    const session = persist.session();
+    // The pre-paint gate and this decision must agree. If this visit shows no intro,
+    // releasing the gate is what keeps the translator visible instead of held back.
+    const wantsIntro = !pick && !shared && !session?.text && introPending();
     if (pick && pick.target !== pick.source) {
       // Opened from Translation Statistics: show that translation, not the old draft.
       if (pick.source !== "auto") setSource(pick.source);
@@ -244,17 +262,33 @@ function Translator() {
       window.history.replaceState(null, "", "/");
       submitNext();
       setText(shared.slice(0, MAX_CHARS));
+    } else if (session?.text) {
+      // A strong writing-system mismatch already reroutes the request to "auto", so
+      // the primed key has to be built from that same effective source.
+      const sessionSource = checkSource(session.text, session.source)?.strong
+        ? "auto"
+        : session.source;
+      if (session.result)
+        prime(
+          session.text,
+          {
+            source: sessionSource,
+            target: session.target,
+            style: session.style,
+            dialect: session.target === "ar" ? bootDialect : "auto",
+            brain: bootBrain,
+          },
+          session.result,
+        );
+      submitNext();
+      quietRef.current = session.text.trim();
+      setText(session.text);
+    }
+    if (wantsIntro) {
+      setIntroOpen(true);
     } else {
-      const session = persist.session();
-      if (session?.text) {
-        if (session.result)
-          prime(session.text, session.source, session.target, session.style, session.result);
-        submitNext();
-        quietRef.current = session.text.trim();
-        setText(session.text);
-      } else if (shouldShowIntro()) {
-        setIntroOpen(true);
-      }
+      releaseIntroGate();
+      setIntroMounted(false);
     }
     setRestored(true);
   }, [submitNext, prime]);
@@ -634,15 +668,14 @@ function Translator() {
 
   return (
     <>
-      {introOpen ? (
-        <Suspense fallback={null}>
-          <Intro onComplete={() => setIntroOpen(false)} />
-        </Suspense>
-      ) : null}
-      <a href="#composer" className="skip-link">
+      {introMounted ? <Intro onComplete={finishIntro} /> : null}
+      <a href="#composer" className="skip-link" inert={introOpen}>
         {t("skipToInput")}
       </a>
-      <main className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background">
+      <main
+        inert={introOpen}
+        className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background"
+      >
         <AppHeader
           tagline={tagline}
           onToggleTagline={toggleTagline}

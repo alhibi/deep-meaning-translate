@@ -342,6 +342,13 @@ function StatsPage() {
           >
             {t("write_fail")}
           </p>
+        ) : history.lastEvicted() > 0 ? (
+          <p
+            role="status"
+            className="mx-5 mt-3 rounded-xl border border-border px-3 py-2 text-[12.5px] text-muted-foreground"
+          >
+            {t("write_trim")}
+          </p>
         ) : null}
 
         {visible.length === 0 ? (

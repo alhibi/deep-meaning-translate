@@ -40,8 +40,25 @@ const DIGIT_MAP: Record<string, string> = {
  */
 const ARABIC_PUNCT = /[،؛؟]/u;
 
-function normalizedDigits(value: string): string {
-  return value.replace(/[٠-٩۰-۹]/g, (d) => DIGIT_MAP[d] ?? d).replace(/[.,]/g, "");
+/**
+ * Canonical form of one number, so that formatting may change and value may not.
+ *
+ * Separators are structural here, not decorative: a single separator followed by
+ * exactly three digits groups thousands ("1.000" in German, "1,000" in English),
+ * while any other final group is a decimal part. With several separators the last
+ * short group is the decimal part and everything before it groups thousands. Both
+ * numeral systems fold to ASCII, so ٣٥ and 35 stay equal — but 1,5 and 15 do not,
+ * which the previous digits-only comparison could not tell apart.
+ */
+function canonicalNumber(value: string): string {
+  const digits = value.replace(/[٠-٩۰-۹]/g, (d) => DIGIT_MAP[d] ?? d);
+  const parts = digits.split(/[.,]/);
+  if (parts.length === 1) return digits;
+  const last = parts.pop()!;
+  const int = parts.join("");
+  const out = last.length === 3 ? int + last : `${int}.${last}`;
+  // 1,50 and 1.5 are the same number; trailing decimal zeros are formatting.
+  return out.includes(".") ? out.replace(/\.?0+$/, "") : out;
 }
 
 function multiset(list: string[]): Map<string, number> {
@@ -135,8 +152,8 @@ export function verifyTranslation(req: TranslationRequest, res: TranslationResul
   if (lostUrls.length) issues.push(`URLs dropped or altered: ${lostUrls.join(", ")}`);
 
   const lostNums = missing(
-    (src.match(NUM_RE) ?? []).map(normalizedDigits),
-    (out.match(NUM_RE) ?? []).map(normalizedDigits),
+    (src.match(NUM_RE) ?? []).map(canonicalNumber),
+    (out.match(NUM_RE) ?? []).map(canonicalNumber),
   );
   if (lostNums.length) issues.push(`Numbers missing from the translation: ${lostNums.join(", ")}`);
 

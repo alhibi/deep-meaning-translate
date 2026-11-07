@@ -13,8 +13,9 @@ import type { TranslationResult } from "./types";
  * - **device-only.** Nothing is uploaded; this is the same class of storage the
  *   phrasebook and history already use, and the privacy page says so.
  * - **bounded twice**: at most `MAX_ENTRIES` rows *and* at most `MAX_BYTES` of JSON,
- *   whichever comes first. A localStorage quota error must never be able to break a
- *   translation, so a failed write is dropped, not retried.
+ *   whichever comes first. Bytes are real UTF-8 bytes, so an Arabic row cannot buy
+ *   twice the budget a Latin row gets. A localStorage quota error must never be able
+ *   to break a translation, so a failed write is dropped, not retried.
  * - **validated on read.** A row whose payload no longer passes `isResult` (schema
  *   changed, storage tampered with, a half-written value) is discarded rather than
  *   rendered. Trusting device storage is how a UI ends up showing `undefined`.
@@ -80,13 +81,17 @@ function load(): Row[] {
   return rows;
 }
 
+/** Real UTF-8 bytes, not UTF-16 code units: an Arabic row costs two bytes per letter. */
+const encoder = typeof TextEncoder === "undefined" ? null : new TextEncoder();
+const byteLength = (value: string) => (encoder ? encoder.encode(value).length : value.length);
+
 function flush(): void {
   if (typeof window === "undefined" || !rows) return;
   // Trim to the byte budget from the oldest end before writing, never after:
   // a value that does not fit must not be written at all.
   let out = rows;
   let json = JSON.stringify(out);
-  while (json.length > MAX_BYTES && out.length > 1) {
+  while (byteLength(json) > MAX_BYTES && out.length > 1) {
     out = out.slice(0, -1);
     json = JSON.stringify(out);
   }

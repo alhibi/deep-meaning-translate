@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
-import { takeSpeechToken } from "@/lib/translation/throttle";
+import { takeSpeechToken, takeWarmToken } from "@/lib/translation/throttle";
 import {
   SpeakInput,
   buildInteraction,
@@ -23,9 +23,14 @@ export const Route = createFileRoute("/api/speak")({
   server: {
     handlers: {
       // Warm-up: open DNS/TLS to Google before the first Listen tap. No key, no text.
-      GET: async () => {
+      GET: async ({ request }) => {
+        const noContent = new Response(null, {
+          status: 204,
+          headers: { "Cache-Control": "no-store" },
+        });
+        if (!takeWarmToken(clientAddress(request))) return noContent;
         await fetch(ENDPOINT, { method: "HEAD" }).catch(() => {});
-        return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+        return noContent;
       },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number, extra?: Record<string, string>) =>

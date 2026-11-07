@@ -1,3 +1,4 @@
+import { INTRO_BOOT } from "@/lib/intro";
 import { THEME_BOOT } from "@/lib/theme";
 import { ErrorScreen, NotFoundScreen } from "@/components/FailureScreen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -5,6 +6,10 @@ import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanst
 import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+// The two faces used above the fold. Preloading them removes the late swap: without it
+// the browser only discovers a font after parsing the stylesheet that references it.
+import geistWoff2 from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+import serifItalicWoff2 from "@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   staticData: { sitemap: false },
@@ -41,6 +46,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       {
+        rel: "preload",
+        href: geistWoff2,
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        href: serifItalicWoff2,
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
         rel: "stylesheet",
         href: appCss,
       },
@@ -61,6 +80,12 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT }} />
+        {/* A browser without JavaScript keeps the translator visible: the gate exists
+            only to stop a flash, never to hide the app from someone it cannot open. */}
+        <noscript>
+          <style>{`html[data-intro="open"] .intro-screen{display:none}`}</style>
+        </noscript>
         <HeadContent />
       </head>
       <body>

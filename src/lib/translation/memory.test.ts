@@ -55,6 +55,17 @@ describe("translation memory", () => {
     expect(memoryGet("k1")?.translation).toBe("واحدة");
   });
 
+  it("keeps the stored payload inside a real 200 KB of UTF-8, Arabic included", () => {
+    // Arabic costs two bytes per letter: a length check in UTF-16 units would allow
+    // twice the documented budget. The bound has to be measured in bytes.
+    const big = "مرحبا بالعالم ".repeat(300);
+    for (let i = 0; i < 120; i++) memorySet(`k${i}`, result(big));
+    const stored = localStorage.getItem(KEY) ?? "";
+    expect(new TextEncoder().encode(stored).length).toBeLessThanOrEqual(200_000);
+    // Trimming happens from the oldest end; the newest sentence always survives.
+    expect(memoryGet("k119")?.translation).toBe(big);
+  });
+
   it("drops rows whose payload no longer validates instead of rendering them", () => {
     writeRaw([
       { k: "good", v: result("سليمة"), at: Date.now() },

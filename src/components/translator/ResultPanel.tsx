@@ -156,6 +156,9 @@ export const ResultPanel = memo(function ResultPanel({
   // A settled translation may be listened to: open the path to the voice service (free, once).
   useEffect(() => {
     if (!text || provisional || pending || voicePrefs.engine === "device") return;
+    // Never synthesize before the person has touched this page: a restored session
+    // would otherwise spend a speech request on audio nobody asked to hear.
+    if (!navigator.userActivation?.hasBeenActive) return;
     if (voicePrefs.engine === "gemini") warmVoice();
     // Prepare the voice as soon as the translation settles, so Listen is instant.
     const id = setTimeout(() => prefetchSpeech(text, voiceLang, voicePrefs), 350);

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import type { TranslationResult } from "./types";
+import { DEFAULT_BRAIN, type TranslationResult } from "./types";
 
 const call = vi.fn();
 const repairCall = vi.fn();
@@ -62,6 +62,32 @@ afterEach(() => {
 });
 
 describe("useTranslator", () => {
+  it("shows a primed translation for a dialect without spending a request", async () => {
+    // A restored session must open stable: the primed key has to include the dialect
+    // and the brain, exactly as the first real request would.
+    const success = vi.fn();
+    const { result: h } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: {
+        text: "Hallo.",
+        source: "de",
+        target: "ar",
+        style: "natural" as const,
+        dialect: "levant" as const,
+      },
+    });
+    act(() =>
+      h.current.prime(
+        "Hallo.",
+        { source: "de", target: "ar", style: "natural", dialect: "levant", brain: DEFAULT_BRAIN },
+        result("أهلاً"),
+      ),
+    );
+    await flush(400);
+    expect(call).not.toHaveBeenCalled();
+    expect(h.current.result?.translation).toBe("أهلاً");
+    expect(h.current.phase).toBe("COMPLETE");
+  });
+
   it("invalidates a pending reply and retry after deletion to one character", async () => {
     let finish: (value: unknown) => void = () => {};
     const success = vi.fn();

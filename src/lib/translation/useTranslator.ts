@@ -63,6 +63,23 @@ interface Cached {
 const keyOf = (text: string, source: string, target: string, style: string) =>
   `${source}|${target}|${style}|${text}`;
 
+/**
+ * The one definition of a request's identity. The in-flight cache, the device memory
+ * and session priming must all agree, or a restored translation is re-requested and
+ * primed results are never found.
+ */
+export function translationKey(
+  text: string,
+  source: string,
+  target: string,
+  style: StyleOverride,
+  dialect: Dialect,
+  brain: Brain,
+): string {
+  const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
+  return keyOf(normalize(text), source, target, styleKey);
+}
+
 /** A streamed live translation keeps the last known metadata; only the text is fresh. */
 function liveResult(
   prev: TranslationResult | null,
@@ -99,9 +116,6 @@ export function useTranslator(opts: {
   const style = opts.style;
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const brain: Brain = opts.brain ?? DEFAULT_BRAIN;
-  const brainRef = useRef(brain);
-  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
-  brainRef.current = brain;
   const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
   const callRepair = useServerFn(repairTranslation);
 
@@ -475,8 +489,18 @@ export function useTranslator(opts: {
 
   /** Seed a known result (e.g. restored session) so it shows without a new request. */
   const prime = useCallback(
-    (raw: string, s: string, t: string, st: StyleOverride, value: TranslationResult) => {
-      cache.current.set(keyOf(normalize(raw), s, t, `${st}@${brainRef.current}`), {
+    (
+      raw: string,
+      at: {
+        source: string;
+        target: string;
+        style: StyleOverride;
+        dialect: Dialect;
+        brain: Brain;
+      },
+      value: TranslationResult,
+    ) => {
+      cache.current.set(translationKey(raw, at.source, at.target, at.style, at.dialect, at.brain), {
         result: value,
         at: Date.now(),
         provisional: false,

@@ -118,6 +118,7 @@ const en = {
     "This browser is blocking storage on this device. Your translations were not changed.",
   error_retry: "Try again",
   write_fail: "The last change couldn't be saved on this device (storage full or blocked).",
+  write_trim: "Older translations were removed so new ones can keep being saved.",
   privacy:
     "Statistics are calculated on this device from your own translations. Nothing is sent anywhere to compute them.",
   forgetAll: "Delete everything on this device",
@@ -246,6 +247,7 @@ const ar: Dict = {
   error_body: "هذا المتصفح يمنع التخزين على الجهاز. ترجماتك لم تتغير.",
   error_retry: "أعد المحاولة",
   write_fail: "تعذّر حفظ آخر تغيير على هذا الجهاز (الذاكرة ممتلئة أو محظورة).",
+  write_trim: "حُذفت ترجمات أقدم لإفساح مكان لترجمات جديدة.",
   privacy: "تُحسب الإحصائيات على هذا الجهاز من ترجماتك أنت، ولا يُرسل أي شيء لحسابها.",
   forgetAll: "حذف كل شيء من هذا الجهاز",
   forgetConfirm: "سيُحذف كل ما ترجمته وكل العبارات المحفوظة والإعدادات. هل تريد الحذف؟",
@@ -374,6 +376,7 @@ const de: Dict = {
   error_retry: "Erneut versuchen",
   write_fail:
     "Die letzte Änderung konnte auf diesem Gerät nicht gespeichert werden (Speicher voll oder blockiert).",
+  write_trim: "Ältere Übersetzungen wurden entfernt, damit neue weiter gespeichert werden können.",
   privacy:
     "Die Statistik wird auf diesem Gerät aus deinen eigenen Übersetzungen berechnet. Dafür wird nichts gesendet.",
   forgetAll: "Alles auf diesem Gerät löschen",

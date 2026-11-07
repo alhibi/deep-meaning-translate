@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { InputSchema } from "@/lib/translation/translate.functions";
-import { takeToken } from "@/lib/translation/throttle";
+import { takeToken, takeWarmToken } from "@/lib/translation/throttle";
 import { z } from "zod";
 import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
 
@@ -15,10 +15,17 @@ export const Route = createFileRoute("/api/translate-stream")({
     handlers: {
       // Warm-up: resolve and open the connection to the provider so the first real
       // translation skips DNS/TLS setup. Sends no text and no credentials.
-      GET: async () => {
+      GET: async ({ request }) => {
+        const noContent = new Response(null, {
+          status: 204,
+          headers: { "Cache-Control": "no-store" },
+        });
+        // Free work for us, but still an outbound request: bounded per client, or the
+        // endpoint becomes a request amplifier for anyone who knows the URL.
+        if (!takeWarmToken(clientAddress(request))) return noContent;
         // DeepSeek writes everything while Luna is paused.
         await fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {});
-        return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+        return noContent;
       },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number) =>

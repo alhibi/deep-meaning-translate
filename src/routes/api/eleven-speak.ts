@@ -2,16 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ElevenInput, elevenBody } from "@/lib/voice/elevenVoice";
 import { kindForStatus } from "@/lib/voice/geminiVoice";
 import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
-import { takeSpeechToken } from "@/lib/translation/throttle";
+import { takeSpeechToken, takeWarmToken } from "@/lib/translation/throttle";
 
 export const Route = createFileRoute("/api/eleven-speak")({
   staticData: { sitemap: false },
   server: {
     handlers: {
       // Warm-up: open DNS/TLS to ElevenLabs before the first Listen tap. No key, no text.
-      GET: async () => {
+      GET: async ({ request }) => {
+        const noContent = new Response(null, {
+          status: 204,
+          headers: { "Cache-Control": "no-store" },
+        });
+        if (!takeWarmToken(clientAddress(request))) return noContent;
         await fetch("https://api.elevenlabs.io/v1/models", { method: "HEAD" }).catch(() => {});
-        return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+        return noContent;
       },
       POST: async ({ request }) => {
         const fail = (kind: string, status: number, retry?: string | null) =>

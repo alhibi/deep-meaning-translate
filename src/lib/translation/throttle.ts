@@ -59,3 +59,10 @@ export const takeRepairToken = createLimiter(24, 0.4);
 
 /** Cloud speech: synthesis costs more than a translation and is played, not typed. */
 export const takeSpeechToken = createLimiter(40, 1.2);
+
+/**
+ * Connection warm-ups. They send no text and cost no model tokens, but each one is
+ * still a real outbound request to a paid provider's API, so it gets its own small
+ * budget instead of being an unbounded amplifier for anyone with the URL.
+ */
+export const takeWarmToken = createLimiter(12, 0.3);

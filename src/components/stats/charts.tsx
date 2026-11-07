@@ -126,7 +126,9 @@ export const Donut = memo(function Donut({
   let offset = 0;
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[188px]">
-      <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="img" aria-label={label}>
+      {/* A group, not an image: the slices are real buttons, so a keyboard user can
+          reach the same filter a pointer user reaches. */}
+      <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="group" aria-label={label}>
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--border)" strokeWidth="9" />
         {slices.map((s) => {
           const len = (s.value / total) * c;
@@ -144,7 +146,16 @@ export const Donut = memo(function Donut({
               strokeDashoffset={-offset}
               opacity={selected && selected !== s.id ? 0.35 : 1}
               onClick={() => onSelect(s.id)}
-              className="cursor-pointer motion-safe:transition-[stroke-width,opacity] motion-safe:duration-300"
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onSelect(s.id);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={s.label}
+              aria-pressed={selected === s.id}
+              className="donut-slice cursor-pointer motion-safe:transition-[stroke-width,opacity] motion-safe:duration-300"
             >
               <title>{s.label}</title>
             </circle>
