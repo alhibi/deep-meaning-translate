@@ -241,6 +241,12 @@ html.vivid {
  * the person touched, and drives its own clip-path animation, so while it owns the root
  * pseudo-elements the default fade has to be suppressed or the two fight.
  *
+ * The overlay itself carries the page colour. A cross-fade is two partially transparent
+ * snapshots for most of its life; without this backdrop the browser's canvas — which
+ * need not be the app's palette — shows through as a one-frame colour shift. Both
+ * snapshots also share a duration and easing now, so neither page is over-weighted
+ * mid-transition and the cross-fade stays perceptually even.
+ *
  * `html.theme-reveal` is added for exactly the lifetime of that transition
  * (`src/lib/theme.ts`); nothing else ever carries it.
  */
@@ -254,11 +260,16 @@ html.vivid {
     opacity: 0;
   }
 }
+::view-transition {
+  background-color: var(--background);
+}
 ::view-transition-old(root) {
-  animation: vt-out 180ms var(--ease-soft) both;
+  mix-blend-mode: normal;
+  animation: vt-out 220ms var(--ease-soft) both;
 }
 ::view-transition-new(root) {
-  animation: vt-in 260ms var(--ease-out) both;
+  mix-blend-mode: normal;
+  animation: vt-in 220ms var(--ease-soft) both;
 }
 html.theme-reveal::view-transition-old(root),
 html.theme-reveal::view-transition-new(root) {
@@ -283,6 +294,15 @@ html.theme-fade *::after {
 
   html {
     -webkit-text-size-adjust: 100%;
+    /*
+     * The document owns the canvas colour explicitly: during a route transition, an
+     * overscroll on mobile, or the frame before body paints, the visible colour must
+     * already be the app's, not the browser's default.
+     */
+    background-color: var(--color-background);
+    /* The translator never scrolls the document; /stats and the public pages do.
+       Reserving the gutter once keeps that width change out of navigation. */
+    scrollbar-gutter: stable;
   }
 
   body {

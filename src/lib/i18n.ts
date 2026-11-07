@@ -573,13 +573,32 @@ function apply(l: Locale) {
   html.dir = l === "ar" ? "rtl" : "ltr";
 }
 
+/**
+ * Self-contained on purpose: the pre-paint boot is built from this exact function, so
+ * the stored choice, the browser fallback and React can never disagree about validity.
+ */
+export function normalizeLocale(value: unknown): Locale | null {
+  return value === "ar" || value === "de" || value === "en" ? value : null;
+}
+
+/**
+ * Direction and document language before the first paint.
+ * The interface copy still hydrates from storage, but an Arabic reader no longer sees
+ * an English, left-to-right page reflow into Arabic, right-to-left a moment later.
+ */
+export const LOCALE_BOOT = `(function(){var P=${normalizeLocale.toString()};var s=null;try{s=P(localStorage.getItem("${STORAGE}"))}catch(e){}if(!s){try{var nav=navigator.languages??[navigator.language];for(var i=0;i<nav.length;i++){var v=P(String(nav[i]).slice(0,2).toLowerCase());if(v){s=v;break}}}catch(e){}}s=s||"en";var d=document.documentElement;d.lang=s;d.dir=s==="ar"?"rtl":"ltr";})();`;
+
 function detectInitial(): Locale {
   try {
-    const saved = localStorage.getItem(STORAGE) as Locale | null;
-    if (saved && LOCALES.includes(saved)) return saved;
+    const saved = normalizeLocale(localStorage.getItem(STORAGE));
+    if (saved) return saved;
   } catch {}
   const nav = (navigator.languages ?? [navigator.language]).map((x) => x.slice(0, 2).toLowerCase());
-  return (nav.find((x) => LOCALES.includes(x as Locale)) as Locale) ?? "en";
+  for (const code of nav) {
+    const locale = normalizeLocale(code);
+    if (locale) return locale;
+  }
+  return "en";
 }
 
 let started = false;

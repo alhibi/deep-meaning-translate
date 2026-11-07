@@ -48,13 +48,6 @@ export default defineConfig({
               handler: "CacheFirst",
               options: { cacheName: "lingua-assets", expiration: { maxEntries: 80 } },
             },
-            {
-              urlPattern: ({ url }) =>
-                url.origin === "https://fonts.googleapis.com" ||
-                url.origin === "https://fonts.gstatic.com",
-              handler: "StaleWhileRevalidate",
-              options: { cacheName: "lingua-fonts", expiration: { maxEntries: 12 } },
-            },
             // Translation requests (/_serverFn) are never cached.
           ],
         },

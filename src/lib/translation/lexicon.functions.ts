@@ -14,7 +14,7 @@ const LexiconInput = z.object({
 });
 
 export const lookupLexicon = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => LexiconInput.parse(input))
+  .validator((input: unknown) => LexiconInput.parse(input))
   .handler(
     async ({ data }): Promise<{ ok: true; lexicon: import("./lexicon").LexiconResult | null }> => {
       const { isLexiconCandidate } = await import("./lexicon");

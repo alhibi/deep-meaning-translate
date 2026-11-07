@@ -77,6 +77,16 @@ export function parseSession(v: unknown): Session | null {
   };
 }
 
+/**
+ * In-memory memory of this tab's own last values.
+ *
+ * Route components unmount on navigation; the translator must not remount empty.
+ * This copy lives as long as the tab, is never read during server rendering, and is
+ * only an initial value: storage stays the single source of truth across reloads.
+ */
+let rememberedPrefs: Prefs | null = null;
+let rememberedSession: Session | null = null;
+
 function get(key: string): unknown {
   try {
     const raw = window.localStorage.getItem(key);
@@ -98,11 +108,28 @@ function set(key: string, value: unknown): boolean {
 
 export const persist = {
   prefs: () => parsePrefs(get(PREFS)),
-  savePrefs: (p: Prefs) => set(PREFS, p),
+  savePrefs: (p: Prefs) => {
+    rememberedPrefs = p;
+    return set(PREFS, p);
+  },
   session: () => parseSession(get(SESSION)),
-  saveSession: (s: Session | null) => set(SESSION, s && s.text.trim() ? s : null),
+  saveSession: (s: Session | null) => {
+    const valid = s && s.text.trim() ? s : null;
+    rememberedSession = valid;
+    return set(SESSION, valid);
+  },
+  /**
+   * The last values this tab held, for a route that is being mounted again.
+   * Empty on server rendering and on the first visit; never a substitute for storage.
+   */
+  remembered: (): { prefs: Prefs | null; session: Session | null } => ({
+    prefs: rememberedPrefs,
+    session: rememberedSession,
+  }),
   /** Remove everything Lingua keeps on this device. */
   clearAll() {
+    rememberedPrefs = null;
+    rememberedSession = null;
     try {
       for (const k of Object.keys(window.localStorage))
         if (k.startsWith("lingua.")) window.localStorage.removeItem(k);

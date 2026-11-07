@@ -110,6 +110,12 @@ export function useTranslator(opts: {
   style: StyleOverride;
   dialect?: Dialect;
   brain?: Brain;
+  /**
+   * A translation carried over from this tab's previous mount (returning from another
+   * route). It is shown on the first paint and its key is treated as committed, so the
+   * scheduler neither re-requests it nor briefly replaces it with a loading state.
+   */
+  restored?: TranslationResult | null;
   onSuccess?: (result: TranslationResult, text: string, provisional: boolean) => void;
 }) {
   const { text, source, target, onSuccess } = opts;
@@ -117,10 +123,12 @@ export function useTranslator(opts: {
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const brain: Brain = opts.brain ?? DEFAULT_BRAIN;
   const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
+  const restored = opts.restored ?? null;
+  const restoredKey = restored ? keyOf(normalize(text), source, target, styleKey) : null;
   const callRepair = useServerFn(repairTranslation);
 
-  const [phase, setPhase] = useState<Phase>("EMPTY");
-  const [result, setResult] = useState<TranslationResult | null>(null);
+  const [phase, setPhase] = useState<Phase>(restored ? "COMPLETE" : "EMPTY");
+  const [result, setResult] = useState<TranslationResult | null>(restored);
   const [provisional, setProvisional] = useState(false);
   const [error, setError] = useState<ErrorKind | null>(null);
   const [showPending, setShowPending] = useState(false);
@@ -142,12 +150,12 @@ export function useTranslator(opts: {
   /** Request token of the text currently on screen; older streams never overwrite it. */
   const shown = useRef(0);
   /** Length of the text on screen: a newer stream takes over only once it catches up (no shrinking flicker). */
-  const shownLen = useRef(0);
+  const shownLen = useRef(restored?.translation.length ?? 0);
   const dropLingering = () => {
     lingering.current?.abort();
     lingering.current = null;
   };
-  const committedKey = useRef<string | null>(null);
+  const committedKey = useRef<string | null>(restoredKey);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cache = useRef(new Map<string, Cached>());
   const deliberate = useRef(false);

@@ -1,9 +1,10 @@
 import { INTRO_BOOT } from "@/lib/intro";
-import { THEME_BOOT } from "@/lib/theme";
+import { THEME_BOOT, syncThemeColor } from "@/lib/theme";
+import { LOCALE_BOOT } from "@/lib/i18n";
 import { ErrorScreen, NotFoundScreen } from "@/components/FailureScreen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 // The two faces used above the fold. Preloading them removes the late swap: without it
@@ -80,6 +81,7 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOT }} />
         <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT }} />
         {/* A browser without JavaScript keeps the translator visible: the gate exists
             only to stop a flash, never to hide the app from someone it cannot open. */}
@@ -98,6 +100,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    // The palette is already correct before paint (THEME_BOOT); this also keeps the
+    // browser chrome right on routes that mount no ThemeToggle, such as /stats.
+    syncThemeColor();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

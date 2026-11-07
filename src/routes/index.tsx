@@ -56,6 +56,7 @@ import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
 import { persist } from "@/lib/persist";
 import { introPending, releaseIntroGate } from "@/lib/intro";
+import { restorePlan } from "@/lib/translation/restore";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 /*
@@ -146,14 +147,18 @@ export const Route = createFileRoute("/")({
 const MAX_CHARS = 5000;
 
 function Translator() {
-  const [text, setText] = useState("");
-  const [source, setSource] = useState("auto");
-  const [target, setTarget] = useState("de");
-  const [style, setStyle] = useState<StyleOverride>("natural");
-  const [dialect, setDialect] = useState<Dialect>("auto");
+  // Returning from another route must not paint an empty translator first: the tab's
+  // own last values seed the first render. On a cold load this is empty, and the boot
+  // effect below restores storage exactly as before (server HTML and client match).
+  const [boot] = useState(() => persist.remembered());
+  const [text, setText] = useState(boot.session?.text ?? "");
+  const [source, setSource] = useState(boot.session?.source ?? "auto");
+  const [target, setTarget] = useState(boot.session?.target ?? "de");
+  const [style, setStyle] = useState<StyleOverride>(boot.session?.style ?? "natural");
+  const [dialect, setDialect] = useState<Dialect>(boot.prefs?.dialect ?? "auto");
   const [dialectOpen, setDialectOpen] = useState(false);
-  const [brain, setBrain] = useState<Brain>(DEFAULT_BRAIN);
-  const [shadowOn, setShadowOn] = useState(true);
+  const [brain, setBrain] = useState<Brain>(effectiveBrain(boot.prefs?.brain ?? DEFAULT_BRAIN));
+  const [shadowOn, setShadowOn] = useState(boot.prefs?.shadow !== false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
   /** Mounted from the first paint; CSS decides whether this visit sees it. */
@@ -217,6 +222,7 @@ function Translator() {
     style,
     dialect,
     brain,
+    restored: boot.session?.result ?? null,
     onSuccess: handleSuccess,
   });
 
@@ -230,8 +236,6 @@ function Translator() {
     // The same values the translator will use after restoring, resolved *now*: state
     // setters below are asynchronous, so reading them back for the cache key would
     // prime a key the first request can never find.
-    const bootDialect: Dialect = prefs?.dialect ?? "auto";
-    const bootBrain: Brain = effectiveBrain(prefs?.brain ?? DEFAULT_BRAIN);
     if (prefs) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
       setSource(prefs.source);
@@ -263,26 +267,30 @@ function Translator() {
       submitNext();
       setText(shared.slice(0, MAX_CHARS));
     } else if (session?.text) {
-      // A strong writing-system mismatch already reroutes the request to "auto", so
-      // the primed key has to be built from that same effective source.
-      const sessionSource = checkSource(session.text, session.source)?.strong
-        ? "auto"
-        : session.source;
-      if (session.result)
+      // The session owns the pair it was written in. Restoring the preference pair
+      // instead primed a key the first request could not find: the draft came back,
+      // the translation vanished, and the sentence was paid for again.
+      const plan = restorePlan(session, prefs);
+      if (plan.result)
         prime(
-          session.text,
+          plan.text,
           {
-            source: sessionSource,
-            target: session.target,
-            style: session.style,
-            dialect: session.target === "ar" ? bootDialect : "auto",
-            brain: bootBrain,
+            source: plan.requestSource,
+            target: plan.target,
+            style: plan.style,
+            dialect: plan.target === "ar" ? plan.dialect : "auto",
+            brain: plan.brain,
           },
-          session.result,
+          plan.result,
         );
       submitNext();
-      quietRef.current = session.text.trim();
-      setText(session.text);
+      quietRef.current = plan.text.trim();
+      setText(plan.text);
+      setSource(plan.source);
+      setTarget(plan.target);
+      setStyle(plan.style);
+      setDialect(plan.dialect);
+      setBrain(plan.brain);
     }
     if (wantsIntro) {
       setIntroOpen(true);

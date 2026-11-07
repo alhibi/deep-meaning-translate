@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { nextTheme, parseTheme, THEME_BOOT, THEME_KEY, THEMES, useTheme } from "./theme";
+import {
+  nextTheme,
+  parseTheme,
+  syncThemeColor,
+  THEME_BOOT,
+  THEME_KEY,
+  THEMES,
+  useTheme,
+} from "./theme";
 
 afterEach(() => {
   cleanup();
@@ -69,6 +77,16 @@ describe("the three themes", () => {
       result.current.toggle(1, 1);
     });
     expect(result.current.theme).toBe("light");
+  });
+
+  it("never blanks the browser-chrome colour when no stylesheet is present", () => {
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    meta.content = "#12100f";
+    document.head.appendChild(meta);
+    syncThemeColor();
+    expect(meta.content).toBe("#12100f");
+    meta.remove();
   });
 
   it("applies the vivid class and leaves no stale theme class behind", () => {

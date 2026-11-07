@@ -25,7 +25,7 @@ export type TranslateResponse =
   | { ok: false; kind: "auth" | "quota" | "rate" | "network" | "provider" | "input" };
 
 export const translate = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => InputSchema.parse(input))
+  .validator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<TranslateResponse> => {
     const request = getRequest();
     if (!sameOrigin(request)) return { ok: false, kind: "input" };
@@ -73,7 +73,7 @@ const ResultSchema = z.object({
 
 /** Quiet second pass for a shown translation that failed the deterministic checks. */
 export const repairTranslation = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z.object({ request: InputSchema, previous: ResultSchema }).parse(input),
   )
   .handler(

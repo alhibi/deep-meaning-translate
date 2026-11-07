@@ -89,6 +89,22 @@ describe("session", () => {
     const { persist } = await import("./persist");
     expect(() => persist.session()).not.toThrow();
   });
+  it("remembers this tab's last values for a route that mounts again", async () => {
+    vi.resetModules();
+    const { persist } = await import("./persist");
+    persist.saveSession({
+      text: "Hallo",
+      result: null,
+      source: "de",
+      target: "ar",
+      style: "natural",
+    });
+    persist.savePrefs({ source: "de", target: "ar", style: "natural" });
+    expect(persist.remembered().session?.text).toBe("Hallo");
+    expect(persist.remembered().prefs?.target).toBe("ar");
+    persist.clearAll();
+    expect(persist.remembered()).toEqual({ prefs: null, session: null });
+  });
 });
 
 describe("data integrity (edit, delete, restore)", () => {

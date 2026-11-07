@@ -250,4 +250,17 @@ describe("useTranslator", () => {
     }
     expect(call.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("opens a carried-over result immediately and spends no request", async () => {
+    const carried = result("محفوظة");
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("Guten Morgen."), restored: carried },
+    });
+    // Returning from another route: the first paint already shows the translation.
+    expect(h.current.result?.translation).toBe("محفوظة");
+    expect(h.current.phase).toBe("COMPLETE");
+    await flush(1500);
+    expect(call).not.toHaveBeenCalled();
+    expect(h.current.result?.translation).toBe("محفوظة");
+  });
 });

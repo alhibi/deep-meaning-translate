@@ -11,6 +11,61 @@
 
 <!-- LOVABLE:END -->
 
+## Start here
+
+This file is the operating contract. It is deliberately short on architecture detail: the
+knowledge lives in `docs/`, and this file says which document wins and how to change code safely.
+
+| Question | Source of truth |
+| --- | --- |
+| What the product is, and what it refuses to become | `PROJECT_CONSTITUTION.md`, `docs/product/` |
+| Where code lives and what depends on what | `PROJECT_MAP.md`, `docs/architecture/overview.md` |
+| Why navigation, theme and restore behave this way | `docs/architecture/navigation-and-lifecycle.md` |
+| How a translation is produced and verified | `docs/translation/` (prompts live only in `src/lib/translation/prompt.ts`) |
+| What must be true before calling work done | `DEFINITION_OF_DONE.md` |
+| How to test, build and release | `docs/quality/testing.md`, `docs/operations/development-and-release.md` |
+| Security boundaries and privacy claims | `docs/security/privacy-and-threat-model.md` |
+| Known debt and unverified areas | `docs/audits/technical-debt.md` |
+
+Authority order when documents disagree: **verified implementation and executable gates** →
+approved decisions (`docs/architecture/decisions/`) → current specifications → this file →
+historical notes and proposals. Reconcile the contradiction; never silently pick a side.
+
+### Commands
+
+```sh
+npm ci
+npm run dev              # http://localhost:8080
+npm run verify           # typecheck + lint + tests + contrast
+npm run check:docs       # documentation links and inventory
+npm run build            # production Worker bundle + headers + PWA check
+npm run preview          # serve the built Worker on Node
+```
+
+### Change workflow
+
+1. Read the relevant document and the code path it names. Never document a capability before
+   tracing its execution path.
+2. Reproduce the defect, then fix its cause. Keep the smallest coherent change; no unrelated
+   refactors, no new abstraction without a concrete justification.
+3. Add or update a regression test. A bug fix without a test is unfinished.
+4. Run the narrowest check that covers the change, then `npm run verify`. Run the build when
+   routing, bundling, headers, the service worker or server code changed.
+5. Update the documents whose **Scope** covers the change. If behaviour and documentation
+   disagree, the implementation is evidence and the document must be corrected — unless the
+   implementation is the defect, in which case fix it and record the decision.
+6. Record new debt in `docs/audits/technical-debt.md`; never label unresolved work as fixed.
+
+### Hard rules
+
+- Never fabricate a test result, a measurement or an audit. Use the classifications in
+  `docs/quality/testing.md` (VERIFIED / OBSERVED / SUSPECTED / NOT_VERIFIED).
+- Never commit, print or document secret values. Provider keys are read only in server handlers.
+- Never rewrite published Git history, force-push, or leave the connected branch broken.
+- Preserve the product's meaning-first identity and the one-screen workflow.
+- Preserve user data and device persistence; any migration must read old values through a
+  validator and keep a rollback path.
+
 - Everything read back from device storage goes through a validator (parsePrefs/parseSession/isPhrase/isEntry) mirroring the server input schema — corrupted or stale data must never reach the server or crash the UI.
 - Two-brain translation: the request's `brain` field (default from DEFAULT_BRAIN in types.ts) picks the writer; the other model is the automatic fallback, and DeepSeek reviews only Luna-written sentences. All provider routing lives in engine.server.ts / translate-stream route; the app must still work with only one key.
 - Stats are computed locally from the history archive (lingua.history.v1); no separate store — keeps one source of truth and old rows.

@@ -32,6 +32,21 @@ function current(): Theme {
   return parseTheme(document.documentElement.dataset["theme"]);
 }
 
+/**
+ * Keep the browser chrome in step with the document palette (mobile address bar, PWA).
+ * The root route calls this once after mount: `/stats` renders no ThemeToggle, so
+ * without it a light visit kept the hardcoded dark `theme-color` from the server head.
+ */
+export function syncThemeColor(): void {
+  if (typeof document === "undefined") return;
+  const color = getComputedStyle(document.documentElement).getPropertyValue("--background").trim();
+  // jsdom has no stylesheet; never blank the meta with an empty computed value.
+  if (!color) return;
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((m) => m.setAttribute("content", color));
+}
+
 function apply(t: Theme) {
   const d = document.documentElement;
   d.classList.remove("dark", "light", "vivid");
@@ -40,10 +55,7 @@ function apply(t: Theme) {
   // `vivid` is a dark palette: form controls, scrollbars and the UA colour scheme
   // all follow the dark branch, exactly as they do for clay dark.
   d.style.colorScheme = t === "light" ? "light" : "dark";
-  const color = getComputedStyle(d).getPropertyValue("--background").trim();
-  document
-    .querySelectorAll('meta[name="theme-color"]')
-    .forEach((m) => m.setAttribute("content", color));
+  syncThemeColor();
 }
 
 export function useTheme() {

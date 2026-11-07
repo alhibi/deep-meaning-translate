@@ -16,7 +16,7 @@ const ShadowInput = z.object({
 
 /** Sentence Shadow analysis. Any failure is a quiet `null`; user text is never logged. */
 export const analyzeShadow = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => ShadowInput.parse(input))
+  .validator((input: unknown) => ShadowInput.parse(input))
   .handler(async ({ data }): Promise<{ shadow: import("./shadow").ShadowResult | null }> => {
     const sh = await import("./shadow");
     const request = getRequest();
