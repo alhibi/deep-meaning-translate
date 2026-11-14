@@ -24,7 +24,7 @@ page is hidden. On return to `/`, the draft and translation paint from the remem
 without a new request.
 
 **Failure.** Offline, timeout, rate limit and provider errors produce a calm, translated state and
-keep the previous good result and the draft. Transient failures retry once. A rate-limited *live*
+keep the previous good result and the draft. Transient failures retry once. A rate-limited _live_
 request stays silent while typing.
 
 ## 2. Hold a conversation in Live mode

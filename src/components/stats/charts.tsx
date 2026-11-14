@@ -6,20 +6,48 @@ import { addDays, daysBetween, weekKey } from "@/lib/stats/engine";
 /** Every point represents one actual bucket, including days with no activity. */
 export function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
-  const points = values.map((value, i) =>
-    `${values.length > 1 ? (i / (values.length - 1)) * 120 : 60},${29 - (value / max) * 25}`,
-  ).join(" ");
+  const points = values
+    .map(
+      (value, i) =>
+        `${values.length > 1 ? (i / (values.length - 1)) * 120 : 60},${29 - (value / max) * 25}`,
+    )
+    .join(" ");
   return (
-    <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true" className="h-8 w-full text-muted-foreground">
+    <svg
+      viewBox="0 0 120 32"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      className="h-8 w-full text-muted-foreground"
+    >
       <path d="M0 29H120" stroke="var(--border-strong)" fill="none" />
-      {values.length === 1 ? <circle cx="60" cy={29 - ((values[0] ?? 0) / max) * 25} r="2" fill="currentColor" /> :
-        <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />}
+      {values.length === 1 ? (
+        <circle cx="60" cy={29 - ((values[0] ?? 0) / max) * 25} r="2" fill="currentColor" />
+      ) : (
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+          strokeLinejoin="round"
+        />
+      )}
     </svg>
   );
 }
 
 /** Daily buckets only. Blank cells are outside the period, not zero-activity days. */
-export function CalendarChart({ buckets, metric, selected, todayKey, onSelect, fmt, label, less, more }: {
+export function CalendarChart({
+  buckets,
+  metric,
+  selected,
+  todayKey,
+  onSelect,
+  fmt,
+  label,
+  less,
+  more,
+}: {
   buckets: Bucket[];
   metric: "translations" | "words";
   selected: string | null;
@@ -38,24 +66,48 @@ export function CalendarChart({ buckets, metric, selected, todayKey, onSelect, f
   return (
     <div role="group" aria-label={label}>
       <div dir="ltr" className="grid grid-cols-7 gap-1.5">
-        {Array.from({ length: 7 }, (_, i) => <span key={i} className="pb-1 text-center text-[12px] text-muted-foreground">{fmt.weekday(addDays(monday, i))}</span>)}
-        {Array.from({ length: padding }, (_, i) => <span key={`pad-${i}`} aria-hidden="true" />)}
+        {Array.from({ length: 7 }, (_, i) => (
+          <span key={i} className="pb-1 text-center text-[12px] text-muted-foreground">
+            {fmt.weekday(addDays(monday, i))}
+          </span>
+        ))}
+        {Array.from({ length: padding }, (_, i) => (
+          <span key={`pad-${i}`} aria-hidden="true" />
+        ))}
         {buckets.map((b) => {
           const level = b[metric] === 0 ? 0 : Math.max(1, Math.ceil((b[metric] / max) * 4));
           const name = `${fmt.dayLong(b.from)}: ${fmt.num(b[metric])}`;
           return (
-            <button key={b.key} type="button" onClick={() => onSelect(b.key)} aria-label={name} aria-pressed={selected === b.key} aria-current={b.key === todayKey ? "date" : undefined} title={name}
-              data-level={level} data-selected={selected === b.key}
-              className="stats-calendar-day press-soft flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md border text-[12px] tabular-nums">
+            <button
+              key={b.key}
+              type="button"
+              onClick={() => onSelect(b.key)}
+              aria-label={name}
+              aria-pressed={selected === b.key}
+              aria-current={b.key === todayKey ? "date" : undefined}
+              title={name}
+              data-level={level}
+              data-selected={selected === b.key}
+              className="stats-calendar-day press-soft flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md border text-[12px] tabular-nums"
+            >
               <span>{fmt.num(Number(b.from.slice(-2)))}</span>
               <span className="text-[10px]">{fmt.num(b[metric])}</span>
             </button>
           );
         })}
       </div>
-      <div className="mt-3 flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground" aria-hidden="true">
+      <div
+        className="mt-3 flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground"
+        aria-hidden="true"
+      >
         <span>{less}</span>
-        {[0, 1, 2, 3, 4].map((level) => <span key={level} data-level={level} className="stats-calendar-day size-2.5 rounded-sm border" />)}
+        {[0, 1, 2, 3, 4].map((level) => (
+          <span
+            key={level}
+            data-level={level}
+            className="stats-calendar-day size-2.5 rounded-sm border"
+          />
+        ))}
         <span>{more}</span>
       </div>
     </div>

@@ -900,12 +900,25 @@ html:not([data-intro="open"]) .intro-screen {
   background: var(--surface);
   border-color: var(--border);
 }
-.stats-calendar-day[data-level="1"] { background: color-mix(in oklab, var(--cat-2) 14%, var(--background)); }
-.stats-calendar-day[data-level="2"] { background: color-mix(in oklab, var(--cat-2) 23%, var(--background)); }
-.stats-calendar-day[data-level="3"] { background: color-mix(in oklab, var(--cat-2) 32%, var(--background)); }
-.stats-calendar-day[data-level="4"] { background: color-mix(in oklab, var(--cat-2) 42%, var(--background)); }
-.stats-calendar-day[data-selected="true"] { outline: 2px solid var(--ring); outline-offset: 2px; }
-.stats-calendar-day[aria-current="date"] { border-color: var(--foreground); }
+.stats-calendar-day[data-level="1"] {
+  background: color-mix(in oklab, var(--cat-2) 14%, var(--background));
+}
+.stats-calendar-day[data-level="2"] {
+  background: color-mix(in oklab, var(--cat-2) 23%, var(--background));
+}
+.stats-calendar-day[data-level="3"] {
+  background: color-mix(in oklab, var(--cat-2) 32%, var(--background));
+}
+.stats-calendar-day[data-level="4"] {
+  background: color-mix(in oklab, var(--cat-2) 42%, var(--background));
+}
+.stats-calendar-day[data-selected="true"] {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.stats-calendar-day[aria-current="date"] {
+  border-color: var(--foreground);
+}
 
 .donut-slice:focus-visible {
   outline: 2px solid var(--ring);

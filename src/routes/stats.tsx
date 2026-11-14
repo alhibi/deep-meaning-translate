@@ -1,6 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Activity, ArrowDownRight, ArrowLeft, ArrowUpRight, BarChart3, CalendarDays, ChevronDown, ChevronRight, Languages, ListFilter, Type, X, type LucideIcon } from "lucide-react";
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowLeft,
+  ArrowUpRight,
+  BarChart3,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  Languages,
+  ListFilter,
+  Type,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { initLocale, useI18n } from "@/lib/i18n";
 import { useTodayKey } from "@/lib/useTodayKey";
 import { history } from "@/lib/history";
@@ -43,7 +57,15 @@ import {
   writeStatsPrefs,
 } from "@/lib/stats/useArchive";
 import { makeFormat, type Fmt } from "@/components/stats/format";
-import { BarList, CalendarChart, Donut, Sparkline, StackBar, TimelineChart, type BarRow } from "@/components/stats/charts";
+import {
+  BarList,
+  CalendarChart,
+  Donut,
+  Sparkline,
+  StackBar,
+  TimelineChart,
+  type BarRow,
+} from "@/components/stats/charts";
 import { RecordList } from "@/components/stats/RecordList";
 import { RecordSheet } from "@/components/stats/RecordSheet";
 import { DetailSheet, type DetailSpec } from "@/components/stats/DetailSheet";
@@ -440,14 +462,33 @@ function StatsPage() {
             </p>
 
             {/* Activity */}
-            <Panel title={t("activity")} className="lg:col-span-2" action={gran === "day" ? (
-              <div role="radiogroup" aria-label={t("activity")} className="flex gap-1">
-                {(["bars", "calendar"] as const).map((view) => {
-                  const Icon = view === "bars" ? BarChart3 : CalendarDays;
-                  return <button key={view} type="button" role="radio" aria-checked={activityView === view} aria-label={t(view === "bars" ? "barsView" : "calendarView")} title={t(view === "bars" ? "barsView" : "calendarView")} onClick={() => setActivityView(view)} className={`press-soft grid size-9 place-items-center rounded-md ${activityView === view ? "bg-signal-soft text-signal-text" : "text-muted-foreground"}`}><Icon className="size-4" strokeWidth={1.75} /></button>;
-                })}
-              </div>
-            ) : undefined}>
+            <Panel
+              title={t("activity")}
+              className="lg:col-span-2"
+              action={
+                gran === "day" ? (
+                  <div role="radiogroup" aria-label={t("activity")} className="flex gap-1">
+                    {(["bars", "calendar"] as const).map((view) => {
+                      const Icon = view === "bars" ? BarChart3 : CalendarDays;
+                      return (
+                        <button
+                          key={view}
+                          type="button"
+                          role="radio"
+                          aria-checked={activityView === view}
+                          aria-label={t(view === "bars" ? "barsView" : "calendarView")}
+                          title={t(view === "bars" ? "barsView" : "calendarView")}
+                          onClick={() => setActivityView(view)}
+                          className={`press-soft grid size-9 place-items-center rounded-md ${activityView === view ? "bg-signal-soft text-signal-text" : "text-muted-foreground"}`}
+                        >
+                          <Icon className="size-4" strokeWidth={1.75} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : undefined
+              }
+            >
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div
                   role="radiogroup"
@@ -485,30 +526,36 @@ function StatsPage() {
                   })
                 }
               />
-              {activityView === "calendar" && gran === "day" ? <CalendarChart
-                buckets={buckets}
-                metric={metric}
-                selected={bucketSel}
-                todayKey={today}
-                onSelect={(k) => setBucketSel((s) => s === k ? null : k)}
-                fmt={fmt}
-                label={t("calendarView")}
-                less={t("lessActivity")}
-                more={t("moreActivity")}
-              /> : <TimelineChart
-                buckets={buckets}
-                metric={metric}
-                granularity={gran}
-                selected={bucketSel}
-                todayKey={today}
-                onSelect={(k) => setBucketSel((s) => (s === k ? null : k))}
-                fmt={fmt}
-                label={t("chartSummary", {
-                  metric: t(metric === "translations" ? "m_translations" : "m_words"),
-                  gran: t(`g_${gran}` as StatsKey),
-                  total: fmt.num(metric === "translations" ? summary.translations : summary.words),
-                })}
-              />}
+              {activityView === "calendar" && gran === "day" ? (
+                <CalendarChart
+                  buckets={buckets}
+                  metric={metric}
+                  selected={bucketSel}
+                  todayKey={today}
+                  onSelect={(k) => setBucketSel((s) => (s === k ? null : k))}
+                  fmt={fmt}
+                  label={t("calendarView")}
+                  less={t("lessActivity")}
+                  more={t("moreActivity")}
+                />
+              ) : (
+                <TimelineChart
+                  buckets={buckets}
+                  metric={metric}
+                  granularity={gran}
+                  selected={bucketSel}
+                  todayKey={today}
+                  onSelect={(k) => setBucketSel((s) => (s === k ? null : k))}
+                  fmt={fmt}
+                  label={t("chartSummary", {
+                    metric: t(metric === "translations" ? "m_translations" : "m_words"),
+                    gran: t(`g_${gran}` as StatsKey),
+                    total: fmt.num(
+                      metric === "translations" ? summary.translations : summary.words,
+                    ),
+                  })}
+                />
+              )}
               <TimelineSummary buckets={buckets} metric={metric} gran={gran} fmt={fmt} t={t} />
             </Panel>
 
@@ -658,7 +705,10 @@ function StatsPage() {
       <div className="mx-auto w-full max-w-xl lg:max-w-5xl">
         {header}
         <div className="px-5 pb-2 pt-3">
-          <div className="mb-4 flex items-center gap-2 text-muted-foreground" aria-hidden="true"><BarChart3 className="size-5" strokeWidth={1.5} /><span className="h-px w-10 bg-border-strong" /></div>
+          <div className="mb-4 flex items-center gap-2 text-muted-foreground" aria-hidden="true">
+            <BarChart3 className="size-5" strokeWidth={1.5} />
+            <span className="h-px w-10 bg-border-strong" />
+          </div>
           <h1 className="text-[28px] font-semibold leading-tight">{t("title")}</h1>
           <p className="mt-1.5 max-w-md text-[14px] leading-relaxed text-muted-foreground">
             {t("subtitle")}
@@ -831,7 +881,13 @@ function KpiCard({
       onClick={onClick}
       className={`press-soft relative flex min-w-0 flex-col justify-between rounded-lg border border-border bg-surface p-3 text-start ${wide ? "min-h-[172px] sm:p-4" : "min-h-[136px]"} ${className}`}
     >
-      <span className="mb-2 flex items-center justify-between text-muted-foreground" aria-hidden="true"><Icon className="size-4" strokeWidth={1.5} /><ChevronRight className="size-3 rtl:-scale-x-100" /></span>
+      <span
+        className="mb-2 flex items-center justify-between text-muted-foreground"
+        aria-hidden="true"
+      >
+        <Icon className="size-4" strokeWidth={1.5} />
+        <ChevronRight className="size-3 rtl:-scale-x-100" />
+      </span>
       <span className="text-[12.5px] leading-snug text-muted-foreground">{label}</span>
       <span className="mt-3 flex flex-wrap items-baseline gap-1.5">
         <span
@@ -846,12 +902,23 @@ function KpiCard({
         ) : null}
       </span>
       {prev !== undefined && delta !== undefined && delta !== null ? (
-        <span dir="ltr" className="mt-2 inline-flex items-center gap-1 text-[12px] tabular-nums text-muted-foreground">
-          {delta > 0 ? <ArrowUpRight className="size-3.5" /> : delta < 0 ? <ArrowDownRight className="size-3.5" /> : null}
+        <span
+          dir="ltr"
+          className="mt-2 inline-flex items-center gap-1 text-[12px] tabular-nums text-muted-foreground"
+        >
+          {delta > 0 ? (
+            <ArrowUpRight className="size-3.5" />
+          ) : delta < 0 ? (
+            <ArrowDownRight className="size-3.5" />
+          ) : null}
           {fmt.delta(delta)}
         </span>
       ) : null}
-      {spark ? <span className="mt-3 block w-full" dir="ltr"><Sparkline values={spark} /></span> : null}
+      {spark ? (
+        <span className="mt-3 block w-full" dir="ltr">
+          <Sparkline values={spark} />
+        </span>
+      ) : null}
     </button>
   );
 }
