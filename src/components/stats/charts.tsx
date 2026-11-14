@@ -235,11 +235,18 @@ export const Donut = memo(function Donut({
   const r = 42;
   const c = 2 * Math.PI * r;
   const gap = slices.length > 1 ? 1.6 : 0;
-  const arcs = slices.reduce<{ slice: DonutSlice; length: number; offset: number }[]>((out, slice) => {
-    const previous = out[out.length - 1];
-    out.push({ slice, length: (slice.value / total) * c, offset: previous ? previous.offset + previous.length : 0 });
-    return out;
-  }, []);
+  const arcs = slices.reduce<{ slice: DonutSlice; length: number; offset: number }[]>(
+    (out, slice) => {
+      const previous = out[out.length - 1];
+      out.push({
+        slice,
+        length: (slice.value / total) * c,
+        offset: previous ? previous.offset + previous.length : 0,
+      });
+      return out;
+    },
+    [],
+  );
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[188px]">
       {/* A group, not an image: the slices are real buttons, so a keyboard user can
