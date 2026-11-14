@@ -8,7 +8,7 @@ Status: **Verified** on 2026-11-07. Counts below are from executed commands, not
 | --- | --- | --- |
 | `npm run typecheck` | TypeScript consistency | PASS, 0 errors |
 | `npm run lint -- --max-warnings 0` | ESLint + Prettier, zero warnings | PASS |
-| `npm run test` | Vitest unit/integration suite | **300 passed, 4 skipped, 50 files** |
+| `npm run test` | Vitest unit/integration suite with coverage | **302 passed, 4 skipped, 51 files**; coverage collected |
 | `npm run check:contrast` | WCAG AA for every theme pair | **51/51 pairs** |
 | `npm run check:docs` | Documentation links and inventory | added in this audit |
 | `npm run build` | Worker bundle + headers + PWA check | PASS; **37 precached files** |
@@ -16,7 +16,9 @@ Status: **Verified** on 2026-11-07. Counts below are from executed commands, not
 | `npm run test:e2e` | Python Playwright phone checks | Requires Playwright + running app; **not run here** |
 
 Coverage floors are enforced by `vitest.config.ts` (statements/branches/functions/lines:
-48/46/39/39). Floors are a regression guard, not a quality score.
+48/46/39/39) and `npm run test` collects coverage, so the run fails when a floor is missed. The
+2026-11-14 baseline measured 51.79/41.86/42.92/53.74. Floors are a regression guard, not a quality
+score.
 
 ## Test architecture
 
@@ -46,10 +48,13 @@ behaviour works.
 ## End-to-end suite
 
 `tests/e2e/*.py` are phone-sized Playwright scripts against `http://localhost:8080`. They cover
-smoke, adversarial input, statistics, themes, voice and shadow, with network fakes for translation.
-They are **not wired into CI** and were **not executed in this audit** (Playwright/Python runner not
-available in the workspace). The new navigation scenario is documented in
-`docs/quality/navigation-regression.md`.
+smoke, navigation, service-worker navigation, adversarial input, statistics, themes, voice and
+shadow, with network fakes for translation. They are **not wired into CI**. Task 2 executed them on
+a dev server with a hydration wait: smoke and SEO passed; several journeys were **NOT_VERIFIED**
+because the headless browser closed (see `docs/audits/2026-11-14-task2-request-lifecycle.md`).
+`tests/e2e/pwa_navigation.py` runs against the production build (`npm run preview`) and proves that
+an active worker serves the app for online navigations and `/offline.html` only when a fetch fails.
+The navigation scenario is documented in `docs/quality/navigation-regression.md`.
 
 ## What is covered well
 

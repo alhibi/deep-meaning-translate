@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { InputSchema } from "@/lib/translation/translate.functions";
 import { takeToken, takeWarmToken } from "@/lib/translation/throttle";
 import { z } from "zod";
-import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
+import { clientAddress, parseAdmittedJson, sameOrigin } from "@/lib/requestSafety";
 
 const StreamInput = InputSchema.extend({
   mode: z.enum(["live", "full"]).optional().default("live"),
@@ -40,13 +40,11 @@ export const Route = createFileRoute("/api/translate-stream")({
             },
           );
         if (!sameOrigin(request)) return fail("input", 403);
-        if (!takeToken(clientAddress(request))) return fail("rate", 429);
-        let data;
-        try {
-          data = StreamInput.parse(await boundedJson(request));
-        } catch {
-          return fail("input", 400);
-        }
+        const admitted = await parseAdmittedJson(request, StreamInput, () =>
+          takeToken(clientAddress(request)),
+        );
+        if (!admitted.ok) return fail(admitted.kind, admitted.kind === "rate" ? 429 : 400);
+        const data = admitted.data;
         const upstream = new AbortController();
         const abort = () => upstream.abort();
         request.signal.addEventListener("abort", abort, { once: true });

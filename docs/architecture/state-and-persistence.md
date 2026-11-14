@@ -64,7 +64,11 @@ every `lingua.*` key.
 - text, source, target and style come from the **session**;
 - dialect and brain come from preferences (the brain passes through `effectiveBrain`);
 - a strong script mismatch sets only `requestSource = "auto"`, not the visible pair;
-- the session's cached result is returned for priming and for `useTranslator`'s `restored` seed.
+- the session's cached result is returned for priming and for `useTranslator`'s `restored` seed,
+  but only when it passes the full result validator (`translation/result.ts`) and its
+  `targetLanguage` matches the session's target; an incomplete result, or one written for another
+  target, is dropped rather than shown under the wrong pair;
+- the request's target, not the model's `targetLanguage` echo, is authoritative for that check.
 
 This prevents the primed cache key and the visible pair from drifting, which previously caused the
 draft to return without its translation and a second paid request. See ADR 0002.
@@ -72,7 +76,8 @@ draft to return without its translation and a second paid request. See ADR 0002.
 ## Device memory and archive
 
 - Memory is bounded twice (rows and bytes), has a TTL, and is validated on read. Only settled
-  results are stored; a provisional stream never went through verification.
+  results are stored; a provisional stream never went through verification. Another tab's
+  `storage` event (including a clear) drops this tab's in-memory copy.
 - History is a lightweight archive, not a chat log. Statistics are computed from it; there is no
   second stats store to drift.
 - Saved phrases are explicit user actions, not an automatic archive.
@@ -81,8 +86,10 @@ draft to return without its translation and a second paid request. See ADR 0002.
 
 ## Clearing data
 
-The privacy page exposes the local-data controls implemented by the app. `persist.clearAll()` is the
-single removal path for `lingua.*` values; a new store must join it, or it will survive "clear all".
+The privacy page exposes the local-data controls implemented by the app. `clearDeviceData()` is the
+single removal path: it resets the phrasebook, history and translation-memory caches, then removes
+every `lingua.*` value through `persist.clearAll()`. A new store must join it and its test; removing
+storage keys alone leaves module caches alive and a cleared translation can still answer from RAM.
 
 ## Known limits
 

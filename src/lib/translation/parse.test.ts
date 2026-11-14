@@ -17,3 +17,19 @@ describe("partialTranslation", () => {
     expect(r.situation).toBe("chat");
   });
 });
+
+describe("target language authority", () => {
+  const deRequest = { ...req, target: "de" };
+
+  it("keeps the requested target when the model names another language", () => {
+    // A model may echo a different target. Trusting it hid the translation behind a
+    // permanent pending state, because routing compared the model's field to the UI.
+    const r = parseResult('{"translation":"Hallo","targetLanguage":"ar"}', deRequest);
+    expect(r.targetLanguage).toBe("de");
+  });
+
+  it("still accepts a model that agrees with the request", () => {
+    const r = parseResult('{"translation":"Hallo","targetLanguage":"de"}', deRequest);
+    expect(r.targetLanguage).toBe("de");
+  });
+});

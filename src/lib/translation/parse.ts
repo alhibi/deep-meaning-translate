@@ -43,8 +43,9 @@ export function parseResult(raw: string, req: TranslationRequest): TranslationRe
   return {
     sourceLanguage:
       typeof data["sourceLanguage"] === "string" ? data["sourceLanguage"] : req.source,
-    targetLanguage:
-      typeof data["targetLanguage"] === "string" ? data["targetLanguage"] : req.target,
+    // The request is authoritative. A model that names another target language must not
+    // re-route the result: trusting it hid translations behind a permanent skeleton.
+    targetLanguage: req.target,
     translation,
     tone: typeof data["tone"] === "string" ? data["tone"] : "",
     formality: typeof data["formality"] === "string" ? data["formality"] : "",

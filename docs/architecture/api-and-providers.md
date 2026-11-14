@@ -64,12 +64,16 @@ the active writer; the OpenCode/Luna provider remains in the codebase behind the
 - Cancellation (`AbortError`, client abort) is not an error and produces no failure state.
 
 The route logs metrics only: event, mode, brain, outcome, duration, character count. It never logs
-text or the translation.
+text or the translation. Provider error messages carry the HTTP status only; the provider body is
+cancelled, never copied into an error or a log.
+
+Body size and schema are checked **before** admission: malformed or oversized input returns 400 and
+does not spend the client's token. Only a schema-valid body reaches the rate limiter.
 
 ## Rate limiting
 
 Process-local bounded token buckets, one per purpose: translation, warm-up, repair, enrichment,
-speech. Background work cannot spend the typing budget. This protects a single instance; it is not
+speech, and dictation token minting. Background work cannot spend the typing budget. This protects a single instance; it is not
 a deployment-wide abuse defence, and the documentation says so rather than implying otherwise.
 
 ## Provider failure UX

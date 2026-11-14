@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ElevenInput, elevenBody } from "@/lib/voice/elevenVoice";
 import { kindForStatus } from "@/lib/voice/geminiVoice";
-import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
+import { clientAddress, parseAdmittedJson, sameOrigin } from "@/lib/requestSafety";
 import { takeSpeechToken, takeWarmToken } from "@/lib/translation/throttle";
 
 export const Route = createFileRoute("/api/eleven-speak")({
@@ -31,13 +31,12 @@ export const Route = createFileRoute("/api/eleven-speak")({
         // like translation/Gemini; Origin checks prevent cross-site browser spending, not bots.
         if (!sameOrigin(request)) return fail("input", 403);
         // Speech synthesis is the most expensive call in the app: it needs its own budget.
-        if (!takeSpeechToken(clientAddress(request))) return fail("rate", 429, "5");
-        let data;
-        try {
-          data = ElevenInput.parse(await boundedJson(request));
-        } catch {
-          return fail("input", 400);
-        }
+        const admitted = await parseAdmittedJson(request, ElevenInput, () =>
+          takeSpeechToken(clientAddress(request)),
+        );
+        if (!admitted.ok)
+          return admitted.kind === "rate" ? fail("rate", 429, "5") : fail("input", 400);
+        const data = admitted.data;
         const key = process.env["ELEVENLABS_API_KEY"];
         if (!key) return fail("config", 503);
         const ctrl = new AbortController();

@@ -1,4 +1,4 @@
-import { isResult } from "../persist";
+import { isResult } from "./result";
 import type { TranslationResult } from "./types";
 
 /**
@@ -41,6 +41,13 @@ interface Row {
 
 /** null = not read yet, so an empty device is not re-read on every request. */
 let rows: Row[] | null = null;
+
+if (typeof window !== "undefined") {
+  // Another tab cleared the device: drop this tab's copy instead of answering from stale RAM.
+  window.addEventListener("storage", (event) => {
+    if (event.key === KEY || event.key === null) rows = null;
+  });
+}
 
 function isRow(v: unknown): v is Row {
   const r = v as Row | null;

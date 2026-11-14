@@ -18,8 +18,7 @@ import {
 import { initLocale, useI18n } from "@/lib/i18n";
 import { useTodayKey } from "@/lib/useTodayKey";
 import { history } from "@/lib/history";
-import { persist } from "@/lib/persist";
-import { saved } from "@/lib/saved";
+import { clearDeviceData } from "@/lib/clearData";
 import {
   FILTER_KEYS,
   INSIGHT_MIN,
@@ -255,9 +254,7 @@ function StatsPage() {
   );
 
   const forgetAll = () => {
-    persist.clearAll();
-    saved.clear();
-    history.reload();
+    clearDeviceData();
     setConfirmForget(false);
   };
 

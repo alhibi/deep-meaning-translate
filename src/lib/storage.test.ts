@@ -34,7 +34,17 @@ describe("saved phrases", () => {
     localStorage.setItem("lingua.saved.v1", JSON.stringify([null, 5, { id: "x" }]));
     const { saved } = await import("./saved");
     expect(saved.list()).toEqual([]);
-    expect(saved.ofTheDay()).toBeNull();
+    expect(saved.ofTheDay("2026-11-14")).toBeNull();
+  });
+  it("selects the daily phrase from an explicit day key", async () => {
+    const { saved } = await import("./saved");
+    saved.toggle({ source: "de", target: "ar", original: "A", translated: "أ" });
+    saved.toggle({ source: "de", target: "ar", original: "B", translated: "ب" });
+    const first = saved.ofTheDay("2026-11-14");
+    const second = saved.ofTheDay("2026-11-15");
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first?.id).not.toBe(second?.id);
   });
   it("survives invalid JSON", async () => {
     localStorage.setItem("lingua.saved.v1", "{broken");
@@ -88,6 +98,75 @@ describe("session", () => {
     localStorage.setItem("lingua.session.v1", "{broken");
     const { persist } = await import("./persist");
     expect(() => persist.session()).not.toThrow();
+  });
+  it("drops a cached result written into a different target language", async () => {
+    // A model can name the wrong target; storing that result and restoring it as the
+    // session's translation hides a translation into the wrong language on return.
+    localStorage.setItem(
+      "lingua.session.v1",
+      JSON.stringify({
+        text: "Hallo",
+        result: {
+          sourceLanguage: "de",
+          targetLanguage: "ar",
+          translation: "مرحبا",
+          tone: "",
+          formality: "",
+          confidence: 1,
+          isAmbiguous: false,
+          alternativeTranslations: [],
+          notes: "",
+        },
+        source: "de",
+        target: "de",
+        style: "natural",
+      }),
+    );
+    const { persist } = await import("./persist");
+    expect(persist.session()?.result).toBeNull();
+  });
+  it("drops a cached result missing required result fields", async () => {
+    localStorage.setItem(
+      "lingua.session.v1",
+      JSON.stringify({
+        text: "Hallo",
+        result: {
+          sourceLanguage: "de",
+          targetLanguage: "ar",
+          translation: "مرحبا",
+          alternativeTranslations: [],
+        },
+        source: "de",
+        target: "ar",
+        style: "natural",
+      }),
+    );
+    const { persist } = await import("./persist");
+    expect(persist.session()?.result).toBeNull();
+  });
+  it("keeps a cached result that belongs to the session target", async () => {
+    localStorage.setItem(
+      "lingua.session.v1",
+      JSON.stringify({
+        text: "Hallo",
+        result: {
+          sourceLanguage: "de",
+          targetLanguage: "ar",
+          translation: "مرحبا",
+          tone: "",
+          formality: "",
+          confidence: 1,
+          isAmbiguous: false,
+          alternativeTranslations: [],
+          notes: "",
+        },
+        source: "de",
+        target: "ar",
+        style: "natural",
+      }),
+    );
+    const { persist } = await import("./persist");
+    expect(persist.session()?.result?.translation).toBe("مرحبا");
   });
   it("remembers this tab's last values for a route that mounts again", async () => {
     vi.resetModules();

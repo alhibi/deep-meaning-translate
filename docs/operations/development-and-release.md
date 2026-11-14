@@ -48,8 +48,8 @@ serves static assets with the generated headers, and streams responses. Use it f
 - The build targets a Cloudflare Worker with static assets; Lovable builds from the connected
   repository.
 - `scripts/build-headers.mjs` writes security headers after the platform's own rewrite step.
-- `vite-plugin-pwa` writes `sw.js` and the precache into `.output/public`; the worker falls back to
-  `/offline.html`.
+- `vite-plugin-pwa` writes `sw.js` and the precache into `.output/public`; the worker serves
+  `/offline.html` only when a navigation fetch fails and no document is cached.
 - Environment secrets are configured in the hosting environment, never in the repository.
 - The audit did **not** deploy, push, or verify the live hosting configuration.
 

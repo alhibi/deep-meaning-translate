@@ -1,7 +1,9 @@
 # Navigation Regression
 
-Status: **Scenario authored and validated manually in a browser; the Playwright script was not
-executed in this environment.** The measured results below come from the production bundle.
+Status: **Scenario authored and validated manually in a browser; executed 2026-11-14 on the dev
+server with a hydration wait.** Two restore checks fail because the script seeds storage after load
+and the app's `pagehide` flush removes the session; see the Task 2 report. The measured results
+below come from the production bundle.
 
 ## What must remain true
 
@@ -38,6 +40,14 @@ python3 tests/e2e/navigation_stability.py
 
 It needs `playwright` for Python. It is not part of CI.
 
+## Service-worker navigation
+
+`tests/e2e/pwa_navigation.py` runs against the production build (`npm run build && npm run preview`).
+It waits for the worker to control the page, then navigates twice online (reload `/`, then `/stats`
+and back). Both must render the app, and the document must appear in the `lingua-shell` cache. It
+then deletes that cache and goes offline: the navigation must reach `/offline.html` only then. The
+old build failed this test because the offline page answered every navigation.
+
 ## Product unit coverage (executed)
 
 | Test | What it protects |
@@ -60,7 +70,8 @@ It needs `playwright` for Python. It is not part of CI.
 ## Limits
 
 - Browser automation was limited to one Chromium-based cloud browser; no Firefox/WebKit run.
-- The Python script itself was not executed here; its logic mirrors the verified in-browser steps.
+- The Python navigation script was executed on 2026-11-14 (dev server); its two restore checks fail
+  on the seeding order described above.
 - Two isolated boundaries were observed after build/server/preview switches; neither reproduced
   after cleanup (25 clean checks). They are recorded as SUSPECTED environment artifacts (TD13),
   not as a product defect with a proven cause.

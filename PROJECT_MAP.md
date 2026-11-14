@@ -47,7 +47,7 @@ Worker (Cloudflare target; Node adapter locally)
 
 - `vite build` emits a Worker bundle under `.output/`; `scripts/build-headers.mjs` writes security
   headers after the platform's own rewrites; `vite-plugin-pwa` emits `sw.js` into `.output/public`
-  with `navigateFallback: /offline.html`.
+  with NetworkFirst documents and an offline fallback used only when a fetch fails.
 - `scripts/check-pwa.mjs` fails if the precache stops containing the shell.
 - `scripts/serve-build.mjs` runs the production bundle on Node for local verification.
 - The connected Lovable project builds from the repository; this audit did not deploy or push.

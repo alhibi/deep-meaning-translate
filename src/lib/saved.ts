@@ -61,6 +61,13 @@ function write(next: SavedPhrase[]) {
 
 const norm = (s: string) => s.trim().replace(/\s+/g, " ");
 
+/** UTC day index of a `YYYY-MM-DD` key, so the same key picks the same phrase anywhere. */
+function dayIndex(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return 0;
+  return Math.floor(Date.UTC(y!, m! - 1, d!) / 86_400_000);
+}
+
 export const saved = {
   list: read,
   find(original: string, target: string) {
@@ -109,12 +116,11 @@ export const saved = {
   reviewQueue() {
     return [...read()].sort((a, b) => a.known - b.known || a.reviewedAt - b.reviewedAt);
   },
-  /** One phrase per calendar day, stable for the whole day. */
-  ofTheDay(): SavedPhrase | null {
+  /** One phrase per calendar day key (`YYYY-MM-DD`), stable for the whole day. */
+  ofTheDay(dayKey: string): SavedPhrase | null {
     const list = read();
     if (list.length === 0) return null;
-    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60_000) / 86_400_000);
-    return list[day % list.length] ?? null;
+    return list[((dayIndex(dayKey) % list.length) + list.length) % list.length] ?? null;
   },
   clear() {
     write([]);

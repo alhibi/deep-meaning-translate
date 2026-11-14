@@ -24,6 +24,25 @@ export async function boundedJson(request: Request, maxBytes = 96 * 1024): Promi
   }
 }
 
+/**
+ * Parse the bounded body before spending admission. Invalid or oversized input must not
+ * drain a client's budget, and a spent budget must not hide an input error behind a 429.
+ */
+export async function parseAdmittedJson<T>(
+  request: Request,
+  schema: { parse(value: unknown): T },
+  take: () => boolean,
+): Promise<{ ok: true; data: T } | { ok: false; kind: "input" | "rate" }> {
+  let data: T;
+  try {
+    data = schema.parse(await boundedJson(request));
+  } catch {
+    return { ok: false, kind: "input" };
+  }
+  if (!take()) return { ok: false, kind: "rate" };
+  return { ok: true, data };
+}
+
 export function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("Origin");
   return (

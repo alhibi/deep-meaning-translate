@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { boundedJson, clientAddress, sameOrigin } from "@/lib/requestSafety";
+import { clientAddress, parseAdmittedJson, sameOrigin } from "@/lib/requestSafety";
 import { takeSpeechToken, takeWarmToken } from "@/lib/translation/throttle";
 import {
   SpeakInput,
@@ -39,14 +39,14 @@ export const Route = createFileRoute("/api/speak")({
             { status, headers: { "Cache-Control": "no-store", ...extra } },
           );
         if (!sameOrigin(request)) return fail("input", 403);
-        if (!takeSpeechToken(clientAddress(request)))
-          return fail("rate", 429, { "Retry-After": "5" });
-        let data;
-        try {
-          data = SpeakInput.parse(await boundedJson(request));
-        } catch {
-          return fail("input", 400);
-        }
+        const admitted = await parseAdmittedJson(request, SpeakInput, () =>
+          takeSpeechToken(clientAddress(request)),
+        );
+        if (!admitted.ok)
+          return admitted.kind === "rate"
+            ? fail("rate", 429, { "Retry-After": "5" })
+            : fail("input", 400);
+        const data = admitted.data;
         const key = process.env["GEMINI_API_KEY"];
         if (!key) return fail("config", 503);
 

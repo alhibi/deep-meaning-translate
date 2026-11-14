@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boundedJson, sameOrigin } from "./requestSafety";
+import { boundedJson, parseAdmittedJson, sameOrigin } from "./requestSafety";
 import { createLimiter } from "./translation/throttle";
 
 describe("request admission", () => {
@@ -13,6 +13,51 @@ describe("request admission", () => {
     const take = createLimiter();
     for (let i = 0; i < 3000; i++) expect(take(String(i))).toBe(true);
     for (let i = 0; i < 3000; i++) expect(take(String(i))).toBe(true);
+  });
+  it("does not spend admission on malformed or oversized input", async () => {
+    let calls = 0;
+    const take = () => {
+      calls++;
+      return true;
+    };
+    const schema = { parse: (value: unknown) => value as { text: string } };
+    const malformed = new Request("https://fluently.today/api/translate-stream", {
+      method: "POST",
+      body: "{bad",
+    });
+    expect(await parseAdmittedJson(malformed, schema, take)).toEqual({
+      ok: false,
+      kind: "input",
+    });
+    const oversized = new Request("https://fluently.today/api/translate-stream", {
+      method: "POST",
+      body: "x".repeat(200_000),
+    });
+    expect(await parseAdmittedJson(oversized, schema, take)).toEqual({
+      ok: false,
+      kind: "input",
+    });
+    expect(calls).toBe(0);
+  });
+  it("spends admission once for a valid body and reports a spent budget", async () => {
+    let calls = 0;
+    const schema = { parse: (value: unknown) => value as { text: string } };
+    const request = () =>
+      new Request("https://fluently.today/api/translate-stream", {
+        method: "POST",
+        body: JSON.stringify({ text: "مرحبا" }),
+      });
+    expect(
+      await parseAdmittedJson(request(), schema, () => {
+        calls++;
+        return true;
+      }),
+    ).toEqual({ ok: true, data: { text: "مرحبا" } });
+    expect(calls).toBe(1);
+    expect(await parseAdmittedJson(request(), schema, () => false)).toEqual({
+      ok: false,
+      kind: "rate",
+    });
   });
   it("rejects cross-site browser spending and accepts the app origin", () => {
     expect(

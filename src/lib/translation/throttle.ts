@@ -66,3 +66,9 @@ export const takeSpeechToken = createLimiter(40, 1.2);
  * budget instead of being an unbounded amplifier for anyone with the URL.
  */
 export const takeWarmToken = createLimiter(12, 0.3);
+
+/**
+ * Dictation sessions. Each call mints a short-lived AssemblyAI token, i.e. a real
+ * outbound request whose budget must not be shared with speech synthesis.
+ */
+export const takeDictationToken = createLimiter(20, 0.5);

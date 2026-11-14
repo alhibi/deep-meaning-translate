@@ -304,7 +304,7 @@ export function useTranslator(opts: {
         };
         const res:
           | { ok: true; result: TranslationResult; needsRepair: boolean }
-          | { ok: false; kind: ErrorKind } = prov
+          | { ok: false; kind: ErrorKind; cancelled?: true } = prov
           ? await streamTranslate(data, ctrl.signal, onText, "live").then((r) =>
               r.ok
                 ? {
@@ -362,6 +362,9 @@ export function useTranslator(opts: {
               })
               .catch(() => {});
           }
+        } else if (res.cancelled) {
+          // The server ended an outdated stream quietly: not an error, never a retry.
+          setPhase(hasResult.current ? "COMPLETE" : "READY");
         } else {
           fail(res.kind);
         }

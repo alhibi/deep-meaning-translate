@@ -1,7 +1,8 @@
 name: CI
 
 # Every push and pull request runs the same gates a developer runs locally:
-# types, lint (zero warnings), unit tests, production build, PWA integrity.
+# types, lint (zero warnings), documentation, unit tests with coverage, production build,
+# PWA integrity.
 on:
   push:
     branches: ["**"]
@@ -36,7 +37,10 @@ jobs:
       - name: Lint (zero warnings allowed)
         run: npm run lint -- --max-warnings 0
 
-      - name: Unit tests
+      - name: Documentation links and inventory
+        run: npm run check:docs
+
+      - name: Unit tests (coverage floors enforced)
         run: npm run test
         env:
           CI: true

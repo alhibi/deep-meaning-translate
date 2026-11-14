@@ -63,15 +63,13 @@ async function send(
     throw new TranslationError("network", "Could not reach DeepSeek.");
   }
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
+    // Never carry a provider body into an error: it can echo the private input text.
+    void res.body?.cancel().catch(() => {});
     if (res.status === 401 || res.status === 403)
       throw new TranslationError("auth", "DeepSeek rejected the key.");
     if (res.status === 402) throw new TranslationError("quota", "DeepSeek balance is empty.");
     if (res.status === 429) throw new TranslationError("rate", "DeepSeek is rate limiting.");
-    throw new TranslationError(
-      "provider",
-      `DeepSeek responded ${res.status}${body ? `: ${body.slice(0, 200)}` : ""}`,
-    );
+    throw new TranslationError("provider", `DeepSeek responded ${res.status}`);
   }
   return res;
 }

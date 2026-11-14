@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getRequest } from "@tanstack/react-start/server";
 import { clientAddress, sameOrigin } from "../requestSafety";
+import { isResult } from "./result";
 
 import { takeRepairToken, takeToken } from "./throttle";
 
@@ -55,20 +56,9 @@ export const translate = createServerFn({ method: "POST" })
     }
   });
 
-const ResultSchema = z.object({
-  sourceLanguage: z.string().max(10),
-  targetLanguage: z.string().max(10),
-  translation: z
-    .string()
-    .min(1)
-    .max(MAX_CHARS * 3),
-  tone: z.string().max(60),
-  formality: z.string().max(30),
-  confidence: z.number(),
-  isAmbiguous: z.boolean(),
-  alternativeTranslations: z.array(z.string().max(MAX_CHARS * 3)).max(2),
-  notes: z.string().max(300),
-  situation: z.enum(["chat", "work", "official", "general"]).optional(),
+/** One result validator: the same full shape that device storage accepts. */
+const ResultSchema = z.custom<import("./types").TranslationResult>((value) => isResult(value), {
+  message: "Invalid translation result.",
 });
 
 /** Quiet second pass for a shown translation that failed the deterministic checks. */

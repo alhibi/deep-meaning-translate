@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { initServiceWorker } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
+import { useTodayKey } from "@/lib/useTodayKey";
 import { AppHeader } from "@/components/translator/AppHeader";
 import { Intro } from "@/components/Intro";
 import { LanguageBar } from "@/components/translator/LanguageBar";
@@ -51,6 +52,7 @@ import { BrainPicker } from "@/components/translator/BrainPicker";
 import { LanguageNotice } from "@/components/translator/LanguageNotice";
 import { checkSource } from "@/lib/translation/languageCheck";
 import { styleSuggestion } from "@/lib/translation/suggestion";
+import { resultState } from "@/lib/translation/view";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
@@ -171,6 +173,7 @@ function Translator() {
   const closeDialect = useCallback(() => setDialectOpen(false), []);
   const selectDialect = useCallback((c: string) => setDialect(c as Dialect), []);
   const savedList = useSaved();
+  const todayKey = useTodayKey();
   const [dismissedFor, setDismissedFor] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { canInstall, install } = useInstallPrompt();
@@ -336,9 +339,11 @@ function Translator() {
     !!raw &&
     (lang2(raw.sourceLanguage) === lang2(raw.targetLanguage) ||
       raw.translation.trim() === text.trim());
-  // Never present a translation into a language the user no longer asked for.
-  const staleTarget = !!raw && !!raw.targetLanguage && lang2(raw.targetLanguage) !== target;
-  const baseResult = rerouting || staleTarget ? null : raw;
+  // Hiding a stale result must never be what makes the screen "pending": pending means
+  // a request is in flight, or a re-route is under way. The old expression forced a
+  // skeleton when the model named a different target language, with nothing running.
+  const view = resultState({ raw, rawPending, rerouting, target });
+  const baseResult = view.result;
   // Sentence shadow fix: shown over the model's translation it was made for, and only that one.
   const [applied, setApplied] = useState<{ base: string; original: string; text: string } | null>(
     null,
@@ -352,7 +357,7 @@ function Translator() {
         : baseResult,
     [baseResult, applied, text],
   );
-  const pending = rawPending || rerouting || (staleTarget && !!text.trim());
+  const pending = view.pending;
 
   // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
   // lifts above the on-screen keyboard instead of hiding behind it.
@@ -672,7 +677,8 @@ function Translator() {
       ? { label: t(proposed.key), next: proposed.next }
       : null;
 
-  const today = restored && !hasText ? (savedList.length ? saved.ofTheDay() : null) : null;
+  const today =
+    restored && !hasText && todayKey ? (savedList.length ? saved.ofTheDay(todayKey) : null) : null;
 
   return (
     <>

@@ -17,6 +17,15 @@ for (const file of must) {
 
 if (!failures.length) {
   const sw = await readFile(join(publicDir, "sw.js"), "utf8");
+  // F15 guard: a navigation fallback route answers every online navigation from one document.
+  if (/createHandlerBoundToURL\(|NavigationRoute\(/.test(sw))
+    failures.push(
+      "service worker registers a navigation fallback route (F15: it would answer every navigation)",
+    );
+  if (!sw.includes("PrecacheFallbackPlugin"))
+    failures.push(
+      "service worker has no PrecacheFallbackPlugin; a failed navigation cannot reach /offline.html",
+    );
   const urls = [...sw.matchAll(/url:"([^"]+)"/g)].map((m) => m[1]);
   if (urls.length < 6) failures.push(`service worker precaches only ${urls.length} entries`);
   if (!urls.some((u) => u.endsWith(".css"))) failures.push("no stylesheet in the precache list");

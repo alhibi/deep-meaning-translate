@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
-import { sameOrigin } from "./requestSafety";
+import { clientAddress, sameOrigin } from "./requestSafety";
+import { takeDictationToken } from "./translation/throttle";
 
 export const assemblyToken = createServerFn({ method: "POST" }).handler(async () => {
   setResponseHeader("Cache-Control", "no-store");
@@ -12,6 +13,12 @@ export const assemblyToken = createServerFn({ method: "POST" }).handler(async ()
       message: "Cross-site microphone requests are not allowed.",
       status: 403,
     };
+  if (!takeDictationToken(clientAddress(request)))
+    return {
+      ok: false as const,
+      message: "Too many dictation sessions. Wait a moment and try again.",
+      status: 429,
+    };
   const key = process.env["ASSEMBLYAI_API_KEY"];
   if (!key) return { ok: false as const, message: "AssemblyAI is not configured.", status: 503 };
   try {
@@ -22,14 +29,17 @@ export const assemblyToken = createServerFn({ method: "POST" }).handler(async ()
         signal: AbortSignal.timeout(15000),
       },
     );
-    const data: unknown = await response.json();
     if (!response.ok) {
-      const message =
-        data && typeof data === "object" && "error" in data && typeof data.error === "string"
-          ? data.error
-          : `AssemblyAI request failed (${response.status}).`;
-      return { ok: false as const, status: response.status, message };
+      // Never surface a provider body: only the status is ours to report.
+      void response.body?.cancel().catch(() => {});
+      console.warn("[assembly] provider status", response.status);
+      return {
+        ok: false as const,
+        status: response.status,
+        message: "AssemblyAI is unavailable right now.",
+      };
     }
+    const data: unknown = await response.json();
     if (!data || typeof data !== "object" || !("token" in data) || typeof data.token !== "string")
       return {
         ok: false as const,

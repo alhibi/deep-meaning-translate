@@ -64,8 +64,18 @@ indexed and that relative links resolve.
 | Document | Scope | Status |
 | --- | --- | --- |
 | `docs/audits/2026-11-07-baseline-and-repairs.md` | Baseline evidence, findings, repairs, verification matrix | Verified |
+| `docs/audits/2026-11-14-baseline.md` | Executed baseline gates, real numbers, gate defects repaired, static findings | Verified |
+| `docs/audits/2026-11-14-task2-request-lifecycle.md` | Task 2: F1/F6 failing tests and fixes, Playwright matrix, new F15/F16 findings | Verified |
+| `docs/audits/2026-11-14-task3-server-boundary.md` | Task 3 (started): F18 admission ordering, F19 provider-body hardening, boundary probes, TD15 | In progress |
+| `docs/audits/2026-11-14-task4-local-data.md` | Task 4 (started): F5 full result validation, F8 day key, clear-all caches, remaining F9/F13/F14 | In progress |
 | `docs/audits/technical-debt.md` | Open debt with severity, location, impact and remediation | Living register |
 | `docs/audits/final-report-ar.md` | Arabic final report: maturity, defects, navigation, architecture, inventory, limits | Verified |
+
+## Plans and working documents
+
+| Document | Scope | Status |
+| --- | --- | --- |
+| `docs/superpowers/plans/2026-11-14-deep-audit.md` | Deep audit programme: baseline, workstreams, runtime matrix, fix waves | Living |
 
 ## Historical (not authoritative)
 

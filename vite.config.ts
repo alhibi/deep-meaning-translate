@@ -25,20 +25,26 @@ export default defineConfig({
         devOptions: { enabled: false },
         workbox: {
           globPatterns: ["**/*.{js,css,woff2,png,svg,ico,webmanifest,html}"],
-          navigateFallback: "/offline.html", // first visit with no connection still shows the brand, not a browser error
+          // Disable the plugin default ("index.html") explicitly. A NavigationRoute is registered
+          // before the NetworkFirst document route and answers every navigation from one URL,
+          // online or not; "index.html" is not even precached, so its registration also throws
+          // and drops the routes after it (F15).
+          navigateFallback: null,
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
           runtimeCaching: [
             {
-              // App shell HTML: always try the network, fall back to last good copy offline.
+              // App shell HTML: try the network first. No short timeout — a slow but online
+              // first visit must not be shown as offline. The fallback is used only when the
+              // fetch actually fails and no cached document exists.
               urlPattern: ({ request, url }) =>
                 request.mode === "navigate" && !url.pathname.startsWith("/~oauth"),
               handler: "NetworkFirst",
               options: {
                 cacheName: "lingua-shell",
-                networkTimeoutSeconds: 3,
                 expiration: { maxEntries: 4 },
+                precacheFallback: { fallbackURL: "/offline.html" },
               },
             },
             {

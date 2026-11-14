@@ -1,7 +1,8 @@
 import type { ErrorKind } from "./useTranslator";
 import { partialTranslation } from "./parse";
 
-export type StreamResponse = { ok: true; text: string } | { ok: false; kind: ErrorKind };
+export type StreamResponse =
+  { ok: true; text: string } | { ok: false; kind: ErrorKind; cancelled?: true };
 
 /** Client side of the live stream: calls onText with the accumulated translation as it grows. */
 export async function streamTranslate(
@@ -16,6 +17,9 @@ export async function streamTranslate(
     body: JSON.stringify({ ...data, mode }),
     signal,
   });
+  // The route answers 204 when the request was aborted upstream: a quiet cancellation,
+  // not a provider failure. It carries no body, so it must never be read as JSON.
+  if (res.status === 204) return { ok: false, kind: "provider", cancelled: true };
   if (!res.ok || !res.body) {
     const j = (await res.json().catch(() => null)) as { kind?: ErrorKind } | null;
     return { ok: false, kind: j?.kind ?? (res.status === 429 ? "rate" : "provider") };

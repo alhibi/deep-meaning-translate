@@ -1,4 +1,6 @@
 import type { Brain, Dialect, StyleOverride, TranslationResult } from "./translation/types";
+import { isResult } from "./translation/result";
+import { matchesTarget } from "./translation/view";
 
 /**
  * Intentional, device-only persistence. Nothing here leaves the device.
@@ -49,19 +51,6 @@ export function parsePrefs(v: unknown): Prefs | null {
   return out;
 }
 
-export function isResult(v: unknown): v is TranslationResult {
-  const r = v as TranslationResult | null;
-  return (
-    !!r &&
-    typeof r === "object" &&
-    typeof r.translation === "string" &&
-    typeof r.sourceLanguage === "string" &&
-    typeof r.targetLanguage === "string" &&
-    Array.isArray(r.alternativeTranslations) &&
-    r.alternativeTranslations.every((a) => typeof a === "string")
-  );
-}
-
 export function parseSession(v: unknown): Session | null {
   const s = v as { [K in keyof Session]?: unknown } | null;
   if (!s || typeof s !== "object") return null;
@@ -69,8 +58,9 @@ export function parseSession(v: unknown): Session | null {
   if (!isSourceCode(s.source) || !isTargetCode(s.target) || !isStyle(s.style)) return null;
   return {
     text: s.text.slice(0, MAX_TEXT),
-    // A damaged cached result is discarded; the text is simply translated again.
-    result: isResult(s.result) ? s.result : null,
+    // A damaged cached result is discarded, and so is one written into another target
+    // language; the text is simply translated again.
+    result: isResult(s.result) && matchesTarget(s.result, s.target) ? s.result : null,
     source: s.source,
     target: s.target,
     style: s.style,

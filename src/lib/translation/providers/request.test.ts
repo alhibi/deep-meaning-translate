@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { providerFetch } from "./request.server";
+import { createOpenCodeLunaProvider } from "./opencode.server";
+import type { TranslationRequest } from "../types";
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -42,6 +44,27 @@ describe("direct provider request lifetime", () => {
     expect(await result).toBe("AbortError");
     expect(cancel).toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
+  });
+  it("never puts a provider error body into the error message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("SECRET private sentence", { status: 500 })),
+    );
+    const request: TranslationRequest = {
+      text: "مرحبا",
+      source: "ar",
+      target: "de",
+      style: "natural",
+      dialect: "auto",
+      brain: "luna",
+      partial: false,
+    };
+    const error = (await createOpenCodeLunaProvider("test-key")
+      .translate(request)
+      .then(() => null)
+      .catch((e: Error & { kind?: string }) => e)) as (Error & { kind?: string }) | null;
+    expect(error?.kind).toBe("provider");
+    expect(error?.message).not.toContain("SECRET");
   });
   it("response cancellation aborts upstream immediately", async () => {
     const cancel = vi.fn();

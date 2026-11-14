@@ -82,7 +82,8 @@ async function send(
   }
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
+    // Never carry a provider body into an error: it can echo the private input text.
+    void res.body?.cancel().catch(() => {});
     if (res.status === 401 || res.status === 403)
       throw new TranslationError("auth", "The translation provider rejected the credentials.");
     if (res.status === 402)
@@ -90,10 +91,7 @@ async function send(
     if (res.status === 429)
       throw new TranslationError("rate", "The translation provider is rate limiting requests.");
 
-    throw new TranslationError(
-      "provider",
-      `Provider responded ${res.status}${body ? `: ${body.slice(0, 200)}` : ""}`,
-    );
+    throw new TranslationError("provider", `Provider responded ${res.status}`);
   }
 
   return res;
