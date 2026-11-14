@@ -1,6 +1,118 @@
 import { memo } from "react";
 import type { Bucket, Granularity } from "@/lib/stats/engine";
 import type { Fmt } from "./format";
+import { addDays, daysBetween, weekKey } from "@/lib/stats/engine";
+
+/** Every point represents one actual bucket, including days with no activity. */
+export function Sparkline({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values);
+  const points = values
+    .map(
+      (value, i) =>
+        `${values.length > 1 ? (i / (values.length - 1)) * 120 : 60},${29 - (value / max) * 25}`,
+    )
+    .join(" ");
+  return (
+    <svg
+      viewBox="0 0 120 32"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      className="h-8 w-full text-muted-foreground"
+    >
+      <path d="M0 29H120" stroke="var(--border-strong)" fill="none" />
+      {values.length === 1 ? (
+        <circle cx="60" cy={29 - ((values[0] ?? 0) / max) * 25} r="2" fill="currentColor" />
+      ) : (
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+          strokeLinejoin="round"
+        />
+      )}
+    </svg>
+  );
+}
+
+/** Daily buckets only. Blank cells are outside the period, not zero-activity days. */
+export function CalendarChart({
+  buckets,
+  metric,
+  selected,
+  todayKey,
+  onSelect,
+  fmt,
+  label,
+  less,
+  more,
+}: {
+  buckets: Bucket[];
+  metric: "translations" | "words";
+  selected: string | null;
+  todayKey: string;
+  onSelect: (key: string) => void;
+  fmt: Fmt;
+  label: string;
+  less: string;
+  more: string;
+}) {
+  const first = buckets[0];
+  if (!first) return null;
+  const monday = weekKey(first.from);
+  const padding = daysBetween(monday, first.from);
+  const max = Math.max(1, ...buckets.map((b) => b[metric]));
+  return (
+    <div role="group" aria-label={label}>
+      <div dir="ltr" className="grid grid-cols-7 gap-1.5">
+        {Array.from({ length: 7 }, (_, i) => (
+          <span key={i} className="pb-1 text-center text-[12px] text-muted-foreground">
+            {fmt.weekday(addDays(monday, i))}
+          </span>
+        ))}
+        {Array.from({ length: padding }, (_, i) => (
+          <span key={`pad-${i}`} aria-hidden="true" />
+        ))}
+        {buckets.map((b) => {
+          const level = b[metric] === 0 ? 0 : Math.max(1, Math.ceil((b[metric] / max) * 4));
+          const name = `${fmt.dayLong(b.from)}: ${fmt.num(b[metric])}`;
+          return (
+            <button
+              key={b.key}
+              type="button"
+              onClick={() => onSelect(b.key)}
+              aria-label={name}
+              aria-pressed={selected === b.key}
+              aria-current={b.key === todayKey ? "date" : undefined}
+              title={name}
+              data-level={level}
+              data-selected={selected === b.key}
+              className="stats-calendar-day press-soft flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md border text-[12px] tabular-nums"
+            >
+              <span>{fmt.num(Number(b.from.slice(-2)))}</span>
+              <span className="text-[10px]">{fmt.num(b[metric])}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div
+        className="mt-3 flex items-center justify-end gap-1.5 text-[11px] text-muted-foreground"
+        aria-hidden="true"
+      >
+        <span>{less}</span>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <span
+            key={level}
+            data-level={level}
+            className="stats-calendar-day size-2.5 rounded-sm border"
+          />
+        ))}
+        <span>{more}</span>
+      </div>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ timeline */
 
@@ -67,7 +179,7 @@ export const TimelineChart = memo(function TimelineChart({
               >
                 <span
                   className={`block w-full max-w-[22px] rounded-t-[4px] motion-safe:transition-[height,background-color] motion-safe:duration-300 ${
-                    isSel ? "bg-signal" : v ? "bg-foreground/35 group-hover:bg-foreground/55" : ""
+                    isSel ? "bg-signal" : v ? "bg-muted-foreground group-hover:bg-foreground" : ""
                   }`}
                   style={{ height: h }}
                 />
@@ -123,17 +235,27 @@ export const Donut = memo(function Donut({
   const r = 42;
   const c = 2 * Math.PI * r;
   const gap = slices.length > 1 ? 1.6 : 0;
-  let offset = 0;
+  const arcs = slices.reduce<{ slice: DonutSlice; length: number; offset: number }[]>(
+    (out, slice) => {
+      const previous = out[out.length - 1];
+      out.push({
+        slice,
+        length: (slice.value / total) * c,
+        offset: previous ? previous.offset + previous.length : 0,
+      });
+      return out;
+    },
+    [],
+  );
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[188px]">
       {/* A group, not an image: the slices are real buttons, so a keyboard user can
           reach the same filter a pointer user reaches. */}
       <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="group" aria-label={label}>
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--border)" strokeWidth="9" />
-        {slices.map((s) => {
-          const len = (s.value / total) * c;
+        {arcs.map(({ slice: s, length: len, offset }) => {
           const dash = Math.max(0.01, len - gap);
-          const el = (
+          return (
             <circle
               key={s.id}
               cx="50"
@@ -160,8 +282,6 @@ export const Donut = memo(function Donut({
               <title>{s.label}</title>
             </circle>
           );
-          offset += len;
-          return el;
         })}
       </svg>
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
@@ -210,7 +330,7 @@ export const BarList = memo(function BarList({
             type="button"
             onClick={() => onSelect(r.id)}
             aria-pressed={selected === r.id}
-            className={`press-soft w-full rounded-xl px-2 py-2.5 text-start transition-colors hover:bg-card ${
+            className={`press-soft w-full rounded-md px-2 py-3 text-start transition-colors hover:bg-card ${
               selected === r.id ? "bg-card" : ""
             }`}
           >
@@ -219,7 +339,7 @@ export const BarList = memo(function BarList({
                 className="size-2 shrink-0 translate-y-[-1px] rounded-[3px]"
                 style={{ background: r.color }}
               />
-              <span className="min-w-0 flex-1 truncate text-[14px] text-foreground">
+              <span className="min-w-0 flex-1 text-[14px] text-foreground">
                 {r.label}
                 {r.estimated && estimatedLabel ? (
                   <span className="ms-1.5 text-[11px] text-faint">· {estimatedLabel}</span>
@@ -230,7 +350,7 @@ export const BarList = memo(function BarList({
                 {fmt.pct(r.share)}
               </span>
             </span>
-            <span className="mt-1.5 block h-[5px] overflow-hidden rounded-full bg-border">
+            <span className="mt-2 block h-[6px] overflow-hidden rounded-full bg-border">
               <span
                 className="block h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500"
                 style={{ width: `${(r.count / max) * 100}%`, background: r.color }}
