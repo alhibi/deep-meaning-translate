@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ChevronDown, ListFilter, X } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowLeft, ArrowUpRight, BarChart3, CalendarDays, ChevronDown, ChevronRight, Languages, ListFilter, Type, X, type LucideIcon } from "lucide-react";
 import { initLocale, useI18n } from "@/lib/i18n";
 import { useTodayKey } from "@/lib/useTodayKey";
 import { history } from "@/lib/history";
@@ -43,7 +43,7 @@ import {
   writeStatsPrefs,
 } from "@/lib/stats/useArchive";
 import { makeFormat, type Fmt } from "@/components/stats/format";
-import { BarList, Donut, StackBar, TimelineChart, type BarRow } from "@/components/stats/charts";
+import { BarList, CalendarChart, Donut, Sparkline, StackBar, TimelineChart, type BarRow } from "@/components/stats/charts";
 import { RecordList } from "@/components/stats/RecordList";
 import { RecordSheet } from "@/components/stats/RecordSheet";
 import { DetailSheet, type DetailSpec } from "@/components/stats/DetailSheet";
@@ -113,6 +113,7 @@ function StatsPage() {
   const activeFilters = FILTER_KEYS.filter((k) => filters[k]);
 
   const [metric, setMetric] = useState<Metric>("translations");
+  const [activityView, setActivityView] = useState<"bars" | "calendar">("bars");
   const [bucketSel, setBucketSel] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailSpec | null>(null);
   const [recordId, setRecordId] = useState<string | null>(null);
@@ -369,14 +370,17 @@ function StatsPage() {
             </button>
           </Calm>
         ) : (
-          <div className="mt-5 grid gap-x-8 gap-y-3 px-3 lg:grid-cols-2">
+          <div className="mt-6 grid gap-x-10 gap-y-5 px-5 lg:grid-cols-2">
             {/* KPIs */}
             <section
-              className="grid grid-cols-2 gap-2 lg:col-span-2 lg:grid-cols-5"
+              className="grid grid-cols-6 gap-2 lg:col-span-2 lg:grid-cols-5"
               aria-label={t("title")}
             >
               <KpiCard
                 wide
+                className="col-span-3 lg:col-span-1"
+                icon={BarChart3}
+                spark={buckets.map((b) => b.translations)}
                 label={t("k_translations")}
                 value={fmt.num(summary.translations)}
                 delta={change(summary.translations, prevSummary?.translations)}
@@ -386,6 +390,9 @@ function StatsPage() {
               />
               <KpiCard
                 wide
+                className="col-span-3 lg:col-span-1"
+                icon={Type}
+                spark={buckets.map((b) => b.words)}
                 label={t("k_words")}
                 value={fmt.num(summary.words)}
                 delta={change(summary.words, prevSummary?.words)}
@@ -394,6 +401,8 @@ function StatsPage() {
                 onClick={() => setKpi("words")}
               />
               <KpiCard
+                className="col-span-2 lg:col-span-1"
+                icon={Languages}
                 label={t("k_pairs")}
                 value={fmt.num(summary.pairs)}
                 sub={
@@ -403,6 +412,8 @@ function StatsPage() {
                 onClick={() => setKpi("pairs")}
               />
               <KpiCard
+                className="col-span-2 lg:col-span-1"
+                icon={CalendarDays}
                 label={t("k_days")}
                 value={fmt.num(summary.activeDays)}
                 sub={bounds ? `/ ${fmt.num(bounds.days)}` : undefined}
@@ -413,13 +424,14 @@ function StatsPage() {
               />
               <KpiCard
                 className="col-span-2 lg:col-span-1"
+                icon={Activity}
                 label={t("k_avg")}
                 value={summary.avgWords === null ? "—" : fmt.num1(summary.avgWords)}
                 fmt={fmt}
                 onClick={() => setKpi("avg")}
               />
             </section>
-            <p className="px-2 text-[11.5px] text-faint lg:col-span-2">
+            <p className="text-[12px] text-faint lg:col-span-2">
               {prevB
                 ? prevSummary?.translations
                   ? t("vsPrev", { n: fmt.num(prevB.days) })
@@ -428,7 +440,14 @@ function StatsPage() {
             </p>
 
             {/* Activity */}
-            <Panel title={t("activity")} className="lg:col-span-2">
+            <Panel title={t("activity")} className="lg:col-span-2" action={gran === "day" ? (
+              <div role="radiogroup" aria-label={t("activity")} className="flex gap-1">
+                {(["bars", "calendar"] as const).map((view) => {
+                  const Icon = view === "bars" ? BarChart3 : CalendarDays;
+                  return <button key={view} type="button" role="radio" aria-checked={activityView === view} aria-label={t(view === "bars" ? "barsView" : "calendarView")} title={t(view === "bars" ? "barsView" : "calendarView")} onClick={() => setActivityView(view)} className={`press-soft grid size-9 place-items-center rounded-md ${activityView === view ? "bg-signal-soft text-signal-text" : "text-muted-foreground"}`}><Icon className="size-4" strokeWidth={1.75} /></button>;
+                })}
+              </div>
+            ) : undefined}>
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div
                   role="radiogroup"
@@ -466,7 +485,17 @@ function StatsPage() {
                   })
                 }
               />
-              <TimelineChart
+              {activityView === "calendar" && gran === "day" ? <CalendarChart
+                buckets={buckets}
+                metric={metric}
+                selected={bucketSel}
+                todayKey={today}
+                onSelect={(k) => setBucketSel((s) => s === k ? null : k)}
+                fmt={fmt}
+                label={t("calendarView")}
+                less={t("lessActivity")}
+                more={t("moreActivity")}
+              /> : <TimelineChart
                 buckets={buckets}
                 metric={metric}
                 granularity={gran}
@@ -479,7 +508,7 @@ function StatsPage() {
                   gran: t(`g_${gran}` as StatsKey),
                   total: fmt.num(metric === "translations" ? summary.translations : summary.words),
                 })}
-              />
+              />}
               <TimelineSummary buckets={buckets} metric={metric} gran={gran} fmt={fmt} t={t} />
             </Panel>
 
@@ -628,8 +657,9 @@ function StatsPage() {
     <main dir={dir} className="min-h-[100dvh] bg-background pb-12 text-foreground pad-safe-top">
       <div className="mx-auto w-full max-w-xl lg:max-w-5xl">
         {header}
-        <div className="px-5 pb-1 pt-2">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-tight">{t("title")}</h1>
+        <div className="px-5 pb-2 pt-3">
+          <div className="mb-4 flex items-center gap-2 text-muted-foreground" aria-hidden="true"><BarChart3 className="size-5" strokeWidth={1.5} /><span className="h-px w-10 bg-border-strong" /></div>
+          <h1 className="text-[28px] font-semibold leading-tight">{t("title")}</h1>
           <p className="mt-1.5 max-w-md text-[14px] leading-relaxed text-muted-foreground">
             {t("subtitle")}
           </p>
@@ -760,9 +790,9 @@ function Panel({
   action?: ReactNode;
 }) {
   return (
-    <section className={`animate-fade rounded-[22px] bg-surface p-4 pt-3.5 ${className}`}>
-      <div className="mb-2.5 flex min-h-8 items-center justify-between gap-2 px-1">
-        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+    <section className={`animate-fade min-w-0 border-t border-border pt-5 pb-2 ${className}`}>
+      <div className="mb-4 flex min-h-8 items-center justify-between gap-2">
+        <h2 className="text-[16px] font-semibold">{title}</h2>
         {action}
       </div>
       {children}
@@ -777,6 +807,8 @@ function KpiCard({
   delta,
   prev,
   wide,
+  icon: Icon,
+  spark,
   className = "",
   fmt,
   onClick,
@@ -787,6 +819,8 @@ function KpiCard({
   delta?: number | null | undefined;
   prev?: unknown;
   wide?: boolean;
+  icon: LucideIcon;
+  spark?: number[];
   className?: string;
   fmt: Fmt;
   onClick: () => void;
@@ -795,26 +829,29 @@ function KpiCard({
     <button
       type="button"
       onClick={onClick}
-      className={`press-soft flex min-h-[104px] flex-col justify-between rounded-[20px] bg-surface p-4 text-start ${className}`}
+      className={`press-soft relative flex min-w-0 flex-col justify-between rounded-lg border border-border bg-surface p-3 text-start ${wide ? "min-h-[172px] sm:p-4" : "min-h-[136px]"} ${className}`}
     >
-      <span className="text-[12.5px] text-muted-foreground">{label}</span>
-      <span className="mt-3 flex items-baseline gap-1.5">
+      <span className="mb-2 flex items-center justify-between text-muted-foreground" aria-hidden="true"><Icon className="size-4" strokeWidth={1.5} /><ChevronRight className="size-3 rtl:-scale-x-100" /></span>
+      <span className="text-[12.5px] leading-snug text-muted-foreground">{label}</span>
+      <span className="mt-3 flex flex-wrap items-baseline gap-1.5">
         <span
-          className={`${wide ? "text-[30px]" : "text-[26px]"} font-semibold leading-none tracking-tight tabular-nums`}
+          className={`${wide ? "text-[34px]" : "text-[26px]"} font-semibold leading-none tabular-nums`}
         >
           {value}
         </span>
         {sub ? (
-          <span dir="auto" className="min-w-0 truncate text-[12px] text-muted-foreground">
+          <span dir="auto" className="min-w-0 text-[12px] text-muted-foreground">
             {sub}
           </span>
         ) : null}
       </span>
       {prev !== undefined && delta !== undefined && delta !== null ? (
-        <span className="mt-1.5 text-[11.5px] tabular-nums text-muted-foreground">
+        <span dir="ltr" className="mt-2 inline-flex items-center gap-1 text-[12px] tabular-nums text-muted-foreground">
+          {delta > 0 ? <ArrowUpRight className="size-3.5" /> : delta < 0 ? <ArrowDownRight className="size-3.5" /> : null}
           {fmt.delta(delta)}
         </span>
       ) : null}
+      {spark ? <span className="mt-3 block w-full" dir="ltr"><Sparkline values={spark} /></span> : null}
     </button>
   );
 }

@@ -27,6 +27,7 @@ export function makeFormat(locale: Locale) {
   });
   const monthF = new Intl.DateTimeFormat(tag, { month: "short", year: "numeric", timeZone: "UTC" });
   const stampF = new Intl.DateTimeFormat(tag, { dateStyle: "medium", timeStyle: "short" });
+  const weekdayF = new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: "UTC" });
   let names: Intl.DisplayNames | null = null;
   try {
     names = new Intl.DisplayNames([locale], { type: "language" });
@@ -51,6 +52,7 @@ export function makeFormat(locale: Locale) {
     delta: (v: number) => signed.format(v),
     day: (key: string) => dayF.format(utc(key)),
     dayLong: (key: string) => dayLongF.format(utc(key)),
+    weekday: (key: string) => weekdayF.format(utc(key)),
     bucket: (from: string, to: string, g: Granularity) =>
       g === "day"
         ? dayLongF.format(utc(from))

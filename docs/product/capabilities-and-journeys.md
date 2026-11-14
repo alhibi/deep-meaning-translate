@@ -59,6 +59,14 @@ theme, locale and providers stay alive. The document is not reloaded.
 **B.** Statistics are derived from the local history archive through the pure stats engine. Opening
 a record stores a pending pick and navigates to `/`.
 
+The visual overview uses the same filtered archive: translation/word sparklines include zero
+activity buckets, and the activity view switches between bars and a Monday-aligned calendar
+for daily periods only. Each calendar day includes its actual count, including zero; cells
+outside the selected period are blank. Selecting a day updates the existing readout and opens
+its translations. Colour is relative to the largest visible bucket, not a quality score;
+classification estimates remain labelled and correctable. No synthetic rows, network calls,
+new storage or personal profiling are introduced by these views.
+
 **C.** The translator mounts with the remembered values already present: the draft, the pair and
 the translation are on the first paint. The pending pick replaces them intentionally when the
 record is opened in the translator. A return without a pick restores the session — **not** the
