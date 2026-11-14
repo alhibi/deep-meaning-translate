@@ -235,17 +235,20 @@ export const Donut = memo(function Donut({
   const r = 42;
   const c = 2 * Math.PI * r;
   const gap = slices.length > 1 ? 1.6 : 0;
-  let offset = 0;
+  const arcs = slices.reduce<{ slice: DonutSlice; length: number; offset: number }[]>((out, slice) => {
+    const previous = out[out.length - 1];
+    out.push({ slice, length: (slice.value / total) * c, offset: previous ? previous.offset + previous.length : 0 });
+    return out;
+  }, []);
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[188px]">
       {/* A group, not an image: the slices are real buttons, so a keyboard user can
           reach the same filter a pointer user reaches. */}
       <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="group" aria-label={label}>
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--border)" strokeWidth="9" />
-        {slices.map((s) => {
-          const len = (s.value / total) * c;
+        {arcs.map(({ slice: s, length: len, offset }) => {
           const dash = Math.max(0.01, len - gap);
-          const el = (
+          return (
             <circle
               key={s.id}
               cx="50"
@@ -272,8 +275,6 @@ export const Donut = memo(function Donut({
               <title>{s.label}</title>
             </circle>
           );
-          offset += len;
-          return el;
         })}
       </svg>
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
