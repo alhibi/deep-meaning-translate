@@ -188,7 +188,7 @@ function Translator() {
       if (!result.translation.trim()) return;
       const quiet = quietRef.current !== null && quietRef.current === original.trim();
       quietRef.current = null;
-      history.add(
+      void history.add(
         {
           source: result.sourceLanguage || source,
           target,
@@ -316,20 +316,25 @@ function Translator() {
     if (!restored) return;
     const snapshot = { text, result: provisional ? null : raw, source, target, style };
     sessionRef.current = snapshot;
-    const id = setTimeout(() => persist.saveSession(snapshot), 400);
+    const id = setTimeout(() => void persist.saveSession(snapshot), 400);
     return () => clearTimeout(id);
   }, [restored, text, raw, provisional, source, target, style]);
   useEffect(() => {
     if (!restored) return;
     const flush = () => {
-      if (document.visibilityState === "hidden") persist.saveSession(sessionRef.current);
+      if (document.visibilityState === "hidden") void persist.saveSession(sessionRef.current);
     };
-    const onHide = () => persist.saveSession(sessionRef.current);
+    const onHide = () => void persist.saveSession(sessionRef.current);
+    // Android may stop a backgrounded process without running pagehide; the native
+    // lifecycle event asks for the same flush, and the write is idempotent.
+    const onNativeFlush = () => void persist.saveSession(sessionRef.current);
     document.addEventListener("visibilitychange", flush);
     window.addEventListener("pagehide", onHide);
+    window.addEventListener("lingua:flush", onNativeFlush);
     return () => {
       document.removeEventListener("visibilitychange", flush);
       window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("lingua:flush", onNativeFlush);
     };
   }, [restored]);
 
@@ -560,12 +565,12 @@ function Translator() {
   const archiveFix = useCallback(
     (translated: string) => {
       if (!result) return;
-      history.add(
+      void history.add(
         { source: result.sourceLanguage || source, target, original: text, translated, style },
         { quiet: true },
       );
       const hit = saved.find(text, target);
-      if (hit) saved.update(hit.id, translated);
+      if (hit) void saved.update(hit.id, translated);
     },
     [result, source, target, text, style],
   );
@@ -650,6 +655,48 @@ function Translator() {
   }, [clearTaglineTimer, playTagline]);
   const [localeOpen, setLocaleOpen] = useState(false);
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
+
+  // Android back: close what is open, dismiss the keyboard, go back a route, and only
+  // then leave the app. It never reloads the document or clears the draft.
+  useEffect(() => {
+    const onBack = () => {
+      if (savedOpen) return setSavedOpen(false);
+      if (dialectOpen) return setDialectOpen(false);
+      if (localeOpen) return setLocaleOpen(false);
+      if (lexOpen) return setLexOpen(false);
+      if (shadowMapOpen) return setShadowMapOpen(false);
+      if (shadowFocus) return setShadowFocus(null);
+      if (introOpen) return finishIntro();
+      const active = document.activeElement as HTMLElement | null;
+      if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) {
+        active.blur();
+        return;
+      }
+      if (window.location.pathname !== "/") {
+        window.history.back();
+        return;
+      }
+      void (async () => {
+        try {
+          const { App } = await import("@capacitor/app");
+          await App.exitApp();
+        } catch {
+          /* browser: nothing to exit */
+        }
+      })();
+    };
+    window.addEventListener("lingua:back", onBack);
+    return () => window.removeEventListener("lingua:back", onBack);
+  }, [
+    savedOpen,
+    dialectOpen,
+    localeOpen,
+    lexOpen,
+    shadowMapOpen,
+    shadowFocus,
+    introOpen,
+    finishIntro,
+  ]);
   const rtlInput = text.trim() ? startsRtl(text) : uiRtl;
   const hasText = text.length > 0;
   // The name introduces itself on its own: once 4s after arrival, then a quiet
@@ -668,7 +715,7 @@ function Translator() {
   const isSaved = !!result && !!savedList && !!saved.find(text, target);
   const toggleSave = useCallback(() => {
     if (!result) return;
-    saved.toggle({
+    void saved.toggle({
       source: result.sourceLanguage || source,
       target,
       original: text,

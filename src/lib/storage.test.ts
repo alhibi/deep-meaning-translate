@@ -9,15 +9,15 @@ beforeEach(() => {
 describe("saved phrases", () => {
   it("a clear in another tab cannot resurrect cached phrases on the next save", async () => {
     const { saved, useSaved } = await import("./saved");
-    saved.toggle({ source: "de", target: "ar", original: "Alt", translated: "قديم" });
+    await saved.toggle({ source: "de", target: "ar", original: "Alt", translated: "قديم" });
     const { result, unmount } = renderHook(() => useSaved());
     act(() => {
       localStorage.clear();
       window.dispatchEvent(new StorageEvent("storage", { key: null }));
     });
     expect(result.current).toEqual([]);
-    act(() => {
-      saved.toggle({ source: "de", target: "ar", original: "Neu", translated: "جديد" });
+    act(async () => {
+      await saved.toggle({ source: "de", target: "ar", original: "Neu", translated: "جديد" });
     });
     expect(saved.list().map((p) => p.original)).toEqual(["Neu"]);
     unmount();
@@ -25,9 +25,9 @@ describe("saved phrases", () => {
   it("saves, finds and toggles off", async () => {
     const { saved } = await import("./saved");
     const e = { source: "de", target: "ar", original: "Hallo  Welt", translated: "مرحبا" };
-    expect(saved.toggle(e)).toBe(true);
+    await expect(saved.toggle(e)).resolves.toBe(true);
     expect(saved.find("Hallo Welt", "ar")).toBeTruthy();
-    expect(saved.toggle(e)).toBe(false);
+    await expect(saved.toggle(e)).resolves.toBe(false);
     expect(saved.list()).toHaveLength(0);
   });
   it("drops damaged rows instead of crashing", async () => {
@@ -38,8 +38,8 @@ describe("saved phrases", () => {
   });
   it("selects the daily phrase from an explicit day key", async () => {
     const { saved } = await import("./saved");
-    saved.toggle({ source: "de", target: "ar", original: "A", translated: "أ" });
-    saved.toggle({ source: "de", target: "ar", original: "B", translated: "ب" });
+    await saved.toggle({ source: "de", target: "ar", original: "A", translated: "أ" });
+    await saved.toggle({ source: "de", target: "ar", original: "B", translated: "ب" });
     const first = saved.ofTheDay("2026-11-14");
     const second = saved.ofTheDay("2026-11-15");
     expect(first).not.toBeNull();
@@ -77,8 +77,8 @@ describe("history", () => {
   });
   it("merges a sentence that grew while typing", async () => {
     const { history } = await import("./history");
-    history.add({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
-    const list = history.add({
+    await history.add({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
+    const list = await history.add({
       source: "de",
       target: "ar",
       original: "Hallo Welt",
@@ -189,29 +189,34 @@ describe("session", () => {
 describe("data integrity (edit, delete, restore)", () => {
   it("edits a saved translation and refuses empty edits", async () => {
     const { saved } = await import("./saved");
-    saved.toggle({ source: "de", target: "ar", original: "Danke", translated: "شكرا" });
+    await saved.toggle({ source: "de", target: "ar", original: "Danke", translated: "شكرا" });
     const id = saved.list()[0]!.id;
-    expect(saved.update(id, "  شكراً جزيلاً ")).toBe(true);
-    expect(saved.update(id, "   ")).toBe(false);
-    expect(saved.update("missing", "x")).toBe(false);
+    await expect(saved.update(id, "  شكراً جزيلاً ")).resolves.toBe(true);
+    await expect(saved.update(id, "   ")).resolves.toBe(false);
+    await expect(saved.update("missing", "x")).resolves.toBe(false);
     vi.resetModules();
     const fresh = (await import("./saved")).saved;
     expect(fresh.list()[0]!.translated).toBe("شكراً جزيلاً");
   });
   it("deletes one history entry and keeps the rest across reloads", async () => {
     const { history } = await import("./history");
-    history.add({ source: "de", target: "ar", original: "Eins", translated: "واحد" });
-    const list = history.add({ source: "de", target: "en", original: "Zwei", translated: "two" });
-    const left = history.remove(list[0]!.id);
+    await history.add({ source: "de", target: "ar", original: "Eins", translated: "واحد" });
+    const list = await history.add({
+      source: "de",
+      target: "en",
+      original: "Zwei",
+      translated: "two",
+    });
+    const left = await history.remove(list[0]!.id);
     expect(left.map((e) => e.original)).toEqual(["Eins"]);
     vi.resetModules();
     expect((await import("./history")).history.list().map((e) => e.original)).toEqual(["Eins"]);
   });
   it("clearing the phrasebook also clears what is held in memory", async () => {
     const { saved } = await import("./saved");
-    saved.toggle({ source: "de", target: "ar", original: "Ja", translated: "نعم" });
+    await saved.toggle({ source: "de", target: "ar", original: "Ja", translated: "نعم" });
     localStorage.clear();
-    saved.clear();
+    await saved.clear();
     expect(saved.list()).toEqual([]);
     expect(localStorage.getItem("lingua.saved.v1")).toBe("[]");
   });

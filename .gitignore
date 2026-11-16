@@ -36,3 +36,12 @@ coverage
 /output
 /playwright-report
 /test-results
+
+# Android toolchain and generated shell inputs
+.android-toolchain/
+android-web/
+android/.gradle/
+android/app/build/
+
+# Local build outputs shared with the user, not source
+artifacts/

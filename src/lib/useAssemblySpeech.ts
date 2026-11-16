@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { assemblyToken } from "./assembly.functions";
+import { callDictationToken } from "./native/rpc";
 import { ASSEMBLY_LANGUAGES, assemblyText, assemblyUrl } from "./assembly";
 import type { MicError } from "./speech";
 
@@ -20,7 +19,7 @@ export function useAssemblySpeech(opts: {
   onText: (text: string, final: boolean) => void;
   onDone: () => void;
 }) {
-  const tokenFn = useServerFn(assemblyToken);
+  const tokenFn = callDictationToken;
   const cb = useRef(opts);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   cb.current = opts;

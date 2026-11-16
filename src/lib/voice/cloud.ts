@@ -1,8 +1,15 @@
 import { MAX_SPEAK_CHARS, type SpeakErrorKind, type SpeakRequest } from "./geminiVoice";
 import { elevenParser, type ElevenRequest, type CharTiming } from "./elevenVoice";
+import { isNativeApp, nativeApiUrl } from "../native/config";
 export type CloudRequest = SpeakRequest | ElevenRequest;
 const isEleven = (r: CloudRequest): r is ElevenRequest =>
   "engine" in r && r.engine === "elevenlabs";
+
+/** The APK serves the UI locally, so cloud voice needs the real server's address. */
+function speechEndpoint(eleven: boolean): string | null {
+  if (!isNativeApp()) return eleven ? "/api/eleven-speak" : "/api/speak";
+  return nativeApiUrl(eleven ? "/api/native/v1/eleven-speak" : "/api/native/v1/speak");
+}
 
 /**
  * Browser side of cloud speech: fetches streamed PCM and keeps a small
@@ -123,11 +130,18 @@ export class Feed {
     void (async () => {
       let res: Response;
       try {
-        res = await fetch(isEleven(this.r) ? "/api/eleven-speak" : "/api/speak", {
+        const url = speechEndpoint(isEleven(this.r));
+        if (!url) {
+          this.fail(new CloudSpeakError("config"));
+          return;
+        }
+        res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(this.r),
           signal: this.ctrl.signal,
+          credentials: "omit",
+          cache: "no-store",
         });
       } catch {
         this.fail(
@@ -253,7 +267,11 @@ let warmed = false;
 export function warmVoice() {
   if (warmed || typeof window === "undefined" || !cloudAvailable()) return;
   warmed = true;
-  void fetch("/api/speak", { method: "GET" }).catch(() => undefined);
+  const url = speechEndpoint(false);
+  if (url)
+    void fetch(url, { method: "GET", credentials: "omit", cache: "no-store" }).catch(
+      () => undefined,
+    );
 }
 
 /** Ordered pieces under the server limit, split at sentence ends; the first is short for a fast start. */

@@ -43,6 +43,19 @@ Status: **Verified** (applies from 2026-11-07). "Done" is evidence, not confiden
 - [ ] The change reduces or holds complexity; no new abstraction without a named consumer.
 - [ ] Documentation that names moved files is updated; links pass `npm run check:docs`.
 
+## An Android change
+
+- [ ] `npm run typecheck` and `npx vitest run` pass; `./gradlew :app:testDebugUnitTest` passes.
+- [ ] `./gradlew :app:assembleDebug :app:assembleRelease` succeeds and both APKs verify with
+      `apksigner`.
+- [ ] No `fallbackToDestructiveMigration`; every schema change has a migration and a test that opens
+      real previous-version rows.
+- [ ] No provider key, token or password in the APK or in `assets/public`; cleartext stays disabled.
+- [ ] The bridge method list still matches `src/lib/native/plugin.ts`; rejected calls carry no SQL,
+      values, URLs or stack traces.
+- [ ] A device/emulator run was performed, or the untested paths are listed as NOT_VERIFIED with the
+      manual checklist in `docs/android/device-compatibility.md`.
+
 ## A release
 
 - [ ] `npm run verify` is green: typecheck, lint with zero warnings, tests, contrast.

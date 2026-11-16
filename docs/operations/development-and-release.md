@@ -76,8 +76,24 @@ metrics only. Do not add text to them while debugging.
    migration by deleting user keys.
 5. Record the cause and the missing test in `docs/audits/technical-debt.md`.
 
+## Android build
+
+See `docs/android/build-and-release.md` for the full sequence. Short form:
+
+```bash
+npm run build:native:web && npx cap sync android
+export JAVA_HOME=$PWD/.android-toolchain/jdk-21 ANDROID_HOME=$HOME/android-sdk
+cd android && ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+```
+
+Android needs JDK 21 (Capacitor's generated build sets `VERSION_21`). Release signing is read from
+`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`;
+without them the release APK is debug-signed and must not be published.
+
 ## Dependency policy
 
+- **npm is the single package manager** (`package-lock.json`, `npm ci` in CI). The stray `bun.lock`
+  was removed on 2026-11-16 so two lockfiles cannot disagree. Do not introduce a second manager.
 - Keep the lockfile; no opportunistic upgrades during a defect fix.
 - A dependency update is a change with its own build, tests and a note in the release summary.
 - Security advisories should be checked with the ecosystem's audit tool; this audit did not run one,

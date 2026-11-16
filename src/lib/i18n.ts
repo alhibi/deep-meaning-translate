@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { readDeviceValue, writeDeviceValue } from "./persistence/settings";
 
 export type Locale = "ar" | "en" | "de";
 export const LOCALES: Locale[] = ["ar", "en", "de"];
@@ -582,7 +583,8 @@ const de: Record<Key, string> = {
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };
-const STORAGE = "lingua.ui-locale";
+export const LOCALE_STORAGE = "lingua.ui-locale";
+const STORAGE = LOCALE_STORAGE;
 
 let current: Locale = "en";
 const listeners = new Set<() => void>();
@@ -610,10 +612,8 @@ export function normalizeLocale(value: unknown): Locale | null {
 export const LOCALE_BOOT = `(function(){var P=${normalizeLocale.toString()};var s=null;try{s=P(localStorage.getItem("${STORAGE}"))}catch(e){}if(!s){try{var nav=navigator.languages??[navigator.language];for(var i=0;i<nav.length;i++){var v=P(String(nav[i]).slice(0,2).toLowerCase());if(v){s=v;break}}}catch(e){}}s=s||"en";var d=document.documentElement;d.lang=s;d.dir=s==="ar"?"rtl":"ltr";})();`;
 
 function detectInitial(): Locale {
-  try {
-    const saved = normalizeLocale(localStorage.getItem(STORAGE));
-    if (saved) return saved;
-  } catch {}
+  const saved = normalizeLocale(readDeviceValue(STORAGE));
+  if (saved) return saved;
   const nav = (navigator.languages ?? [navigator.language]).map((x) => x.slice(0, 2).toLowerCase());
   for (const code of nav) {
     const locale = normalizeLocale(code);
@@ -632,11 +632,8 @@ export function initLocale() {
 export function setLocale(l: Locale, save = true) {
   current = l;
   apply(l);
-  if (save) {
-    try {
-      localStorage.setItem(STORAGE, l);
-    } catch {}
-  }
+  // The document switches direction immediately; persistence is the adapter's promise.
+  if (save) void writeDeviceValue(STORAGE, l);
   listeners.forEach((fn) => fn());
 }
 

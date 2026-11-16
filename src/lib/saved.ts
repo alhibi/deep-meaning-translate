@@ -1,65 +1,46 @@
 import { useSyncExternalStore } from "react";
+import { isNativeApp } from "./native/config";
+import { port } from "./persistence";
+import {
+  SAVED_LIMIT,
+  isPhrase,
+  normalizeText as norm,
+  type SavedPhrase,
+} from "./persistence/contracts";
+import { readSaved } from "./persistence/web";
+
+export { isPhrase } from "./persistence/contracts";
+export type { SavedPhrase } from "./persistence/contracts";
 
 /** Personal phrasebook: device-only, never sent anywhere. */
-export interface SavedPhrase {
-  id: string;
-  source: string;
-  target: string;
-  original: string;
-  translated: string;
-  createdAt: number;
-  /** Times reviewed and remembered — weaker phrases come up first. */
-  known: number;
-  reviewedAt: number;
-}
-
-const KEY = "lingua.saved.v1";
-const LIMIT = 300;
 const EMPTY: SavedPhrase[] = [];
+const native = isNativeApp();
 
 let cache: SavedPhrase[] | null = null;
-
-/** Damaged or foreign rows in storage are dropped, never allowed to crash the app. */
-export function isPhrase(v: unknown): v is SavedPhrase {
-  const p = v as SavedPhrase;
-  return (
-    !!p &&
-    typeof p === "object" &&
-    typeof p.id === "string" &&
-    typeof p.original === "string" &&
-    typeof p.translated === "string" &&
-    typeof p.target === "string" &&
-    typeof p.source === "string" &&
-    Number.isFinite(p.createdAt) &&
-    Number.isFinite(p.known) &&
-    Number.isFinite(p.reviewedAt)
-  );
-}
 const listeners = new Set<() => void>();
 
 function read(): SavedPhrase[] {
-  if (typeof window === "undefined") return EMPTY;
   if (cache) return cache;
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
-    cache = Array.isArray(parsed) ? (parsed as unknown[]).filter(isPhrase) : [];
-  } catch {
-    cache = [];
-  }
+  cache = native ? [] : readSaved();
   return cache;
 }
 
-function write(next: SavedPhrase[]) {
-  cache = next.slice(0, LIMIT);
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(cache));
-  } catch {
-    /* storage unavailable */
-  }
+/** Called once by the platform boot with the validated native snapshot. */
+export function hydrateSaved(rows: SavedPhrase[]) {
+  cache = rows.filter(isPhrase).slice(0, SAVED_LIMIT);
   listeners.forEach((fn) => fn());
 }
 
-const norm = (s: string) => s.trim().replace(/\s+/g, " ");
+async function write(next: SavedPhrase[]): Promise<boolean> {
+  cache = next.slice(0, SAVED_LIMIT);
+  listeners.forEach((fn) => fn());
+  try {
+    await port.savedWrite(cache);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** UTC day index of a `YYYY-MM-DD` key, so the same key picks the same phrase anywhere. */
 function dayIndex(key: string): number {
@@ -74,14 +55,14 @@ export const saved = {
     const o = norm(original);
     return read().find((p) => p.target === target && norm(p.original) === o);
   },
-  toggle(entry: Pick<SavedPhrase, "source" | "target" | "original" | "translated">) {
+  async toggle(entry: Pick<SavedPhrase, "source" | "target" | "original" | "translated">) {
     const hit = saved.find(entry.original, entry.target);
     if (hit) {
-      write(read().filter((p) => p.id !== hit.id));
+      await write(read().filter((p) => p.id !== hit.id));
       return false;
     }
     const now = Date.now();
-    write([
+    await write([
       {
         ...entry,
         original: norm(entry.original),
@@ -94,19 +75,19 @@ export const saved = {
     ]);
     return true;
   },
-  remove(id: string) {
-    write(read().filter((p) => p.id !== id));
+  async remove(id: string) {
+    await write(read().filter((p) => p.id !== id));
   },
   /** Edit the saved translation. Empty or unchanged text is refused. */
-  update(id: string, translated: string): boolean {
+  async update(id: string, translated: string): Promise<boolean> {
     const next = translated.trim();
     const hit = read().find((p) => p.id === id);
     if (!hit || !next || next === hit.translated || next.length > 5000) return false;
-    write(read().map((p) => (p.id === id ? { ...p, translated: next } : p)));
+    await write(read().map((p) => (p.id === id ? { ...p, translated: next } : p)));
     return true;
   },
-  mark(id: string, remembered: boolean) {
-    write(
+  async mark(id: string, remembered: boolean) {
+    await write(
       read().map((p) =>
         p.id === id ? { ...p, known: remembered ? p.known + 1 : 0, reviewedAt: Date.now() } : p,
       ),
@@ -122,15 +103,16 @@ export const saved = {
     if (list.length === 0) return null;
     return list[((dayIndex(dayKey) % list.length) + list.length) % list.length] ?? null;
   },
-  clear() {
-    write([]);
+  async clear() {
+    await write([]);
   },
 };
 
 function subscribe(fn: () => void) {
   listeners.add(fn);
   const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY || e.key === null) {
+    if (native) return;
+    if (e.key === "lingua.saved.v1" || e.key === null) {
       cache = null;
       fn();
     }

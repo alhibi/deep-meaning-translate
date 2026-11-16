@@ -18,6 +18,13 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ApiElevenSpeakRouteImport } from './routes/api/eleven-speak'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranslateStreamRouteImport } from './routes/api/translate-stream'
+import { Route as ApiNativeV1DictationTokenRouteImport } from './routes/api/native/v1/dictation-token'
+import { Route as ApiNativeV1ElevenSpeakRouteImport } from './routes/api/native/v1/eleven-speak'
+import { Route as ApiNativeV1LexiconRouteImport } from './routes/api/native/v1/lexicon'
+import { Route as ApiNativeV1RepairRouteImport } from './routes/api/native/v1/repair'
+import { Route as ApiNativeV1ShadowRouteImport } from './routes/api/native/v1/shadow'
+import { Route as ApiNativeV1SpeakRouteImport } from './routes/api/native/v1/speak'
+import { Route as ApiNativeV1TranslateStreamRouteImport } from './routes/api/native/v1/translate-stream'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +71,43 @@ const ApiTranslateStreamRoute = ApiTranslateStreamRouteImport.update({
   path: '/api/translate-stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNativeV1DictationTokenRoute =
+  ApiNativeV1DictationTokenRouteImport.update({
+    id: '/api/native/v1/dictation-token',
+    path: '/api/native/v1/dictation-token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiNativeV1ElevenSpeakRoute = ApiNativeV1ElevenSpeakRouteImport.update({
+  id: '/api/native/v1/eleven-speak',
+  path: '/api/native/v1/eleven-speak',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativeV1LexiconRoute = ApiNativeV1LexiconRouteImport.update({
+  id: '/api/native/v1/lexicon',
+  path: '/api/native/v1/lexicon',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativeV1RepairRoute = ApiNativeV1RepairRouteImport.update({
+  id: '/api/native/v1/repair',
+  path: '/api/native/v1/repair',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativeV1ShadowRoute = ApiNativeV1ShadowRouteImport.update({
+  id: '/api/native/v1/shadow',
+  path: '/api/native/v1/shadow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativeV1SpeakRoute = ApiNativeV1SpeakRouteImport.update({
+  id: '/api/native/v1/speak',
+  path: '/api/native/v1/speak',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativeV1TranslateStreamRoute =
+  ApiNativeV1TranslateStreamRouteImport.update({
+    id: '/api/native/v1/translate-stream',
+    path: '/api/native/v1/translate-stream',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +119,13 @@ export interface FileRoutesByFullPath {
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
+  '/api/native/v1/dictation-token': typeof ApiNativeV1DictationTokenRoute
+  '/api/native/v1/eleven-speak': typeof ApiNativeV1ElevenSpeakRoute
+  '/api/native/v1/lexicon': typeof ApiNativeV1LexiconRoute
+  '/api/native/v1/repair': typeof ApiNativeV1RepairRoute
+  '/api/native/v1/shadow': typeof ApiNativeV1ShadowRoute
+  '/api/native/v1/speak': typeof ApiNativeV1SpeakRoute
+  '/api/native/v1/translate-stream': typeof ApiNativeV1TranslateStreamRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +137,13 @@ export interface FileRoutesByTo {
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
+  '/api/native/v1/dictation-token': typeof ApiNativeV1DictationTokenRoute
+  '/api/native/v1/eleven-speak': typeof ApiNativeV1ElevenSpeakRoute
+  '/api/native/v1/lexicon': typeof ApiNativeV1LexiconRoute
+  '/api/native/v1/repair': typeof ApiNativeV1RepairRoute
+  '/api/native/v1/shadow': typeof ApiNativeV1ShadowRoute
+  '/api/native/v1/speak': typeof ApiNativeV1SpeakRoute
+  '/api/native/v1/translate-stream': typeof ApiNativeV1TranslateStreamRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +156,13 @@ export interface FileRoutesById {
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
+  '/api/native/v1/dictation-token': typeof ApiNativeV1DictationTokenRoute
+  '/api/native/v1/eleven-speak': typeof ApiNativeV1ElevenSpeakRoute
+  '/api/native/v1/lexicon': typeof ApiNativeV1LexiconRoute
+  '/api/native/v1/repair': typeof ApiNativeV1RepairRoute
+  '/api/native/v1/shadow': typeof ApiNativeV1ShadowRoute
+  '/api/native/v1/speak': typeof ApiNativeV1SpeakRoute
+  '/api/native/v1/translate-stream': typeof ApiNativeV1TranslateStreamRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +176,13 @@ export interface FileRouteTypes {
     | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
+    | '/api/native/v1/dictation-token'
+    | '/api/native/v1/eleven-speak'
+    | '/api/native/v1/lexicon'
+    | '/api/native/v1/repair'
+    | '/api/native/v1/shadow'
+    | '/api/native/v1/speak'
+    | '/api/native/v1/translate-stream'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +194,13 @@ export interface FileRouteTypes {
     | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
+    | '/api/native/v1/dictation-token'
+    | '/api/native/v1/eleven-speak'
+    | '/api/native/v1/lexicon'
+    | '/api/native/v1/repair'
+    | '/api/native/v1/shadow'
+    | '/api/native/v1/speak'
+    | '/api/native/v1/translate-stream'
   id:
     | '__root__'
     | '/'
@@ -133,6 +212,13 @@ export interface FileRouteTypes {
     | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
+    | '/api/native/v1/dictation-token'
+    | '/api/native/v1/eleven-speak'
+    | '/api/native/v1/lexicon'
+    | '/api/native/v1/repair'
+    | '/api/native/v1/shadow'
+    | '/api/native/v1/speak'
+    | '/api/native/v1/translate-stream'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +231,13 @@ export interface RootRouteChildren {
   ApiElevenSpeakRoute: typeof ApiElevenSpeakRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
   ApiTranslateStreamRoute: typeof ApiTranslateStreamRoute
+  ApiNativeV1DictationTokenRoute: typeof ApiNativeV1DictationTokenRoute
+  ApiNativeV1ElevenSpeakRoute: typeof ApiNativeV1ElevenSpeakRoute
+  ApiNativeV1LexiconRoute: typeof ApiNativeV1LexiconRoute
+  ApiNativeV1RepairRoute: typeof ApiNativeV1RepairRoute
+  ApiNativeV1ShadowRoute: typeof ApiNativeV1ShadowRoute
+  ApiNativeV1SpeakRoute: typeof ApiNativeV1SpeakRoute
+  ApiNativeV1TranslateStreamRoute: typeof ApiNativeV1TranslateStreamRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +305,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTranslateStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/native/v1/dictation-token': {
+      id: '/api/native/v1/dictation-token'
+      path: '/api/native/v1/dictation-token'
+      fullPath: '/api/native/v1/dictation-token'
+      preLoaderRoute: typeof ApiNativeV1DictationTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/eleven-speak': {
+      id: '/api/native/v1/eleven-speak'
+      path: '/api/native/v1/eleven-speak'
+      fullPath: '/api/native/v1/eleven-speak'
+      preLoaderRoute: typeof ApiNativeV1ElevenSpeakRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/lexicon': {
+      id: '/api/native/v1/lexicon'
+      path: '/api/native/v1/lexicon'
+      fullPath: '/api/native/v1/lexicon'
+      preLoaderRoute: typeof ApiNativeV1LexiconRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/repair': {
+      id: '/api/native/v1/repair'
+      path: '/api/native/v1/repair'
+      fullPath: '/api/native/v1/repair'
+      preLoaderRoute: typeof ApiNativeV1RepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/shadow': {
+      id: '/api/native/v1/shadow'
+      path: '/api/native/v1/shadow'
+      fullPath: '/api/native/v1/shadow'
+      preLoaderRoute: typeof ApiNativeV1ShadowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/speak': {
+      id: '/api/native/v1/speak'
+      path: '/api/native/v1/speak'
+      fullPath: '/api/native/v1/speak'
+      preLoaderRoute: typeof ApiNativeV1SpeakRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/translate-stream': {
+      id: '/api/native/v1/translate-stream'
+      path: '/api/native/v1/translate-stream'
+      fullPath: '/api/native/v1/translate-stream'
+      preLoaderRoute: typeof ApiNativeV1TranslateStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +367,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiElevenSpeakRoute: ApiElevenSpeakRoute,
   ApiSpeakRoute: ApiSpeakRoute,
   ApiTranslateStreamRoute: ApiTranslateStreamRoute,
+  ApiNativeV1DictationTokenRoute: ApiNativeV1DictationTokenRoute,
+  ApiNativeV1ElevenSpeakRoute: ApiNativeV1ElevenSpeakRoute,
+  ApiNativeV1LexiconRoute: ApiNativeV1LexiconRoute,
+  ApiNativeV1RepairRoute: ApiNativeV1RepairRoute,
+  ApiNativeV1ShadowRoute: ApiNativeV1ShadowRoute,
+  ApiNativeV1SpeakRoute: ApiNativeV1SpeakRoute,
+  ApiNativeV1TranslateStreamRoute: ApiNativeV1TranslateStreamRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

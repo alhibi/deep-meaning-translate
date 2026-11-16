@@ -113,7 +113,7 @@ function Review() {
   }
 
   const next = (remembered: boolean) => {
-    saved.mark(card.id, remembered);
+    void saved.mark(card.id, remembered);
     setShown(false);
     setI((n) => n + 1);
   };
@@ -175,7 +175,7 @@ function SavedRow({ e, onPick }: { e: SavedPhrase; onPick: (p: SavedPhrase) => v
 
   if (editing) {
     const commit = () => {
-      saved.update(e.id, draft);
+      void saved.update(e.id, draft);
       setEditing(false);
     };
     return (
@@ -251,7 +251,7 @@ function SavedRow({ e, onPick }: { e: SavedPhrase; onPick: (p: SavedPhrase) => v
       </button>
       <button
         type="button"
-        onClick={() => saved.remove(e.id)}
+        onClick={() => void saved.remove(e.id)}
         aria-label={t("remove")}
         className="press-soft me-2 mt-3 grid size-9 shrink-0 place-items-center rounded-full text-faint hover:text-foreground"
       >

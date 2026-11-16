@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { readDeviceValue, writeDeviceValue } from "../persistence/settings";
 import { DEFAULT_ELEVEN_VOICE, ELEVEN_VOICES } from "./elevenVoice";
 import {
   DEFAULT_VOICE,
@@ -53,7 +54,7 @@ export function getVoicePrefs(): VoicePrefs {
   if (typeof window === "undefined") return DEFAULT_VOICE_PREFS;
   const read = (key: string): unknown => {
     try {
-      return JSON.parse(localStorage.getItem(key) ?? "null");
+      return JSON.parse(readDeviceValue(key) ?? "null");
     } catch {
       return null;
     }
@@ -64,22 +65,14 @@ export function getVoicePrefs(): VoicePrefs {
   } else {
     const old = parseVoicePrefs(read("lingua.voice.v1"));
     current = { ...old, engine: old.engine === "device" ? "device" : "elevenlabs" };
-    try {
-      localStorage.setItem(KEY, JSON.stringify(current));
-    } catch {
-      /* unavailable */
-    }
+    void writeDeviceValue(KEY, JSON.stringify(current));
   }
   return current;
 }
 
 export function setVoicePrefs(patch: Partial<VoicePrefs>) {
   current = parseVoicePrefs({ ...getVoicePrefs(), ...patch });
-  try {
-    localStorage.setItem(KEY, JSON.stringify(current));
-  } catch {
-    /* storage full or blocked: keep in memory */
-  }
+  void writeDeviceValue(KEY, JSON.stringify(current));
   subs.forEach((f) => f());
 }
 

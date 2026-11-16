@@ -1,4 +1,6 @@
 // The single service-worker registrar. Never registers in dev, iframes or Lovable previews.
+import { isNativeApp } from "./native/config";
+
 const SW_URL = "/sw.js";
 
 function refused(): boolean {
@@ -27,6 +29,12 @@ async function unregisterOurs() {
 
 export function initServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  // The APK ships its shell inside the package. A worker here could only serve a stale
+  // asset over a newer APK, so the native build never registers one.
+  if (isNativeApp()) return;
+  // The APK ships its shell inside the package. A worker here could only serve a stale
+  // asset over a newer APK, so the native build never registers one.
+  if (isNativeApp()) return;
   if (refused()) {
     void unregisterOurs().catch(() => undefined);
     return;

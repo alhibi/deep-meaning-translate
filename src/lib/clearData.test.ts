@@ -26,11 +26,11 @@ describe("clearing device data", () => {
     const { clearDeviceData } = await import("./clearData");
 
     persist.saveSession({ text: "Hallo", result, source: "de", target: "ar", style: "natural" });
-    saved.toggle({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
-    history.add({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
+    await saved.toggle({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
+    await history.add({ source: "de", target: "ar", original: "Hallo", translated: "مرحبا" });
     memorySet("de|ar|Hallo", result);
 
-    clearDeviceData();
+    await clearDeviceData();
 
     expect(persist.session()).toBeNull();
     expect(persist.remembered()).toEqual({ prefs: null, session: null });

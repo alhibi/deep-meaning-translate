@@ -74,6 +74,19 @@ flowchart LR
   trade-off, documented rather than hidden.
 - HTTPS is provided by the hosting platform.
 
+## Android app
+
+- Same network surface as the web (`/api/native/v1/*`), same prompts and provider keys: nothing is
+  embedded in the APK and no shared secret is used for authentication.
+- The native origin (`https://localhost`) is in an exact CORS allowlist; `*` is never returned.
+- `android:allowBackup="false"` and `data_extraction_rules.xml` exclude the database, preferences
+  and files from Google backup and device transfer. The archive leaves the device only on an
+  explicit, optionally encrypted export.
+- Permissions are INTERNET, RECORD_AUDIO (dictation) and VIBRATE. No storage permission: backups use
+  the Storage Access Framework.
+- Cleartext HTTP is disabled; only system trust anchors are accepted.
+- Full details: `docs/android/network-and-security.md`.
+
 ## Verified vs unverified
 
 | Claim | Status |

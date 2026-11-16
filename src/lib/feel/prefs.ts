@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { readDeviceValue, removeDeviceValue, writeDeviceValue } from "../persistence/settings";
 
 /**
  * Device-only feel settings. Nothing here is sent anywhere.
@@ -32,7 +33,7 @@ const subscribers = new Set<() => void>();
 
 function read(): unknown {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "null");
+    return JSON.parse(readDeviceValue(KEY) ?? "null");
   } catch {
     return null;
   }
@@ -48,13 +49,8 @@ export function getFeelPrefs(): FeelPrefs {
 export function setFeelPrefs(patch: Partial<FeelPrefs>): FeelPrefs {
   const next = { ...getFeelPrefs(), ...patch };
   current = next;
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      /* private mode: the choice still applies for this session */
-    }
-  }
+  // The choice applies to the next tap immediately; the write is an explicit promise.
+  void writeDeviceValue(KEY, JSON.stringify(next));
   for (const fn of subscribers) fn();
   return next;
 }
@@ -62,13 +58,7 @@ export function setFeelPrefs(patch: Partial<FeelPrefs>): FeelPrefs {
 /** For tests and for the "forget everything" path: back to defaults, on disk too. */
 export function resetFeelPrefs() {
   current = null;
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.removeItem(KEY);
-    } catch {
-      /* nothing to clean */
-    }
-  }
+  void removeDeviceValue(KEY);
   for (const fn of subscribers) fn();
 }
 

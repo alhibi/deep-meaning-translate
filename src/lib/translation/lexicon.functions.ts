@@ -4,7 +4,7 @@ import { takeEnrichmentToken } from "./throttle";
 import { getRequest } from "@tanstack/react-start/server";
 import { clientAddress, sameOrigin } from "../requestSafety";
 
-const LexiconInput = z.object({
+export const LexiconInput = z.object({
   text: z.string().trim().min(1).max(72),
   source: z.string().regex(/^[a-z]{2}$|^auto$/),
   target: z.string().regex(/^[a-z]{2}$/),

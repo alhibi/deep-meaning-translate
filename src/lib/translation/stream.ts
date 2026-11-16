@@ -1,5 +1,10 @@
 import type { ErrorKind } from "./useTranslator";
 import { partialTranslation } from "./parse";
+import { isNativeApp, nativeApiUrl } from "../native/config";
+
+/** The app's UI is served from the APK, so its calls need the real server's address. */
+const streamUrl = () =>
+  isNativeApp() ? nativeApiUrl("/api/native/v1/translate-stream") : "/api/translate-stream";
 
 export type StreamResponse =
   { ok: true; text: string } | { ok: false; kind: ErrorKind; cancelled?: true };
@@ -11,11 +16,15 @@ export async function streamTranslate(
   onText: (text: string) => void,
   mode: "live" | "full" = "live",
 ): Promise<StreamResponse> {
-  const res = await fetch("/api/translate-stream", {
+  const url = streamUrl();
+  if (!url) return { ok: false, kind: "network" };
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...data, mode }),
     signal,
+    credentials: "omit",
+    cache: "no-store",
   });
   // The route answers 204 when the request was aborted upstream: a quiet cancellation,
   // not a provider failure. It carries no body, so it must never be read as JSON.
@@ -41,5 +50,7 @@ export async function streamTranslate(
 /** Fire-and-forget: opens the connection chain to the translation service before the first request. */
 export function warmTranslation(): void {
   if (typeof fetch === "undefined") return;
-  void fetch("/api/translate-stream", { method: "GET", cache: "no-store" }).catch(() => {});
+  const url = streamUrl();
+  if (!url) return;
+  void fetch(url, { method: "GET", cache: "no-store", credentials: "omit" }).catch(() => {});
 }

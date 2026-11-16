@@ -98,3 +98,21 @@ storage keys alone leaves module caches alive and a cleared translation can stil
 - Storage can be blocked or full; writes return `false` and the app continues without persistence.
 - The remembered copy is per-tab and is not a cross-tab sync mechanism.
 - `requestDurable()` is best-effort; the browser may decline persistent storage.
+
+## Android adapter
+
+The installed app uses the same store APIs through `PersistencePort`. The web adapter keeps the
+keys above and their validators; the native adapter replaces only the transport:
+
+| Concern | Web | Android |
+| --- | --- | --- |
+| Records (archive, saved, memory, session, import metadata) | `localStorage` keys above | Room `lingua.db` v2 |
+| Settings map (`lingua.prefs.v1` and the individual keys) | `localStorage` | one Preferences DataStore JSON map |
+| Read timing | synchronous | synchronous cache, hydrated from the bridge at boot |
+| Write timing | synchronous | queued async bridge call; failure reported, cache kept |
+| Backup | file download/upload | Storage Access Framework |
+
+Boot order (root gate) is: inline palette/dir script → bridge `boot` → caches → appearance →
+splash hidden → React render. A failed boot renders in-memory defaults and reports storage as
+unavailable; it never blocks translation. Details and migration rules live in
+`docs/android/persistence-and-migrations.md`.

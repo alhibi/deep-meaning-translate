@@ -4,7 +4,7 @@ import { takeEnrichmentToken } from "./throttle";
 import { getRequest } from "@tanstack/react-start/server";
 import { clientAddress, sameOrigin } from "../requestSafety";
 
-const ShadowInput = z.object({
+export const ShadowInput = z.object({
   text: z.string().trim().min(1).max(600),
   translation: z.string().trim().min(1).max(1500),
   source: z.string().regex(/^[a-z]{2}$|^auto$/),

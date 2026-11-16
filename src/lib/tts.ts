@@ -16,6 +16,7 @@ import { PcmPlayer, unlockAudio } from "./voice/pcmPlayer";
 import { PACE_RATE, type VoicePrefs } from "./voice/prefs";
 import { timedChar, ElevenInput } from "./voice/elevenVoice";
 import { SpeakInput } from "./voice/geminiVoice";
+import { hasNativeVoice, speakNative } from "./native/tts";
 
 export const LOCALE: Record<string, string> = {
   ar: "ar-SA",
@@ -115,11 +116,14 @@ let session = 0;
 
 let raf = 0;
 let stopCloud: (() => void) | null = null;
+let stopDevice: (() => void) | null = null;
 function stopAudio() {
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
   stopCloud?.();
   stopCloud = null;
+  stopDevice?.();
+  stopDevice = null;
 }
 
 export function stopSpeaking() {
@@ -136,6 +140,26 @@ export function speak(text: string, lang: string, h: SpeakHandlers, rate = 0.95)
     !("speechSynthesis" in window) ||
     typeof SpeechSynthesisUtterance === "undefined"
   ) {
+    // The installed app has one more honest option before giving up: Android's own
+    // engine. It has no word timing, so read-along starts at the beginning only.
+    if (hasNativeVoice()) {
+      stopSpeaking();
+      const stop = speakNative(
+        text,
+        LOCALE[lang] ?? lang,
+        {
+          onStart: () => {
+            h.onStart?.();
+            h.onWord?.(0, false);
+          },
+          onEnd: () => h.onEnd?.(),
+          onFail: (why) => h.onFail?.(why),
+        },
+        rate,
+      );
+      stopDevice = stop;
+      return stop;
+    }
     h.onFail?.("unsupported");
     return () => {};
   }

@@ -37,7 +37,7 @@ const entry = (p: Partial<HistoryEntry> & { original: string; at: string }): His
 });
 
 describe("word counting rule", () => {
-  it("counts words, not characters, the same way for Arabic, German and English", () => {
+  it("counts words, not characters, the same way for Arabic, German and English", async () => {
     expect(countWords("Guten Morgen, wie geht's?")).toBe(4);
     expect(countWords("صباح الخير، كيف حالك؟")).toBe(4);
     expect(countWords("Bitte die E-Mail prüfen 🙂 !!")).toBe(4);
@@ -48,13 +48,13 @@ describe("word counting rule", () => {
 });
 
 describe("text type is separate from topic and function", () => {
-  it("classifies by structure", () => {
+  it("classifies by structure", async () => {
     expect(localKind("Termin")).toBe("word");
     expect(localKind("guten Appetit")).toBe("phrase");
     expect(localKind("Ich komme morgen.")).toBe("sentence");
     expect(localKind("Ich komme morgen. Bis dann!")).toBe("text");
   });
-  it("finds topic and function independently", () => {
+  it("finds topic and function independently", async () => {
     // Same work topic, two different functions.
     expect(localDomain("Kannst du mir den Vertrag vom Chef schicken?")).toBe("work");
     expect(localIntent("Entschuldigung, ich bin heute zu spät zur Arbeit.")).toBe("apologize");
@@ -67,18 +67,18 @@ describe("text type is separate from topic and function", () => {
 });
 
 describe("records from the archive (old and new)", () => {
-  it("never counts the same id twice and keeps legacy rows", () => {
+  it("never counts the same id twice and keeps legacy rows", async () => {
     const { v: _v, ...old } = entry({ original: "Hallo", at: "2026-10-10T10:00:00" });
     const recs = toRecords([old, old, entry({ original: "Danke", at: "2026-10-11T10:00:00" })], TZ);
     expect(recs).toHaveLength(2);
     expect(recs.find((r) => r.original === "Hallo")?.legacy).toBe(true);
   });
-  it("drops rows without a translation (failed or empty)", () => {
+  it("drops rows without a translation (failed or empty)", async () => {
     expect(
       toRecords([entry({ original: "Hallo", translated: "  ", at: "2026-10-10T10:00:00" })], TZ),
     ).toHaveLength(0);
   });
-  it("user correction beats model tag beats local estimate", () => {
+  it("user correction beats model tag beats local estimate", async () => {
     const [r] = toRecords(
       [
         entry({
@@ -109,12 +109,12 @@ describe("records from the archive (old and new)", () => {
 });
 
 describe("dates and time zones", () => {
-  it("buckets by the viewer's calendar day, not UTC", () => {
+  it("buckets by the viewer's calendar day, not UTC", async () => {
     // 23:30 UTC on Oct 10 is already Oct 11 in Berlin.
     expect(dayKey(Date.parse("2026-10-10T23:30:00Z"), TZ)).toBe("2026-10-11");
     expect(dayKey(Date.parse("2026-10-10T23:30:00Z"), "UTC")).toBe("2026-10-10");
   });
-  it("handles month and DST boundaries", () => {
+  it("handles month and DST boundaries", async () => {
     expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
     expect(weekKey("2026-10-18")).toBe("2026-10-12"); // Sunday → Monday of that week
@@ -122,7 +122,7 @@ describe("dates and time zones", () => {
     expect(dayKey(Date.parse("2026-10-25T22:59:00Z"), TZ)).toBe("2026-10-25");
     expect(dayKey(Date.parse("2026-10-25T23:00:00Z"), TZ)).toBe("2026-10-26");
   });
-  it("periods include today and the right number of days", () => {
+  it("periods include today and the right number of days", async () => {
     const b = rangeBounds("7d", "2026-10-19", [])!;
     expect(b).toEqual({ from: "2026-10-13", to: "2026-10-19", days: 7 });
     expect(previousBounds("7d", b)).toEqual({ from: "2026-10-06", to: "2026-10-12", days: 7 });
@@ -165,7 +165,7 @@ describe("hand-checked dataset", () => {
   const b = rangeBounds("7d", today, data)!;
   const visible = select(data, b, {});
 
-  it("totals match manual counts", () => {
+  it("totals match manual counts", async () => {
     const s = summarize(visible);
     expect(s.translations).toBe(5);
     expect(s.words).toBe(15);
@@ -174,13 +174,13 @@ describe("hand-checked dataset", () => {
     expect(s.activeDays).toBe(4);
     expect(s.avgWords).toBe(3);
   });
-  it("Arabic→German and German→Arabic are different pairs", () => {
+  it("Arabic→German and German→Arabic are different pairs", async () => {
     const d = distribution(visible, "pair");
     expect(d.find((x) => x.id === "de>ar")?.count).toBe(3);
     expect(d.find((x) => x.id === "ar>de")?.count).toBe(1);
     expect(d.reduce((a, x) => a + x.share, 0)).toBeCloseTo(1);
   });
-  it("filters narrow every number together", () => {
+  it("filters narrow every number together", async () => {
     const f = select(data, b, { pair: "de>ar" });
     expect(summarize(f).translations).toBe(3);
     expect(timeline(f, b).reduce((a, x) => a + x.translations, 0)).toBe(3);
@@ -188,32 +188,32 @@ describe("hand-checked dataset", () => {
     const both = select(data, b, { lang: "ar" });
     expect(both).toHaveLength(4); // either side
   });
-  it("timeline is zero-filled and sums to the total", () => {
+  it("timeline is zero-filled and sums to the total", async () => {
     const tl = timeline(visible, b);
     expect(tl).toHaveLength(7);
     expect(tl.find((x) => x.key === "2026-10-19")?.translations).toBe(2);
     expect(tl.find((x) => x.key === "2026-10-17")?.translations).toBe(0);
     expect(tl.reduce((a, x) => a + x.words, 0)).toBe(15);
   });
-  it("comparison uses real previous data and refuses a zero base", () => {
+  it("comparison uses real previous data and refuses a zero base", async () => {
     expect(change(5, 1)).toBe(4);
     expect(change(5, 0)).toBeNull();
     expect(change(5, null)).toBeNull();
     const prev = select(data, previousBounds("7d", b), {});
     expect(prev.map((r) => r.original)).toEqual(["Alt"]);
   });
-  it("sorts by newest, oldest and use count", () => {
+  it("sorts by newest, oldest and use count", async () => {
     expect(sortRecords(visible, "oldest")[0]!.original).toBe("hello");
     expect(sortRecords(visible, "newest")[0]!.original).toBe("Wie geht es dir?");
   });
 });
 
 describe("shares, others and empty sets", () => {
-  it("handles a zero denominator", () => {
+  it("handles a zero denominator", async () => {
     expect(summarize([]).avgWords).toBeNull();
     expect(distribution([], "domain")).toEqual([]);
   });
-  it("folds the tail into one 'others' slice with the right count", () => {
+  it("folds the tail into one 'others' slice with the right count", async () => {
     const slices = ["a", "b", "c", "d", "e", "f", "g"].map((id, i) => ({
       id,
       count: 7 - i,
@@ -224,7 +224,7 @@ describe("shares, others and empty sets", () => {
     expect(top).toHaveLength(4);
     expect(others?.count).toBe(3 + 2 + 1);
   });
-  it("granularity follows the period length", () => {
+  it("granularity follows the period length", async () => {
     expect(granularityFor(30)).toBe("day");
     expect(granularityFor(90)).toBe("week");
     expect(granularityFor(400)).toBe("month");
@@ -232,11 +232,11 @@ describe("shares, others and empty sets", () => {
 });
 
 describe("patterns are descriptive and need evidence", () => {
-  it("says nothing below the minimum", () => {
+  it("says nothing below the minimum", async () => {
     const few = toRecords([entry({ original: "Hallo", at: "2026-10-19T08:00:00" })], TZ);
     expect(insights(few, null)).toEqual([]);
   });
-  it("reports a repeated phrase and the leading direction", () => {
+  it("reports a repeated phrase and the leading direction", async () => {
     const recs = toRecords(
       [
         entry({ original: "Danke", at: "2026-10-19T08:00:00", uses: 3 }),
@@ -256,7 +256,7 @@ describe("patterns are descriptive and need evidence", () => {
 });
 
 describe("model tags", () => {
-  it("keeps only tag values the taxonomy knows", () => {
+  it("keeps only tag values the taxonomy knows", async () => {
     const r = parseResult(
       '{"translation":"x","tags":{"kind":"idiom","domain":"astrology","intent":"thank"}}',
       { text: "a", source: "de", target: "ar", style: "natural" },
@@ -273,7 +273,7 @@ describe("model tags", () => {
 });
 
 describe("labels", () => {
-  it("ar, en and de have identical statistics keys and every category is named", () => {
+  it("ar, en and de have identical statistics keys and every category is named", async () => {
     const keys = Object.keys(STATS_DICT.en).sort();
     for (const l of ["ar", "de"] as const) expect(Object.keys(STATS_DICT[l]).sort()).toEqual(keys);
     for (const l of ["ar", "en", "de"] as const)
@@ -295,20 +295,20 @@ describe("archive behaviour", () => {
     const { history } = await import("../history");
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-19T08:00:00Z"));
-    history.add({ source: "de", target: "ar", original: "Danke", translated: "شكرا" });
+    await history.add({ source: "de", target: "ar", original: "Danke", translated: "شكرا" });
     vi.setSystemTime(new Date("2026-10-19T08:00:05Z"));
-    history.add({ source: "de", target: "ar", original: "Danke", translated: "شكراً" }); // same occasion
+    await history.add({ source: "de", target: "ar", original: "Danke", translated: "شكراً" }); // same occasion
     let rows = history.list();
     expect(rows).toHaveLength(1);
     expect(rows[0]!.uses).toBe(1);
     expect(rows[0]!.createdAt).toBe(Date.parse("2026-10-19T08:00:00Z"));
     vi.setSystemTime(new Date("2026-10-19T12:00:00Z"));
-    history.add({ source: "de", target: "ar", original: "Danke", translated: "شكراً" }); // a new occasion
+    await history.add({ source: "de", target: "ar", original: "Danke", translated: "شكراً" }); // a new occasion
     rows = history.list();
     expect(rows).toHaveLength(1);
     expect(rows[0]!.uses).toBe(2);
     vi.setSystemTime(new Date("2026-10-19T18:00:00Z"));
-    history.add(
+    await history.add(
       { source: "de", target: "ar", original: "Danke", translated: "شكراً" },
       { quiet: true },
     ); // restored draft
@@ -317,7 +317,7 @@ describe("archive behaviour", () => {
   });
   it("a correction changes only the tag, and survives a reload", async () => {
     const { history } = await import("../history");
-    history.add({
+    await history.add({
       source: "de",
       target: "ar",
       original: "Termin",
@@ -326,7 +326,7 @@ describe("archive behaviour", () => {
     });
     const id = history.list()[0]!.id;
     const created = history.list()[0]!.createdAt;
-    history.retag(id, { domain: "services" });
+    await history.retag(id, { domain: "services" });
     vi.resetModules();
     const fresh = (await import("../history")).history.list()[0]!;
     expect(fresh.fix).toEqual({ domain: "services" });
@@ -373,14 +373,19 @@ describe("archive behaviour", () => {
   });
   it("never archives a failed/empty result or an undetermined target", async () => {
     const { history } = await import("../history");
-    history.add({ source: "de", target: "auto", original: "Hallo", translated: "x" });
-    history.add({ source: "de", target: "ar", original: "Hallo", translated: "  " });
+    await history.add({ source: "de", target: "auto", original: "Hallo", translated: "x" });
+    await history.add({ source: "de", target: "ar", original: "Hallo", translated: "  " });
     expect(history.list()).toHaveLength(0);
   });
   it("keeps far more than the old 40 rows", async () => {
     const { history, HISTORY_LIMIT } = await import("../history");
     for (let i = 0; i < 60; i++)
-      history.add({ source: "de", target: "ar", original: `Satz ${i} xyz${i}`, translated: "y" });
+      await history.add({
+        source: "de",
+        target: "ar",
+        original: `Satz ${i} xyz${i}`,
+        translated: "y",
+      });
     expect(history.list()).toHaveLength(60);
     expect(HISTORY_LIMIT).toBeGreaterThanOrEqual(2000);
   });

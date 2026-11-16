@@ -1,10 +1,12 @@
 import { INTRO_BOOT } from "@/lib/intro";
+import { BOOT_GUARD_SCRIPT } from "@/lib/bootGuard";
 import { THEME_BOOT, syncThemeColor } from "@/lib/theme";
 import { LOCALE_BOOT } from "@/lib/i18n";
 import { ErrorScreen, NotFoundScreen } from "@/components/FailureScreen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { finishPlatformChrome, hydratePlatform, platformReadySync } from "@/lib/platform";
 
 import appCss from "../styles.css?url";
 // The two faces used above the fold. Preloading them removes the late swap: without it
@@ -83,6 +85,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOT }} />
         <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: BOOT_GUARD_SCRIPT }} />
         {/* A browser without JavaScript keeps the translator visible: the gate exists
             only to stop a flash, never to hide the app from someone it cannot open. */}
         <noscript>
@@ -100,11 +103,37 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // In the Android app the durable snapshot is loaded behind the native splash screen,
+  // so the first translator paint already has the saved theme, direction, draft and
+  // recent archive. A browser tab is ready immediately and keeps its current behaviour.
+  const [ready, setReady] = useState(() => platformReadySync());
   useEffect(() => {
     // The palette is already correct before paint (THEME_BOOT); this also keeps the
     // browser chrome right on routes that mount no ThemeToggle, such as /stats.
     syncThemeColor();
-  }, []);
+    if (ready) {
+      // React has committed the restored frame: only now hand the screen over.
+      void finishPlatformChrome();
+      return;
+    }
+    let alive = true;
+    void hydratePlatform().then(() => {
+      if (alive) setReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [ready]);
+
+  if (!ready)
+    return (
+      <div
+        aria-busy="true"
+        aria-label="Loading"
+        className="min-h-[100dvh] w-full bg-background"
+        data-boot-cover="native"
+      />
+    );
 
   return (
     <QueryClientProvider client={queryClient}>

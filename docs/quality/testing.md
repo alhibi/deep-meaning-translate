@@ -8,7 +8,7 @@ Status: **Verified** on 2026-11-07. Counts below are from executed commands, not
 | --- | --- | --- |
 | `npm run typecheck` | TypeScript consistency | PASS, 0 errors |
 | `npm run lint -- --max-warnings 0` | ESLint + Prettier, zero warnings | PASS |
-| `npm run test` | Vitest unit/integration suite with coverage | **302 passed, 4 skipped, 51 files**; coverage collected |
+| `npm run test` | Vitest unit/integration suite with coverage | **345 passed, 4 skipped, 59 files**; coverage collected |
 | `npm run check:contrast` | WCAG AA for every theme pair | **51/51 pairs** |
 | `npm run check:docs` | Documentation links and inventory | added in this audit |
 | `npm run build` | Worker bundle + headers + PWA check | PASS; **37 precached files** |
@@ -19,6 +19,19 @@ Coverage floors are enforced by `vitest.config.ts` (statements/branches/function
 48/46/39/39) and `npm run test` collects coverage, so the run fails when a floor is missed. The
 2026-11-14 baseline measured 51.79/41.86/42.92/53.74. Floors are a regression guard, not a quality
 score.
+
+## Android gates
+
+| Command | What it proves | Result on 2026-11-16 |
+| --- | --- | --- |
+| `./gradlew :app:testDebugUnitTest` | Repository merge/trim/session guard, JSON mapping, migration 1→2 | 9 passed, 0 failed |
+| `./gradlew :app:assembleDebug :app:assembleRelease` | Kotlin compiles, Room KSP runs, R8 shrinks, both APKs sign | PASS (v2 signature verified) |
+| `apksigner verify`, `aapt2 dump badging` | Signature, package, SDK, permissions, packaged assets | PASS |
+| Device install/run | Keyboard, RTL, SAF, TTS, restore on hardware | **NOT RUN** — no emulator/device |
+
+Kotlin tests run on the JVM with Robolectric; the migration test creates a real v1 SQLite schema
+with a row and opens it through Room v2. The bridge itself (Capacitor reflection) is covered only by
+compilation and plugin registration; a device smoke test remains the honest gap.
 
 ## Test architecture
 

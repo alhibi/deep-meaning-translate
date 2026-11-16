@@ -1,13 +1,13 @@
-const INTRO_KEY = "lingua.intro.seen.v1";
+import { readDeviceValue, storageReachable, writeDeviceValue } from "./persistence/settings";
+
+export const INTRO_KEY = "lingua.intro.seen.v1";
 /** Marks the document before paint when this visit will open the intro. */
 const INTRO_ATTR = "data-intro";
 
 export function shouldShowIntro(): boolean {
-  try {
-    return window.localStorage.getItem(INTRO_KEY) !== "1";
-  } catch {
-    return false;
-  }
+  // An intro that cannot be remembered would return on every visit; stay silent instead.
+  if (!storageReachable()) return false;
+  return readDeviceValue(INTRO_KEY) !== "1";
 }
 
 /**
@@ -34,11 +34,8 @@ export function releaseIntroGate(): void {
 }
 
 export function markIntroSeen(): void {
-  try {
-    window.localStorage.setItem(INTRO_KEY, "1");
-  } catch {
-    /* Storage is optional; the translator must remain usable without it. */
-  }
+  // Storage is optional; the translator must remain usable without it.
+  void writeDeviceValue(INTRO_KEY, "1");
   // Released before the exit animation, so the translator is already there when the
   // intro slides away instead of appearing through a hole.
   releaseIntroGate();

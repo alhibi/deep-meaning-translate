@@ -79,7 +79,7 @@ export function RecordSheet({
               <button
                 type="button"
                 onClick={() => {
-                  history.remove(r.id);
+                  void history.remove(r.id);
                   close();
                 }}
                 className="press h-11 flex-1 rounded-full bg-destructive text-[14px] font-medium text-destructive-foreground"
@@ -174,7 +174,7 @@ export function RecordSheet({
                           key={v}
                           type="button"
                           onClick={() => {
-                            history.retag(r.id, { [d]: v } as EntryTags);
+                            void history.retag(r.id, { [d]: v } as EntryTags);
                             setEditing(null);
                           }}
                           aria-pressed={value === v}
@@ -193,7 +193,7 @@ export function RecordSheet({
                         <button
                           type="button"
                           onClick={() => {
-                            history.retag(r.id, { [d]: null });
+                            void history.retag(r.id, { [d]: null });
                             setEditing(null);
                           }}
                           className="press-soft min-h-8 rounded-full px-2.5 text-[12.5px] text-muted-foreground underline underline-offset-4"

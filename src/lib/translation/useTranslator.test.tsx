@@ -8,6 +8,7 @@ vi.mock("@tanstack/react-start", () => ({
   useServerFn: (fn: { kind?: string }) => (fn.kind === "repair" ? repairCall : call),
 }));
 vi.mock("./translate.functions", () => ({ translate: {}, repairTranslation: { kind: "repair" } }));
+vi.mock("../native/rpc", () => ({ callRepair: repairCall }));
 // Live (partial) requests stream; route them through the same mock so behaviour stays testable.
 vi.mock("./stream", () => ({
   warmTranslation: () => {},

@@ -1,4 +1,4 @@
-import { useServerFn } from "@tanstack/react-start";
+import { callShadow } from "../native/rpc";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import type { Dialect, StyleOverride } from "./types";
@@ -24,7 +24,7 @@ export function useShadow(opts: {
   settled: boolean;
   enabled: boolean;
 }) {
-  const analyze = useServerFn(analyzeShadow);
+  const analyze = callShadow;
   const [state, setState] = useState<ShadowState>({ status: "idle" });
   const generation = useRef(0);
   const cache = useRef(new Map<string, ShadowResult | null>());

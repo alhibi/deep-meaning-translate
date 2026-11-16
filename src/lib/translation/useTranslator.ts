@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { repairTranslation } from "./translate.functions";
+import { callRepair } from "../native/rpc";
 import { parseResult } from "./parse";
 import { verifyTranslation } from "./verify";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
@@ -125,7 +124,6 @@ export function useTranslator(opts: {
   const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
   const restored = opts.restored ?? null;
   const restoredKey = restored ? keyOf(normalize(text), source, target, styleKey) : null;
-  const callRepair = useServerFn(repairTranslation);
 
   const [phase, setPhase] = useState<Phase>(restored ? "COMPLETE" : "EMPTY");
   const [result, setResult] = useState<TranslationResult | null>(restored);
@@ -400,7 +398,7 @@ export function useTranslator(opts: {
         if (lingering.current === ctrl) lingering.current = null;
       }
     },
-    [callRepair, commit, source, target, style, dialect, brain],
+    [commit, source, target, style, dialect, brain],
   );
 
   // Warm the path to the translation service on the first keystroke, once per visit.

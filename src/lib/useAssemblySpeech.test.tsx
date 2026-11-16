@@ -2,8 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const token = vi.fn();
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => token }));
-vi.mock("./assembly.functions", () => ({ assemblyToken: {} }));
+vi.mock("./native/rpc", () => ({ callDictationToken: (...args: unknown[]) => token(...args) }));
 import { useAssemblySpeech } from "./useAssemblySpeech";
 
 afterEach(() => {

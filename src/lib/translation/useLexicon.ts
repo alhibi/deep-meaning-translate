@@ -1,4 +1,4 @@
-import { useServerFn } from "@tanstack/react-start";
+import { callLexicon } from "../native/rpc";
 import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import type { Dialect } from "./types";
@@ -18,7 +18,7 @@ export function useLexicon(opts: {
   translation?: string | undefined;
   dialect?: Dialect | undefined;
 }) {
-  const lookup = useServerFn(lookupLexicon);
+  const lookup = callLexicon;
   const [lexicon, setLexicon] = useState<LexiconResult | null>(null);
   const [loading, setLoading] = useState(false);
   const generation = useRef(0);

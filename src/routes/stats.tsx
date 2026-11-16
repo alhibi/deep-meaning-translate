@@ -60,7 +60,7 @@ import {
 import {
   readStatsPrefs,
   setPendingPick,
-  useArchive,
+  useFullArchive,
   writeStatsPrefs,
 } from "@/lib/stats/useArchive";
 import { makeFormat, type Fmt } from "@/components/stats/format";
@@ -133,7 +133,7 @@ function StatsPage() {
   const dir = rtl ? "rtl" : "ltr";
   const t = useMemo(() => statsT(locale), [locale]);
   const fmt = useMemo(() => makeFormat(locale), [locale]);
-  const entries = useArchive();
+  const entries = useFullArchive();
   // The clock is an external store: pure reads, and a page left open overnight rolls over.
   const today = useTodayKey();
   const status = entries ? history.status() : "ok";

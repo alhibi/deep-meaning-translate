@@ -5,6 +5,7 @@ import { useI18n, type Key } from "@/lib/i18n";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { feel } from "@/lib/feel";
 import { normalizeLanguageQuery } from "@/lib/translation/languages";
+import { readDeviceValue, writeDeviceValue } from "@/lib/persistence/settings";
 
 export interface PickerItem {
   code: string;
@@ -437,7 +438,7 @@ const FAVORITES_KEY = "lingua.language-favorites.v1";
 
 export function readRecent(): string[] {
   try {
-    const v = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    const v = JSON.parse(readDeviceValue(RECENT_KEY) ?? "[]");
     return Array.isArray(v) ? [...new Set(v.filter(codeOk))].slice(0, 5) : [];
   } catch {
     return [];
@@ -447,7 +448,7 @@ export function pushRecent(code: string) {
   if (!codeOk(code)) return;
   try {
     const next = [code, ...readRecent().filter((c) => c !== code)].slice(0, 5);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    void writeDeviceValue(RECENT_KEY, JSON.stringify(next));
   } catch {
     /* ignore */
   }
@@ -456,19 +457,15 @@ export function pushRecent(code: string) {
 /** Device-only, bounded and validated — a damaged list must never reach the picker. */
 export function readFavorites(): string[] {
   try {
-    const v = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]");
+    const v = JSON.parse(readDeviceValue(FAVORITES_KEY) ?? "[]");
     return Array.isArray(v) ? [...new Set(v.filter(codeOk))].slice(0, 8) : [];
   } catch {
     return [];
   }
 }
 function writeFavorites(codes: string[]) {
-  try {
-    localStorage.setItem(
-      FAVORITES_KEY,
-      JSON.stringify([...new Set(codes.filter(codeOk))].slice(0, 8)),
-    );
-  } catch {
-    /* non-essential */
-  }
+  void writeDeviceValue(
+    FAVORITES_KEY,
+    JSON.stringify([...new Set(codes.filter(codeOk))].slice(0, 8)),
+  );
 }

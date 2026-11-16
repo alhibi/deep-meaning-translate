@@ -2,8 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const analyze = vi.fn();
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => analyze }));
-vi.mock("./shadow.functions", () => ({ analyzeShadow: {} }));
+vi.mock("../native/rpc", () => ({ callShadow: (...args: unknown[]) => analyze(...args) }));
 const { useShadow, SHADOW_DELAY } = await import("./useShadow");
 const { resetEnrichmentQueueForTests } = await import("./enrichment");
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { readDeviceValue, writeDeviceValue } from "./persistence/settings";
 
 interface BIPEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,7 +14,7 @@ export function useInstallPrompt() {
 
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) return;
-    if (localStorage.getItem(DISMISS_KEY)) return;
+    if (readDeviceValue(DISMISS_KEY)) return;
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setEvt(e as BIPEvent);
@@ -31,7 +32,7 @@ export function useInstallPrompt() {
     if (!evt) return;
     await evt.prompt();
     const { outcome } = await evt.userChoice;
-    if (outcome === "dismissed") localStorage.setItem(DISMISS_KEY, "1");
+    if (outcome === "dismissed") void writeDeviceValue(DISMISS_KEY, "1");
     setEvt(null);
   }, [evt]);
 

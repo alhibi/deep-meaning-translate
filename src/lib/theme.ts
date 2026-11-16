@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { writeDeviceValue } from "./persistence/settings";
 
 export const THEMES = ["dark", "light", "vivid"] as const;
 export type Theme = (typeof THEMES)[number];
@@ -77,11 +78,9 @@ export function useTheme() {
     const next = nextTheme(selected.current);
     selected.current = next;
     activeTransition.current?.skipTransition();
-    try {
-      localStorage.setItem(THEME_KEY, next);
-    } catch {
-      /* private mode: still switch */
-    }
+    // The palette switches immediately; the durable choice is written by the active
+    // adapter (DataStore in the app, the same localStorage key in a browser).
+    void writeDeviceValue(THEME_KEY, next);
     const run = () => {
       apply(selected.current);
       setTheme(selected.current);

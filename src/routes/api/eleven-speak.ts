@@ -1,106 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ElevenInput, elevenBody } from "@/lib/voice/elevenVoice";
-import { kindForStatus } from "@/lib/voice/geminiVoice";
-import { clientAddress, parseAdmittedJson, sameOrigin } from "@/lib/requestSafety";
-import { takeSpeechToken, takeWarmToken } from "@/lib/translation/throttle";
+import { sameOrigin } from "@/lib/requestSafety";
+import { handleElevenSpeak, warmEleven } from "@/lib/voice/speechRoute.server";
 
+/**
+ * ElevenLabs timestamped speech, streamed. Shared with `/api/native/v1/eleven-speak`;
+ * this route owns only the browser's same-origin rule.
+ */
 export const Route = createFileRoute("/api/eleven-speak")({
   staticData: { sitemap: false },
   server: {
     handlers: {
-      // Warm-up: open DNS/TLS to ElevenLabs before the first Listen tap. No key, no text.
-      GET: async ({ request }) => {
-        const noContent = new Response(null, {
-          status: 204,
-          headers: { "Cache-Control": "no-store" },
-        });
-        if (!takeWarmToken(clientAddress(request))) return noContent;
-        await fetch("https://api.elevenlabs.io/v1/models", { method: "HEAD" }).catch(() => {});
-        return noContent;
-      },
-      POST: async ({ request }) => {
-        const fail = (kind: string, status: number, retry?: string | null) =>
-          Response.json(
-            { ok: false, kind, status },
-            {
-              status,
-              headers: { "Cache-Control": "no-store", ...(retry ? { "Retry-After": retry } : {}) },
-            },
-          );
-        // The app has no user accounts. This same-origin endpoint is intentionally public,
-        // like translation/Gemini; Origin checks prevent cross-site browser spending, not bots.
-        if (!sameOrigin(request)) return fail("input", 403);
-        // Speech synthesis is the most expensive call in the app: it needs its own budget.
-        const admitted = await parseAdmittedJson(request, ElevenInput, () =>
-          takeSpeechToken(clientAddress(request)),
-        );
-        if (!admitted.ok)
-          return admitted.kind === "rate" ? fail("rate", 429, "5") : fail("input", 400);
-        const data = admitted.data;
-        const key = process.env["ELEVENLABS_API_KEY"];
-        if (!key) return fail("config", 503);
-        const ctrl = new AbortController();
-        const abort = () => ctrl.abort();
-        request.signal.addEventListener("abort", abort, { once: true });
-        if (request.signal.aborted) ctrl.abort();
-        const timer = setTimeout(abort, 45000);
-        const cleanup = () => {
-          clearTimeout(timer);
-          request.signal.removeEventListener("abort", abort);
-        };
-        try {
-          const res = await fetch(
-            `https://api.elevenlabs.io/v1/text-to-speech/${data.voice}/stream/with-timestamps?output_format=pcm_24000`,
-            {
-              method: "POST",
-              headers: { "xi-api-key": key, "Content-Type": "application/json" },
-              body: JSON.stringify(elevenBody(data)),
-              signal: ctrl.signal,
-            },
-          );
-          if (!res.ok || !res.body) {
-            cleanup();
-            // Never log provider bodies: they can contain the private input text.
-            await res.body?.cancel();
-            console.warn("[eleven-speak] provider status", res.status);
-            return fail(kindForStatus(res.status), res.status, res.headers.get("Retry-After"));
-          }
-          const reader = res.body.getReader();
-          return new Response(
-            new ReadableStream<Uint8Array>({
-              async pull(c) {
-                try {
-                  const { value, done } = await reader.read();
-                  if (done) {
-                    cleanup();
-                    c.close();
-                  } else c.enqueue(value);
-                } catch {
-                  cleanup();
-                  if (request.signal.aborted) c.close();
-                  else c.error(new Error("network"));
-                }
-              },
-              cancel() {
-                cleanup();
-                ctrl.abort();
-                void reader.cancel().catch(() => {});
-              },
-            }),
-            {
-              headers: {
-                "Content-Type": "application/x-ndjson",
-                "Cache-Control": "no-store",
-                "X-Content-Type-Options": "nosniff",
-              },
-            },
-          );
-        } catch {
-          cleanup();
-          if (request.signal.aborted) return new Response(null, { status: 204 });
-          return fail(ctrl.signal.aborted ? "timeout" : "network", ctrl.signal.aborted ? 504 : 502);
-        }
-      },
+      GET: async ({ request }) =>
+        sameOrigin(request) ? warmEleven(request) : new Response(null, { status: 204 }),
+      POST: async ({ request }) => handleElevenSpeak(request, sameOrigin),
     },
   },
 });

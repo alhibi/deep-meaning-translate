@@ -21,6 +21,17 @@ Worker (Cloudflare target; Node adapter locally)
   └─ static assets + generated _headers + sw.js + offline.html
 ```
 
+## Android shell
+
+```text
+today.fluently.app (Capacitor 8, minSdk 24, targetSdk 36)
+  └─ WebView: bundled SPA from android-web/ (origin https://localhost)
+       ├─ PersistencePort → LinguaStore bridge → Room lingua.db + DataStore
+       ├─ LinguaFiles: SAF export/import of backups
+       └─ LinguaTts: device voice when WebView has no speechSynthesis
+  └─ Network: /api/native/v1/* on the Worker, exact origin allowlist
+```
+
 ## Source layout
 
 | Path | Responsibility | Depends on |
@@ -38,6 +49,13 @@ Worker (Cloudflare target; Node adapter locally)
 | `src/lib/intro.ts` | First-run gate, pre-paint decision | storage |
 | `src/lib/voice/`, `tts.ts` | Device/cloud speech, PCM player, timing, fallbacks | speech APIs |
 | `src/lib/feel/` | Haptics/audio feedback façade | settings, device limits |
+| `src/lib/persistence/` | `PersistencePort`, web/native adapters, backup envelope and import | contracts, storage keys |
+| `src/lib/native/` | Transport, native URL config, bridge DTOs, streaming and voice URLs | persistence, speech |
+| `src/routes/api/native/v1/` | Versioned native endpoints reusing the web handlers | translation, voice, requestSafety |
+| `android/app/src/main/java/today/fluently/app/data/` | Room entities/DAOs/database, DataStore, mapping, repository | Room, DataStore |
+| `android/app/src/main/java/today/fluently/app/bridge/` | `LinguaStore`, `LinguaFiles`, `LinguaTts` plugins | repository, SAF, TextToSpeech |
+| `android/app/src/test/` | Repository and migration tests (Robolectric) | Room testing |
+| `docs/android/` | Architecture, persistence, import/export, network, compatibility, build | — |
 | `src/components/translator/` | Language bar, style, result, sheets, header, wordmark | lib + design tokens |
 | `src/styles.css` | Tokens, themes, base layer, transitions, utilities | — |
 | `scripts/` | Headers, PWA integrity, contrast, docs, OG card, production preview | build output |
@@ -51,6 +69,9 @@ Worker (Cloudflare target; Node adapter locally)
 - `scripts/check-pwa.mjs` fails if the precache stops containing the shell.
 - `scripts/serve-build.mjs` runs the production bundle on Node for local verification.
 - The connected Lovable project builds from the repository; this audit did not deploy or push.
+- Android is a separate target: `npm run build:native:web` → `android-web/`, then
+  `npx cap sync android` and Gradle. It does not touch `vite.config.ts` or `wrangler.jsonc`,
+  so a web deploy is unaffected. See `docs/android/build-and-release.md`.
 
 ## Generated and historical files
 

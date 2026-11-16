@@ -34,6 +34,20 @@ indexed and that relative links resolve.
 | `docs/architecture/decisions/0002-session-owns-restore-pair.md` | Why the session pair wins over preferences on restore | touching restore, prefs or translation keys |
 | `docs/architecture/decisions/0003-palette-before-paint.md` | Why the document owns the canvas and theme colour is synced after mount | touching themes, transitions or backgrounds |
 | `docs/architecture/decisions/0004-service-worker-and-offline-shell.md` | Single registrar, precache, offline fallback, preview escape hatch | touching PWA, caching or deployment |
+| `docs/architecture/decisions/0005-capacitor-hybrid-shell.md` | Why Android packages the existing SPA instead of a Compose rewrite | questioning the app shell |
+| `docs/architecture/decisions/0006-persistence-port-room-datastore.md` | Why the port exists and how Room/DataStore split the data | changing storage or the bridge |
+| `docs/architecture/decisions/0007-native-api-surface.md` | Versioned native endpoints, origin allowlist, no secret in the APK | adding an endpoint or changing CORS |
+
+## Android
+
+| Document | Scope | Consult when |
+| --- | --- | --- |
+| `docs/android/architecture.md` | Shell, layers, boot sequence, back order, failure philosophy | starting any Android change |
+| `docs/android/persistence-and-migrations.md` | Room schema v2, migration 1→2, DataStore keys, bounds, clearing | touching records, settings or migrations |
+| `docs/android/data-import-export.md` | Backup envelope, digest, password encryption, merge/replace, SAF | changing export, import or restore |
+| `docs/android/network-and-security.md` | Native routes, origin gate, transport, permissions, threat notes | changing an endpoint, permission or header |
+| `docs/android/device-compatibility.md` | minSdk 24 → target 36, keyboard/RTL/safe-area behaviour, verification matrix | testing or supporting a device |
+| `docs/android/build-and-release.md` | Toolchain, commands, signing, APK evidence, verification limits | building, signing or shipping |
 
 ## Translation
 

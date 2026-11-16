@@ -2,8 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const lookup = vi.fn();
-vi.mock("@tanstack/react-start", () => ({ useServerFn: () => lookup }));
-vi.mock("./lexicon.functions", () => ({ lookupLexicon: {} }));
+vi.mock("../native/rpc", () => ({ callLexicon: (...args: unknown[]) => lookup(...args) }));
 const { useLexicon } = await import("./useLexicon");
 const { resetEnrichmentQueueForTests } = await import("./enrichment");
 
