@@ -19,6 +19,14 @@ val releaseStore = System.getenv("ANDROID_KEYSTORE_PATH")
 val releaseReady = releaseStore != null && file(releaseStore).exists()
 val allowDebugSigning = (project.findProperty("allowDebugSigning") as String?)?.toBoolean() ?: false
 
+/**
+ * A personal build can carry the owner's own DeepSeek key as a first-run seed. This is
+ * deliberately NOT set for release/CI builds; a public APK must never contain a key. The
+ * key is written once into app-private DataStore (a marker prevents re-seeding after the
+ * person removes it) and is then used only by the device's direct provider path.
+ */
+val personalDeepseekKey = System.getenv("PERSONAL_DEEPSEEK_KEY")?.trim().orEmpty()
+
 android {
     namespace = "today.fluently.app"
     compileSdk = (rootProject.extra["compileSdkVersion"] as Int)
@@ -27,8 +35,13 @@ android {
         applicationId = "today.fluently.app"
         minSdk = (rootProject.extra["minSdkVersion"] as Int)
         targetSdk = (rootProject.extra["targetSdkVersion"] as Int)
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
+        buildConfigField(
+            "String",
+            "PERSONAL_DEEPSEEK_KEY",
+            "\"" + personalDeepseekKey.replace("\\", "\\\\").replace("\"", "\\\"") + "\"",
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The translator is Arabic-first: keep the app usable in RTL and German.
         resourceConfigurations += listOf("en", "ar", "de")

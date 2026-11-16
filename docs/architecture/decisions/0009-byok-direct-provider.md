@@ -29,8 +29,10 @@ Add an **optional, device-only personal key** (BYOK) for DeepSeek:
   deterministic verification, repair and Arabic/German behaviour stay intact.
 - The native shell's CSP allows api.deepseek.com only for this mode. The key is not part of the
   service-worker/web CSP because web builds do not offer BYOK.
-- If the direct request fails for a network/provider/timeout reason, the app falls back to the
+- If the direct request fails for a network/provider/timeout reason, the app retries once
+  through CapacitorHttp (the Android network stack, no CORS) and then falls back to the
   deployed service; an auth/quota/rate answer from DeepSeek is shown instead of hiding it.
+  A 15 s first-response guard prevents a silently hung WebView fetch from holding the screen.
 - The default remains server mode. No account, sync or telemetry is added.
 
 ## Consequences

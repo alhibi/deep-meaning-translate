@@ -1,8 +1,8 @@
-# Android Release Report — 1.0.5
+# Android Release Report — 1.0.6
 
-Date: 2026-11-16 · Build: `versionCode 6`, `versionName 1.0.5` · Base commit `c897209`.
+Date: 2026-11-16 · Build: `versionCode 7`, `versionName 1.0.6` · Base commit `c897209`.
 
-## 1.0.5 — translation-freeze hotfix (why 1.0.3 was replaced)
+## 1.0.6 — translation-freeze hotfix (why 1.0.3 was replaced)
 
 The 1.0.3 APK could leave the result area on a skeleton forever — a person typed a short
 German word (or any text whose translation equalled the input) while the target chip said
@@ -12,7 +12,7 @@ and the old rule also treated “translation text equals input text” as “the
 to re-route”. Since the auto-flip effect only fires when a _detected_ source equals the
 target, nothing flipped the target and the skeleton never cleared.
 
-1.0.5 fixes it in two ways:
+1.0.6 fixes it in two ways:
 
 - `shouldHoldForReroute()` (`src/lib/translation/echo.ts`) holds only a **settled** result
   whose `sourceLanguage` explicitly equals the target; a provisional result can never freeze
@@ -23,14 +23,14 @@ target, nothing flipped the target and the skeleton never cleared.
   instead of only when the panel is empty, and `AbortSignal.timeout` has a manual
   fallback for older WebViews.
 
-Verified on the 1.0.5 **release** APK: fresh install → type “Hallo” with default Deutsch
+Verified on the 1.0.6 **release** APK: fresh install → type “Hallo” with default Deutsch
 → target flips to العربية and shows “مرحبًا”. Arabic→German, full-sentence auto-reroute,
 force-stop restore and the previous device matrix still pass.
 
-## 1.0.5 — personal DeepSeek key (direct mode)
+## 1.0.6 — personal DeepSeek key (direct mode)
 
 1.0.4 fixed the freeze but a phone whose network cannot reach the deployed Worker still
-cannot translate. 1.0.5 adds the requested **device-only BYOK path**:
+cannot translate. 1.0.6 adds the requested **device-only BYOK path**:
 
 - In the installed app, **Privacy → Advanced** has a DeepSeek key field. The key is stored in
   app-private DataStore, excluded from backups and never sent to today's server.
@@ -43,14 +43,33 @@ cannot translate. 1.0.5 adds the requested **device-only BYOK path**:
   `api.deepseek.com/chat/completions` and the result was Arabic for the German sentence.
   The key field was saved through the real UI and reported “Direct mode is active”.
 
+## 1.0.6 — native transport fallback
+
+1.0.5's direct path still began with a WebView `fetch`. A WebView that accepts the request
+but never delivers a response, or whose CORS/proxy policy refuses the connection, would leave
+the person waiting or fall back to the Worker (which may be just as unreachable). 1.0.6 makes
+the device path transport-resilient:
+
+- `streamDirect` now has a 15-second first-response budget; if the WebView fetch fails, hangs or
+  dies mid-stream, the same request is retried once through **CapacitorHttp**, i.e. the Android
+  network stack, which has no CORS and different proxy handling. The fallback returns one full
+  response and feeds the same result pipeline.
+- Verified with the DeepSeek origin deliberately removed from the WebView CSP: the fetch was
+  blocked (visible CSP errors in logcat), the native fallback still produced the Arabic
+  translation. This is the closest emulator reproduction of a phone whose WebView cannot make
+  the cross-origin request.
+- A personal build (not uploaded publicly) can seed the owner's own key once into app-private
+  storage via a build-time field; it is then removed from the public release pipeline. The
+  public APKs have no key (checked string-wise) and the key field remains for everyone else.
+
 ## Deliverables
 
 | Artefact                                | Path                                                                  | Size        | SHA-256                                                            |
 | --------------------------------------- | --------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
-| Debug (installable, current data model) | `artifacts/android-1.0.5/today-1.0.5-debug.apk`                       | 6 442 205 B | `feb1c89939f8e5cf0879ee4e6e84fcc2851ac1189b9dcdf25e0fe9e88aba9795` |
-| Release review (debug-signed)           | `artifacts/android-1.0.5/today-1.0.5-release-review-debug-signed.apk` | 2 184 243 B | `beab65762f66abe14a737335b61835efcac1b90f5e12ffdb31f36057ff2d0e2c` |
-| Checksums                               | `artifacts/android-1.0.5/SHA256SUMS.txt`                              | —           | —                                                                  |
-| Screenshots                             | `artifacts/android-1.0.5/screenshots/`                                | —           | —                                                                  |
+| Debug (installable, current data model) | `artifacts/android-1.0.6/today-1.0.6-debug.apk`                       | 6 401 830 B | `3c87e963f6e8e058aa70776db8555e24217f855a266a35d96c0a937e0e51c162` |
+| Release review (debug-signed)           | `artifacts/android-1.0.6/today-1.0.6-release-review-debug-signed.apk` | 2 180 795 B | `529b9ae1a62312b40cfea2a7d484a818870dcc7805d6d4620663e92924e251b0` |
+| Checksums                               | `artifacts/android-1.0.6/SHA256SUMS.txt`                              | —           | —                                                                  |
+| Screenshots                             | `artifacts/android-1.0.6/screenshots/`                                | —           | —                                                                  |
 
 The `artifacts/` directory is gitignored (built output), but the files exist on the machine that
 produced this report and are the exact files tested below.
@@ -60,7 +79,7 @@ produced this report and are the exact files tested below.
 | Fact                            | Debug                                                                              | Release review                       |
 | ------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------ |
 | package                         | `today.fluently.app.debug`                                                         | `today.fluently.app`                 |
-| versionCode / versionName       | 6 / 1.0.5-debug                                                                    | 6 / 1.0.5                            |
+| versionCode / versionName       | 7 / 1.0.6-debug                                                                    | 7 / 1.0.6                            |
 | minSdk / targetSdk / compileSdk | 24 / 36 / 36                                                                       | 24 / 36 / 36                         |
 | ABIs                            | arm64-v8a, armeabi-v7a, x86, x86_64                                                | same                                 |
 | permissions                     | INTERNET, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, VIBRATE                             | same                                 |
@@ -75,12 +94,12 @@ included `assets/*` and all `classes*.dex` `strings`.
 ## Verification outputs
 
 ```text
-apksigner verify --verbose --print-certs today-1.0.5-debug.apk
+apksigner verify --verbose --print-certs today-1.0.6-debug.apk
   Verified using v2 scheme (APK Signature Scheme v2): true
   Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
   Signer #1 certificate SHA-256: 02d5b40c0d3d3da6835511cf24d8b8da40cc0b36f22b97bd055b0a529ee5de9a
 
-apksigner verify --verbose --print-certs today-1.0.5-release-review-debug-signed.apk
+apksigner verify --verbose --print-certs today-1.0.6-release-review-debug-signed.apk
   Verified using v2 scheme (APK Signature Scheme v2): true
   Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
   Signer #1 certificate SHA-256: 02d5b40c… (same local debug key)
@@ -120,9 +139,9 @@ certificate is verified. See `docs/android/build-and-release.md`.
 ## How to install (review)
 
 ```bash
-adb install -r artifacts/android-1.0.5/today-1.0.5-debug.apk
+adb install -r artifacts/android-1.0.6/today-1.0.6-debug.apk
 # or the review release (fresh package, cannot coexist with a store install of the same id):
-adb install artifacts/android-1.0.5/today-1.0.5-release-review-debug-signed.apk
+adb install artifacts/android-1.0.6/today-1.0.6-release-review-debug-signed.apk
 ```
 
 On a phone: copy the APK to the device, allow installation from the file manager, then open “today”.

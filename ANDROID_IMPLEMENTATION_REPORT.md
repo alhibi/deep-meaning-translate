@@ -140,6 +140,17 @@ device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
   (device-only, not in the APK, not on the server, app-private storage).
 - Version 1.0.5 / versionCode 6; release diagnostic verified the direct request end-to-end.
 
+## 5d. 1.0.6 — native transport fallback
+
+- `src/lib/translation/direct.ts`: a 15 s first-response guard and a one-shot retry through
+  `CapacitorHttp` on fetch failure/hang/mid-stream death; the fallback uses the same prompt,
+  parser, verifier and result path.
+- Verified by removing `https://api.deepseek.com` from the WebView CSP in a diagnostic build:
+  fetch was blocked, CapacitorHttp still returned the Arabic translation.
+- A private personal build can seed the owner's key once via a build-time field; public APKs
+  are checked to contain no key and keep the key field for manual use.
+- Version 1.0.6 / versionCode 7.
+
 ## 6. What was deliberately not changed
 
 - No Compose/Flutter rewrite, no second translation engine, no prompts or provider keys in Kotlin.

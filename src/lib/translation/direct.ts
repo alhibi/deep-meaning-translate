@@ -81,6 +81,45 @@ function errorKind(status: number): "auth" | "quota" | "rate" | "provider" {
   return "provider";
 }
 
+/**
+ * Native HTTP fallback: some WebViews/proxies refuse cross-origin fetch even though the
+ * device can reach api.deepseek.com. CapacitorHttp uses the Android network stack, so the
+ * same key and body work without CORS. It returns one complete response instead of a
+ * stream, which is exactly right for the fallback path.
+ */
+async function callDirectNative(
+  data: Record<string, unknown>,
+  mode: "live" | "full",
+): Promise<string> {
+  const key = readProviderKey();
+  if (!key) throw new TranslationError("auth", "No personal key.");
+  const { CapacitorHttp } = await import("@capacitor/core");
+  const payload = JSON.parse(requestPayload(data, mode, false)) as Record<string, unknown>;
+  const res = await CapacitorHttp.post({
+    url: DIRECT_URL,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
+    data: payload,
+    responseType: "json",
+    connectTimeout: 20_000,
+    readTimeout: 90_000,
+  });
+  if (res.status === 401 || res.status === 403) throw new TranslationError("auth", "auth");
+  if (res.status === 402) throw new TranslationError("quota", "quota");
+  if (res.status === 429) throw new TranslationError("rate", "rate");
+  if (res.status < 200 || res.status >= 300)
+    throw new TranslationError("provider", `DeepSeek responded ${res.status}`);
+  const value = res.data as {
+    choices?: { message?: { content?: unknown } }[];
+  };
+  const text = value?.choices?.[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim())
+    throw new TranslationError("provider", "Empty direct reply.");
+  return text;
+}
+
 /** Reads one "data: {...}" SSE payload into the text delta (or ""). */
 export function deltaFromSsePayload(payload: string): string {
   if (!payload || payload === "[DONE]") return "";
@@ -107,6 +146,13 @@ export async function streamDirect(
 ): Promise<DirectResponse> {
   const key = readProviderKey();
   if (!key) return { ok: false, kind: "auth" };
+  // Do not let a WebView that accepts a request but never receives a response hold the
+  // screen for the full 90 s timeout. If the first response does not arrive quickly, fall
+  // through to the Android network stack (which has no CORS and different proxy handling).
+  const first = new AbortController();
+  const abortFirst = () => first.abort();
+  signal.addEventListener("abort", abortFirst, { once: true });
+  const firstTimer = setTimeout(() => first.abort(), 15_000);
   let res: Response;
   try {
     res = await fetch(DIRECT_URL, {
@@ -116,7 +162,7 @@ export async function streamDirect(
         Authorization: `Bearer ${key}`,
       },
       body: requestPayload(data, mode, true),
-      signal,
+      signal: first.signal,
       credentials: "omit",
       cache: "no-store",
     });
@@ -124,16 +170,29 @@ export async function streamDirect(
     if (signal.aborted) return { ok: false, kind: "provider", cancelled: true };
     if (typeof navigator !== "undefined" && navigator.onLine === false)
       return { ok: false, kind: "offline" };
+    // WebView fetch can fail where the Android stack succeeds (CORS/proxy quirks).
+    try {
+      const text = await callDirectNative(data, mode);
+      onText(mode === "full" ? partialTranslation(text).trim() : text.trim());
+      return { ok: true, text };
+    } catch {
+      /* report the original fetch failure below */
+    }
     const name = (error as Error)?.name;
     return {
       ok: false,
       kind: name === "TimeoutError" || name === "AbortError" ? "timeout" : "network",
     };
+  } finally {
+    clearTimeout(firstTimer);
+    signal.removeEventListener("abort", abortFirst);
   }
   if (!res.ok || !res.body) {
     void res.body?.cancel().catch(() => {});
     return { ok: false, kind: res.status === 429 ? "rate" : errorKind(res.status) };
   }
+  // A CORS/proxy/WebView failure below is retried through the Android network stack once;
+  // a real HTTP status was already classified above and must not be retried.
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -176,7 +235,14 @@ export async function streamDirect(
     }
   } catch (error) {
     if (signal.aborted) return { ok: false, kind: "provider", cancelled: true };
-    return { ok: false, kind: "network" };
+    // The stream died mid-read; try the Android stack once before giving up.
+    try {
+      const text = await callDirectNative(data, mode);
+      onText(mode === "full" ? partialTranslation(text).trim() : text.trim());
+      return { ok: true, text };
+    } catch {
+      return { ok: false, kind: "network" };
+    }
   }
   raw = raw.trim();
   return raw ? { ok: true, text: raw } : { ok: false, kind: "provider" };
