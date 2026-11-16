@@ -151,6 +151,17 @@ device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
   are checked to contain no key and keep the key field for manual use.
 - Version 1.0.6 / versionCode 7.
 
+## 5e. 1.0.7 — input-state recovery
+
+- `src/routes/index.tsx`: native DOM input/composition listeners, 700 ms value reconciliation,
+  Enter/blur sync, and an always-available translate-now arrow that reads the field directly.
+- `src/lib/translation/useTranslator.ts`: `translateNow(raw)` and a 1.8 s scheduler watchdog
+  that forces a request when the phase never leaves SCHEDULED/READY.
+- `src/lib/i18n.ts`: the dictation failure line no longer claims a recording stopped.
+- `src/lib/native/transport.ts`: JSON native calls (dictation token, repair, lexicon, shadow)
+  retry through CapacitorHttp when WebView fetch fails.
+- Version 1.0.7 / versionCode 8; verified with Arabic locale, including a DOM-only value.
+
 ## 6. What was deliberately not changed
 
 - No Compose/Flutter rewrite, no second translation engine, no prompts or provider keys in Kotlin.

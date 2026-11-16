@@ -7,7 +7,7 @@ app.
 
 Live: https://fluently.today/
 
-## Android app (1.0.6)
+## Android app (1.0.7)
 
 The same translator is packaged as an Android app: the React shell runs in a Capacitor WebView,
 while Kotlin/Room/DataStore own device records, settings, backups and the native lifecycle. The

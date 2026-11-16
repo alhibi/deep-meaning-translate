@@ -1,6 +1,6 @@
 # Android Test Evidence — 2026-11-16
 
-Commit tested: the 1.0.6 release commit on `main` (see the GitHub release v1.0.6). Classifications follow
+Commit tested: the 1.0.7 release commit on `main` (see the GitHub release v1.0.7). Classifications follow
 `docs/quality/testing.md`: **VERIFIED** (executed/observed), **OBSERVED** (seen in a running
 system), **SUSPECTED**, **NOT_VERIFIED**. No result below is inferred from a successful build.
 
@@ -11,8 +11,8 @@ system), **SUSPECTED**, **NOT_VERIFIED**. No result below is inferred from a suc
 | Device           | emulator-5554, AVD `almani`, Android 15 (API 35), arm64-v8a, 1080×2400 @420 dpi         |
 | WebView          | 124.0.6367.219, software GPU (SwiftShader)                                              |
 | Host             | macOS arm64, JDK 21.0.13, Node 26.13.1, Android SDK build-tools 36.0.0                  |
-| Artifacts tested | `artifacts/android-1.0.6/today-1.0.6-debug.apk` and `…-release-review-debug-signed.apk` |
-| Screenshots      | `artifacts/android-1.0.6/screenshots/`                                                  |
+| Artifacts tested | `artifacts/android-1.0.7/today-1.0.7-debug.apk` and `…-release-review-debug-signed.apk` |
+| Screenshots      | `artifacts/android-1.0.7/screenshots/`                                                  |
 
 ## Web/PWA gates (executed)
 
@@ -67,15 +67,18 @@ The web production build and PWA checks were run in the baseline and after the f
 | Cold start (review release)                           | **VERIFIED** 492–689 ms Displayed                                                                                        | ActivityTaskManager logcat                          |
 | Translate German→Arabic (debug, online)               | **VERIFIED** “طاب يومك، كيف حالك؟” + quality badge                                                                       | screenshot 02                                       |
 | Translate German→Arabic (review release)              | **VERIFIED** “سعيد نهارك”                                                                                                | screenshot 11                                       |
-| **1.0.6 regression:** default Deutsch, type “Hallo”   | **VERIFIED** target auto-flips to العربية and shows “مرحبًا”; no stuck skeleton                                          | 1.0.6 release screenshot                            |
-| **1.0.6 regression:** Arabic sentence, target Deutsch | **VERIFIED** “Ich möchte für morgen eine Zugfahrkarte nach Berlin buchen.”                                               | 1.0.6 debug/release run                             |
-| **1.0.6 regression:** German sentence, target Deutsch | **VERIFIED** auto-flips and returns an Arabic translation with the quality badge                                         | emulator                                            |
-| **1.0.6 native fallback:** CSP blocks deepseek fetch  | **VERIFIED** WebView fetch blocked; CapacitorHttp retry returned the Arabic translation                                  | 1.0.6 diagnostic build + logcat                     |
-| **1.0.6 personal seed:** install, no key entry        | **VERIFIED** first run translated “Hallo” → “مرحبًا”; seed marker prevents re-seeding after removal                      | 1.0.6 personal release                              |
-| **1.0.6 clean public APK**                            | **VERIFIED** no key string in either public APK; keyless install still translates through the service                    | string scan + fresh install                         |
-| **1.0.6 BYOK:** save key in Privacy → Advanced        | **VERIFIED** “Saved on this device. Direct mode is active.” through the real UI                                          | 1.0.6 debug build                                   |
-| **1.0.6 BYOK:** translate with the personal key       | **VERIFIED** release diagnostic requested only `api.deepseek.com/chat/completions`; Arabic result returned               | 1.0.6 release diagnostic + CDP resource list        |
-| **1.0.6:** key absent → service path                  | **VERIFIED** provider path unchanged; the built-in service is used when no key is saved                                  | 1.0.6 final release                                 |
+| **1.0.7 regression:** default Deutsch, type “Hallo”   | **VERIFIED** target auto-flips to العربية and shows “مرحبًا”; no stuck skeleton                                          | 1.0.7 release screenshot                            |
+| **1.0.7 regression:** Arabic sentence, target Deutsch | **VERIFIED** “Ich möchte für morgen eine Zugfahrkarte nach Berlin buchen.”                                               | 1.0.7 debug/release run                             |
+| **1.0.7 regression:** German sentence, target Deutsch | **VERIFIED** auto-flips and returns an Arabic translation with the quality badge                                         | emulator                                            |
+| **1.0.7 IME recovery:** Arabic visible, state stale   | **VERIFIED** the field value was reconciled and translated without a synthetic input event                               | debug build + CDP DOM-only test                     |
+| **1.0.7 translate-now:** DOM-only + arrow             | **VERIFIED** “شكرا” visible with no React event → arrow → “Danke”                                                        | debug build + CDP                                   |
+| **1.0.7 normal Arabic input:** target Deutsch         | **VERIFIED** “مرحبا” → “Hallo” with the Arabic keyboard/locale                                                           | emulator, Arabic locale                             |
+| **1.0.7 native fallback:** CSP blocks deepseek fetch  | **VERIFIED** WebView fetch blocked; CapacitorHttp retry returned the Arabic translation                                  | 1.0.7 diagnostic build + logcat                     |
+| **1.0.7 personal seed:** install, no key entry        | **VERIFIED** first run translated “Hallo” → “مرحبًا”; seed marker prevents re-seeding after removal                      | 1.0.7 personal release                              |
+| **1.0.7 clean public APK**                            | **VERIFIED** no key string in either public APK; keyless install still translates through the service                    | string scan + fresh install                         |
+| **1.0.7 BYOK:** save key in Privacy → Advanced        | **VERIFIED** “Saved on this device. Direct mode is active.” through the real UI                                          | 1.0.7 debug build                                   |
+| **1.0.7 BYOK:** translate with the personal key       | **VERIFIED** release diagnostic requested only `api.deepseek.com/chat/completions`; Arabic result returned               | 1.0.7 release diagnostic + CDP resource list        |
+| **1.0.7:** key absent → service path                  | **VERIFIED** provider path unchanged; the built-in service is used when no key is saved                                  | 1.0.7 final release                                 |
 | Translation quality feedback                          | **VERIFIED** “Nothing essential lost” shown; unknown/damaged state not shown as truth                                    | screenshot 02                                       |
 | Offline error state                                   | **VERIFIED** calm “connection dropped” + Try again, draft intact                                                         | screenshots 24                                      |
 | Draft + result + pair survive force-stop              | **VERIFIED** restored after restart, no re-request observed                                                              | screenshots 05/16/40                                |
@@ -113,10 +116,10 @@ The web production build and PWA checks were run in the baseline and after the f
 ## Artifact verification
 
 ```text
-debug  today-1.0.6-debug.apk                     6,401,830 B
-       sha256 3c87e963f6e8e058aa70776db8555e24217f855a266a35d96c0a937e0e51c162
-release today-1.0.6-release-review-debug-signed.apk  2,180,795 B
-       sha256 529b9ae1a62312b40cfea2a7d484a818870dcc7805d6d4620663e92924e251b0
+debug  today-1.0.7-debug.apk                     6,402,570 B
+       sha256 b15832734bdc65a7884d5a1a0e8b114c6814f7c2f4bdd0904cb3e59273ffb2c8
+release today-1.0.7-release-review-debug-signed.apk  2,181,407 B
+       sha256 a23bf3eb7dc64e0093a5a40d10e61542ccdfea8e50022a6da8d26437d7650f2b
 both: verify via APK Signature Scheme v2; package/versionCode/versionName/minSdk/targetSdk as
 documented in ANDROID_RELEASE_REPORT.md; no provider key material in assets or dex strings.
 ```

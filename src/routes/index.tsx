@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ClipboardPaste,
   ChartNoAxesCombined,
+  ArrowUp,
   Mic,
   X,
 } from "lucide-react";
@@ -221,6 +222,7 @@ function Translator() {
     provisional,
     error,
     retry,
+    translateNow,
     submitNext,
     prime,
   } = useTranslator({
@@ -559,6 +561,35 @@ function Translator() {
   }, []);
 
   // A paste is a deliberate submission: translate the whole thing right away.
+  // Android IME/WebView can paint the field while the synthetic React input never reaches
+  // state. Poll the actual field value once a beat and reconcile it, so visible text can
+  // never sit in an idle translator. Normal typing makes this a no-op.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const field = inputRef.current;
+      if (!field) return;
+      const value = field.value.slice(0, MAX_CHARS);
+      if (value !== text) setText(value);
+    }, 700);
+    return () => window.clearInterval(id);
+  }, [text, submitNext]);
+  // Some Android IMEs emit composition/input events that never reach React's synthetic
+  // handler. Listen on the DOM node as well and reconcile the visible value directly.
+  useEffect(() => {
+    const field = inputRef.current;
+    if (!field) return;
+    const sync = () => {
+      setText(field.value.slice(0, MAX_CHARS));
+    };
+    field.addEventListener("input", sync);
+    field.addEventListener("compositionupdate", sync);
+    field.addEventListener("compositionend", sync);
+    return () => {
+      field.removeEventListener("input", sync);
+      field.removeEventListener("compositionupdate", sync);
+      field.removeEventListener("compositionend", sync);
+    };
+  }, [submitNext]);
   const onPaste = useCallback(() => submitNext(), [submitNext]);
   const canReadClipboard =
     restored && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
@@ -901,6 +932,28 @@ function Translator() {
                 value={text}
                 onChange={onInput}
                 onPaste={onPaste}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" || event.shiftKey) return;
+                  event.preventDefault();
+                  const value = event.currentTarget.value.slice(0, MAX_CHARS);
+                  if (value !== text) setText(value);
+                  translateNow(value);
+                }}
+                onCompositionEnd={(event) => {
+                  // Android IMEs can leave the visible value ahead of React state.
+                  const value = event.currentTarget.value.slice(0, MAX_CHARS);
+                  if (value !== text) {
+                    setText(value);
+                    submitNext();
+                  }
+                }}
+                onBlur={(event) => {
+                  const value = event.currentTarget.value.slice(0, MAX_CHARS);
+                  if (value !== text) {
+                    setText(value);
+                    submitNext();
+                  }
+                }}
                 dir={rtlInput ? "rtl" : "ltr"}
                 rows={2}
                 autoCapitalize="sentences"
@@ -1011,6 +1064,20 @@ function Translator() {
                   ) : null}
                 </div>
                 <div className="flex items-center gap-3">
+                  {!speech.listening ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const value = (inputRef.current?.value ?? text).slice(0, MAX_CHARS);
+                        if (value !== text) setText(value);
+                        translateNow(value);
+                      }}
+                      aria-label={t("translateNow")}
+                      className={`press grid size-9 place-items-center rounded-full bg-signal text-signal-foreground transition-opacity ${hasText ? "opacity-100" : "opacity-50"}`}
+                    >
+                      <ArrowUp className="size-4" strokeWidth={2} />
+                    </button>
+                  ) : null}
                   {!hasText && canReadClipboard && hasClip && !speech.listening ? (
                     <button
                       type="button"

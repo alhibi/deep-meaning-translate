@@ -471,6 +471,20 @@ export function useTranslator(opts: {
     return () => clearTimeout(id);
   }, [text, source, target, styleKey, run]);
 
+  // A watchdog for a scheduler that never fires: text is visible, worth translating, but
+  // the phase is still waiting and no request is in flight. Force one after a short grace.
+  useEffect(() => {
+    const norm = normalize(text);
+    if (!worthTranslating(norm)) return;
+    if (phase !== "SCHEDULED" && phase !== "READY") return;
+    const key = keyOf(norm, source, target, styleKey);
+    const id = setTimeout(() => {
+      if (inflight.current || committedKey.current === key) return;
+      void run(norm, key, isProvisional(norm, text, false));
+    }, 1_800);
+    return () => clearTimeout(id);
+  }, [text, phase, source, target, styleKey, run]);
+
   // A live result for text without final punctuation settles once the writer pauses,
   // so Copy/Listen/Save appear instead of waiting for a period that may never come.
   useEffect(() => {
@@ -507,6 +521,23 @@ export function useTranslator(opts: {
   const submitNext = useCallback(() => {
     deliberate.current = true;
   }, []);
+
+  /**
+   * Force a request for the current text. Auto-translation normally runs from the
+   * scheduler, but a controlled input inside an Android IME/WebView can keep the visible
+   * value while the React state (and therefore the scheduler) lags. The explicit action
+   * reads the value from the field and runs immediately, so the person always has a way
+   * to translate what they can see.
+   */
+  const translateNow = useCallback(
+    (raw: string) => {
+      const norm = normalize(raw);
+      if (!worthTranslating(norm)) return;
+      committedKey.current = null;
+      void run(norm, keyOf(norm, source, target, styleKey), false);
+    },
+    [run, source, target, styleKey],
+  );
 
   /** Seed a known result (e.g. restored session) so it shows without a new request. */
   const prime = useCallback(
@@ -583,9 +614,21 @@ export function useTranslator(opts: {
       pending: showPending && !streaming,
       error: error ?? PHASE_ERROR[phase] ?? null,
       retry,
+      translateNow,
       submitNext,
       prime,
     }),
-    [phase, result, provisional, showPending, streaming, error, retry, submitNext, prime],
+    [
+      phase,
+      result,
+      provisional,
+      showPending,
+      streaming,
+      error,
+      retry,
+      translateNow,
+      submitNext,
+      prime,
+    ],
   );
 }

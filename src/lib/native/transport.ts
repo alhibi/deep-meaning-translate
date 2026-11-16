@@ -62,16 +62,47 @@ export async function nativeRequest(
   }
 }
 
-export async function nativeJson<T>(path: string, body: unknown, timeoutMs = 30_000): Promise<T> {
-  const res = await nativeRequest(path, {
-    method: "POST",
+/** Same-origin JSON through the Android network stack when WebView fetch is blocked. */
+async function nativeJsonViaHttp<T>(url: string, body: unknown, timeoutMs: number): Promise<T> {
+  const { CapacitorHttp } = await import("@capacitor/core");
+  const res = await CapacitorHttp.post({
+    url,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    timeoutMs,
+    data: body,
+    responseType: "json",
+    connectTimeout: Math.min(timeoutMs, 20_000),
+    readTimeout: timeoutMs,
   });
-  if (!res.ok) {
-    const payload = (await res.json().catch(() => null)) as { kind?: NativeErrorKind } | null;
+  if (res.status < 200 || res.status >= 300) {
+    const payload = res.data as { kind?: NativeErrorKind } | null;
     throw new NativeTransportError(payload?.kind ?? (res.status === 429 ? "rate" : "provider"));
   }
-  return (await res.json()) as T;
+  return res.data as T;
+}
+
+export async function nativeJson<T>(path: string, body: unknown, timeoutMs = 30_000): Promise<T> {
+  try {
+    const res = await nativeRequest(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      timeoutMs,
+    });
+    if (!res.ok) {
+      const payload = (await res.json().catch(() => null)) as { kind?: NativeErrorKind } | null;
+      throw new NativeTransportError(payload?.kind ?? (res.status === 429 ? "rate" : "provider"));
+    }
+    return (await res.json()) as T;
+  } catch (error) {
+    const kind = error instanceof NativeTransportError ? error.kind : "network";
+    if (kind !== "network" && kind !== "timeout") throw error;
+    const url = nativeApiUrl(path);
+    if (!url) throw error;
+    // WebView fetch can be blocked while the Android stack is not: retry once natively.
+    try {
+      return await nativeJsonViaHttp<T>(url, body, timeoutMs);
+    } catch {
+      throw error;
+    }
+  }
 }

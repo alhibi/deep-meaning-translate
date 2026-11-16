@@ -86,6 +86,12 @@ durable local data, a real Android lifecycle, correct system integration and a r
 | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P1-18 | Even the direct key path could fail if WebView fetch hung or was refused by CSP/CORS/proxy, leaving the skeleton or falling back to an unreachable Worker. | The direct path assumed browser fetch was the only transport. | **1.0.6**: 15 s first-response guard + one-shot CapacitorHttp retry on fetch failure/hang/mid-stream death; verified with the DeepSeek origin removed from CSP (fetch blocked, native transport returned the translation). |
 
+## 1.0.7 — visible text, idle translator
+
+| #     | Gap                                                                                                                              | Root cause                                                                                     | Status                                                                                                                                                                                                     |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1-19 | On the user's phone, Arabic text was visible in the composer but the translator stayed idle and the clear button never appeared. | The DOM held the IME composition while React state was empty, so the scheduler never saw text. | **1.0.7**: native input/composition listeners, 700 ms reconciliation, a 1.8 s scheduler watchdog, and an explicit translate-now arrow that reads the field value directly. Verified with a DOM-only value. |
+
 ## Independent final review
 
 A8 (`docs/audits/android-team/08-final-review.md`) re-reviewed the commit instead of trusting this
