@@ -48,3 +48,6 @@ artifacts/
 
 # Kotlin incremental/build metadata
 android/.kotlin/
+
+# Generated Capacitor Cordova-compat config (and OS duplicates)
+android/app/src/main/res/xml/config*.xml
