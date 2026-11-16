@@ -11,7 +11,7 @@ import {
 } from "@/lib/persistence/backup";
 import { isNativeApp } from "@/lib/native/config";
 import { filesPlugin } from "@/lib/native/plugin";
-import { platformError } from "@/lib/platform";
+import { platformError, rehydrateDeviceData } from "@/lib/platform";
 
 /**
  * Device data controls: the only place a backup is created or restored.
@@ -48,7 +48,7 @@ const copy = {
     added: "added",
     skipped: "already present",
     reload: "Reload the app",
-    badFile: "That file is not a today backup, or it was changed after export.",
+    badFile: "That file is not a today backup, or it was damaged after export.",
     badVersion: "This backup comes from a newer version of the app.",
     needPassword: "This file is protected. Enter its password.",
     unreadable: "The file could not be read.",
@@ -82,7 +82,7 @@ const copy = {
     added: "أُضيف",
     skipped: "موجود مسبقاً",
     reload: "إعادة تحميل التطبيق",
-    badFile: "هذا ليس ملف نسخة من today، أو تغيّر بعد التصدير.",
+    badFile: "هذا ليس ملف نسخة من today، أو تلف بعد التصدير.",
     badVersion: "هذه النسخة من إصدار أحدث من التطبيق.",
     needPassword: "الملف محمي. أدخل كلمة المرور.",
     unreadable: "تعذّر قراءة الملف.",
@@ -117,7 +117,7 @@ const copy = {
     added: "hinzugefügt",
     skipped: "bereits vorhanden",
     reload: "App neu laden",
-    badFile: "Das ist keine today-Sicherung, oder sie wurde nach dem Export verändert.",
+    badFile: "Das ist keine today-Sicherung, oder sie wurde nach dem Export beschädigt.",
     badVersion: "Diese Sicherung stammt aus einer neueren App-Version.",
     needPassword: "Die Datei ist geschützt. Gib ihr Passwort ein.",
     unreadable: "Die Datei konnte nicht gelesen werden.",
@@ -133,6 +133,8 @@ interface Preview {
   counts: ReturnType<typeof countOf>;
   fileName: string;
   encrypted: boolean;
+  /** Envelope digest, recorded in the device's import log (Room import_meta). */
+  digest: string;
 }
 
 export function DataControls() {
@@ -220,6 +222,7 @@ export function DataControls() {
           counts: parsed.counts,
           fileName: name,
           encrypted: parsed.envelope.encrypted,
+          digest: parsed.envelope.digest,
         });
       } catch {
         setError(c.unreadable);
@@ -252,7 +255,14 @@ export function DataControls() {
       setBusy(true);
       setError(null);
       try {
-        const result = await port.replaceAll(preview.data, mode);
+        const result = await port.replaceAll(preview.data, mode, {
+          fileName: preview.fileName,
+          digest: preview.digest,
+        });
+        // The import replaced storage; without re-reading, the next phrasebook/memory save
+        // would rewrite the imported tables from the pre-import cache (A3-03).
+        const reloaded = await rehydrateDeviceData().catch(() => false);
+        if (!reloaded) setError(c.storage);
         setReport(result);
         setPreview(null);
       } catch {

@@ -53,3 +53,55 @@ jobs:
 
       - name: PWA integrity (new build is precached)
         run: node scripts/check-pwa.mjs
+
+  android:
+    name: Android · Gradle · APK integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install JS dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build packaged shell and sync Capacitor
+        run: |
+          npm run build:native:web
+          npx cap sync android
+
+      - name: Room / repository / migration tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --console=plain
+        working-directory: android
+
+      - name: Assemble the debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --console=plain
+        working-directory: android
+
+      - name: Verify the APK's identity, permissions, signing and secrets
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          BT=$ANDROID_HOME/build-tools/36.0.0
+          $BT/aapt2 dump badging "$APK" | grep -E "package: name='today.fluently.app.debug'|sdkVersion|targetSdkVersion|uses-permission"
+          $BT/apksigner verify --verbose --print-certs "$APK"
+          unzip -p "$APK" assets/capacitor.config.json | grep -q '"webContentsDebuggingEnabled": false'
+          if unzip -p "$APK" assets/public/index.html | grep -qE "DEEPSEEK_API_KEY|ASSEMBLYAI_API_KEY|ELEVENLABS_API_KEY|GEMINI_API_KEY|AIza[0-9A-Za-z_-]{35}"; then
+            echo "A provider key appears in the packaged assets" >&2
+            exit 1
+          fi

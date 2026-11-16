@@ -37,6 +37,7 @@ indexed and that relative links resolve.
 | `docs/architecture/decisions/0005-capacitor-hybrid-shell.md` | Why Android packages the existing SPA instead of a Compose rewrite | questioning the app shell |
 | `docs/architecture/decisions/0006-persistence-port-room-datastore.md` | Why the port exists and how Room/DataStore split the data | changing storage or the bridge |
 | `docs/architecture/decisions/0007-native-api-surface.md` | Versioned native endpoints, origin allowlist, no secret in the APK | adding an endpoint or changing CORS |
+| `docs/architecture/decisions/0008-android-data-at-rest.md` | Accepted at-rest risk and why SQLCipher is not added | questioning Android database encryption (TD19) |
 
 ## Android
 
@@ -82,8 +83,25 @@ indexed and that relative links resolve.
 | `docs/audits/2026-11-14-task2-request-lifecycle.md` | Task 2: F1/F6 failing tests and fixes, Playwright matrix, new F15/F16 findings | Verified |
 | `docs/audits/2026-11-14-task3-server-boundary.md` | Task 3 (started): F18 admission ordering, F19 provider-body hardening, boundary probes, TD15 | In progress |
 | `docs/audits/2026-11-14-task4-local-data.md` | Task 4 (started): F5 full result validation, F8 day key, clear-all caches, remaining F9/F13/F14 | In progress |
+| `docs/audits/android-team/01-architecture.md` | A1 architecture/repository audit, 2026-11-16 | reviewing Android architecture findings |
+| `docs/audits/android-team/02-native.md` | A2 native engineering audit | reviewing lifecycle/IME/back/TTS findings |
+| `docs/audits/android-team/03-data.md` | A3 data/persistence audit | reviewing Room/DataStore/boot/import findings |
+| `docs/audits/android-team/04-ux.md` | A4 UI/UX/device audit | reviewing Android experience findings |
+| `docs/audits/android-team/05-security.md` | A5 security/privacy audit | reviewing Android security findings |
+| `docs/audits/android-team/06-performance.md` | A6 performance/reliability audit | reviewing Android performance findings |
+| `docs/audits/android-team/07-qa-release.md` | A7 QA/release-engineering audit | reviewing Android release-gate findings |
 | `docs/audits/technical-debt.md` | Open debt with severity, location, impact and remediation | Living register |
 | `docs/audits/final-report-ar.md` | Arabic final report: maturity, defects, navigation, architecture, inventory, limits | Verified |
+
+## Android completion reports (2026-11-16, root)
+
+| Document | Scope | Status |
+| --- | --- | --- |
+| `ANDROID_DISCOVERY_REPORT.md` | Repository/environment inventory and baseline evidence | Verified |
+| `ANDROID_GAP_ANALYSIS.md` | Consolidated P0–P3 gaps, fixes and remaining debt | Verified |
+| `ANDROID_IMPLEMENTATION_REPORT.md` | Changes made, by area and file | Verified |
+| `ANDROID_TEST_EVIDENCE.md` | Executed gates, device matrix and classifications | Verified |
+| `ANDROID_RELEASE_REPORT.md` | APK identity, hashes, signing and install evidence | Verified |
 
 ## Plans and working documents
 

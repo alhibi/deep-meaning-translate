@@ -90,4 +90,7 @@ interface ImportDao {
 
     @Upsert
     suspend fun insert(row: ImportMetaEntity)
+
+    @Query("DELETE FROM import_meta")
+    suspend fun clear()
 }

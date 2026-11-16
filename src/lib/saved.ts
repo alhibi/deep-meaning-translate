@@ -31,6 +31,12 @@ export function hydrateSaved(rows: SavedPhrase[]) {
   listeners.forEach((fn) => fn());
 }
 
+/** Drop the in-memory phrase list; the next read re-reads storage (post-import reload). */
+export function resetSavedCache() {
+  cache = null;
+  listeners.forEach((fn) => fn());
+}
+
 async function write(next: SavedPhrase[]): Promise<boolean> {
   cache = next.slice(0, SAVED_LIMIT);
   listeners.forEach((fn) => fn());

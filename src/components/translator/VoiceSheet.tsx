@@ -7,6 +7,7 @@ import { FeelSection } from "./FeelSection";
 import { feel } from "@/lib/feel";
 import { ELEVEN_VOICES } from "@/lib/voice/elevenVoice";
 import { VoiceButton } from "@/components/VoiceButton";
+import { useAndroidBack } from "@/lib/useAndroidBack";
 
 function Segmented<T extends string>({
   value,
@@ -44,6 +45,7 @@ function Segmented<T extends string>({
 
 /** Voice settings: engine, Gemini voice character, quality (model) and speed. Device-only. */
 export function VoiceSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useAndroidBack(open, onClose);
   const { t, rtl } = useI18n();
   const p = useVoicePrefs();
   const gem = p.engine === "gemini";

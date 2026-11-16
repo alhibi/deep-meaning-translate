@@ -1,7 +1,8 @@
 # Network and security (Android)
 
-Status: **Implemented**. CORS/allowlist behaviour is covered by TypeScript tests; TLS and
-WebView behaviour on a device are **NOT_VERIFIED**.
+Status: **Implemented and partly device-verified** (2026-11-16, emulator API 35). CORS/allowlist
+behaviour is covered by `src/lib/native/gate.server.test.ts` (10 cases). HTTPS/TLS on a device,
+edge behaviour and abuse at scale remain **NOT_VERIFIED**.
 
 ## Endpoints
 
@@ -46,8 +47,15 @@ control is per-purpose throttling plus server-side keys.
 - Cleartext HTTP is disabled in `network_security_config.xml` and
   `android:usesCleartextTraffic="false"`. Only system trust anchors are accepted.
 - Streaming uses the same SSE reader as the web; a dropped stream surfaces the existing
-  retry/cancel behaviour. Voice streams use the native speech endpoint and are stopped
-  when the app backgrounds.
+  retry/cancel behaviour. Leaving the foreground dispatches `lingua:flush`, which now stops
+  cloud/device speech and cancels an in-flight dictation session before flushing storage
+  (device observation limited; see TD28).
+- The packaged WebView shell carries a **meta Content-Security-Policy** injected by
+  `scripts/prepare-native-web.mjs` (self, inline boot scripts, the product Worker, the
+  AssemblyAI WebSocket, blob AudioWorklet). The web deployment's HTTP CSP cannot reach the
+  APK, so this is the backstop.
+- `android.webContentsDebuggingEnabled` is false in the tracked Capacitor config and asserted
+  by the Android CI job; a release must be built after a fresh `cap sync`.
 
 ## Device surface
 
@@ -55,6 +63,7 @@ control is per-purpose throttling plus server-side keys.
 | --- | --- | --- |
 | `INTERNET` | translation and cloud voice | always required |
 | `RECORD_AUDIO` | dictation | requested when the person first records |
+| `MODIFY_AUDIO_SETTINGS` | required by Capacitor's WebView audio-capture gate; it asks for both this and `RECORD_AUDIO` and denies when either is undeclared | normal permission, granted at install |
 | `VIBRATE` | feel/haptics (Capacitor plugin) | optional |
 
 No storage, location, contacts, camera or background permissions. Backups use the
@@ -66,10 +75,20 @@ Storage Access Framework, so the app never receives broad file access.
   preferences and files from Google cloud backup and device transfer. Personal sentences
   leave the device only through an explicit export.
 - The database is in the app's private sandbox; no file is world-readable, no external
-  storage is used. Optional database encryption is not implemented (see technical debt);
-  Android's file-based encryption protects the sandbox at rest on modern devices.
-- Backups can be encrypted with a password (AES-GCM, PBKDF2-SHA256 210 000 iterations);
-  passwords are never stored.
+  storage is used. **No app-level database encryption is implemented** — the accepted
+  at-rest decision and its threat model are recorded in
+  [ADR 0008](../architecture/decisions/0008-android-data-at-rest.md) (TD19 closed). Android
+  file-based encryption protects the sandbox while the device is locked; a rooted/forensic
+  device can read the archive.
+- Backups can be encrypted with a password (AES-256-GCM, PBKDF2-SHA256 210 000 iterations);
+  passwords are never stored. Plain backups carry an unkeyed digest: it detects damage, not
+  deliberate rewrites.
+
+## Release signing
+
+A release build fails closed when no upload key is configured. `-PallowDebugSigning=true`
+is an explicit local-review opt-out that prints a warning and produces a **non-publishable**
+APK (TD18). "Release" in build logs always names the signer.
 
 ## Logging and privacy
 

@@ -28,15 +28,32 @@ import { storePlugin } from "../native/plugin";
 import { seedSettings } from "./settings";
 
 let seq = 0;
+/**
+ * Session stamps are wall-clock based. Seed them from the stored row so a device clock that
+ * was rolled back (or an import that stamped a future seq) cannot make every later draft
+ * save look stale and be silently rejected (A3-06).
+ */
 const nextSeq = () => {
   seq = Math.max(seq + 1, Date.now());
   return seq;
 };
 
-async function store() {
+/**
+ * True only after a complete boot snapshot was read AND applied. Until then every read and
+ * write fails closed: a timed-out bridge must never look like "storage is empty" and let a
+ * whole-table write erase the phrasebook or memory (A3-02).
+ */
+let hydrated = false;
+
+async function rawStore() {
   const plugin = await storePlugin();
   if (!plugin) throw new Error("bridge-unavailable");
   return plugin;
+}
+
+async function store() {
+  if (!hydrated) throw new Error("storage-unavailable");
+  return rawStore();
 }
 
 function parseJson<T>(raw: string | null | undefined, fallback: T): T {
@@ -52,11 +69,14 @@ export const nativePort: PersistencePort = {
   kind: "native",
 
   async hydrate(): Promise<Hydrated> {
-    const boot = await (await store()).boot();
+    const boot = await (await rawStore()).boot();
     const settings = parseJson<Record<string, string>>(boot.settings, {});
     seedSettings(settings);
+    // A stored session always has a lower seq than the next write; adopting it makes the
+    // guard survive restarts instead of depending on the device clock only.
+    if (Number.isFinite(boot.sessionSeq)) seq = Math.max(seq, boot.sessionSeq);
     const history = parseJson<unknown[]>(boot.history, []).filter(isEntry).map(sanitizeEntry);
-    return {
+    const snapshot: Hydrated = {
       settings,
       prefs: parsePrefs(parseJson<unknown>(boot.prefs, null)),
       session: parseSession(parseJson<unknown>(boot.session, null)),
@@ -67,6 +87,8 @@ export const nativePort: PersistencePort = {
         .filter(isMemoryRow)
         .slice(0, MEMORY_MAX_ENTRIES),
     };
+    hydrated = true;
+    return snapshot;
   },
 
   async savePrefs(prefs: Prefs | null) {
@@ -158,21 +180,25 @@ export const nativePort: PersistencePort = {
     };
   },
 
-  async replaceAll(input: BackupData, mode): Promise<ImportReport> {
+  async replaceAll(input: BackupData, mode, meta): Promise<ImportReport> {
     // Merge/replace is decided in `backup.ts` from a full snapshot so the archive rules
     // live in one language; Kotlin then applies the result atomically.
     const { mergeData, replaceData } = await import("./backup");
     const previous = await this.snapshot();
     const { data, report } =
       mode === "merge" ? mergeData(previous, input) : replaceData(input, previous);
-    const res = await (
+    await (
       await store()
     ).replaceAll({
       json: JSON.stringify(data),
       mode,
+      ...(meta?.fileName ? { fileName: meta.fileName } : {}),
+      ...(meta?.digest ? { digest: meta.digest } : {}),
+      report: JSON.stringify(report),
     });
-    const applied = parseJson<ImportReport | null>(res.report, null);
-    return applied ?? report;
+    // The TS report is the one the person saw in the preview: it knows added vs skipped.
+    // Kotlin's applied counts only describe the final table sizes (A2-05/A3-07).
+    return report;
   },
 
   async clearAll() {

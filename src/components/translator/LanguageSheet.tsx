@@ -6,6 +6,7 @@ import { useFocusTrap } from "@/lib/useFocusTrap";
 import { feel } from "@/lib/feel";
 import { normalizeLanguageQuery } from "@/lib/translation/languages";
 import { readDeviceValue, writeDeviceValue } from "@/lib/persistence/settings";
+import { useAndroidBack } from "@/lib/useAndroidBack";
 
 export interface PickerItem {
   code: string;
@@ -127,6 +128,7 @@ export function LanguageSheet({
   onSelect,
   onClose,
 }: Props) {
+  useAndroidBack(open, onClose);
   const { t, locale, rtl } = useI18n();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);

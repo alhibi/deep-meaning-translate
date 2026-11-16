@@ -76,6 +76,12 @@ export function setVoicePrefs(patch: Partial<VoicePrefs>) {
   subs.forEach((f) => f());
 }
 
+/** Drop the in-memory choice too, so "forget everything" cannot resurrect it (A2-06). */
+export function resetVoicePrefs() {
+  current = null;
+  subs.forEach((f) => f());
+}
+
 export function useVoicePrefs(): VoicePrefs {
   return useSyncExternalStore(
     (f) => {

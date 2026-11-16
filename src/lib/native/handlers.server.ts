@@ -6,30 +6,40 @@
  * runs from a local origin, so authorization is an exact origin allowlist
  * (`gate.server.ts`) instead of the browser's same-origin check.
  */
+import { z } from "zod";
 import { InputSchema } from "../translation/translate.functions";
 import { LexiconInput } from "../translation/lexicon.functions";
 import { ShadowInput } from "../translation/shadow.functions";
 import { isResult } from "../translation/result";
+import type { TranslationResult } from "../translation/types";
 import { takeDictationToken, takeEnrichmentToken, takeRepairToken } from "../translation/throttle";
-import { clientAddress } from "../requestSafety";
+import { boundedJson, clientAddress, parseAdmittedJson } from "../requestSafety";
 
 const badRequest = (kind = "input") =>
   Response.json({ ok: false, kind }, { status: 400, headers: { "Cache-Control": "no-store" } });
 
+const quietNull = () =>
+  Response.json({ ok: true, result: null }, { headers: { "Cache-Control": "no-store" } });
+
+/** The quiet second pass takes the same schema as the web server function. */
+const RepairInput = z.object({
+  request: InputSchema,
+  previous: z.custom<TranslationResult>((value) => isResult(value), {
+    message: "Invalid translation result.",
+  }),
+});
+
 export async function nativeRepair(request: Request): Promise<Response> {
-  let data: { request: unknown; previous: unknown };
-  try {
-    data = (await request.json()) as { request: unknown; previous: unknown };
-  } catch {
-    return badRequest();
-  }
-  const parsed = InputSchema.safeParse(data?.request);
-  if (!parsed.success || !isResult(data?.previous)) return badRequest();
-  if (!takeRepairToken(clientAddress(request)))
-    return Response.json({ ok: true, result: null }, { headers: { "Cache-Control": "no-store" } });
+  // Bounded before the schema and before the repair budget: an oversized body must be a
+  // 400 that spends nothing, not a fully buffered JSON.parse (A5-01).
+  const admitted = await parseAdmittedJson(request, RepairInput, () =>
+    takeRepairToken(clientAddress(request)),
+  );
+  if (!admitted.ok) return admitted.kind === "rate" ? quietNull() : badRequest();
+  const data = admitted.data;
   const { runRepair } = await import("../translation/engine.server");
   const started = Date.now();
-  const result = await runRepair(parsed.data, data.previous).catch(() => null);
+  const result = await runRepair(data.request, data.previous).catch(() => null);
   // Metrics only, never the text.
   console.info(
     JSON.stringify({
@@ -45,7 +55,7 @@ export async function nativeRepair(request: Request): Promise<Response> {
 export async function nativeLexicon(request: Request): Promise<Response> {
   let body: unknown;
   try {
-    body = await request.json();
+    body = await boundedJson(request);
   } catch {
     return badRequest();
   }
@@ -67,7 +77,7 @@ export async function nativeLexicon(request: Request): Promise<Response> {
 export async function nativeShadow(request: Request): Promise<Response> {
   let body: unknown;
   try {
-    body = await request.json();
+    body = await boundedJson(request);
   } catch {
     return badRequest();
   }

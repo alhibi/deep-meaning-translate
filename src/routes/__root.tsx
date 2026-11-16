@@ -101,12 +101,21 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** True only in the Android asset build (Vite define in `vite.native.config.ts`). */
+const NATIVE_SHELL = import.meta.env?.["VITE_NATIVE_SHELL"] === "1";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   // In the Android app the durable snapshot is loaded behind the native splash screen,
   // so the first translator paint already has the saved theme, direction, draft and
   // recent archive. A browser tab is ready immediately and keeps its current behaviour.
-  const [ready, setReady] = useState(() => platformReadySync());
+  //
+  // On native the server-prerendered HTML must be the boot cover, not the translator:
+  // the client's first render cannot know the draft yet, so rendering the translator
+  // would diverge from the server markup and React would discard it (error #418). The
+  // build define makes both sides render the same cover, then the real screen mounts
+  // after the bridge snapshot is applied — still behind the splash.
+  const [ready, setReady] = useState(() => (NATIVE_SHELL ? false : platformReadySync()));
   useEffect(() => {
     // The palette is already correct before paint (THEME_BOOT); this also keeps the
     // browser chrome right on routes that mount no ThemeToggle, such as /stats.

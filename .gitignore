@@ -45,3 +45,6 @@ android/app/build/
 
 # Local build outputs shared with the user, not source
 artifacts/
+
+# Kotlin incremental/build metadata
+android/.kotlin/

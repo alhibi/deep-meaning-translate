@@ -9,11 +9,15 @@ plugins {
 /**
  * Release signing comes from the environment, never from the repository:
  *   ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
- * Without them the release build is signed with the local debug key so the APK stays
- * installable; the build log states which key was used. That build is NOT a Play release.
+ *
+ * A release build fails closed when none is configured. The explicit opt-out
+ * `-PallowDebugSigning=true` produces a local, installable, debug-signed review APK and
+ * prints a warning; it is never a publishable artefact (TD18). The old silent fallback
+ * produced a release APK that nobody could distinguish from a real one (A5-02).
  */
 val releaseStore = System.getenv("ANDROID_KEYSTORE_PATH")
 val releaseReady = releaseStore != null && file(releaseStore).exists()
+val allowDebugSigning = (project.findProperty("allowDebugSigning") as String?)?.toBoolean() ?: false
 
 android {
     namespace = "today.fluently.app"
@@ -23,8 +27,8 @@ android {
         applicationId = "today.fluently.app"
         minSdk = (rootProject.extra["minSdkVersion"] as Int)
         targetSdk = (rootProject.extra["targetSdkVersion"] as Int)
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The translator is Arabic-first: keep the app usable in RTL and German.
         resourceConfigurations += listOf("en", "ar", "de")
@@ -52,9 +56,14 @@ android {
                     keyAlias = System.getenv("ANDROID_KEY_ALIAS")
                     keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
                 }
-            } else {
-                // Installable, but with the debug key. Documented in docs/android/build-and-release.md.
+                logger.lifecycle("Release signing: upload key at $releaseStore")
+            } else if (allowDebugSigning) {
+                // Local review only; the warning is repeated by the guard below.
                 signingConfig = signingConfigs.getByName("debug")
+                logger.warn(
+                    "RELEASE SIGNED WITH THE DEBUG KEY (-PallowDebugSigning=true). " +
+                        "This APK is installable for review but is NOT publishable.",
+                )
             }
         }
     }
@@ -84,6 +93,22 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
+    }
+}
+
+// Fail before packaging, not after: no release artefact may be produced silently with the
+// debug key. `-PallowDebugSigning=true` is the explicit local-review escape hatch.
+tasks.configureEach {
+    if (name == "assembleRelease" || name == "bundleRelease") {
+        doFirst {
+            if (!releaseReady && !allowDebugSigning) {
+                throw GradleException(
+                    "Release signing is not configured. Set ANDROID_KEYSTORE_PATH, " +
+                        "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD, " +
+                        "or pass -PallowDebugSigning=true for a non-publishable local review build.",
+                )
+            }
+        }
     }
 }
 
@@ -122,6 +147,8 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:${rootProject.extra["androidxEspressoCoreVersion"]}")
     androidTestImplementation("androidx.room:room-testing:2.7.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
+    // ActivityScenario for the Capacitor bridge test (TD20).
+    androidTestImplementation("androidx.test:core:1.6.1")
 }
 
 // Capacitor's generated plugin wiring (Groovy). Applied after our dependencies.

@@ -1,8 +1,11 @@
 # Android architecture
 
-Status: **Implemented and built** on 2026-11-16. On-device runtime behaviour is
-**NOT_VERIFIED** in this environment (no device or emulator was available); everything the
-build can prove is recorded in `build-and-release.md`.
+Status: **Implemented, built and partly device-verified** on 2026-11-16 on emulator-5554
+(API 35, WebView 124). Install, cold/warm start, force-stop restore, theme/locale restore,
+keyboard, back order, statistics, SAF export/import and permission denial were executed; low-API,
+OEM-keyboard, foldable and physical-device behaviour remain **NOT_VERIFIED** (TD17). The exact
+runs and their limits are in `docs/audits/android-team/07-qa-release.md` and
+`docs/audits/technical-debt.md`.
 
 ## Shape
 
@@ -46,15 +49,21 @@ requires.
 ## Boot sequence
 
 ```text
-Android splash (launchAutoHide: false)
-  └─ WebView loads packaged index.html (no network)
-       └─ inline boot script paints saved palette + dir/lang before first frame
+Android splash (JS hides it; 6 s native ceiling only)
+  └─ WebView loads packaged index.html (no network; CSP meta in the shell)
+       └─ the native build prerenders the boot cover, matching the client's first render
             └─ hydratePlatform(): boot bridge → settings/draft/archive caches
-                 ├─ applyStoredAppearance()
-                 ├─ status-bar icon style follows the palette
-                 ├─ SplashScreen.hide()   ← only now is the first frame correct
-                 └─ React renders the translator with the restored state
+                 ├─ applyStoredAppearance() (theme, locale, intro gate from DataStore)
+                 ├─ hydratePersist/History/Saved/Memory
+                 ├─ native writes become allowed only after this complete snapshot
+                 ├─ React renders the translator with the restored state
+                 ├─ SplashScreen.hide()
+                 └─ system bars + window strip colours are applied/reapplied
 ```
+
+The native build defines `VITE_NATIVE_SHELL`, so the prerendered HTML is the boot cover rather
+than the translator. Before that, the server HTML and the client's first render disagreed and
+React threw hydration error #418 on every cold start, discarding the prerender.
 
 `src/routes/__root.tsx` holds rendering behind the platform gate, but the gate is bounded:
 `hydratePlatform()` races the bridge against a 3-second timeout and always marks the app
@@ -75,20 +84,27 @@ script) only adds that padding on API 30+, where `ime()` is the real overlap.
 - Native: Room is the record store. `localStorage` is not used for records and is never
   written in parallel. The web adapter is not imported at runtime, only type-shared.
 - Web: `localStorage` keeps the same keys as before; the native adapter is never loaded.
-- Settings: DataStore holds one JSON map keyed by the same `lingua.*` names. The app reads
-  a snapshot synchronously (hydrated at boot) and queues writes; it does not maintain a
-  second authoritative copy in the WebView.
+- Settings: DataStore holds one string preference per `lingua.*` key (not one JSON map). The
+  app reads a snapshot synchronously (hydrated at boot) and queues writes; it does not maintain
+  a second authoritative copy in the WebView. Writes are refused until the boot snapshot has
+  been applied, so a timed-out bridge cannot rewrite a table from an empty cache.
 
 ## Back navigation
 
-The Android back button is handled in `src/routes/index.tsx`:
+The native shell dispatches one cancelable `lingua:back` event and `dispatchBack()` decides when
+nobody claimed it:
 
 ```text
-open overlay/sheet → close it
-keyboard visible   → dismiss it (Capacitor Keyboard)
-history available  → previous destination
-otherwise          → App.exitApp()
+open overlay/sheet (any component) → close it, cancel the event
+keyboard visible                    → blur the field, cancel the event
+non-root route (/stats, /privacy)   → history.back()
+root translator                     → App.exitApp()
 ```
+
+Overlays own their local state, so the event is the meeting point: the old route-only handler ran
+before a freshly mounted sheet's listener and quit the app while closing the sheet. On-device this
+was verified both ways (sheet closes and the app stays; next back exits; `/stats` back returns to
+the translator with the draft intact).
 
 `android:enableOnBackInvokedCallback="false"` keeps the predictive-back gesture routed to
 the same handler on Android 13+, so the order is identical on every API level.
@@ -97,7 +113,7 @@ the same handler on Android 13+, so the order is identical on every API level.
 
 | Failure | Behaviour |
 | --- | --- |
-| Room cannot open (corrupt, disk full) | App still runs; writes report failure; Data settings says storage is unavailable |
+| Room cannot open (corrupt, disk full) | App still runs; native reads/writes fail closed; Data settings says storage is unavailable. There is no in-app reset yet (TD26). |
 | Bridge does not answer within 3 s | Boot times out, the app opens with in-memory defaults, and the splash is still hidden after React commits |
 | Import is malformed or fails mid-write | Transaction rolls back; the previous archive is intact |
 | No network | Translation and cloud voice show the existing calm error; local history, phrasebook and backups keep working |

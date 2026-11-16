@@ -24,10 +24,12 @@ score.
 
 | Command | What it proves | Result on 2026-11-16 |
 | --- | --- | --- |
-| `./gradlew :app:testDebugUnitTest` | Repository merge/trim/session guard, JSON mapping, migration 1→2 | 9 passed, 0 failed |
-| `./gradlew :app:assembleDebug :app:assembleRelease` | Kotlin compiles, Room KSP runs, R8 shrinks, both APKs sign | PASS (v2 signature verified) |
-| `apksigner verify`, `aapt2 dump badging` | Signature, package, SDK, permissions, packaged assets | PASS |
-| Device install/run | Keyboard, RTL, SAF, TTS, restore on hardware | **NOT RUN** — no emulator/device |
+| `./gradlew :app:testDebugUnitTest` | Repository merge/trim/session guard, JSON mapping, migration 1→2, the backup UTF-8 reader | **13 passed, 0 failed** (Repository 7, Migration 3, BackupReader 3) |
+| `./gradlew :app:connectedDebugAndroidTest` | Real Capacitor bridge: packaged origin/shell, storage round trip, namespace refusal, session seq guard | **3 passed, 0 failed** on emulator API 35 |
+| `./gradlew :app:assembleDebug :app:assembleRelease -PallowDebugSigning=true` | Kotlin compiles, Room KSP runs, R8 shrinks, both APKs sign | PASS (v2 signature verified) |
+| `./gradlew :app:assembleRelease` without signing | Fail-closed release signing | expected failure, executed |
+| `apksigner verify`, `aapt2 dump badging`, `unzip` | Signature, package, SDK, permissions, packaged assets/CSP, debug flag, no keys | PASS |
+| Device install/run | Keyboard, theme, back, restore, SAF, stats, release APK | **executed on API 35 emulator**, see `ANDROID_TEST_EVIDENCE.md`; API 24–29 and OEM/foldable hardware remain NOT_VERIFIED |
 
 Kotlin tests run on the JVM with Robolectric; the migration test creates a real v1 SQLite schema
 with a row and opens it through Room v2. The bridge itself (Capacitor reflection) is covered only by

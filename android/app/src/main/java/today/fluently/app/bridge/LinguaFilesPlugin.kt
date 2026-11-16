@@ -79,18 +79,9 @@ class LinguaFilesPlugin : Plugin() {
         val uri: Uri = result.data?.data ?: return call.resolve(JSObject().put("content", null))
         try {
             val text = context.contentResolver.openInputStream(uri)?.use { stream ->
-                // A backup is a small JSON document; refuse anything that is not.
-                val buffer = ByteArray(1 shl 20)
-                val builder = StringBuilder()
-                var total = 0
-                while (true) {
-                    val read = stream.read(buffer)
-                    if (read <= 0) break
-                    total += read
-                    if (total > 8 * 1024 * 1024) throw IOException("too large")
-                    builder.append(String(buffer, 0, read, Charsets.UTF_8))
-                }
-                builder.toString()
+                // One UTF-8 decode for the whole bounded document: decoding each buffer
+                // separately corrupts a character split across a read boundary (A5-03).
+                BackupReader.readUtf8(stream)
             }
             if (text == null) {
                 call.resolve(JSObject().put("content", null))

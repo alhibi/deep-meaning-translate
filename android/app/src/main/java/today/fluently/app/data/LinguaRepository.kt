@@ -2,6 +2,7 @@ package today.fluently.app.data
 
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -27,6 +28,8 @@ class LinguaRepository(
         val settings: Map<String, String>,
         val prefs: String?,
         val session: String?,
+        /** The stored session write stamp, so the JS guard can continue from it. */
+        val sessionSeq: Long,
         val history: List<HistoryEntity>,
         val historyTotal: Int,
         val saved: List<SavedPhraseEntity>,
@@ -36,10 +39,12 @@ class LinguaRepository(
     suspend fun boot(recentLimit: Int = 400): Boot = withContext(io) {
         val all = settings.all()
         val prefs = all[PREFS_KEY]
+        val session = db.session().get()
         Boot(
             settings = all - PREFS_KEY,
             prefs = prefs,
-            session = db.session().get()?.json,
+            session = session?.json,
+            sessionSeq = session?.seq ?: 0L,
             history = db.history().page(recentLimit.coerceIn(1, 500), 0),
             historyTotal = db.history().count(),
             saved = db.saved().all(),
@@ -77,6 +82,9 @@ class LinguaRepository(
         sessionMutex.withLock {
             val clean = Mapping.blobOrNull(json)
             if (json != null && clean == null) return@withLock false
+            // A stamp is required: seq=0 was the symptom of the Long-decode bug and must
+            // fail visibly in tests instead of silently discarding every draft.
+            if (seq <= 0L) return@withLock false
             val current = db.session().get()
             if (current != null && seq <= current.seq) return@withLock false
             db.session().put(
@@ -170,6 +178,7 @@ class LinguaRepository(
         mode: String,
         fileName: String?,
         digest: String?,
+        reportJson: String?,
     ): JSONObject = withContext(io) {
         val previousSettings = settings.all()
         val previousHistory = db.history().all()
@@ -192,6 +201,22 @@ class LinguaRepository(
         if (prefsJson is JSONObject) newSettings[PREFS_KEY] = prefsJson.toString()
         val sessionJson = dataset.opt("session")
         val sessionValue = if (sessionJson is JSONObject) sessionJson.toString() else null
+        // Counts from the TS merge/replace decision; this is the import log's source of
+        // truth. Kotlin's table sizes cannot distinguish "already present" from "added".
+        var addedTotal = history.size
+        var skippedTotal = 0
+        runCatching {
+            val report = JSONObject(reportJson ?: "{}")
+            val added = report.optJSONObject("added")
+            val skipped = report.optJSONObject("skipped")
+            if (added != null) {
+                addedTotal = added.optInt("history") + added.optInt("saved") + added.optInt("memory")
+            }
+            if (skipped != null) {
+                skippedTotal =
+                    skipped.optInt("history") + skipped.optInt("saved") + skipped.optInt("memory")
+            }
+        }
 
         try {
             db.withTransaction {
@@ -213,15 +238,19 @@ class LinguaRepository(
             }
             settings.replaceAll(newSettings)
         } catch (error: Throwable) {
-            runCatching {
-                db.withTransaction {
-                    db.history().clear(); db.saved().clear(); db.memory().clear(); db.session().clear()
-                    if (previousHistory.isNotEmpty()) db.history().upsert(previousHistory)
-                    if (previousSaved.isNotEmpty()) db.saved().upsert(previousSaved)
-                    if (previousMemory.isNotEmpty()) db.memory().upsert(previousMemory)
-                    previousSession?.let { db.session().put(it) }
+            // The compensating rollback must finish even if the caller's coroutine was
+            // cancelled mid-import, or the archive would be left half-written (A3-05).
+            withContext(NonCancellable) {
+                runCatching {
+                    db.withTransaction {
+                        db.history().clear(); db.saved().clear(); db.memory().clear(); db.session().clear()
+                        if (previousHistory.isNotEmpty()) db.history().upsert(previousHistory)
+                        if (previousSaved.isNotEmpty()) db.saved().upsert(previousSaved)
+                        if (previousMemory.isNotEmpty()) db.memory().upsert(previousMemory)
+                        previousSession?.let { db.session().put(it) }
+                    }
+                    settings.replaceAll(previousSettings)
                 }
-                settings.replaceAll(previousSettings)
             }
             throw error
         }
@@ -232,8 +261,8 @@ class LinguaRepository(
                 digest = digest,
                 mode = mode,
                 importedAt = System.currentTimeMillis(),
-                added = history.size,
-                skipped = 0,
+                added = addedTotal,
+                skipped = skippedTotal,
             )
         )
 
@@ -252,6 +281,7 @@ class LinguaRepository(
             db.saved().clear()
             db.memory().clear()
             db.session().clear()
+            db.imports().clear()
         }
         settings.clear()
     }

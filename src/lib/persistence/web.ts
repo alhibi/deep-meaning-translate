@@ -263,7 +263,9 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
     };
   },
 
-  async replaceAll(input: BackupData, mode): Promise<ImportReport> {
+  // The web backend has no import log table; the provenance argument is accepted so the
+  // port has one call shape, and deliberately ignored here.
+  async replaceAll(input: BackupData, mode, _meta?): Promise<ImportReport> {
     const previous = await this.snapshot();
     const { data, report } =
       mode === "merge" ? mergeData(previous, input) : replaceData(input, previous);

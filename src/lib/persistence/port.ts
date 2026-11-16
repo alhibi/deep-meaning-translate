@@ -60,8 +60,15 @@ export interface PersistencePort {
 
   /** Everything a backup contains, already validated. */
   snapshot(): Promise<Dataset>;
-  /** One transaction: merged or replaced, or the previous data untouched. */
-  replaceAll(data: BackupData, mode: "merge" | "replace"): Promise<ImportReport>;
+  /**
+   * One transaction: merged or replaced, or the previous data untouched. The optional
+   * provenance is recorded by backends that keep an import log (Room's import_meta).
+   */
+  replaceAll(
+    data: BackupData,
+    mode: "merge" | "replace",
+    meta?: { fileName?: string; digest?: string },
+  ): Promise<ImportReport>;
 
   clearAll(): Promise<void>;
 }

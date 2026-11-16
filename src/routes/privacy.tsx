@@ -36,7 +36,7 @@ const copy = {
     sections: [
       {
         title: "What stays on your device",
-        body: "Your current draft, your translation archive (up to 2,000 entries), your phrasebook, your language pair, style, theme and voice preferences are stored only in this browser's local storage. They are never uploaded, and clearing your browser data removes them permanently.",
+        body: "Your current draft, your translation archive (up to 2,000 entries), your phrasebook, your language pair, style, theme and voice preferences are stored only on this device — app-private storage in the Android app, this browser's local storage on the web. They are never uploaded. Clearing the app's data (or clearing this site's data in a browser) removes them permanently.",
       },
       {
         title: "What is sent, and to whom",
@@ -48,11 +48,11 @@ const copy = {
       },
       {
         title: "Third-party processing",
-        body: "The services named above process the text only to return a result. Their own handling is governed by their terms; for confidential material, use the device voice and review the result before sharing. Saved phrases, the archive and statistics never leave your device.",
+        body: "The services named above process the text only to return a result. Their own handling is governed by their terms. For confidential material, review the result before sharing; a device voice may still be synthesized by a TTS engine that downloads voices. Saved phrases, the archive and statistics never leave your device.",
       },
       {
         title: "Your controls",
-        body: "You can delete a single phrase, clear the archive and phrasebook, or remove everything from the statistics page. Uninstalling the app or clearing site data deletes all of it. No request to a server is needed to erase your data.",
+        body: "You can delete a single phrase, clear the archive and phrasebook, or remove everything from the statistics page. Uninstalling the app or clearing its data deletes all of it; in a browser that is clearing this site's data. No request to a server is needed to erase your data.",
       },
       {
         title: "Children and contact",
@@ -67,7 +67,7 @@ const copy = {
     sections: [
       {
         title: "ما يبقى على جهازك",
-        body: "مسوّدتك الحالية، وأرشيف ترجماتك (حتى 2000 مدخل)، ودفتر عباراتك، واللغتان المختارتان، والأسلوب والثيم وإعدادات الصوت — كلها محفوظة في تخزين المتصفح المحلي فقط. لا تُرفع أبداً، ومسح بيانات المتصفح يحذفها نهائياً.",
+        body: "مسوّدتك الحالية، وأرشيف ترجماتك (حتى 2000 مدخل)، ودفتر عباراتك، واللغتان المختارتان، والأسلوب والثيم وإعدادات الصوت — كلها محفوظة على هذا الجهاز فقط: في تخزين التطبيق الخاص على Android، وفي التخزين المحلي للمتصفح على الويب. لا تُرفع أبداً، ومسح بيانات التطبيق (أو بيانات الموقع في المتصفح) يحذفها نهائياً.",
       },
       {
         title: "ما يُرسل وإلى مَن",
@@ -79,11 +79,11 @@ const copy = {
       },
       {
         title: "المعالجة لدى أطراف ثالثة",
-        body: "الخدمات المذكورة أعلاه تعالج النص لإرجاع نتيجة فقط، ويخضع تعاملها لشروطها. للمواد السرّية استخدم صوت الجهاز وراجع النتيجة قبل المشاركة. العبارات المحفوظة والأرشيف والإحصاءات لا تغادر جهازك.",
+        body: "الخدمات المذكورة أعلاه تعالج النص لإرجاع نتيجة فقط، ويخضع تعاملها لشروطها. للمواد السرّية راجع النتيجة قبل المشاركة؛ فصوت الجهاز قد يعتمد على محرّك نطق ينزّل الأصوات. العبارات المحفوظة والأرشيف والإحصاءات لا تغادر جهازك.",
       },
       {
         title: "تحكّمك",
-        body: "يمكنك حذف عبارة واحدة، أو مسح الأرشيف ودفتر العبارات، أو حذف كل شيء من صفحة الإحصاءات. إلغاء تثبيت التطبيق أو مسح بيانات الموقع يحذف كل ذلك، دون أي طلب إلى خادم.",
+        body: "يمكنك حذف عبارة واحدة، أو مسح الأرشيف ودفتر العبارات، أو حذف كل شيء من صفحة الإحصاءات. إلغاء تثبيت التطبيق أو مسح بياناته يحذف كل ذلك، وفي المتصفح يكفي مسح بيانات الموقع. لا يُرسل أي طلب إلى خادم لمسح بياناتك.",
       },
       {
         title: "الأطفال والتواصل",
@@ -98,7 +98,7 @@ const copy = {
     sections: [
       {
         title: "Was auf deinem Gerät bleibt",
-        body: "Dein aktueller Entwurf, dein Übersetzungsarchiv (bis zu 2.000 Einträge), dein Phrasenbuch, Sprachpaar, Stil, Farbschema und Stimmeinstellungen liegen ausschließlich im lokalen Speicher dieses Browsers. Sie werden nie hochgeladen; das Löschen der Browserdaten entfernt sie endgültig.",
+        body: "Dein aktueller Entwurf, dein Übersetzungsarchiv (bis zu 2.000 Einträge), dein Phrasenbuch, Sprachpaar, Stil, Farbschema und Stimmeinstellungen liegen ausschließlich auf diesem Gerät — im app-privaten Speicher der Android-App, im lokalen Speicher dieses Browsers im Web. Sie werden nie hochgeladen; das Löschen der App-Daten (bzw. der Websitedaten im Browser) entfernt sie endgültig.",
       },
       {
         title: "Was gesendet wird — und an wen",
@@ -110,11 +110,11 @@ const copy = {
       },
       {
         title: "Verarbeitung durch Dritte",
-        body: "Die genannten Dienste verarbeiten den Text nur, um ein Ergebnis zurückzugeben; ihre Bedingungen gelten. Für Vertrauliches nutze die Gerätestimme und prüfe das Ergebnis vor dem Teilen. Gespeicherte Phrasen, Archiv und Statistik verlassen dein Gerät nie.",
+        body: "Die genannten Dienste verarbeiten den Text nur, um ein Ergebnis zurückzugeben; ihre Bedingungen gelten. Prüfe bei Vertraulichem das Ergebnis vor dem Teilen; eine Gerätestimme kann von einer TTS-Engine stammen, die Stimmen herunterlädt. Gespeicherte Phrasen, Archiv und Statistik verlassen dein Gerät nie.",
       },
       {
         title: "Deine Kontrolle",
-        body: "Du kannst einzelne Phrasen löschen, Archiv und Phrasenbuch leeren oder auf der Statistikseite alles entfernen. App deinstallieren oder Websitedaten löschen entfernt alles — ohne Anfrage an einen Server.",
+        body: "Du kannst einzelne Phrasen löschen, Archiv und Phrasenbuch leeren oder auf der Statistikseite alles entfernen. Die App zu deinstallieren oder ihre Daten zu löschen entfernt alles; im Browser sind es die Websitedaten. Dafür ist keine Anfrage an einen Server nötig.",
       },
       {
         title: "Kinder und Kontakt",

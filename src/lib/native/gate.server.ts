@@ -11,7 +11,19 @@
  * the APK and why abuse protection still belongs at the hosting edge.
  */
 
-const DEFAULT_ORIGINS = ["https://localhost", "capacitor://localhost", "http://localhost"];
+const DEFAULT_ORIGINS = ["https://localhost", "capacitor://localhost"];
+/** Browser preview only: the installed app is always https://localhost. */
+const DEVELOPMENT_ORIGINS = ["http://localhost"];
+
+/**
+ * Fail closed. The worker bundle is not guaranteed to define NODE_ENV, so "not production"
+ * would have kept the browser origin in the deployed allowlist (A5-09). Only an explicit
+ * development/test environment gets it.
+ */
+function isDevelopment(): boolean {
+  const environment = process.env["NODE_ENV"];
+  return environment === "development" || environment === "test";
+}
 
 /** Origins the installed app is allowed to call from. Extra hosts come from the server env. */
 export function nativeOrigins(): string[] {
@@ -19,7 +31,8 @@ export function nativeOrigins(): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  return [...new Set([...DEFAULT_ORIGINS, ...extra])];
+  const defaults = isDevelopment() ? [...DEFAULT_ORIGINS, ...DEVELOPMENT_ORIGINS] : DEFAULT_ORIGINS;
+  return [...new Set([...defaults, ...extra])];
 }
 
 export interface NativeGate {

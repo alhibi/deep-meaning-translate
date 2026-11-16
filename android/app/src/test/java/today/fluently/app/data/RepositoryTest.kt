@@ -124,8 +124,21 @@ class RepositoryTest {
             .put("saved", JSONArray())
             .put("memory", JSONArray())
 
-        val report = repo.replaceAll(dataset, "replace", "backup.json", "abc")
+        val reportJson = JSONObject()
+            .put(
+                "added",
+                JSONObject().put("history", 1).put("saved", 0).put("memory", 0).put("settings", 2),
+            )
+            .put("skipped", JSONObject().put("history", 0).put("saved", 0).put("memory", 0))
+        val report = repo.replaceAll(dataset, "replace", "backup.json", "abc", reportJson.toString())
         assertThat(report.getJSONObject("added").getInt("history")).isEqualTo(1)
+        // Provenance is recorded from the TS report, not fabricated from table sizes.
+        val importMeta = db.imports().recent().first()
+        assertThat(importMeta.fileName).isEqualTo("backup.json")
+        assertThat(importMeta.digest).isEqualTo("abc")
+        assertThat(importMeta.mode).isEqualTo("replace")
+        assertThat(importMeta.added).isEqualTo(1)
+        assertThat(importMeta.skipped).isEqualTo(0)
         assertThat(repo.historyAll()).hasSize(1)
         assertThat(settings.get("lingua.theme.v1")).isEqualTo("light")
 

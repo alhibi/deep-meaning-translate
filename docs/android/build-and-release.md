@@ -1,105 +1,96 @@
 # Build and release (Android)
 
-Status: **Built and signature-verified** on 2026-11-16. Device install/run is
-**NOT_VERIFIED** (no device or emulator in this environment).
+Status: **Built, signature-verified and device-smoke-tested** on 2026-11-16 (emulator API 35).
+The review release APK is **debug-signed** because no upload keystore exists in this environment;
+TD18 therefore remains open for a publishable build.
 
-## Toolchain
+## Toolchain actually used
 
-| Tool | Version | Location in this workspace |
+| Tool | Version | Location |
 | --- | --- | --- |
-| JDK | 21 (required by Capacitor's `JavaVersion.VERSION_21`) | `.android-toolchain/jdk-21` |
-| Android SDK | platform 36, build-tools 36.0.0 | `~/android-sdk` |
-| Gradle | 8.14.3 (wrapper) | `android/gradlew` |
+| JDK | OpenJDK 21.0.13 (arm64) | `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` |
+| Android SDK | platforms 34/36/36.1/37.0, build-tools 36.0.0 | `ANDROID_HOME=~/Library/Android/sdk` |
+| Gradle | wrapper 8.14.3 (AGP 8.13.0) | `android/gradlew` |
 | Kotlin / KSP | 2.1.21 / 2.1.21-2.0.1 | `android/app/build.gradle.kts` |
-| Node | per `.nvmrc` / CI | — |
+| Node | 26.13.1 | — |
+| Emulator | API 35, arm64, 1080×2400, WebView 124.0.6367.219 | AVD `almani` |
 
-The toolchain directories are generated and ignored by Git. The project itself only needs
-a machine with JDK 21 and the Android SDK.
+**Locale pin (required):** `android/gradle.properties` sets
+`-Duser.language=en -Duser.country=US` for both the Gradle daemon and the Kotlin daemon. On an
+Arabic-locale host (this machine is `ar_DE`) Room's KSP generator otherwise writes Arabic-Indic
+digits into `LinguaDatabase_Impl.kt` and the Kotlin compile fails.
 
 ## Commands
 
 ```bash
-npm ci                              # one package manager: npm + package-lock.json
-                                    # postinstall applies patches/@capacitor+android+8.6.2.patch
-npm run build:native:web            # SPA → android-web/ (no service worker)
-npx cap sync android                # copy assets + plugin config into android/
-export JAVA_HOME=$PWD/.android-toolchain/jdk-21
-export ANDROID_HOME=$HOME/android-sdk
+npm ci                              # postinstall applies the Capacitor IME patch
+npm run build:native:web            # SPA → android-web/ (CSP injected, no service worker)
+npx cap sync android                # copies assets + writes capacitor.config.json (debugging false)
 cd android
-./gradlew :app:testDebugUnitTest    # Room, migration, repository tests (Robolectric)
+./gradlew :app:testDebugUnitTest    # 13 JVM tests (Robolectric + backup reader)
+./gradlew :app:connectedDebugAndroidTest   # 3 bridge tests on a device/emulator
 ./gradlew :app:assembleDebug
-./gradlew :app:assembleRelease
+
+# A release artefact requires signing env vars, or the explicit non-publishable opt-out:
+./gradlew :app:assembleRelease -PallowDebugSigning=true
 ```
 
-`npm run android:assembleDebug|assembleRelease|test` wrap the same Gradle tasks.
+Without `ANDROID_KEYSTORE_PATH`/`ANDROID_KEYSTORE_PASSWORD`/`ANDROID_KEY_ALIAS`/`ANDROID_KEY_PASSWORD`
+(or `-PallowDebugSigning=true`) `:app:assembleRelease` **fails before packaging**; that behaviour was
+executed and is evidence for A5-02/TD18.
 
-## Outputs (this build)
+## Release signing
+
+- A real upload build reads only environment variables; the build log prints the keystore path.
+- `-PallowDebugSigning=true` produces an installable review APK signed with the local debug key and
+  logs a warning. It is **not publishable** (an upgrade signed with another key would be rejected).
+- This environment has no upload keystore, so the 1.0.3 release artefact is debug-signed.
+
+## Outputs (this build, 2026-11-16)
 
 | File | Size | SHA-256 |
 | --- | --- | --- |
-| `android/app/build/outputs/apk/debug/app-debug.apk` | 6 391 079 B | `edcca1a50edb1736dc4f5c4a0d656a41a62644f1d143a1f90e899603196ad367` |
-| `android/app/build/outputs/apk/release/app-release.apk` | 2 171 156 B | `842019bf89a44607a3271974aba7f2d6e6fcdd01e6a9898151590a3f9326076d` |
+| `today-1.0.3-debug.apk` | 6 549 963 B | `29bf06266a02c54688edf168bdd66c0fc4593ee603a0f3d2e8c74b2a8e80dc46` |
+| `today-1.0.3-release-review-debug-signed.apk` | 2 173 393 B | `a5c75769eed0b717b5deda9e5050221672f451e8c854339438edf4d57936258e` |
 
-Manifest facts (from `aapt2 dump badging`):
+Both verify with the v2 APK signature scheme. The review release certificate is
+`C=US, O=Android, CN=Android Debug`, SHA-256
+`02d5b40c0d3d3da6835511cf24d8b8da40cc0b36f22b97bd055b0a529ee5de9a`. The debug APK uses the same
+debug certificate (normal for a debug build). Nothing in the packages contains a provider key.
 
-```text
-package: today.fluently.app.debug  versionCode 3  versionName 1.0.2-debug
-targetSdkVersion 36
-uses-permission: INTERNET, RECORD_AUDIO, VIBRATE
-native-code: arm64-v8a armeabi-v7a x86 x86_64
-assets/public/index.html present
-```
-
-## Signing
-
-Release signing reads only environment variables:
+Manifest facts (`aapt2 dump badging` / merged manifest):
 
 ```text
-ANDROID_KEYSTORE_PATH
-ANDROID_KEYSTORE_PASSWORD
-ANDROID_KEY_ALIAS
-ANDROID_KEY_PASSWORD
+package: today.fluently.app           versionCode 4  versionName 1.0.3
+package: today.fluently.app.debug     versionCode 4  versionName 1.0.3-debug
+minSdk 24 · targetSdk 36 · compileSdk 36
+permissions: INTERNET, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, VIBRATE
+native-code: arm64-v8a, armeabi-v7a, x86, x86_64
+assets/public/index.html present (65 packaged public assets)
+capacitor.config.json: webContentsDebuggingEnabled=false, mixed content off, origin https://localhost
 ```
-
-Without them the release build is signed with the local **debug key** so the APK stays
-installable for review. That is what this workspace produced:
-
-```text
-Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
-SHA-256: 937327930160d71abc45e471f882c00ba912a3d1225913c28dd41f58eccbf631
-Verified using v2 scheme: true   (v1/v3/v4: false)
-```
-
-**This release APK is not a Play Store artefact.** Before any distribution:
-
-1. create an upload keystore outside the repository;
-2. set the four variables above and rebuild;
-3. confirm `apksigner verify --print-certs` shows the release certificate;
-4. keep the keystore and passwords in a secret manager, never in Git.
-
-Version bumps happen in `android/app/build.gradle.kts` (`versionCode`, `versionName`) and
-in `package.json`; the debug build appends `.debug` / `-debug` so both can be installed
-side by side.
 
 ## Verification performed
 
 ```bash
-apksigner verify --verbose --print-certs app-debug.apk        # Verifies; v2 true
-apksigner verify --verbose --print-certs app-release.apk      # Verifies; v2 true
-aapt2 dump badging app-debug.apk                              # package, sdk, permissions
-unzip -l app-release.apk | grep assets/public/index.html      # packaged UI present
-unzip -p ... | grep -E "sk-ant-|sk-proj-|AIza"                # no provider key in assets
-sha256sum app-debug.apk app-release.apk
-adb devices                                                   # empty: no target
+apksigner verify --verbose --print-certs app-debug.apk        # v2 true
+apksigner verify --verbose --print-certs app-release.apk      # v2 true, debug DN
+aapt2 dump badging …                                          # package/sdk/permissions/ABI
+unzip -p … assets/capacitor.config.json                       # debugging false
+unzip -p … assets/public/index.html                           # CSP meta present
+strings classes*.dex | grep -E "sk-|AIza|…_API_KEY"            # no provider keys
+sha256sum                                                     # values above
+adb install + launch + translate + force-stop + relaunch      # see below
 ```
 
-Not performed, and therefore not claimed: `adb install`, launch, first-run restore,
-keyboard, RTL, dictation permission, SAF export/import on a device. See
-[device-compatibility.md](device-compatibility.md) for the manual checklist.
+Device smoke (API 35 emulator): debug APK installed over previous data and launched; release APK
+installed clean, first-run intro shown, translated German→Arabic (“سعيد نهارك”), and restored the
+draft/result/target after force-stop. Room/DataStore, SAF, keyboard, back, theme and stats were
+exercised in the debug build; the evidence and limits are in `ANDROID_TEST_EVIDENCE.md`.
 
-## CI note
+## Distribution note
 
-CI keeps building only the web/PWA target. The Android job is separate because it needs
-JDK 21, the SDK and (for a real release) the keystore secret. Do not let an Android build
-change the web deploy: `vite.config.ts` and `wrangler.jsonc` are untouched by
-`vite.native.config.ts`.
+The review release APK is installable on a device with “unknown sources”. It is **not** a Play
+Store or upgrade-safe production artefact: before distributing, create an upload keystore outside
+the repository, set the four environment variables, rebuild without `allowDebugSigning`, verify the
+certificate DN and publish the new hashes. TD18 stays open until then.

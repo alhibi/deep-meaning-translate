@@ -291,9 +291,12 @@ function StatsPage() {
     [navigate],
   );
 
-  const forgetAll = () => {
-    clearDeviceData();
-    setConfirmForget(false);
+  const forgetAll = async () => {
+    try {
+      await clearDeviceData();
+    } finally {
+      setConfirmForget(false);
+    }
   };
 
   /* ---------------- states ---------------- */
@@ -751,7 +754,7 @@ function StatsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={forgetAll}
+                  onClick={() => void forgetAll()}
                   className="press h-10 flex-1 rounded-full bg-destructive text-[13px] font-medium text-destructive-foreground"
                 >
                   {t("confirmDelete")}

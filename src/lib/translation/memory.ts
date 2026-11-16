@@ -138,4 +138,9 @@ export function memoryResetForTests(): void {
   rows = null;
 }
 
+/** Post-import reload of the device copy; the next read re-reads storage. */
+export function reloadMemory(): void {
+  rows = null;
+}
+
 export type { MemoryRow };

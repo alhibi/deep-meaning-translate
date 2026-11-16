@@ -6,24 +6,38 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * A real upgrade, not a destructive reset: a version-1 database with a row is opened by
- * version 2 through MIGRATION_1_2, and the row survives with a usable merge key.
+ * A real upgrade, not a destructive reset: a version-1 database with rows is opened by
+ * version 2 through MIGRATION_1_2, and every row survives with a usable merge key.
  *
- * The v1 tables are created directly here because v1 was the pre-normalization schema;
- * this is the exact shape the migration must accept.
+ * The v1 tables are created directly here because v1 is the pre-normalization schema and
+ * no exported 1.json was kept; this is the exact shape the migration must accept. Both
+ * tables the migration touches are populated, and one test goes through the production
+ * `LinguaDatabase.open()` so a forgotten `addMigrations` call fails the suite.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class MigrationTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private val files = mutableSetOf<String>()
+
+    @After
+    fun cleanUp() {
+        for (name in files) {
+            for (suffix in listOf("", "-wal", "-shm", "-journal")) {
+                context.getDatabasePath(name + suffix).delete()
+            }
+        }
+    }
 
     private fun createV1(name: String): SQLiteDatabase {
+        files.add(name)
         val file = context.getDatabasePath(name)
         file.parentFile?.mkdirs()
         if (file.exists()) file.delete()
@@ -67,6 +81,14 @@ class MigrationTest {
             "INSERT INTO history_entries (id, source, target, original, translated, created_at, " +
                 "updated_at, uses, version) VALUES ('row-1', 'de', 'ar', ' Hallo  Welt ', 'مرحبا', 123, 123, 1, 2)"
         )
+        db.execSQL(
+            "INSERT INTO saved_phrases (id, source, target, original, translated, created_at, known, reviewed_at) " +
+                "VALUES ('saved-1', 'de', 'ar', ' Guten\tTag ', 'طاب يومك', 124, 0, 0)"
+        )
+        db.execSQL(
+            "INSERT INTO session_state (id, json, seq, updated_at) " +
+                "VALUES (1, '{\"text\":\"Hallo\"}', 7, 125)"
+        )
         db.version = 1
         db.close()
         return SQLiteDatabase.openOrCreateDatabase(file, null)
@@ -89,6 +111,47 @@ class MigrationTest {
         assertThat(row.translated).isEqualTo("مرحبا")
         // The archive's duplicate rule now answers from the index, not from JavaScript.
         assertThat(room.history().candidates("ar", "Hallo Welt", 0)).hasSize(1)
+        // The other table the migration backfills keeps its row and merge key too.
+        val saved = room.saved().all()
+        assertThat(saved).hasSize(1)
+        assertThat(saved.first().normalized).isEqualTo("Guten Tag")
+        // The session row is untouched: the draft still exists after the upgrade.
+        assertThat(room.session().get()?.seq).isEqualTo(7)
         room.close()
+    }
+
+    @Test
+    fun `production open applies the migration instead of resetting the database`() = runBlocking {
+        val name = LinguaDatabase.NAME
+        createV1(name).close()
+        val room = LinguaDatabase.open(context)
+        assertThat(room.history().all().map { it.id }).containsExactly("row-1")
+        assertThat(room.saved().all().map { it.id }).containsExactly("saved-1")
+        room.close()
+    }
+
+    @Test
+    fun `a missing migration fails loudly instead of destructively resetting`() {
+        val name = "missing-migration-test.db"
+        createV1(name).close()
+        val room = Room.databaseBuilder(context, LinguaDatabase::class.java, name)
+            .allowMainThreadQueries()
+            .build()
+        val failure = runCatching { runBlocking { room.history().all() } }.exceptionOrNull()
+        room.close()
+        assertThat(failure).isNotNull()
+        assertThat(failure).isInstanceOf(IllegalStateException::class.java)
+        // Nothing was deleted on the way out: the v1 file still holds its row.
+        val raw = SQLiteDatabase.openDatabase(
+            context.getDatabasePath(name).absolutePath,
+            null,
+            SQLiteDatabase.OPEN_READONLY,
+        )
+        val cursor = raw.rawQuery("SELECT COUNT(*) FROM history_entries", null)
+        cursor.use {
+            it.moveToFirst()
+            assertThat(it.getInt(0)).isEqualTo(1)
+        }
+        raw.close()
     }
 }

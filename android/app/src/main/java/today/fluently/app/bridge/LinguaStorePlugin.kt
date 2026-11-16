@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import today.fluently.app.data.LinguaDatabase
@@ -30,6 +32,13 @@ import today.fluently.app.data.SettingsStore
 @CapacitorPlugin(name = "LinguaStore")
 class LinguaStorePlugin : Plugin() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /**
+     * One operation at a time. The session had its own mutex, but whole-document writes
+     * (phrasebook, memory, import) were independent coroutines and could land out of order,
+     * so a stale list could overwrite a newer one (A3-04). Serializing the whole bridge
+     * keeps arrival order = commit order; the work is small and already off the main thread.
+     */
+    private val operations = Mutex()
     private var database: LinguaDatabase? = null
     private var repo: LinguaRepository? = null
     private var initError: String? = null
@@ -70,12 +79,14 @@ class LinguaStorePlugin : Plugin() {
 
     private inline fun run(call: PluginCall, crossinline block: suspend (LinguaRepository) -> JSObject) {
         scope.launch {
-            try {
-                val result = block(repository())
-                call.resolve(result)
-            } catch (error: Throwable) {
-                // Never include SQL, values or stack traces in the message a person can see.
-                call.reject("device storage unavailable")
+            operations.withLock {
+                try {
+                    val result = block(repository())
+                    call.resolve(result)
+                } catch (error: Throwable) {
+                    // Never include SQL, values or stack traces in the message a person can see.
+                    call.reject("device storage unavailable")
+                }
             }
         }
     }
@@ -99,6 +110,7 @@ class LinguaStorePlugin : Plugin() {
             .put("historyTotal", boot.historyTotal)
             .put("saved", saved.toString())
             .put("memory", memory.toString())
+            .put("sessionSeq", boot.sessionSeq)
             .put("schemaVersion", LinguaDatabase.VERSION)
     }
 
@@ -129,7 +141,10 @@ class LinguaStorePlugin : Plugin() {
 
     @PluginMethod
     fun sessionWrite(call: PluginCall) = run(call) { repository ->
-        val seq = call.getDouble("seq")?.toLong() ?: 0L
+        // Epoch-millisecond stamps arrive as a JSON Long, and PluginCall.getDouble refuses
+        // Long values. The old getDouble fallback silently produced seq=0, so the repository
+        // rejected every draft save and the session table stayed empty (A2-01).
+        val seq = call.getLong("seq") ?: 0L
         JSObject().put("ok", repository.putSession(call.getString("json"), seq))
     }
 
@@ -147,7 +162,8 @@ class LinguaStorePlugin : Plugin() {
     fun historyCandidates(call: PluginCall) = run(call) { repository ->
         val target = call.getString("target") ?: ""
         val normalized = call.getString("normalized") ?: ""
-        val recentSince = call.getDouble("recentSince")?.toLong() ?: 0L
+        // Same Long-vs-Double trap as sessionWrite; a silent 0 would merge unrelated rows.
+        val recentSince = call.getLong("recentSince") ?: 0L
         val rows = repository.historyCandidates(target, normalized, recentSince)
         val json = JSONArray()
         rows.forEach { json.put(Mapping.historyToJson(it)) }
@@ -229,6 +245,7 @@ class LinguaStorePlugin : Plugin() {
             mode = call.getString("mode") ?: "merge",
             fileName = call.getString("fileName"),
             digest = call.getString("digest"),
+            reportJson = call.getString("report"),
         )
         JSObject().put("report", report.toString())
     }

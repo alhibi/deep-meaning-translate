@@ -14,6 +14,12 @@ import { storePlugin } from "../native/plugin";
 import { BACKUP_SETTING_KEYS } from "./contracts";
 
 let nativeMode = false;
+/**
+ * Native writes are blocked until the boot snapshot has been read successfully. A bridge
+ * that times out must not turn "not hydrated" into "empty" and let the first save rewrite
+ * a whole table (phrasebook/memory) from an empty cache (A3-02).
+ */
+let nativeReady = false;
 const snapshot = new Map<string, string>();
 
 /** Sequential writes per key: a keystroke burst becomes one DataStore write, not thirty. */
@@ -24,6 +30,11 @@ let lastWriteOk = true;
 
 export function setNativeSettingsMode(on: boolean) {
   nativeMode = on;
+}
+
+/** Called by the boot path only after the native snapshot has been applied. */
+export function setNativeSettingsReady(ready: boolean) {
+  nativeReady = ready;
 }
 
 export function isNativeSettings(): boolean {
@@ -79,6 +90,7 @@ export function writeDeviceValue(key: string, value: string): Promise<boolean> {
       return Promise.resolve(false);
     }
   }
+  if (!nativeReady) return Promise.resolve(false);
   snapshot.set(key, value);
   removals.delete(key);
   queued.set(key, value);
@@ -94,6 +106,7 @@ export function removeDeviceValue(key: string): Promise<boolean> {
       return Promise.resolve(false);
     }
   }
+  if (!nativeReady) return Promise.resolve(false);
   snapshot.delete(key);
   queued.delete(key);
   removals.add(key);
@@ -163,6 +176,7 @@ function runQueue(): Promise<boolean> {
 /** Await every queued setting write (called before the app is backgrounded). */
 export async function flushSettings(): Promise<boolean> {
   if (!nativeMode) return true;
+  if (!nativeReady) return false;
   if (flushing) await flushing;
   if (queued.size || removals.size) return runQueue();
   return lastWriteOk;
@@ -181,7 +195,11 @@ export async function forgetSettingsCache(): Promise<void> {
   queued.clear();
   removals.clear();
   snapshot.clear();
-  if (nativeMode) return;
+  if (nativeMode) {
+    // clearAll already emptied DataStore; keep writes enabled so the app remains usable
+    // after "forget everything" without a reload.
+    return;
+  }
   try {
     for (const key of Object.keys(window.localStorage)) {
       if (key.startsWith("lingua.")) window.localStorage.removeItem(key);

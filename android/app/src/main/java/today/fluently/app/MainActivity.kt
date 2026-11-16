@@ -3,6 +3,7 @@ package today.fluently.app
 import android.os.Bundle
 import androidx.core.view.WindowCompat
 import com.getcapacitor.BridgeActivity
+import today.fluently.app.bridge.LinguaChromePlugin
 import today.fluently.app.bridge.LinguaFilesPlugin
 import today.fluently.app.bridge.LinguaStorePlugin
 import today.fluently.app.bridge.LinguaTtsPlugin
@@ -21,8 +22,18 @@ class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         registerPlugin(LinguaStorePlugin::class.java)
         registerPlugin(LinguaFilesPlugin::class.java)
+        registerPlugin(LinguaChromePlugin::class.java)
         registerPlugin(LinguaTtsPlugin::class.java)
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reapply the canvas-coloured strip if the window background was reset while we
+        // were away (splash exit, theme recreation, OEM launcher transitions).
+        LinguaChromePlugin.lastColor?.let { color ->
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(color))
+        }
     }
 }

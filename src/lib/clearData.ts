@@ -3,6 +3,8 @@ import { persist } from "./persist";
 import { saved } from "./saved";
 import { memoryClear } from "./translation/memory";
 import { forgetSettingsCache } from "./persistence/settings";
+import { resetFeelPrefs } from "./feel/prefs";
+import { resetVoicePrefs } from "./voice/prefs";
 
 /**
  * Remove every Lingua store: archive, phrasebook, translation memory, session and the
@@ -18,5 +20,9 @@ export async function clearDeviceData(): Promise<void> {
   await history.clear();
   await memoryClear();
   await persist.clearAll();
+  // In-memory settings caches must be dropped too, or the next toggle in this session
+  // can write an old value back after everything was "forgotten" (A2-06).
+  resetFeelPrefs();
+  resetVoicePrefs();
   await forgetSettingsCache();
 }

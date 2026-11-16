@@ -1,4 +1,5 @@
 import type { PluginListenerHandle } from "@capacitor/core";
+import { asNonThenable } from "./plugin";
 
 /**
  * Android's own text-to-speech, used only when the WebView has no speech synthesis.
@@ -23,7 +24,10 @@ async function engine(): Promise<NativeTts | null> {
   if (plugin) return plugin;
   try {
     const { registerPlugin } = await import("@capacitor/core");
-    plugin = registerPlugin<NativeTts>("LinguaTts");
+    // Same Capacitor Proxy trap as the storage plugin: an async function must not resolve
+    // with a raw plugin proxy or promise assimilation calls `.then()` and the bridge rejects.
+    // Without this wrapper `await engine()` threw and onFail never ran (A2-04).
+    plugin = asNonThenable(registerPlugin<NativeTts>("LinguaTts") as object) as NativeTts;
     return plugin;
   } catch {
     return null;
@@ -51,7 +55,7 @@ export function speakNative(
     void engine().then((p) => p?.stop().catch(() => undefined));
   };
   void (async () => {
-    const tts = await engine();
+    const tts = await engine().catch(() => null);
     if (!tts) return h.onFail?.("unsupported");
     try {
       const ready = await tts.available();

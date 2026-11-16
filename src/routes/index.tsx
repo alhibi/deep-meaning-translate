@@ -32,6 +32,8 @@ import { SafeArea } from "@/components/SafeArea";
 import { feel } from "@/lib/feel";
 import { useClipboardHint } from "@/lib/clipboardHint";
 import { joinSpeech } from "@/lib/speech";
+import { stopSpeaking } from "@/lib/tts";
+import { isNativeApp } from "@/lib/native/config";
 import { useAssemblySpeech } from "@/lib/useAssemblySpeech";
 import { speechLang } from "@/lib/speech";
 import { saved, useSaved, type SavedPhrase } from "@/lib/saved";
@@ -409,6 +411,43 @@ function Translator() {
       document.documentElement.style.removeProperty("--vvh");
     };
   }, []);
+  // Under adjustResize the window and the visual viewport shrink together, so the
+  // comparison above can never fire on Android (A4-04). The native Keyboard plugin knows
+  // the real show/hide transition; web keeps the visualViewport path.
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    let disposed = false;
+    let handles: { remove: () => void | Promise<void> }[] = [];
+    void (async () => {
+      try {
+        const { Keyboard } = await import("@capacitor/keyboard");
+        const show = await Keyboard.addListener("keyboardWillShow", () => {
+          if (disposed) return;
+          const wasOpen = kbOpen.current;
+          kbOpen.current = true;
+          setKbUp(true);
+          if (!wasOpen)
+            requestAnimationFrame(() => {
+              const el = scrollRef.current;
+              if (el) el.scrollTop = el.scrollHeight;
+            });
+        });
+        const hide = await Keyboard.addListener("keyboardWillHide", () => {
+          if (disposed) return;
+          kbOpen.current = false;
+          setKbUp(false);
+        });
+        handles = [show, hide];
+      } catch {
+        /* plugin absent: the visualViewport fallback still applies */
+      }
+    })();
+    return () => {
+      disposed = true;
+      for (const handle of handles) void handle.remove();
+    };
+  }, []);
+
   // While the keyboard is up, keep the newest translation pinned in view.
   useEffect(() => {
     if (!kbOpen.current) return;
@@ -617,6 +656,19 @@ function Translator() {
     },
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
+  // Backgrounding must stop cloud read-along and a live dictation session, not only
+  // flush storage; the docs already promised it (A5-06/A2-07).
+  const cancelSpeech = speech.cancel;
+  const stopVoice = useCallback(() => {
+    stopSpeaking();
+    cancelSpeech();
+  }, [cancelSpeech]);
+  useEffect(() => {
+    const onFlush = () => stopVoice();
+    window.addEventListener("lingua:flush", onFlush);
+    return () => window.removeEventListener("lingua:flush", onFlush);
+  }, [stopVoice]);
+
   const toggleMic = useCallback(() => {
     if (!speech.listening && !speech.starting)
       speechBase.current = inputRef.current?.value.trim() ?? "";
@@ -659,31 +711,44 @@ function Translator() {
   // Android back: close what is open, dismiss the keyboard, go back a route, and only
   // then leave the app. It never reloads the document or clears the draft.
   useEffect(() => {
-    const onBack = () => {
-      if (savedOpen) return setSavedOpen(false);
-      if (dialectOpen) return setDialectOpen(false);
-      if (localeOpen) return setLocaleOpen(false);
-      if (lexOpen) return setLexOpen(false);
-      if (shadowMapOpen) return setShadowMapOpen(false);
-      if (shadowFocus) return setShadowFocus(null);
-      if (introOpen) return finishIntro();
+    const onBack = (event: Event) => {
+      // An overlay (LanguageSheet/VoiceSheet) already handled and cancelled this press.
+      if (event.defaultPrevented) return;
+      const claim = () => event.preventDefault();
+      if (savedOpen) {
+        claim();
+        return setSavedOpen(false);
+      }
+      if (dialectOpen) {
+        claim();
+        return setDialectOpen(false);
+      }
+      if (localeOpen) {
+        claim();
+        return setLocaleOpen(false);
+      }
+      if (lexOpen) {
+        claim();
+        return setLexOpen(false);
+      }
+      if (shadowMapOpen) {
+        claim();
+        return setShadowMapOpen(false);
+      }
+      if (shadowFocus) {
+        claim();
+        return setShadowFocus(null);
+      }
+      if (introOpen) {
+        claim();
+        return finishIntro();
+      }
       const active = document.activeElement as HTMLElement | null;
       if (active && (active.tagName === "TEXTAREA" || active.tagName === "INPUT")) {
+        // Dismiss the keyboard first; `platform.dispatchBack` decides after this handler.
+        claim();
         active.blur();
-        return;
       }
-      if (window.location.pathname !== "/") {
-        window.history.back();
-        return;
-      }
-      void (async () => {
-        try {
-          const { App } = await import("@capacitor/app");
-          await App.exitApp();
-        } catch {
-          /* browser: nothing to exit */
-        }
-      })();
     };
     window.addEventListener("lingua:back", onBack);
     return () => window.removeEventListener("lingua:back", onBack);
