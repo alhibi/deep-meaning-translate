@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { readDeviceValue, writeDeviceValue } from "./persistence/settings";
 
 export type Locale = "ar" | "en" | "de";
@@ -651,6 +651,9 @@ export function useI18n() {
     () => current,
     () => "en" as Locale,
   );
-  const dict = DICT[locale];
-  return { locale, t: (k: Key) => dict[k], rtl: locale === "ar" };
+  // Stable until the locale changes: a fresh `t` on every render invalidated memoised
+  // children and rebuilt props on every keystroke for a function that only reads a table.
+  const t = useCallback((k: Key) => DICT[locale][k], [locale]);
+  const rtl = locale === "ar";
+  return useMemo(() => ({ locale, t, rtl }), [locale, t, rtl]);
 }

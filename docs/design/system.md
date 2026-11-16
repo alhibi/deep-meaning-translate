@@ -1,6 +1,6 @@
 # Design System
 
-Status: **Verified** against `src/styles.css`, components and the contrast gate on 2026-11-07.
+Status: **Verified** against `src/styles.css`, components and the contrast gate on 2026-11-16.
 Visual regression was not automated; no screenshot claim is made beyond the checks listed.
 
 ## Philosophy
@@ -50,19 +50,20 @@ tracking). Components use the same scale rather than arbitrary values.
 
 The translator is a fixed, phone-first workspace with safe-area padding and a viewport-aware height
 (`--vvh`) so the keyboard lifts the canvas instead of covering it. The canvas itself takes the
-height the screen leaves below the header and divides it by moment (`canvasStage`: idle, writing,
-translating, settled): while writing, the composer keeps most of the room; once a translation
-settles, the result takes most of it while the composer keeps a strip of three-plus lines. Floors
-and ceilings are expressed in `lh` and `dvh`, so an Arabic line and a small phone each get a size
-of their own, and the grow weights share what remains; with the keyboard open both fields collapse
-to a compact strip. The canvas never shrinks below its content: long text scrolls the workspace,
-and a capped composer scrolls inside its own stage rather than opening an empty band. When a short
-answer leaves room in the result, the action row settles at its foot, so the translation reads as a
-composed page instead of a paragraph floating above dead space. The stage mapping is covered by
-`stage.test.ts`; the split itself is CSS, not a measured height. Nothing in the canvas measures its
-children or animates an inline height: a measured grow box fed its own stretched content back
-through `ResizeObserver` and clipped the panel (2,300 callbacks while typing), so the geometry is
-one flex tree, and `tests/e2e/field_layout.py` asserts that it holds still and never overlaps.
+height the screen leaves below the header and gives the composer a **fixed three-line strip**
+(`calc(3lh)`; two lines with the keyboard up) while the result owns every pixel below it, with a
+floor in `dvh` for small phones. The composer never grows and never animates its height: a long
+draft scrolls inside the field, and a long answer scrolls the workspace. The split is deliberately
+not a function of typing or streaming state — an earlier design divided the canvas by moment and
+transitioned the composer's and result's `min-height`, which moved the field under the thumb on
+every request (dozens of layout frames per sentence). When a short answer leaves room in the
+result, the action row settles at its foot, so the translation reads as a composed page instead of
+a paragraph floating above dead space. Nothing in the canvas measures its children or animates an
+inline height: a measured grow box fed its own stretched content back through `ResizeObserver` and
+clipped the panel (2,300 callbacks while typing), so the geometry is one flex tree, and
+`tests/e2e/field_layout.py` asserts that it holds still, stays three lines, and never overlaps.
+The clear control is placed by the **input's** direction (not the interface's) so mixed-direction
+text can never run under it.
 Secondary pages use a readable single column. Sheets are overlays, not routes. Radii, hairlines and shadows
 stay restrained; depth comes from surface contrast and spacing rather than heavy elevation.
 

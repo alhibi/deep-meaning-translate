@@ -309,7 +309,10 @@ export const ResultPanel = memo(function ResultPanel({
 
   const rtl = isRtl(lang);
 
-  const textCls = `${rtl ? "font-arabic font-medium" : "font-medium"} ${sizeFor(text.length, rtl)}`;
+  // While words stream in, keep one display size so the answer does not reflow mid-arrival;
+  // the settled length chooses its final size once, as the answer lands.
+  const sizeLen = provisional ? 120 : text.length;
+  const textCls = `${rtl ? "font-arabic font-medium" : "font-medium"} ${sizeFor(sizeLen, rtl)}`;
   const showShadow =
     !!shadow && shadow.losses.length > 0 && !provisional && !pending && !speaking ? true : false;
   let body: React.ReactNode;

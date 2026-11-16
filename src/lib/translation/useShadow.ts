@@ -13,6 +13,10 @@ export const SHADOW_DELAY = 600;
 export type ShadowState =
   { status: "off" | "idle" | "loading" } | { status: "ready"; losses: Loss[]; carried?: boolean };
 
+/** Shared settled states: returning a fresh object on every keystroke re-rendered the route. */
+const IDLE: ShadowState = { status: "idle" };
+const OFF: ShadowState = { status: "off" };
+
 export function useShadow(opts: {
   text: string;
   translation: string;
@@ -48,9 +52,9 @@ export function useShadow(opts: {
   useEffect(() => {
     const token = ++generation.current;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
-    if (!enabled) return setState({ status: "off" });
+    if (!enabled) return setState((s) => (s.status === "off" ? s : OFF));
     if (!settled || !translation || !isShadowCandidate(normalized))
-      return setState({ status: "idle" });
+      return setState((s) => (s.status === "idle" ? s : IDLE));
     if (cache.current.has(key)) return setState(visible(key, cache.current.get(key) ?? null));
     // Just applied a fix: the untouched losses stay visible while the rest is re-checked.
     const c = carry.current;
@@ -86,7 +90,7 @@ export function useShadow(opts: {
           setState(visible(key, value));
         })
         .catch(() => {
-          if (token === generation.current) setState({ status: "idle" });
+          if (token === generation.current) setState((s) => (s.status === "idle" ? s : IDLE));
         });
     }, SHADOW_DELAY);
     return () => clearTimeout(id);

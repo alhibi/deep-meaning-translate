@@ -1,15 +1,6 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Bookmark,
@@ -56,7 +47,6 @@ import { LanguageNotice } from "@/components/translator/LanguageNotice";
 import { checkSource } from "@/lib/translation/languageCheck";
 import { styleSuggestion } from "@/lib/translation/suggestion";
 import { resultState } from "@/lib/translation/view";
-import { canvasStage } from "@/lib/translation/stage";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
@@ -166,6 +156,7 @@ function Translator() {
   const [dialectOpen, setDialectOpen] = useState(false);
   const [brain, setBrain] = useState<Brain>(effectiveBrain(boot.prefs?.brain ?? DEFAULT_BRAIN));
   const [shadowOn, setShadowOn] = useState(boot.prefs?.shadow !== false);
+  const toggleShadow = useCallback(() => setShadowOn((v) => !v), []);
   const [savedOpen, setSavedOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
   /** Mounted from the first paint; CSS decides whether this visit sees it. */
@@ -181,6 +172,10 @@ function Translator() {
   const todayKey = useTodayKey();
   const [dismissedFor, setDismissedFor] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  /** Latest visible value, read by the native reconciliation path without re-binding it. */
+  const textRef = useRef(text);
+  // eslint-disable-next-line react-hooks/refs -- latest-value ref, read only from a DOM listener
+  textRef.current = text;
   const { canInstall, install } = useInstallPrompt();
 
   // A restored draft re-shows its old translation: recorded quietly, never as a new use.
@@ -376,12 +371,6 @@ function Translator() {
     [baseResult, applied, text],
   );
   const pending = view.pending;
-  // One decision for the canvas geometry: what the screen is being used for right now.
-  const stage = canvasStage({
-    hasText: text.trim().length > 0,
-    hasResult: !!result,
-    live: pending || provisional,
-  });
 
   // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
   // lifts above the on-screen keyboard instead of hiding behind it.
@@ -548,48 +537,25 @@ function Translator() {
     }
   }, [source, target, detected, arabicScript, result, submitNext]);
 
-  // Fallback autosize only for browsers without CSS field-sizing.
-  useLayoutEffectSafe(() => {
-    const el = inputRef.current;
-    if (!el || SUPPORTS_FIELD_SIZING) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [text]);
-
   const onInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value.slice(0, MAX_CHARS));
   }, []);
 
   // A paste is a deliberate submission: translate the whole thing right away.
-  // Android IME/WebView can paint the field while the synthetic React input never reaches
-  // state. Poll the actual field value once a beat and reconcile it, so visible text can
-  // never sit in an idle translator. Normal typing makes this a no-op.
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      const field = inputRef.current;
-      if (!field) return;
-      const value = field.value.slice(0, MAX_CHARS);
-      if (value !== text) setText(value);
-    }, 700);
-    return () => window.clearInterval(id);
-  }, [text, submitNext]);
-  // Some Android IMEs emit composition/input events that never reach React's synthetic
-  // handler. Listen on the DOM node as well and reconcile the visible value directly.
+  // Android IME/WebView can paint the field while React's synthetic handler never reaches
+  // state. One native listener reconciles only a genuinely stale value: normal typing is a
+  // no-op, there is no timer writing state behind the IME, and composition events are left
+  // to the platform until they finish.
   useEffect(() => {
     const field = inputRef.current;
     if (!field) return;
     const sync = () => {
-      setText(field.value.slice(0, MAX_CHARS));
+      const value = field.value.slice(0, MAX_CHARS);
+      if (value !== textRef.current) setText(value);
     };
     field.addEventListener("input", sync);
-    field.addEventListener("compositionupdate", sync);
-    field.addEventListener("compositionend", sync);
-    return () => {
-      field.removeEventListener("input", sync);
-      field.removeEventListener("compositionupdate", sync);
-      field.removeEventListener("compositionend", sync);
-    };
-  }, [submitNext]);
+    return () => field.removeEventListener("input", sync);
+  }, []);
   const onPaste = useCallback(() => submitNext(), [submitNext]);
   const canReadClipboard =
     restored && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
@@ -635,7 +601,11 @@ function Translator() {
     settled: shadowSettled,
     enabled: shadowOn,
   });
-  const shadowLosses = shadowState.status === "ready" ? shadowState.losses : [];
+  // Stable props, so the memoised result panel is not re-rendered by pure typing.
+  const shadowLosses = useMemo(
+    () => (shadowState.status === "ready" ? shadowState.losses : []),
+    [shadowState],
+  );
   const [shadowFocus, setShadowFocus] = useState<string | null>(null);
   const [shadowMapOpen, setShadowMapOpen] = useState(false);
   const [undo, setUndo] = useState<{
@@ -703,6 +673,13 @@ function Translator() {
     },
     [dismissShadow],
   );
+  const shadowProp = useMemo(
+    () =>
+      shadowState.status === "ready"
+        ? { losses: shadowLosses, focusId: shadowFocus, onPick: pickShadow }
+        : null,
+    [shadowState, shadowLosses, shadowFocus, pickShadow],
+  );
   const [lexOpen, setLexOpen] = useState(false);
   const openLex = useCallback(() => setLexOpen(true), []);
   const closeLex = useCallback(() => setLexOpen(false), []);
@@ -712,6 +689,7 @@ function Translator() {
 
   // Voice input: speech joins whatever is already written, and translates the moment you stop.
   const speechBase = useRef("");
+  const speechEcho = useRef<HTMLDivElement>(null);
   const speech = useAssemblySpeech({
     lang: source === "auto" ? "auto" : speechLang(source, target, locale, dialect),
     onText: (spoken, final) => {
@@ -720,6 +698,13 @@ function Translator() {
     },
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
+  // The echo is its own scroller (the composer is a fixed strip): keep the newest words
+  // visible, exactly where the caret would be in the transparent field underneath.
+  useEffect(() => {
+    if (!speech.listening) return;
+    const el = speechEcho.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [text, speech.listening]);
   // Backgrounding must stop cloud read-along and a live dictation session, not only
   // flush storage; the docs already promised it (A5-06/A2-07).
   const cancelSpeech = speech.cancel;
@@ -864,15 +849,65 @@ function Translator() {
   );
 
   // Situation detection → one quiet suggestion, only when it disagrees with the chosen style.
+  // Memoised with the other ResultPanel props: typing must not re-render a long answer.
   const suggestKey = `${text.trim()}|${style}`;
-  const proposed = result ? styleSuggestion({ situation: result.situation, style }) : null;
-  const suggestion =
-    proposed && dismissedFor !== suggestKey
-      ? { label: t(proposed.key), next: proposed.next }
-      : null;
+  const suggestion = useMemo(() => {
+    const proposed = result ? styleSuggestion({ situation: result.situation, style }) : null;
+    if (!proposed || dismissedFor === suggestKey) return null;
+    return {
+      label: t(proposed.key),
+      onApply: () => setStyle(proposed.next),
+      onDismiss: () => setDismissedFor(suggestKey),
+    };
+  }, [result, style, dismissedFor, suggestKey, t]);
 
-  const today =
-    restored && !hasText && todayKey ? (savedList.length ? saved.ofTheDay(todayKey) : null) : null;
+  const today = useMemo(
+    () =>
+      restored && !hasText && todayKey
+        ? savedList.length
+          ? saved.ofTheDay(todayKey)
+          : null
+        : null,
+    [restored, hasText, todayKey, savedList],
+  );
+  const idle = useMemo(
+    () =>
+      today ? (
+        <button
+          type="button"
+          onClick={() => pickSaved(today)}
+          className="press-soft block w-full text-start"
+        >
+          <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
+            <span aria-hidden className="size-1 rotate-45 bg-signal" />
+            {t("phraseOfDay")}
+          </span>
+          <span
+            dir="auto"
+            className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}
+          >
+            {today.translated}
+          </span>
+          <span dir="auto" className="mt-1 block text-start text-[14px] text-muted-foreground">
+            {today.original}
+          </span>
+        </button>
+      ) : undefined,
+    [today, pickSaved, t],
+  );
+  const shadowSummary = useMemo(
+    () =>
+      validUndo || shadowState.status === "loading" || shadowState.status === "ready" ? (
+        <ShadowSummary
+          status={shadowState.status === "ready" ? "ready" : "loading"}
+          losses={shadowLosses}
+          onPick={pickShadow}
+          onMap={() => setShadowMapOpen(true)}
+          undo={validUndo ? { onUndo: undoShadow } : null}
+        />
+      ) : null,
+    [validUndo, shadowState, shadowLosses, pickShadow, undoShadow],
+  );
 
   return (
     <>
@@ -919,7 +954,6 @@ function Translator() {
           {/* One canvas: source writing surface, a live seam, then the result. */}
           <div
             className="canvas-shell mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface"
-            data-stage={stage}
             data-keyboard={kbUp ? "open" : undefined}
           >
             <section
@@ -962,7 +996,7 @@ function Translator() {
                 spellCheck
                 placeholder={t("placeholder")}
                 aria-label={t("inputLabel")}
-                className={`autogrow block w-full resize-none bg-transparent pe-14 outline-none ${
+                className={`composer-field block w-full resize-none bg-transparent pe-14 outline-none ${
                   rtlInput
                     ? "font-arabic text-[24px] leading-[1.7]"
                     : "text-[22px] leading-[1.45] tracking-[-0.015em]"
@@ -971,9 +1005,10 @@ function Translator() {
               {speech.listening ? (
                 /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
                 <div
+                  ref={speechEcho}
                   aria-hidden
                   dir={rtlInput ? "rtl" : "ltr"}
-                  className={`pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
+                  className={`speech-echo pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
                     rtlInput
                       ? "font-arabic text-[24px] leading-[1.7]"
                       : "text-[22px] leading-[1.45] tracking-[-0.015em]"
@@ -1002,7 +1037,7 @@ function Translator() {
                 }}
                 aria-label={t("clearText")}
                 tabIndex={hasText ? 0 : -1}
-                className={`press absolute end-3 top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${
+                className={`press absolute top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${rtlInput ? "left-3" : "right-3"} ${
                   hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
                 }`}
               >
@@ -1147,63 +1182,14 @@ function Translator() {
                   onRetry={retry}
                   isSaved={isSaved}
                   onSave={toggleSave}
-                  suggestion={
-                    suggestion
-                      ? {
-                          label: suggestion.label,
-                          onApply: () => setStyle(suggestion.next),
-                          onDismiss: () => setDismissedFor(suggestKey),
-                        }
-                      : null
-                  }
-                  idle={
-                    today ? (
-                      <button
-                        type="button"
-                        onClick={() => pickSaved(today)}
-                        className="press-soft block w-full text-start"
-                      >
-                        <span className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-faint">
-                          <span aria-hidden className="size-1 rotate-45 bg-signal" />
-                          {t("phraseOfDay")}
-                        </span>
-                        <span
-                          dir="auto"
-                          className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}
-                        >
-                          {today.translated}
-                        </span>
-                        <span
-                          dir="auto"
-                          className="mt-1 block text-start text-[14px] text-muted-foreground"
-                        >
-                          {today.original}
-                        </span>
-                      </button>
-                    ) : undefined
-                  }
+                  suggestion={suggestion}
+                  idle={idle}
                   onDictionary={lexicon || lexiconLoading ? openLex : undefined}
                   dictionaryReady={!!lexicon}
                   shadowOn={shadowOn}
-                  onToggleShadow={() => setShadowOn((v) => !v)}
-                  shadow={
-                    shadowState.status === "ready"
-                      ? { losses: shadowLosses, focusId: shadowFocus, onPick: pickShadow }
-                      : null
-                  }
-                  shadowSummary={
-                    validUndo ||
-                    shadowState.status === "loading" ||
-                    shadowState.status === "ready" ? (
-                      <ShadowSummary
-                        status={shadowState.status === "ready" ? "ready" : "loading"}
-                        losses={shadowLosses}
-                        onPick={pickShadow}
-                        onMap={() => setShadowMapOpen(true)}
-                        undo={validUndo ? { onUndo: undoShadow } : null}
-                      />
-                    ) : null
-                  }
+                  onToggleShadow={toggleShadow}
+                  shadow={shadowProp}
+                  shadowSummary={shadowSummary}
                 />
               </SafeArea>
             </div>
@@ -1290,13 +1276,6 @@ function Translator() {
     </>
   );
 }
-
-const SUPPORTS_FIELD_SIZING =
-  typeof CSS !== "undefined" &&
-  typeof CSS.supports === "function" &&
-  CSS.supports("field-sizing", "content");
-
-const useLayoutEffectSafe = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 function lang2(code: string | undefined) {
   return (code ?? "").slice(0, 2).toLowerCase();

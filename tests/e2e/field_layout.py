@@ -43,6 +43,30 @@ GEOMETRY = """() => {
 }"""
 
 
+STAGE_BOX = """() => {
+  const r = document.querySelector('.source-stage').getBoundingClientRect();
+  return { top: r.top, bottom: r.bottom, height: r.height };
+}"""
+
+# The clear control is placed by the input's direction, the field reserves its width with
+# the matching logical padding. Comparing the two catches mixed UI/input directions, where
+# `end-3` followed the interface and the Arabic glyphs ran under the X.
+CLEAR_SIDE = """() => {
+  const ta = document.querySelector('.source-stage textarea');
+  const clear = document.querySelector('.source-stage > button');
+  if (!ta || !clear) return null;
+  const cs = getComputedStyle(ta);
+  const t = ta.getBoundingClientRect(), b = clear.getBoundingClientRect();
+  return {
+    rtl: ta.getAttribute('dir') === 'rtl',
+    onLeft: b.left + b.width / 2 < t.left + t.width / 2,
+    padLeft: parseFloat(cs.paddingLeft),
+    padRight: parseFloat(cs.paddingRight),
+    width: b.width,
+  };
+}"""
+
+
 async def enter(page, field, text):
     """Fill after hydration, retrying until React's controlled value keeps the text."""
     for _ in range(6):
@@ -141,6 +165,17 @@ async def main():
             idle["scroll"]["height"] <= idle["scroll"]["client"] + 1,
             f"idle canvas fills without overflow ({idle['scroll']['height']}/{idle['scroll']['client']})",
         )
+        composer = await page.evaluate(
+            """() => {
+              const el = document.querySelector('.source-stage textarea');
+              const lh = parseFloat(getComputedStyle(el).lineHeight);
+              return { height: el.getBoundingClientRect().height, lh };
+            }"""
+        )
+        check(
+            abs(composer["height"] - 3 * composer["lh"]) < 1,
+            f"composer is a compact three-line field ({composer['height']:.1f}px for {composer['lh']:.1f}px lines)",
+        )
         await page.wait_for_timeout(1500)
         idle_later = await page.evaluate(GEOMETRY)
         check(idle == idle_later, "idle geometry holds still for 1.5s")
@@ -149,6 +184,37 @@ async def main():
         # 2. A short answer settles and stops moving; nothing renders outside its surface.
         field = page.locator("textarea").first
         await enter(page, field, SHORT)
+        # Arabic raises the line height; measure this script's strip before asserting that a
+        # later long draft does not change it.
+        arabic_composer = await page.evaluate(
+            """() => {
+              const el = document.querySelector('.source-stage textarea');
+              const lh = parseFloat(getComputedStyle(el).lineHeight);
+              return { height: el.getBoundingClientRect().height, lh };
+            }"""
+        )
+        check(
+            abs(arabic_composer["height"] - 3 * arabic_composer["lh"]) < 1,
+            f"Arabic composer is also a compact three-line field ({arabic_composer['height']:.1f}px)",
+        )
+        # The regression this guards: the canvas used to animate the composer's and the
+        # result's heights between writing/translating/settled, so the field moved under
+        # the thumb on every request. Sample across the whole request and settle.
+        still = [await page.evaluate(STAGE_BOX)]
+        for _ in range(8):
+            await page.wait_for_timeout(120)
+            still.append(await page.evaluate(STAGE_BOX))
+        check(
+            all(box == still[0] for box in still),
+            "composer holds perfectly still while the answer streams and settles",
+        )
+        side = await page.evaluate(CLEAR_SIDE)
+        check(bool(side and side["rtl"]), "Arabic draft is right-to-left")
+        check(bool(side and side["onLeft"]), "clear control follows the Arabic reading edge")
+        check(
+            bool(side) and (side["padLeft"] if side["onLeft"] else side["padRight"]) >= side["width"],
+            "the field reserves the clear control's width on that side (no overlap)",
+        )
         await page.get_by_text("Termin morgen.").first.wait_for(timeout=15000)
         settled = await settled_geometry(page)
         settled_later = await settled_geometry(page)
@@ -175,6 +241,13 @@ async def main():
         long = await settled_geometry(page)
         check(long["panel"]["height"] > before + 40, "long answer grows the result")
         check(long["text"]["bottom"] <= long["panel"]["bottom"] + 1, "long answer is not clipped")
+        long_field = await page.evaluate(
+            "() => document.querySelector('.source-stage textarea').getBoundingClientRect().height"
+        )
+        check(
+            abs(long_field - arabic_composer["height"]) < 1,
+            "long draft never grows the composer; it scrolls instead",
+        )
         check(
             await field.evaluate("e => e.scrollHeight > e.clientHeight"),
             "long draft scrolls inside its capped composer",
