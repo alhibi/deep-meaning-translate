@@ -71,10 +71,22 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
-
+      # The hosted runner already has the Android SDK and accepted licenses. Avoid
+      # android-actions/setup-android here: its "sdkmanager tools" step fails on runners
+      # whose command-line tools no longer ship that legacy package (seen on 2026-11-16).
       - name: Install Android SDK packages
-        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=${SDK_ROOT}" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=${SDK_ROOT}" >> "$GITHUB_ENV"
+          SDKM="$(find "${SDK_ROOT}/cmdline-tools" -maxdepth 3 -type f -name sdkmanager 2>/dev/null | head -1)"
+          if [ -z "${SDKM}" ]; then
+            echo "sdkmanager not found under ${SDK_ROOT}" >&2
+            exit 1
+          fi
+          yes | "${SDKM}" --licenses >/dev/null 2>&1 || true
+          yes | "${SDKM}" --install "platforms;android-36" "build-tools;36.0.0" >/dev/null
+          "${SDKM}" --list_installed | grep -E "platforms;android-36|build-tools;36.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
 
