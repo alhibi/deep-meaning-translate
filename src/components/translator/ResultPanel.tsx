@@ -331,12 +331,13 @@ export const ResultPanel = memo(function ResultPanel({
           <p
             dir={rtl ? "rtl" : "ltr"}
             lang={lang}
+            data-streaming={provisional ? "true" : undefined}
             className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${textCls} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
           >
             {speaking && voiceStarted ? (
               <SpokenText text={text} current={spokenWord} />
             ) : (
-              <StreamingText text={text} />
+              <StreamingText text={text} live={provisional} />
             )}
           </p>
           {showShadow && shadow ? (

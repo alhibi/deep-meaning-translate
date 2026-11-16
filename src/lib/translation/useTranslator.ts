@@ -102,6 +102,24 @@ function liveResult(
 
 const isOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
+/**
+ * One React commit per displayed frame instead of one per provider delta.
+ *
+ * SSE frequently delivers dozens of small chunks per second. Committing each chunk made
+ * the whole translator reconcile for text that had not visibly changed yet, which is the
+ * main source of jank while an answer streams on a phone. The buffer is flushed on the
+ * next animation frame, and the final result is always committed from the response text,
+ * so coalescing can never lose or reorder the answer.
+ */
+const scheduleFrame = (cb: () => void): number =>
+  typeof requestAnimationFrame === "function"
+    ? requestAnimationFrame(cb)
+    : (setTimeout(cb, 16) as unknown as number);
+const cancelFrame = (id: number): void => {
+  if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(id);
+  else clearTimeout(id);
+};
+
 export function useTranslator(opts: {
   text: string;
   source: string;
@@ -265,7 +283,7 @@ export function useTranslator(opts: {
       lastSentAt.current = Date.now();
       const started = performance.now();
 
-      const fail = (kind: ErrorKind) => {
+      const fail = (kind: ErrorKind, allowRetry = true) => {
         metrics.error(kind);
         // A throttled *live* request is not the user's problem: they are mid-word, and
         // the settled sentence will be translated on its own pause. Never interrupt typing
@@ -275,7 +293,7 @@ export function useTranslator(opts: {
           return;
         }
         const transient = kind === "rate" || kind === "network" || kind === "provider";
-        if (transient && attempt === 0) {
+        if (allowRetry && transient && attempt === 0) {
           metrics.retry();
           setPhase("RETRYING");
           retryTimer.current = setTimeout(
@@ -292,51 +310,111 @@ export function useTranslator(opts: {
         setPhase(phaseFor(kind));
       };
 
+      // Streaming paint coalescing: one commit per displayed frame. Declared outside the
+      // try so an error or a superseded stream can always cancel the pending frame.
+      let frame = 0;
+      let pendingText = "";
+      const paint = () => {
+        frame = 0;
+        const partialText = pendingText;
+        if (!partialText || token < shown.current || ctrl.signal.aborted) return;
+        if (token > shown.current && partialText.length < shownLen.current) return;
+        // A newer stream has caught up with what is on screen: the older prefix stream
+        // has done its job, so cancel it instead of letting two providers finish.
+        if (lingering.current && lingering.current !== ctrl) {
+          lingering.current.abort();
+          lingering.current = null;
+        }
+        shown.current = token;
+        shownLen.current = partialText.length;
+        setStreaming(true);
+        setResult((r) => liveResult(r, partialText, source, target));
+        setProvisional(true);
+      };
+      const onText = (partialText: string) => {
+        pendingText = partialText;
+        if (frame) return;
+        frame = scheduleFrame(paint);
+      };
+      /** Cancel a pending paint so it can never overwrite a more complete answer. */
+      const dropFrame = () => {
+        if (frame) cancelFrame(frame);
+        frame = 0;
+      };
+
       try {
         const data = { text: norm, source, target, style, dialect, brain, partial: prov };
         // Live typing streams plain text so words appear as they are generated;
         // a finished sentence gets the full structured, verified translation.
-        const onText = (partialText: string) => {
-          if (token < shown.current || ctrl.signal.aborted) return;
-          if (token > shown.current && partialText.length < shownLen.current) return;
-          // A newer stream has caught up with what is on screen: the older prefix stream
-          // has done its job, so cancel it instead of letting two providers finish.
-          if (lingering.current && lingering.current !== ctrl) {
-            lingering.current.abort();
-            lingering.current = null;
-          }
-          shown.current = token;
-          shownLen.current = partialText.length;
-          setStreaming(true);
-          setResult((r) => liveResult(r, partialText, source, target));
-          setProvisional(true);
+        /**
+         * A structured answer that failed to parse or that the provider cut at its token
+         * ceiling is salvaged as plain live text once. A very long pasted sentence then
+         * still produces a readable translation instead of a provider error, and the
+         * person never has to understand why the JSON was incomplete.
+         */
+        let salvaged = false;
+        const salvage = async (): Promise<TranslationResult | null> => {
+          salvaged = true;
+          const live = await streamTranslate(
+            { ...data, partial: true },
+            ctrl.signal,
+            onText,
+            "live",
+          );
+          dropFrame();
+          if (!live.ok) return null;
+          const value = liveResult(resultRef.current, live.text, source, target);
+          // A plain-text fallback is not exempt from the deterministic checks: a model
+          // that degenerates into a repetition loop must surface as an error, not as a
+          // wall of invented text replacing the translation.
+          return verifyTranslation(data, value).length ? null : value;
         };
-        const res:
-          | { ok: true; result: TranslationResult; needsRepair: boolean }
-          | { ok: false; kind: ErrorKind; cancelled?: true } = prov
-          ? await streamTranslate(data, ctrl.signal, onText, "live").then((r) =>
-              r.ok
-                ? {
-                    ok: true as const,
-                    result: liveResult(resultRef.current, r.text, source, target),
-                    needsRepair: false,
-                  }
-                : r,
-            )
-          : await streamTranslate(data, ctrl.signal, onText, "full").then((r) => {
-              if (!r.ok) return r;
-              try {
-                const parsed = parseResult(r.text, data);
-                return {
-                  ok: true as const,
-                  result: parsed,
-                  needsRepair: verifyTranslation(data, parsed).length > 0,
-                };
-              } catch {
-                return { ok: false as const, kind: "provider" as const };
+        type Settled =
+          | { ok: true; result: TranslationResult; needsRepair: boolean; salvaged?: true }
+          | { ok: false; kind: ErrorKind; cancelled?: true };
+        let res: Settled;
+        if (prov) {
+          const r = await streamTranslate(data, ctrl.signal, onText, "live");
+          res = r.ok
+            ? {
+                ok: true,
+                result: liveResult(resultRef.current, r.text, source, target),
+                needsRepair: false,
               }
-            });
+            : r;
+        } else {
+          const r = await streamTranslate(data, ctrl.signal, onText, "full");
+          // This run was superseded while the full request was finishing. Its buffered
+          // live paint may still be the newest text on screen, so leave it to land and
+          // never spend a salvage request nobody is waiting for.
+          if (token !== latest.current) return;
+          dropFrame();
+          if (!r.ok) {
+            res = r;
+            // A provider error may be a cut-off answer or a transport failure; one plain
+            // live request can still salvage a readable translation.
+            if (r.kind === "provider" && attempt === 0) {
+              const value = await salvage();
+              if (value) res = { ok: true, result: value, needsRepair: false, salvaged: true };
+            }
+          } else {
+            try {
+              const parsed = parseResult(r.text, data);
+              res = {
+                ok: true,
+                result: parsed,
+                needsRepair: verifyTranslation(data, parsed).length > 0,
+              };
+            } catch {
+              const value = attempt === 0 ? await salvage() : null;
+              res = value
+                ? { ok: true, result: value, needsRepair: false, salvaged: true }
+                : { ok: false, kind: "provider" };
+            }
+          }
+        }
         if (token !== latest.current) return; // superseded — shown live at most, never committed
+        dropFrame();
         metrics.latency(performance.now() - started);
         if (res.ok) {
           cache.current.set(key, { result: res.result, at: Date.now(), provisional: prov });
@@ -344,11 +422,12 @@ export function useTranslator(opts: {
             cache.current.delete(cache.current.keys().next().value as string);
           shown.current = token;
           commit(key, res.result, prov, norm);
-          // Only a settled, verified answer is remembered. A provisional stream is
-          // plain text that never went through `verify`, so storing it would let an
-          // unchecked reading answer for this sentence forever after.
-          if (!prov) memorySet(key, res.result);
-          if (!prov && (res.needsRepair || LUNA_ENABLED)) {
+          // Only a settled, verified answer is remembered. A provisional stream — and a
+          // salvaged plain-text answer that never went through `verify` — must not
+          // answer for this sentence forever after from device memory.
+          const verified = !prov && !res.salvaged;
+          if (verified) memorySet(key, res.result);
+          if (verified && (res.needsRepair || LUNA_ENABLED)) {
             // Shown already. Finished sentences get a quiet second look only when it can
             // change something: deterministic issues need a repair, and a second brain
             // needs to exist to review. With Luna paused, a clean DeepSeek result would
@@ -376,9 +455,14 @@ export function useTranslator(opts: {
           // The server ended an outdated stream quietly: not an error, never a retry.
           setPhase(hasResult.current ? "COMPLETE" : "READY");
         } else {
-          fail(res.kind);
+          // If salvage was already attempted, repeating the same expensive full request
+          // would only delay the honest error.
+          fail(res.kind, !salvaged);
         }
       } catch {
+        // A paint scheduled by the failed stream must not land after the error state.
+        // A superseded prefix stream is not an error for the screen: let its frame land.
+        if (token === latest.current) dropFrame();
         if (token !== latest.current) return;
         if (timedOut) {
           metrics.timeout();
@@ -393,6 +477,7 @@ export function useTranslator(opts: {
           fail("network");
         }
       } finally {
+        if (token === latest.current) dropFrame();
         clearTimeout(timer);
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
         if (lingering.current === ctrl) lingering.current = null;

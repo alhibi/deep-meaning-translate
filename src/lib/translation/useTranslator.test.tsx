@@ -163,6 +163,42 @@ describe("useTranslator", () => {
     expect(call).toHaveBeenCalledTimes(2);
   });
 
+  it("salvages a provider-cut structured answer as plain text instead of failing", async () => {
+    call
+      .mockResolvedValueOnce({ ok: false, kind: "provider" })
+      .mockResolvedValueOnce({ ok: true, result: result("نسخة منقذة") });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ein langer Satz."),
+    });
+    await flush(900);
+    expect(h.current.result?.translation).toBe("نسخة منقذة");
+    expect(h.current.error).toBeNull();
+    expect(h.current.phase).toBe("COMPLETE");
+    expect(call).toHaveBeenCalledTimes(2);
+  });
+
+  it("salvages an unreadable structured reply once, then shows the plain answer", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("") })
+      .mockResolvedValueOnce({ ok: true, result: result("أنقذتني") });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ein langer Satz."),
+    });
+    await flush(900);
+    expect(h.current.result?.translation).toBe("أنقذتني");
+    expect(call).toHaveBeenCalledTimes(2);
+  });
+
+  it("never treats an authentication error as salvageable", async () => {
+    call.mockResolvedValue({ ok: false, kind: "auth" });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ein langer Satz."),
+    });
+    await flush(900);
+    expect(h.current.error).toBe("auth");
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the last good result when a later request fails", async () => {
     call
       .mockResolvedValueOnce({ ok: true, result: result("جيد") })
