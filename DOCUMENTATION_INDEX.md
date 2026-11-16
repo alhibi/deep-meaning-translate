@@ -1,6 +1,6 @@
 # Documentation Index
 
-Status: **Verified** on 2026-11-07. Every authoritative document is listed here; a document that
+Status: **Verified** on 2026-11-16. Every authoritative document is listed here; a document that
 is not listed is not authoritative. `npm run check:docs` enforces that every file in `docs/` is
 indexed and that relative links resolve.
 
@@ -84,6 +84,8 @@ indexed and that relative links resolve.
 | `docs/audits/2026-11-14-task2-request-lifecycle.md` | Task 2: F1/F6 failing tests and fixes, Playwright matrix, new F15/F16 findings                  | Verified                                      |
 | `docs/audits/2026-11-14-task3-server-boundary.md`   | Task 3 (started): F18 admission ordering, F19 provider-body hardening, boundary probes, TD15    | In progress                                   |
 | `docs/audits/2026-11-14-task4-local-data.md`        | Task 4 (started): F5 full result validation, F8 day key, clear-all caches, remaining F9/F13/F14 | In progress                                   |
+| `docs/audits/2026-11-16-web-upgrade.md`             | Web-only upgrade audit: defects, fixes, executed evidence, limits                               | Verified                                      |
+| `docs/audits/2026-11-16-web-upgrade-ar.md`          | Arabic summary of the web upgrade                                                               | Verified                                      |
 | `docs/audits/android-team/01-architecture.md`       | A1 architecture/repository audit, 2026-11-16                                                    | reviewing Android architecture findings       |
 | `docs/audits/android-team/02-native.md`             | A2 native engineering audit                                                                     | reviewing lifecycle/IME/back/TTS findings     |
 | `docs/audits/android-team/03-data.md`               | A3 data/persistence audit                                                                       | reviewing Room/DataStore/boot/import findings |

@@ -35,6 +35,24 @@ gated, because no border is the sole affordance.
 
 At the audit close: **51 pairs pass**.
 
+## The translation's arrival
+
+The answer is the loudest element, and its arrival is the one signature flourish. Streamed words
+condense out of a soft blur with a faint warm signal trail, skewed and spun, then snap clear; a
+single quiet caret shows generation is still in flight and disappears when the answer settles. The
+animation is paint-only, scoped to the fresh tail of a live stream, and reduced to a fade for
+`prefers-reduced-motion`. Settled answers keep no promoted layers. The full rule and its measured
+cost live in `docs/design/motion-and-accessibility.md`.
+
+## Translation Statistics: the practice map
+
+The statistics page is a private, editorial reading of the local archive, not a dashboard. Its
+"خريطة ممارستك" panel is a real map: the strongest domain is the centre, the other domains orbit it
+at sizes and ribbon widths derived from frequency, an outer ring counts the last days of practice,
+and a typographic readout states the same facts in words. Colour is a domain's identity, never the
+only encoding; every node is a focusable button; the panel keeps the calm hairline language of the
+translator rather than introducing cards or elevation.
+
 ## Typography
 
 - **Geist** (variable sans) for interface and German text.
@@ -69,18 +87,18 @@ stay restrained; depth comes from surface contrast and spacing rather than heavy
 
 ## Component inventory (verified)
 
-| Component | Responsibility |
-| --- | --- |
-| `AppHeader` / `Wordmark` | name, interface language, install offer, theme, saved, statistics |
-| `LanguageBar` | source/target selection and swap; source `auto` |
-| `StyleToggle` | Natural / Formal / Casual |
-| `BrainPicker` | model selection; Luna shows as paused |
-| `ResultPanel` | translation, copy, listen, save, shadow, states |
-| `LanguageSheet`, `ShadowSheet`, `LexiconSheet`, `SavedSheet` | lazy dialogs |
-| `Intro` | server-rendered first-run gate |
-| `FailureScreen` | translated error and not-found surfaces |
-| `ThemeToggle` | three-way palette control with reveal |
-| `SafeArea`, focus trap, feel façade | device and interaction infrastructure |
+| Component                                                    | Responsibility                                                    |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `AppHeader` / `Wordmark`                                     | name, interface language, install offer, theme, saved, statistics |
+| `LanguageBar`                                                | source/target selection and swap; source `auto`                   |
+| `StyleToggle`                                                | Natural / Formal / Casual                                         |
+| `BrainPicker`                                                | model selection; Luna shows as paused                             |
+| `ResultPanel`                                                | translation, copy, listen, save, shadow, states                   |
+| `LanguageSheet`, `ShadowSheet`, `LexiconSheet`, `SavedSheet` | lazy dialogs                                                      |
+| `Intro`                                                      | server-rendered first-run gate                                    |
+| `FailureScreen`                                              | translated error and not-found surfaces                           |
+| `ThemeToggle`                                                | three-way palette control with reveal                             |
+| `SafeArea`, focus trap, feel façade                          | device and interaction infrastructure                             |
 
 Every dialog uses `useFocusTrap`: focus enters, Tab wraps, Escape closes, focus returns to the
 opener. Icon-only controls carry real labels and at least a 44 px target where they are touch

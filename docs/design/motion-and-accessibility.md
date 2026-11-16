@@ -1,7 +1,7 @@
 # Motion and Accessibility
 
-Status: **Verified** by source inspection, unit tests and browser frame sampling on 2026-11-07.
-Reduced-motion behavior was inspected in CSS, not tested on a physical device.
+Status: **Verified** by source inspection, unit tests, browser frame sampling and Chromium
+reduced-motion emulation on 2026-11-16. Physical-device frame pacing is still **NOT_VERIFIED**.
 
 ## Motion principles
 
@@ -14,6 +14,15 @@ Reduced-motion behavior was inspected in CSS, not tested on a physical device.
    tokens. No layout-triggering animation.
 5. `prefers-reduced-motion` removes or shortens movement; the interface remains fully usable.
 6. No animation may cover a blank frame, a data refetch or a remount.
+7. The signature exception is **arrival**: a streamed translation's new words whip in on the
+   "whirlwind" (blur, a warm signal trail, a short skew/spin) and a quiet signal caret shows the
+   answer is still being written. This is the one deliberate, repeated flourish; it must stay
+   paint-only (no width or letter-spacing animation), animate only the fresh tail (≤28 words per
+   render), and drop to a fade under reduced motion. Provider deltas are coalesced to one React
+   commit per animation frame so the text can arrive without spending a frame per chunk.
+8. The statistics **practice map** is a mount-only composition: nodes grow from the centre and the
+   ribbons draw once, staggered by rank. It has no continuous loop and no keyframes in
+   `styles.css`; reduced motion renders the same map without the transition.
 
 ## Navigation transition
 
@@ -58,8 +67,13 @@ the whole layer off.
 - Dialog focus behavior: unit-tested (`useFocusTrap` tests) and used by every sheet.
 - Navigation background: all sampled frames showed one background colour; see
   `docs/architecture/navigation-and-lifecycle.md`.
-- Screen-reader announcement quality and real-device reduced-motion behavior: **NOT_VERIFIED** in
-  this environment.
+- Streaming smoothness: 390×844 headless Chromium, 2026-11-16 — 60 fps and zero long tasks
+  unthrottled; 6× CPU throttle averaged ~44 fps with 10–13 long tasks ≤73 ms. Disabling the arrival
+  effect produced the same long-task count (React + text layout dominate, not the blur); the
+  composer held one 122.4 px height and the result never overlapped it.
+- Reduced motion: emulated in Chromium; the `word-in` animations resolve to a fade and the caret is
+  static. Screen-reader announcement quality and real-device reduced-motion behavior:
+  **NOT_VERIFIED** in this environment.
 
 ## Adding motion
 

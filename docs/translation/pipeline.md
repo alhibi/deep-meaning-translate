@@ -1,8 +1,10 @@
 # Translation Pipeline
 
-Status: **Verified** by source inspection and unit tests on 2026-11-07. Live model output was
-**NOT_VERIFIED** (no provider keys). Prompt text lives only in `src/lib/translation/prompt.ts`; this
-document describes its structure, not a second copy.
+Status: **Verified** by source inspection, unit tests and live DeepSeek calls on 2026-11-16.
+Live model output on `deepseek-flash` is verified for the sample set in §11 (accuracy is sampled, not
+a corpus claim); Luna and the cloud-voice providers remain **NOT_VERIFIED** (no key in this
+environment). Prompt text lives only in `src/lib/translation/prompt.ts`; this document describes its
+structure, not a second copy.
 
 ## 1. Input and source resolution
 
@@ -33,10 +35,10 @@ identity; cache, device memory and session priming all use it.
 
 ## 3. Two response modes
 
-| Mode | Request | Response | Commitment |
-| --- | --- | --- | --- |
-| Live (`partial`) | while typing | plain text stream | display only; never verified, stored or archived |
-| Full | finished sentence | structured JSON | parsed, verified; eligible for memory and archive |
+| Mode             | Request           | Response          | Commitment                                        |
+| ---------------- | ----------------- | ----------------- | ------------------------------------------------- |
+| Live (`partial`) | while typing      | plain text stream | display only; never verified, stored or archived  |
+| Full             | finished sentence | structured JSON   | parsed, verified; eligible for memory and archive |
 
 A live result can settle after a pause; only then does it become a normal result with actions.
 
@@ -93,28 +95,64 @@ that never blocks the queue. Foreground translation never waits for enrichment.
 ## 9. Failure states
 
 Offline, timeout, rate limit, auth/quota, provider and validation failures map to distinct phases.
-The draft and the last good result stay on screen. Transient failures retry once. A rate-limited
-live request is silent while typing. Cancellation is a quiet end, not an error.
+The draft and the last good result stay on screen. A rate-limited live request is silent while
+typing. Cancellation is a quiet end, not an error.
+
+Two retry layers, both bounded:
+
+- **Provider boundary (server):** one retry for a transient HTTP status (429/500/502/503/504) or a
+  network failure **before the response body is handed off**, with `Retry-After` clamped to 2.5 s
+  and 200–600 ms full-jitter otherwise. A caller abort, a 401/402, or a stream that has already
+  started is never retried (a started stream cannot be replayed).
+- **Client (session):** one retry after a transient `rate`/`network`/`provider` failure, as
+  before; a live rate limit stays silent while typing.
+
+If a **full structured** request still fails (the provider cut it, or the JSON cannot be parsed),
+the client makes **one** plain live request as a salvage and passes the resulting text through the
+deterministic verifier before showing it. Salvaged text is never written to translation memory. If
+even the salvage cannot be verified, the calm provider error is shown instead. A silent half-JSON,
+a truncated sentence or an invented repetition loop must never become a settled answer.
 
 ## 10. Throughput and admission
 
 - Live typing and settled sentences spend **separate** per-client admission buckets. A burst of
   provisional streams cannot starve the finished sentence that follows it, and background repair
-  remains a third budget.
+  remains a third budget. The buckets are sized so a fast human typist is never admitted-then-refused
+  mid-sentence (live 120 / 4 per second sustained; settled 90 / 2 per second); a scripted client is
+  still bounded. These are admission limits, not model throttles.
 - The warm-up request preloads both provider modules and opens the TLS connection **without text or
   credentials**. The first keystroke therefore does not also pay for module resolution.
-- `max_tokens` is bounded from the source length (`budget.ts`): a short sentence always has room to
-  finish, while a pathological generation for a long paste stops at a finite ceiling. This is a
-  runaway guard, not a target or a quality trade.
+- `max_tokens` is a **runaway ceiling, not a target** (`budget.ts`): structured replies use floor
+  512, factor 2.6 and ceiling 16,384; live replies use floor 256, factor 1.5 and ceiling 8,192. A
+  short sentence always has room to finish, while a pathological generation for a long paste stops
+  at a finite ceiling. The provider accepts 16,384 on `deepseek-flash` (probed 2026-11-16), and a
+  5,000-character source now produces a complete structured answer (verified end-to-end).
+- The stream is only settled by a **protocol completion**: OpenAI `finish_reason` `stop`, or
+  Responses `response.completed`. `finish_reason: "length"`, `content_filter`, an unknown reason,
+  `response.incomplete` and a premature EOF are provider failures; `[DONE]` can no longer turn a
+  cut answer into a success.
 - When the writer is DeepSeek and the sentence has no deterministic issue, no repair round trip is
   made: with Luna paused there is no second brain that could change the result. A result with a lost
   number or link still gets its repair.
 - A newer stream cancels the older prefix stream as soon as it has caught up on screen, and a
   committed result cancels it immediately; two providers never finish the same sentence.
 
-## 11. Known limits
+## 11. Known limits and audit evidence
 
-- Streaming providers may emit partial JSON; only a complete protocol completion is committed.
+- Streaming providers may emit partial JSON; only a complete protocol completion is committed. A
+  cut full answer is salvaged once as verified plain text, never shown as half-JSON.
 - Deterministic verification cannot detect a fluent but semantically wrong sentence.
 - Language pairs other than Arabic ⇄ German have no specialized checks or product guarantees.
-- Provider keys were absent in the audit environment, so no end-to-end quality claim is made.
+- Live DeepSeek observations on 2026-11-16 (dev server, real key, no synthetic mocks): two live
+  Arabic→German streams returned their first byte in 0.29–0.36 s and completed in 0.68–0.90 s; a
+  formal German→Arabic full reply completed in 1.34 s with correct register and tags; a
+  2,926-character varied Arabic text produced a valid 4,297-character structured translation in
+  5.37 s. The old 4,096-token ceiling truncated a 5,000-character full reply at 13,061 bytes and
+  produced invalid JSON; after the budget and anti-repetition prompt fixes the same input produced
+  a valid 7,016-character answer in 6.53 s.
+- A highly repetitive 5,000-character paste initially drove the model into an 8× repetition loop
+  that exhausted the old ceiling. The prompt now mirrors source length and repetition explicitly,
+  the ceiling leaves room for a legitimate long answer, and a degenerate loop that still occurs is
+  rejected by the verifier before it can be shown.
+- Luna is behind `LUNA_ENABLED = false` and no OpenCode key exists in this environment; its paths
+  are unit-tested but not live-verified. Cloud voice and dictation likewise remain NOT_VERIFIED.
