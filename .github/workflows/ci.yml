@@ -113,7 +113,10 @@ jobs:
           $BT/aapt2 dump badging "$APK" | grep -E "package: name='today.fluently.app.debug'|sdkVersion|targetSdkVersion|uses-permission"
           $BT/apksigner verify --verbose --print-certs "$APK"
           unzip -p "$APK" assets/capacitor.config.json | grep -q '"webContentsDebuggingEnabled": false'
-          if unzip -p "$APK" assets/public/index.html | grep -qE "DEEPSEEK_API_KEY|ASSEMBLYAI_API_KEY|ELEVENLABS_API_KEY|GEMINI_API_KEY|AIza[0-9A-Za-z_-]{35}"; then
-            echo "A provider key appears in the packaged assets" >&2
+          SCAN_DIR="$(mktemp -d)"
+          trap 'rm -rf "$SCAN_DIR"' EXIT
+          unzip -q "$APK" -d "$SCAN_DIR"
+          if grep -R -a -qE "PERSONAL_DEEPSEEK_KEY|DEEPSEEK_API_KEY|ASSEMBLYAI_API_KEY|ELEVENLABS_API_KEY|GEMINI_API_KEY|AIza[0-9A-Za-z_-]{35}" "$SCAN_DIR"; then
+            echo "A provider key marker appears anywhere in the APK" >&2
             exit 1
           fi

@@ -126,7 +126,7 @@ export function writeHistorySync(rows: HistoryEntry[]): { ok: boolean; rows: His
 
 let lastEvicted = 0;
 
-function writeMemory(rows: MemoryRow[]) {
+function writeMemory(rows: MemoryRow[]): boolean {
   let out = rows.slice(0, MEMORY_MAX_ENTRIES);
   let json = JSON.stringify(out);
   const size = (v: string) => new TextEncoder().encode(v).length;
@@ -136,8 +136,9 @@ function writeMemory(rows: MemoryRow[]) {
   }
   try {
     window.localStorage.setItem(MEMORY, json);
+    return true;
   } catch {
-    /* quota or private mode: the memory stays in RAM for this session */
+    return false;
   }
 }
 
@@ -214,7 +215,8 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
   },
 
   async historyTrim(limit) {
-    writeHistorySync(readHistory().slice(0, limit));
+    if (!writeHistorySync(readHistory().slice(0, limit)).ok)
+      throw new Error("history-write-failed");
   },
 
   async historyAll() {
@@ -243,13 +245,14 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
         SAVED,
         JSON.stringify(rows.filter(isPhrase).slice(0, SAVED_LIMIT)),
       );
+      return true;
     } catch {
-      /* quota or blocked: the phrasebook stays in memory for this session */
+      return false;
     }
   },
 
   async memoryWrite(rows) {
-    writeMemory(rows.filter(isMemoryRow));
+    return writeMemory(rows.filter(isMemoryRow));
   },
 
   async snapshot(): Promise<Dataset> {
@@ -269,25 +272,47 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
     const previous = await this.snapshot();
     const { data, report } =
       mode === "merge" ? mergeData(previous, input) : replaceData(input, previous);
-    // All-or-nothing: a failed write restores the snapshot taken before it.
+    const requireWrite = (ok: boolean) => {
+      if (!ok) throw new Error("storage-write-failed");
+    };
+    const restore = async (snapshot: Dataset) => {
+      // Best effort cannot create atomic localStorage, but every known store is restored
+      // before the import rejects. Never report an import as successful after any refusal.
+      requireWrite(writeHistorySync(snapshot.history).ok);
+      requireWrite(await this.savedWrite(snapshot.saved));
+      requireWrite(await this.memoryWrite(snapshot.memory));
+      requireWrite(await this.savePrefs(snapshot.prefs));
+      requireWrite(await this.saveSession(snapshot.session));
+      for (const key of BACKUP_SETTING_KEYS) {
+        const value = snapshot.settings[key];
+        requireWrite(
+          value === undefined ? await removeDeviceValue(key) : await writeDeviceValue(key, value),
+        );
+      }
+    };
+    // All-or-nothing from the caller's perspective: a failed write restores every
+    // record family plus prefs/session/settings before the operation rejects.
     try {
-      writeHistorySync(data.history);
-      await this.savedWrite(data.saved);
-      writeMemory(data.memory);
-      await this.savePrefs(data.prefs);
-      await this.saveSession(data.session);
+      requireWrite(writeHistorySync(data.history).ok);
+      requireWrite(await this.savedWrite(data.saved));
+      requireWrite(await this.memoryWrite(data.memory));
+      requireWrite(await this.savePrefs(data.prefs));
+      requireWrite(await this.saveSession(data.session));
       for (const [key, value] of Object.entries(data.settings)) {
-        if (typeof value === "string") await writeDeviceValue(key, value);
+        if (typeof value === "string") requireWrite(await writeDeviceValue(key, value));
       }
       if (mode === "replace") {
         for (const key of BACKUP_SETTING_KEYS) {
-          if (data.settings[key] === undefined) await removeDeviceValue(key);
+          if (data.settings[key] === undefined) requireWrite(await removeDeviceValue(key));
         }
       }
     } catch {
-      writeHistorySync(previous.history);
-      await this.savedWrite(previous.saved);
-      writeMemory(previous.memory);
+      try {
+        await restore(previous);
+      } catch {
+        // The original failure remains the public result; storage can be reported as
+        // unavailable rather than pretending the backup was imported.
+      }
       throw new Error("import-failed");
     }
     return report;

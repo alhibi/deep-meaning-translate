@@ -41,8 +41,7 @@ async function write(next: SavedPhrase[]): Promise<boolean> {
   cache = next.slice(0, SAVED_LIMIT);
   listeners.forEach((fn) => fn());
   try {
-    await port.savedWrite(cache);
-    return true;
+    return await port.savedWrite(cache);
   } catch {
     return false;
   }

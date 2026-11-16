@@ -52,6 +52,7 @@ describe("history archive", () => {
     expect(history.list()[0]?.uses).toBe(2);
     // The first date is the row's identity: it never moves forward.
     expect(history.list()[0]?.createdAt).toBe(now);
+    expect(history.count()).toBe(1);
   });
 
   it("sheds the oldest rows when the device quota is reached, keeping the newest", async () => {

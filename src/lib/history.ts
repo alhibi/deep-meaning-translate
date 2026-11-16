@@ -37,9 +37,12 @@ const native = isNativeApp();
 /** Newest-first window; on Android this is the recent page, not the whole archive. */
 let cache: HistoryEntry[] | null = null;
 let total = 0;
+/** Changes only when archive content changes, not when a native screen refreshes its view. */
+let revision = 0;
 const listeners = new Set<() => void>();
 
-function emit() {
+function emit(contentChanged = true) {
+  if (contentChanged) revision += 1;
   for (const l of listeners) l();
 }
 
@@ -102,6 +105,8 @@ export const history = {
   lastEvicted: () => lastEvicted,
   /** Total rows held by the device, including ones older than the hydrated window. */
   count: (): number => (current(), Math.max(total, cache?.length ?? 0)),
+  /** Monotonic content revision for views that maintain a separate full-archive snapshot. */
+  revision: (): number => revision,
   subscribe(fn: () => void) {
     listeners.add(fn);
     return () => void listeners.delete(fn);
@@ -118,7 +123,9 @@ export const history = {
       const rows = await port.historyAll();
       cache = rows.slice(0, HISTORY_LIMIT);
       total = rows.length;
-      emit();
+      // Fetching the full archive changes the window, not the archive itself. In
+      // particular, it must not make useFullArchive fetch the same 2,000 rows again.
+      emit(false);
       return rows;
     } catch {
       status = "unavailable";
@@ -184,8 +191,12 @@ export const history = {
       fix: same?.fix,
     });
     const removed = merged.filter((e) => e.id !== row.id).map((e) => e.id);
+    // `row.id` may already be in Room even when it is outside the recent UI window.
+    // Re-translating it is an update, not a new archive row; counting it as a new row
+    // made the native badge/stats total drift upward on every later use.
+    const existed = merged.some((e) => e.id === row.id);
     cache = [row, ...rest].slice(0, HISTORY_LIMIT);
-    total = Math.max(total + 1 - removed.length, cache.length);
+    total = Math.max(total + (existed ? 0 : 1) - removed.length, cache.length);
     emit();
     if (!native) {
       const written = writeHistorySync(cache);
@@ -198,6 +209,9 @@ export const history = {
         if (removed.length) await port.historyDelete(removed);
         await port.historyTrim(HISTORY_LIMIT);
         lastWriteOk = true;
+        // The optimistic emit may have raced the Room transaction. Publish one durable
+        // revision once it commits so a mounted full-archive statistics view refetches.
+        emit();
       } catch {
         // Keep the in-memory row: the person sees their translation, and the next save
         // retries. A silent "saved" would be the actual failure.
@@ -227,7 +241,15 @@ export const history = {
       const written = writeHistorySync(next);
       cache = written.rows;
       lastWriteOk = written.ok;
-    } else if (row) await port.historyUpsert([row]).catch(() => void (lastWriteOk = false));
+    } else if (row) {
+      try {
+        await port.historyUpsert([row]);
+        lastWriteOk = true;
+        emit();
+      } catch {
+        lastWriteOk = false;
+      }
+    }
     return next;
   },
   async remove(id: string): Promise<HistoryEntry[]> {
@@ -239,7 +261,15 @@ export const history = {
       const written = writeHistorySync(next);
       cache = written.rows;
       lastWriteOk = written.ok;
-    } else await port.historyDelete([id]).catch(() => void (lastWriteOk = false));
+    } else {
+      try {
+        await port.historyDelete([id]);
+        lastWriteOk = true;
+        emit();
+      } catch {
+        lastWriteOk = false;
+      }
+    }
     return next;
   },
   async clear(): Promise<HistoryEntry[]> {
@@ -248,7 +278,15 @@ export const history = {
     emit();
     if (!native) {
       lastWriteOk = writeHistorySync([]).ok;
-    } else await port.historyClear().catch(() => void (lastWriteOk = false));
+    } else {
+      try {
+        await port.historyClear();
+        lastWriteOk = true;
+        emit();
+      } catch {
+        lastWriteOk = false;
+      }
+    }
     return cache;
   },
 };

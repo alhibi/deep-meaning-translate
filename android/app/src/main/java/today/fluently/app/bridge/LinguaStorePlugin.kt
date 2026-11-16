@@ -15,7 +15,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
-import today.fluently.app.BuildConfig
 import today.fluently.app.data.LinguaDatabase
 import today.fluently.app.data.LinguaRepository
 import today.fluently.app.data.Mapping
@@ -31,9 +30,6 @@ import today.fluently.app.data.SettingsStore
  *   state and keeps working in memory;
  * - all work happens on the IO dispatcher: SQLite never touches the main thread.
  */
-private const val PROVIDER_KEY = "lingua.provider.v1"
-private const val SEEDED_KEY = "lingua.provider.seeded.v1"
-
 @CapacitorPlugin(name = "LinguaStore")
 class LinguaStorePlugin : Plugin() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,7 +59,6 @@ class LinguaStorePlugin : Plugin() {
                 val db = LinguaDatabase.open(context)
                 database = db
                 val settings = SettingsStore(context)
-                seedPersonalProviderKey(settings)
                 val opened = LinguaRepository(db, settings)
                 repo = opened
                 initError = null
@@ -81,25 +76,6 @@ class LinguaStorePlugin : Plugin() {
         database = null
         repo = null
     }
-
-
-
-    /**
-     * A personal build can seed the owner's own DeepSeek key once. Public/CI builds have an
-     * empty field, and the marker means "forget everything" is not undone by the seed.
-     */
-    private fun seedPersonalProviderKey(settings: SettingsStore) {
-        val key = BuildConfig.PERSONAL_DEEPSEEK_KEY
-        if (key.isBlank()) return
-        runBlocking {
-            if (settings.get(SEEDED_KEY) == "1") return@runBlocking
-            if (settings.get(PROVIDER_KEY) == null) {
-                settings.put(PROVIDER_KEY, JSONObject().put("deepseek", key).toString())
-            }
-            settings.put(SEEDED_KEY, "1")
-        }
-    }
-
     private inline fun run(call: PluginCall, crossinline block: suspend (LinguaRepository) -> JSObject) {
         scope.launch {
             operations.withLock {
@@ -257,6 +233,15 @@ class LinguaStorePlugin : Plugin() {
         }
         repository.memoryWrite(rows)
         JSObject().put("ok", true)
+    }
+
+    /**
+     * Read every backup field under the plugin's operation lock. Calling the individual
+     * endpoints from JavaScript allowed a save to split one export into two time slices.
+     */
+    @PluginMethod
+    fun snapshot(call: PluginCall) = run(call) { repository ->
+        JSObject().put("data", repository.snapshot().toString())
     }
 
     @PluginMethod

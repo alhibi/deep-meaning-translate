@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Status: **Verified** on 2026-11-07. Counts below are from executed commands, not estimates.
+Status: **Verified** on 2026-11-16. Counts below are from executed commands, not estimates.
 
 ## Gates
 
@@ -8,7 +8,7 @@ Status: **Verified** on 2026-11-07. Counts below are from executed commands, not
 | ---------------------------------- | ------------------------------------------- | ------------------------------------------------------- |
 | `npm run typecheck`                | TypeScript consistency                      | PASS, 0 errors                                          |
 | `npm run lint -- --max-warnings 0` | ESLint + Prettier, zero warnings            | PASS                                                    |
-| `npm run test`                     | Vitest unit/integration suite with coverage | **345 passed, 4 skipped, 59 files**; coverage collected |
+| `npm run test`                     | Vitest unit/integration suite with coverage | **393 passed, 4 skipped, 69 files**; coverage collected |
 | `npm run check:contrast`           | WCAG AA for every theme pair                | **51/51 pairs**                                         |
 | `npm run check:docs`               | Documentation links and inventory           | added in this audit                                     |
 | `npm run build`                    | Worker bundle + headers + PWA check         | PASS; **37 precached files**                            |

@@ -32,9 +32,6 @@ export function initServiceWorker() {
   // The APK ships its shell inside the package. A worker here could only serve a stale
   // asset over a newer APK, so the native build never registers one.
   if (isNativeApp()) return;
-  // The APK ships its shell inside the package. A worker here could only serve a stale
-  // asset over a newer APK, so the native build never registers one.
-  if (isNativeApp()) return;
   if (refused()) {
     void unregisterOurs().catch(() => undefined);
     return;

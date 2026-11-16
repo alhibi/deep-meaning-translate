@@ -105,6 +105,14 @@ The backup whitelist (`BACKUP_SETTING_KEYS` in `src/lib/persistence/contracts.ts
 only set of settings that can leave or enter a backup; device-only preferences stay on the
 device.
 
+## Export consistency
+
+Native export calls the `snapshot` bridge method once. The plugin holds its operation lock for
+that complete read, so settings, session, archive, saved phrases and translation memory all come
+from one device state; the UI must never compose an export from independent `settingsAll`,
+`historyAll` and boot calls. Import still remains one Room transaction with the documented
+DataStore compensation path.
+
 ## Clearing data
 
 `clearAll` deletes records, `session_state` and `import_meta` in one Room transaction, clears

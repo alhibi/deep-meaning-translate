@@ -31,6 +31,11 @@ export interface PagePayload {
   total: number;
 }
 
+/** One coherent native dataset, read while the bridge operation lock is held. */
+export interface SnapshotPayload {
+  data: string;
+}
+
 export interface FilePayload {
   content: string | null;
   name?: string;
@@ -56,6 +61,8 @@ export interface LinguaStorePlugin {
   historyClear(): Promise<BridgeResult>;
   savedWrite(options: { rows: string }): Promise<BridgeResult>;
   memoryWrite(options: { rows: string }): Promise<BridgeResult>;
+  /** All backup fields in one bridge operation; never compose this from several reads. */
+  snapshot(): Promise<SnapshotPayload>;
   /** One transaction: everything is replaced, or nothing is. Provenance is optional. */
   replaceAll(options: {
     json: string;

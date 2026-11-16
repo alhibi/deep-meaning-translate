@@ -163,10 +163,12 @@ export const nativePort: PersistencePort = {
 
   async savedWrite(rows) {
     await (await store()).savedWrite({ rows: JSON.stringify(rows) });
+    return true;
   },
 
   async memoryWrite(rows) {
     await (await store()).memoryWrite({ rows: JSON.stringify(rows) });
+    return true;
   },
 
   async memoryClear() {
@@ -174,23 +176,26 @@ export const nativePort: PersistencePort = {
   },
 
   async snapshot(): Promise<Dataset> {
-    const plugin = await store();
-    // One round trip for settings plus one per record family; the screen never waits
-    // for this — it runs when the person opens Data settings.
-    const [settings, history, page] = await Promise.all([
-      plugin.settingsAll(),
-      plugin.historyAll(),
-      plugin.historyPage({ limit: 1, offset: 0 }),
-    ]);
-    const boot = await plugin.boot();
+    // This must be a single bridge operation. Composing a backup from separate settings,
+    // history and boot calls could capture a half-before/half-after dataset when a save
+    // happened while the Data screen was open.
+    const raw = await (await store()).snapshot();
+    const value = parseJson<Record<string, unknown>>(raw.data, {});
+    const rawSettings = value["settings"];
+    const settings = Object.fromEntries(
+      Object.entries(rawSettings && typeof rawSettings === "object" ? rawSettings : {}).filter(
+        ([key, setting]) => key.startsWith("lingua.") && typeof setting === "string",
+      ),
+    );
+    const rawHistory = Array.isArray(value["history"]) ? value["history"] : [];
     return {
-      settings: parseJson<Record<string, string>>(settings.values, {}),
-      prefs: parsePrefs(parseJson<unknown>(boot.prefs, null)),
-      session: parseSession(parseJson<unknown>(boot.session, null)),
-      history: parseJson<unknown[]>(history.rows, []).filter(isEntry).map(sanitizeEntry),
-      saved: parseJson<SavedPhrase[]>(boot.saved, []),
-      memory: parseJson<MemoryRow[]>(boot.memory, []).filter(isMemoryRow),
-      historyTotal: page.total,
+      settings,
+      prefs: parsePrefs(value["prefs"]),
+      session: parseSession(value["session"]),
+      history: rawHistory.filter(isEntry).map(sanitizeEntry),
+      saved: Array.isArray(value["saved"]) ? (value["saved"] as SavedPhrase[]) : [],
+      memory: (Array.isArray(value["memory"]) ? value["memory"] : []).filter(isMemoryRow),
+      historyTotal: rawHistory.filter(isEntry).length,
     };
   },
 

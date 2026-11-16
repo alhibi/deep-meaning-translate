@@ -8,7 +8,7 @@ import { isRtl } from "@/lib/translation/languages";
 import type { ErrorKind } from "@/lib/translation/useTranslator";
 import { feel } from "@/lib/feel";
 import { useI18n } from "@/lib/i18n";
-import { prefetchSpeech, speakTranslation, stopSpeaking } from "@/lib/tts";
+import { speakTranslation, stopSpeaking } from "@/lib/tts";
 import { PACE_RATE, getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
 import { VoiceSheet } from "./VoiceSheet";
 import { warmVoice } from "@/lib/voice/cloud";
@@ -152,16 +152,14 @@ export const ResultPanel = memo(function ResultPanel({
     [],
   );
 
-  // A settled translation may be listened to: open the path to the voice service (free, once).
+  // A settled translation may be listened to: warm the free connection path, but never
+  // synthesize audio or spend a provider request until the person presses Listen.
   useEffect(() => {
     if (!text || provisional || pending || voicePrefs.engine === "device") return;
     // Never synthesize before the person has touched this page: a restored session
     // would otherwise spend a speech request on audio nobody asked to hear.
     if (!navigator.userActivation?.hasBeenActive) return;
     if (voicePrefs.engine === "gemini") warmVoice();
-    // Prepare the voice as soon as the translation settles, so Listen is instant.
-    const id = setTimeout(() => prefetchSpeech(text, voiceLang, voicePrefs), 350);
-    return () => clearTimeout(id);
   }, [text, provisional, pending, voiceLang, voicePrefs]);
 
   /**

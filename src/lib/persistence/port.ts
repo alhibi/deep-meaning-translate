@@ -53,8 +53,10 @@ export interface PersistencePort {
   historyAll(): Promise<HistoryEntry[]>;
   historyClear(): Promise<void>;
 
-  savedWrite(rows: SavedPhrase[]): Promise<void>;
-  memoryWrite(rows: MemoryRow[]): Promise<void>;
+  /** False means the in-memory update was not made durable (quota/private mode/bridge). */
+  savedWrite(rows: SavedPhrase[]): Promise<boolean>;
+  /** False means the in-memory update was not made durable (quota/private mode/bridge). */
+  memoryWrite(rows: MemoryRow[]): Promise<boolean>;
   /** Forget the memory entirely; the web removes the key, Room deletes the rows. */
   memoryClear(): Promise<void>;
 

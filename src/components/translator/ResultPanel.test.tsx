@@ -4,14 +4,17 @@ import type { SpeakHandlers } from "@/lib/tts";
 import { ResultPanel } from "./ResultPanel";
 
 const calls = vi.hoisted(() => [] as SpeakHandlers[]);
+const prefetchSpeech = vi.hoisted(() => vi.fn());
+const warmVoice = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/tts", () => ({
-  prefetchSpeech: vi.fn(),
+  prefetchSpeech,
   stopSpeaking: vi.fn(),
   speakTranslation: (_text: string, _lang: string, handlers: SpeakHandlers) => {
     calls.push(handlers);
     return vi.fn();
   },
 }));
+vi.mock("@/lib/voice/cloud", () => ({ warmVoice }));
 const result = {
   translation: "Hallo schöne Welt",
   sourceLanguage: "ar",
@@ -27,9 +30,33 @@ const result = {
 afterEach(() => {
   cleanup();
   calls.length = 0;
+  prefetchSpeech.mockClear();
+  warmVoice.mockClear();
+  Reflect.deleteProperty(navigator, "userActivation");
   vi.useRealTimers();
 });
 describe("read-along playback ownership", () => {
+  it("never starts paid speech merely because a translation settled", async () => {
+    Object.defineProperty(navigator, "userActivation", {
+      value: { hasBeenActive: true },
+      configurable: true,
+    });
+    render(
+      <ResultPanel
+        result={result}
+        target="de"
+        pending={false}
+        provisional={false}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(prefetchSpeech).not.toHaveBeenCalled();
+  });
+
   it("ignores old word and end callbacks after stopping and replaying", () => {
     render(
       <ResultPanel

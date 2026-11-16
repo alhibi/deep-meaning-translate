@@ -15,6 +15,7 @@ export function useArchive(): HistoryEntry[] | null {
  */
 export function useFullArchive(): HistoryEntry[] | null {
   const recent = useArchive();
+  const revision = history.revision();
   const [all, setAll] = useState<HistoryEntry[] | null>(null);
   useEffect(() => {
     let alive = true;
@@ -25,7 +26,10 @@ export function useFullArchive(): HistoryEntry[] | null {
     return () => {
       alive = false;
     };
-  }, [recent?.length]);
+    // A tag correction or an exact re-translation does not change row count, but it
+    // absolutely changes the statistics. `history.all()` deliberately does not advance
+    // this revision, avoiding a full-archive fetch loop after its own refresh.
+  }, [revision]);
   if (!isNativePersistence()) return recent;
   return all;
 }

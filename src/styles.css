@@ -1011,7 +1011,7 @@ textarea:focus-visible {
 }
 
 /* ---------- Voice: soft clay orb, words condense from blur ---------- */
-@keyframes word-in {
+@keyframes speech-word-in {
   from {
     opacity: 0;
     filter: blur(6px);
@@ -1053,7 +1053,7 @@ textarea:focus-visible {
 }
 .speech-word {
   display: inline;
-  animation: word-in 420ms var(--ease-out) both;
+  animation: speech-word-in 420ms var(--ease-out) both;
 }
 .mic-orb .mic-core,
 .mic-orb .mic-halo {
@@ -1126,70 +1126,38 @@ textarea:focus-visible {
   }
 }
 
-/* Word-by-word arrival of streamed translations: only new or changed words animate. */
-/* Flash whirlwind: each word whips in out of a dense haze, skewed and spun,
-   its letters drawn together from the spread, a faint warm trail fading as it snaps clear. */
-@keyframes word-in {
+/* Word-by-word arrival of streamed translations: only new or changed words animate.
+   This stays compositor-friendly while the response is decoding: opacity + transform
+   communicate arrival without per-token blur, shadow or text reflow on a phone. */
+@keyframes stream-word-in {
   0% {
     opacity: 0;
-    filter: blur(10px);
-    letter-spacing: 0.35em;
-    text-shadow: -0.5em 0 0.6em color-mix(in oklab, var(--signal-text) 55%, transparent);
-    transform: translateX(-0.6em) translateY(0.2em) rotate(-8deg) skewX(-18deg) scale(1.15);
-  }
-  40% {
-    opacity: 0.75;
-    filter: blur(3px);
-    letter-spacing: 0.06em;
-    text-shadow: -0.15em 0 0.4em color-mix(in oklab, var(--signal-text) 30%, transparent);
-  }
-  70% {
-    opacity: 1;
-    filter: blur(0.5px);
-    letter-spacing: 0;
-    transform: translateX(0.05em) rotate(0.8deg) skewX(3deg) scale(0.995);
+    transform: translate3d(-0.42em, 0.12em, 0) scale(1.025);
   }
   100% {
     opacity: 1;
-    filter: blur(0);
-    letter-spacing: normal;
-    text-shadow: none;
-    transform: none;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 [dir="rtl"] .word-in {
-  animation-name: word-in-rtl;
+  animation-name: stream-word-in-rtl;
 }
-@keyframes word-in-rtl {
+@keyframes stream-word-in-rtl {
   0% {
     opacity: 0;
-    filter: blur(10px);
-    text-shadow: 0.5em 0 0.6em color-mix(in oklab, var(--signal-text) 55%, transparent);
-    transform: translateX(0.6em) translateY(0.2em) rotate(8deg) skewX(18deg) scale(1.15);
-  }
-  40% {
-    opacity: 0.75;
-    filter: blur(3px);
-    text-shadow: 0.15em 0 0.4em color-mix(in oklab, var(--signal-text) 30%, transparent);
-  }
-  70% {
-    opacity: 1;
-    filter: blur(0.5px);
-    transform: translateX(-0.05em) rotate(-0.8deg) skewX(-3deg) scale(0.995);
+    transform: translate3d(0.42em, 0.12em, 0) scale(1.025);
   }
   100% {
     opacity: 1;
-    filter: blur(0);
-    text-shadow: none;
-    transform: none;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 .word-in {
   display: inline-block;
   white-space: pre-wrap;
   backface-visibility: hidden;
-  will-change: opacity, transform, filter;
-  animation: word-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+  animation: stream-word-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
   .word-in,

@@ -1,5 +1,5 @@
 import { webcrypto } from "node:crypto";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { BACKUP_SETTING_KEYS, type HistoryEntry, type Session } from "./contracts";
 import { countOf, createBackup, mergeData, parseBackup } from "./backup";
 import { webPort } from "./web";
@@ -109,6 +109,52 @@ describe("web persistence adapter", () => {
     expect(report.added.history).toBe(1);
     expect((await webPort.historyAll()).map((r) => r.id)).toEqual(["fresh"]);
     expect(window.localStorage.getItem(drop!)).toBeNull();
+  });
+
+  it("rejects an import and restores every prior store when a later write is refused", async () => {
+    await webPort.historyUpsert([entry("old", "Alt", 1_000)]);
+    await webPort.savedWrite([
+      {
+        id: "saved-old",
+        source: "de",
+        target: "ar",
+        original: "Alt",
+        translated: "قديم",
+        createdAt: 1_000,
+        known: 0,
+        reviewedAt: 0,
+      },
+    ]);
+    const realSetItem = Storage.prototype.setItem;
+    let refuseImportSavedWrite = true;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === "lingua.saved.v1" && refuseImportSavedWrite) {
+        refuseImportSavedWrite = false;
+        throw new DOMException("QuotaExceededError");
+      }
+      return realSetItem.call(this, key, value);
+    });
+
+    await expect(
+      webPort.replaceAll(
+        {
+          settings: {},
+          prefs: null,
+          session: null,
+          history: [entry("new", "Neu", 2_000)],
+          saved: [],
+          memory: [],
+        },
+        "replace",
+      ),
+    ).rejects.toThrow("import-failed");
+
+    expect((await webPort.historyAll()).map((row) => row.id)).toEqual(["old"]);
+    expect((await webPort.hydrate()).saved.map((row) => row.id)).toEqual(["saved-old"]);
   });
 });
 

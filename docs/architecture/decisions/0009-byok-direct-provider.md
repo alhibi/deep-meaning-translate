@@ -22,7 +22,9 @@ Add an **optional, device-only personal key** (BYOK) for DeepSeek:
 
 - The person pastes the key in the installed app under **Privacy → Advanced**. It is stored in
   the app's private DataStore, excluded from the backup whitelist, never logged and never sent
-  to today's Worker. It is **not** bundled in the APK and not committed to Git.
+  to today's Worker. It is **not** bundled in the APK and not committed to Git. The Gradle build
+  rejects the retired `PERSONAL_DEEPSEEK_KEY` mechanism so this boundary cannot be bypassed by
+  a convenient local build.
 - When a valid key is present, the WebView calls https://api.deepseek.com/chat/completions
   directly with fetch (DeepSeek reflects the local origin in CORS; verified). Streaming SSE
   and the same prompts/parsers/verifiers are used, so live translation, structured results,

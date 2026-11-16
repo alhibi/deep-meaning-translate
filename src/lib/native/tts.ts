@@ -18,7 +18,8 @@ interface NativeTts {
 }
 
 let plugin: NativeTts | null = null;
-let detach: (() => void) | null = null;
+/** There can be only one Android TTS utterance. Keep its cleanup with that utterance. */
+let stopActive: (() => void) | null = null;
 
 async function engine(): Promise<NativeTts | null> {
   if (plugin) return plugin;
@@ -48,18 +49,32 @@ export function speakNative(
   rate: number,
 ): () => void {
   let stopped = false;
+  let detach = () => undefined;
+  const finish = () => {
+    detach();
+    detach = () => undefined;
+    if (stopActive === stop) stopActive = null;
+  };
   const stop = () => {
     stopped = true;
-    detach?.();
-    detach = null;
+    finish();
     void engine().then((p) => p?.stop().catch(() => undefined));
   };
+  // Starting a later utterance must retire every callback belonging to the former one.
+  stopActive?.();
+  stopActive = stop;
   void (async () => {
     const tts = await engine().catch(() => null);
-    if (!tts) return h.onFail?.("unsupported");
+    if (!tts) {
+      finish();
+      return h.onFail?.("unsupported");
+    }
     try {
       const ready = await tts.available();
-      if (!ready.ready) return h.onFail?.("unsupported");
+      if (!ready.ready) {
+        finish();
+        return h.onFail?.("unsupported");
+      }
       if (stopped) return;
       const handles: PluginListenerHandle[] = [];
       handles.push(
@@ -69,19 +84,27 @@ export function speakNative(
       );
       handles.push(
         await tts.addListener("end", () => {
-          if (!stopped) h.onEnd?.();
+          if (stopped) return;
+          finish();
+          h.onEnd?.();
         }),
       );
       handles.push(
         await tts.addListener("fail", () => {
-          if (!stopped) h.onFail?.("blocked");
+          if (stopped) return;
+          finish();
+          h.onFail?.("blocked");
         }),
       );
       detach = () => {
         for (const handle of handles) void handle.remove();
       };
+      // stop() can have run while the three asynchronous listener registrations were
+      // resolving. Never leave those late handles attached.
+      if (stopped) return finish();
       await tts.speak({ text, lang, rate });
     } catch (error) {
+      finish();
       const message = (error as Error)?.message ?? "";
       h.onFail?.(message.includes("language") ? "novoice" : "blocked");
     }

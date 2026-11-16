@@ -69,10 +69,7 @@ function flush(): Promise<boolean> {
     json = JSON.stringify(out);
   }
   rows = out;
-  return port.memoryWrite(out).then(
-    () => true,
-    () => false,
-  );
+  return port.memoryWrite(out).catch(() => false);
 }
 
 /** A settled translation for this key, or null when it is unknown or too old. */
