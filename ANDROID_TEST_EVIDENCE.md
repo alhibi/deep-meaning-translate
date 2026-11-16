@@ -1,6 +1,6 @@
 # Android Test Evidence — 2026-11-16
 
-Commit tested: the 1.0.4 release commit on `main` (see the GitHub release v1.0.4). Classifications follow
+Commit tested: the 1.0.5 release commit on `main` (see the GitHub release v1.0.5). Classifications follow
 `docs/quality/testing.md`: **VERIFIED** (executed/observed), **OBSERVED** (seen in a running
 system), **SUSPECTED**, **NOT_VERIFIED**. No result below is inferred from a successful build.
 
@@ -11,8 +11,8 @@ system), **SUSPECTED**, **NOT_VERIFIED**. No result below is inferred from a suc
 | Device           | emulator-5554, AVD `almani`, Android 15 (API 35), arm64-v8a, 1080×2400 @420 dpi         |
 | WebView          | 124.0.6367.219, software GPU (SwiftShader)                                              |
 | Host             | macOS arm64, JDK 21.0.13, Node 26.13.1, Android SDK build-tools 36.0.0                  |
-| Artifacts tested | `artifacts/android-1.0.4/today-1.0.4-debug.apk` and `…-release-review-debug-signed.apk` |
-| Screenshots      | `artifacts/android-1.0.4/screenshots/`                                                  |
+| Artifacts tested | `artifacts/android-1.0.5/today-1.0.5-debug.apk` and `…-release-review-debug-signed.apk` |
+| Screenshots      | `artifacts/android-1.0.5/screenshots/`                                                  |
 
 ## Web/PWA gates (executed)
 
@@ -20,9 +20,9 @@ system), **SUSPECTED**, **NOT_VERIFIED**. No result below is inferred from a suc
 npm run verify
   typecheck        PASS, 0 errors
   lint             PASS, 0 warnings
-  vitest           383 passed, 4 skipped (387 total), 65 test files, coverage floors enforced
+  vitest           386 passed, 4 skipped (390 total), 65 test files, coverage floors enforced
   contrast         51/51 pairs pass
-  check:docs       51 documents, 15 links, all indexed
+  check:docs       52 documents, 18 links, all indexed
 ```
 
 The web production build and PWA checks were run in the baseline and after the final source changes
@@ -67,9 +67,12 @@ The web production build and PWA checks were run in the baseline and after the f
 | Cold start (review release)                           | **VERIFIED** 492–689 ms Displayed                                                                                        | ActivityTaskManager logcat                          |
 | Translate German→Arabic (debug, online)               | **VERIFIED** “طاب يومك، كيف حالك؟” + quality badge                                                                       | screenshot 02                                       |
 | Translate German→Arabic (review release)              | **VERIFIED** “سعيد نهارك”                                                                                                | screenshot 11                                       |
-| **1.0.4 regression:** default Deutsch, type “Hallo”   | **VERIFIED** target auto-flips to العربية and shows “مرحبًا”; no stuck skeleton                                          | 1.0.4 release screenshot                            |
-| **1.0.4 regression:** Arabic sentence, target Deutsch | **VERIFIED** “Ich möchte für morgen eine Zugfahrkarte nach Berlin buchen.”                                               | 1.0.4 debug/release run                             |
-| **1.0.4 regression:** German sentence, target Deutsch | **VERIFIED** auto-flips and returns an Arabic translation with the quality badge                                         | emulator                                            |
+| **1.0.5 regression:** default Deutsch, type “Hallo”   | **VERIFIED** target auto-flips to العربية and shows “مرحبًا”; no stuck skeleton                                          | 1.0.5 release screenshot                            |
+| **1.0.5 regression:** Arabic sentence, target Deutsch | **VERIFIED** “Ich möchte für morgen eine Zugfahrkarte nach Berlin buchen.”                                               | 1.0.5 debug/release run                             |
+| **1.0.5 regression:** German sentence, target Deutsch | **VERIFIED** auto-flips and returns an Arabic translation with the quality badge                                         | emulator                                            |
+| **1.0.5 BYOK:** save key in Privacy → Advanced        | **VERIFIED** “Saved on this device. Direct mode is active.” through the real UI                                          | 1.0.5 debug build                                   |
+| **1.0.5 BYOK:** translate with the personal key       | **VERIFIED** release diagnostic requested only `api.deepseek.com/chat/completions`; Arabic result returned               | 1.0.5 release diagnostic + CDP resource list        |
+| **1.0.5:** key absent → service path                  | **VERIFIED** provider path unchanged; the built-in service is used when no key is saved                                  | 1.0.5 final release                                 |
 | Translation quality feedback                          | **VERIFIED** “Nothing essential lost” shown; unknown/damaged state not shown as truth                                    | screenshot 02                                       |
 | Offline error state                                   | **VERIFIED** calm “connection dropped” + Try again, draft intact                                                         | screenshots 24                                      |
 | Draft + result + pair survive force-stop              | **VERIFIED** restored after restart, no re-request observed                                                              | screenshots 05/16/40                                |
@@ -107,10 +110,10 @@ The web production build and PWA checks were run in the baseline and after the f
 ## Artifact verification
 
 ```text
-debug  today-1.0.4-debug.apk                     6,434,755 B
-       sha256 428a2a5aa78cfad477334a3041a5c27d6ed2cd889f5ecb68d9da97e7fd45c839
-release today-1.0.4-release-review-debug-signed.apk  2,177,457 B
-       sha256 390063556cafc0b45a193e7ebaec35c8fa950bfad9e29bb92c36c63c2a4e1f52
+debug  today-1.0.5-debug.apk                     6,442,205 B
+       sha256 feb1c89939f8e5cf0879ee4e6e84fcc2851ac1189b9dcdf25e0fe9e88aba9795
+release today-1.0.5-release-review-debug-signed.apk  2,184,243 B
+       sha256 beab65762f66abe14a737335b61835efcac1b90f5e12ffdb31f36057ff2d0e2c
 both: verify via APK Signature Scheme v2; package/versionCode/versionName/minSdk/targetSdk as
 documented in ANDROID_RELEASE_REPORT.md; no provider key material in assets or dex strings.
 ```

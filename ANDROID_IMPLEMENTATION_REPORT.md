@@ -126,6 +126,20 @@ device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
 - `src/components/translator/ResultPanel.tsx`: a failure is shown next to a kept result.
 - Version 1.0.4 / versionCode 5; fresh 1.0.4 APKs attached to release v1.0.4.
 
+## 5c. 1.0.5 — device-only DeepSeek key (BYOK)
+
+- `src/lib/translation/providerKey.ts` (new): validated device-only key, excluded from backups.
+- `src/lib/translation/direct.ts` (new): streaming direct calls to api.deepseek.com using
+  `deepseek-flash` (DeepSeek V4.1 Flash), with SSE parsing, error classification and the same
+  prompts/parsers/verifiers; `directRepair.ts` adds the deterministic second pass.
+- `src/lib/translation/stream.ts`: uses direct mode on Android when a key is present, falls back
+  to the deployed service on network/provider errors; auth/quota/rate answers are surfaced.
+- `src/components/ProviderKey.tsx` (new) + `src/routes/privacy.tsx`: the key field under
+  **Privacy → Advanced**, with active/inactive status and removal.
+- CSP allows `https://api.deepseek.com` in the APK; ADR 0009 records the security boundary
+  (device-only, not in the APK, not on the server, app-private storage).
+- Version 1.0.5 / versionCode 6; release diagnostic verified the direct request end-to-end.
+
 ## 6. What was deliberately not changed
 
 - No Compose/Flutter rewrite, no second translation engine, no prompts or provider keys in Kotlin.

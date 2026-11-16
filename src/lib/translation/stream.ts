@@ -1,6 +1,8 @@
 import type { ErrorKind } from "./useTranslator";
 import { partialTranslation } from "./parse";
 import { isNativeApp, nativeApiUrl } from "../native/config";
+import { hasProviderKey } from "./providerKey";
+import { streamDirect } from "./direct";
 
 /** The app's UI is served from the APK, so its calls need the real server's address. */
 const streamUrl = () =>
@@ -16,6 +18,15 @@ export async function streamTranslate(
   onText: (text: string) => void,
   mode: "live" | "full" = "live",
 ): Promise<StreamResponse> {
+  // Personal-key mode: call DeepSeek from this device, bypassing the deployed service and
+  // its shared admission budget. A network/provider failure falls back to the service, so
+  // a key never makes the app less available than it was without one.
+  if (isNativeApp() && hasProviderKey()) {
+    const direct = await streamDirect(data, signal, onText, mode);
+    if (direct.ok || direct.cancelled) return direct;
+    if (direct.kind !== "network" && direct.kind !== "timeout" && direct.kind !== "provider")
+      return direct;
+  }
   const url = streamUrl();
   if (!url) return { ok: false, kind: "network" };
   const res = await fetch(url, {
@@ -50,6 +61,8 @@ export async function streamTranslate(
 /** Fire-and-forget: opens the connection chain to the translation service before the first request. */
 export function warmTranslation(): void {
   if (typeof fetch === "undefined") return;
+  // Direct mode has no Worker connection to warm and must not spend a provider call here.
+  if (isNativeApp() && hasProviderKey()) return;
   const url = streamUrl();
   if (!url) return;
   void fetch(url, { method: "GET", cache: "no-store", credentials: "omit" }).catch(() => {});

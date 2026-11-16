@@ -38,6 +38,7 @@ indexed and that relative links resolve.
 | `docs/architecture/decisions/0006-persistence-port-room-datastore.md`  | Why the port exists and how Room/DataStore split the data                                      | changing storage or the bridge                                     |
 | `docs/architecture/decisions/0007-native-api-surface.md`               | Versioned native endpoints, origin allowlist, no secret in the APK                             | adding an endpoint or changing CORS                                |
 | `docs/architecture/decisions/0008-android-data-at-rest.md`             | Accepted at-rest risk and why SQLCipher is not added                                           | questioning Android database encryption (TD19)                     |
+| `docs/architecture/decisions/0009-byok-direct-provider.md`             | Optional device-only DeepSeek key; direct provider path and its security boundary              | changing provider keys, direct mode or BYOK storage                |
 
 ## Android
 

@@ -46,7 +46,9 @@ const CSP = [
   "media-src 'self' blob: data:",
   // AudioWorklet for dictation is created from a blob.
   "worker-src 'self' blob:",
-  `connect-src 'self' ${API_ORIGIN} wss://streaming.assemblyai.com wss://api.assemblyai.com`,
+  // API_ORIGIN is fluently.today by default; api.deepseek.com is used only by the optional
+  // personal-key (BYOK) mode, which never sends the key to our Worker.
+  `connect-src 'self' ${API_ORIGIN} https://api.deepseek.com wss://streaming.assemblyai.com wss://api.assemblyai.com`,
   "object-src 'none'",
   "frame-src 'none'",
   "base-uri 'self'",

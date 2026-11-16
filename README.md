@@ -7,7 +7,7 @@ app.
 
 Live: https://fluently.today/
 
-## Android app (1.0.4)
+## Android app (1.0.5)
 
 The same translator is packaged as an Android app: the React shell runs in a Capacitor WebView,
 while Kotlin/Room/DataStore own device records, settings, backups and the native lifecycle. The
@@ -22,6 +22,10 @@ installable APKs are published with the repository:
 - Android evidence: [ANDROID_TEST_EVIDENCE.md](ANDROID_TEST_EVIDENCE.md),
   [ANDROID_RELEASE_REPORT.md](ANDROID_RELEASE_REPORT.md), and
   [docs/android/build-and-release.md](docs/android/build-and-release.md).
+- **Optional personal key:** in the installed app, Privacy → Advanced lets you paste your own
+  DeepSeek key. It stays in the app's private storage, is excluded from backups, never goes to
+  the today server, and is used for direct DeepSeek calls with your own quota (ADR 0009). This
+  is the fallback when a phone's network cannot reach the deployed service.
 
 ## What the product actually does
 

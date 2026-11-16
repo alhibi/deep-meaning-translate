@@ -84,6 +84,15 @@ Storage Access Framework, so the app never receives broad file access.
   passwords are never stored. Plain backups carry an unkeyed digest: it detects damage, not
   deliberate rewrites.
 
+## Optional personal provider key (BYOK)
+
+The installed app can hold one device-only DeepSeek key (Privacy → Advanced). It is saved in
+app-private DataStore, excluded from the backup whitelist, never logged and never sent to the
+Worker. When present, the WebView calls `https://api.deepseek.com/chat/completions` directly;
+the native CSP allows that origin and the same prompts/parsers/verifiers are used. Without a
+key the app keeps the server path. ADR 0009 records the security boundary and the residual
+risk (key readable on a rooted device; TD30 tracks Keystore wrapping).
+
 ## Release signing
 
 A release build fails closed when no upload key is configured. `-PallowDebugSigning=true`

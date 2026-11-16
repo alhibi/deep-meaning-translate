@@ -10,10 +10,16 @@ import { nativeJson } from "./transport";
 import type { TranslationResult } from "../translation/types";
 import type { LexiconResult } from "../translation/lexicon";
 import type { ShadowResult } from "../translation/shadow";
+import { hasProviderKey } from "../translation/providerKey";
 
 export async function callRepair(input: {
   data: { request: unknown; previous: TranslationResult };
 }): Promise<{ ok: true; result: TranslationResult | null }> {
+  if (isNativeApp() && hasProviderKey()) {
+    const { repairDirect } = await import("../translation/directRepair");
+    const request = input.data.request as Parameters<typeof repairDirect>[0];
+    return { ok: true, result: await repairDirect(request, input.data.previous) };
+  }
   if (isNativeApp()) {
     return nativeJson<{ ok: true; result: TranslationResult | null }>(
       "/api/native/v1/repair",
