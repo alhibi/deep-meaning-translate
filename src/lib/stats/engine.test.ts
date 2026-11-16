@@ -62,6 +62,9 @@ describe("text type is separate from topic and function", () => {
     expect(localIntent("Wo ist der Bahnhof?")).toBe("ask");
     expect(localDomain("بدي موعد بالبلدية")).toBe("services");
     expect(localIntent("شكراً كتير")).toBe("thank");
+    expect(localKind("Wo ist der Bahnhof?")).toBe("question");
+    expect(localDomain("Der Anwalt ist beim Gericht.")).toBe("legal");
+    expect(localIntent("Herzlichen Glückwunsch!")).toBe("congratulate");
     expect(localDomain("qwerty zxcv")).toBe("none");
   });
 });
@@ -262,6 +265,11 @@ describe("model tags", () => {
       { text: "a", source: "de", target: "ar", style: "natural" },
     );
     expect(r.tags).toEqual({ kind: "idiom", intent: "thank" });
+    const expanded = parseResult(
+      '{"translation":"x","tags":{"kind":"dialogue","domain":"finance","intent":"negotiate"}}',
+      { text: "a", source: "de", target: "ar", style: "natural" },
+    );
+    expect(expanded.tags).toEqual({ kind: "dialogue", domain: "finance", intent: "negotiate" });
     const none = parseResult('{"translation":"x"}', {
       text: "a",
       source: "de",

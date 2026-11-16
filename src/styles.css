@@ -112,6 +112,12 @@
   --cat-10: #8a78be;
   --cat-11: #6f9a78;
   --cat-12: #b0876a;
+  --cat-13: #b59a7a;
+  --cat-14: #78a3a8;
+  --cat-15: #bf8f9d;
+  --cat-16: #9e9acb;
+  --cat-17: #91ad72;
+  --cat-18: #c58f68;
   --cat-none: #57524c;
   color-scheme: dark;
 }
@@ -165,6 +171,12 @@ html.light {
   --cat-10: #5d4c96;
   --cat-11: #436e4d;
   --cat-12: #8a5e40;
+  --cat-13: #7f6745;
+  --cat-14: #3f7276;
+  --cat-15: #9f5269;
+  --cat-16: #625d9d;
+  --cat-17: #617f45;
+  --cat-18: #a45e38;
   --cat-none: #b8afa5;
   --elev-1: 0 1px 2px rgb(28 24 21 / 6%);
   color-scheme: light;
@@ -215,7 +227,7 @@ html.vivid {
   --focus-surface: #101219;
   /* Cool near-black needs a touch more lift than clay to read as elevation. */
   --elev-1: 0 1px 0 rgb(255 255 255 / 5%);
-  /* Data palette: same twelve categories, re-tuned for a cool ground. */
+  /* Data palette: eighteen distinct category hues, re-tuned for a cool ground. */
   --cat-1: #b39aff;
   --cat-2: #7fb8ff;
   --cat-3: #86e0b4;
@@ -228,6 +240,12 @@ html.vivid {
   --cat-10: #a98cf0;
   --cat-11: #6fd6a0;
   --cat-12: #b09ae0;
+  --cat-13: #e0b77f;
+  --cat-14: #76ced0;
+  --cat-15: #ed8eaa;
+  --cat-16: #9f9ae8;
+  --cat-17: #a9d87e;
+  --cat-18: #edac7e;
   --cat-none: #4d5162;
   color-scheme: dark;
 }

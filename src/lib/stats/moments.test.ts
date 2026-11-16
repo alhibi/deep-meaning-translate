@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { distribution, summarize, toRecords, type Slice } from "./engine";
-import { highlights, languageFlow, milestones, nextMilestones, rhythm, streaks } from "./moments";
+import {
+  highlights,
+  languageFlow,
+  milestones,
+  nextMilestones,
+  practiceProfile,
+  rhythm,
+  streaks,
+} from "./moments";
 
 const entries = [
   {
@@ -157,5 +165,36 @@ describe("language flow", () => {
     const flow = languageFlow(distribution(records, "pair"), 6);
     expect(flow.total).toBe(records.length);
     expect(flow.links.length).toBeGreaterThan(0);
+  });
+});
+
+describe("practice profile", () => {
+  it("keeps every card accountable to real rows, calendar days and saved uses", () => {
+    const profile = practiceProfile(records, { from: "2026-11-10", to: "2026-11-16", days: 7 });
+    expect(profile.focus).toMatchObject({ id: "daily", count: 2 });
+    expect(profile.activeDomains).toBe(2);
+    expect(profile.activeDays).toBe(4);
+    expect(profile.possibleDays).toBe(7);
+    expect(profile.revisitedPhrases).toBe(1);
+    expect(profile.repeatUses).toBe(1);
+  });
+
+  it("does not turn unclassified rows into a fictional topic", () => {
+    const unknown = toRecords(
+      [
+        {
+          id: "unknown",
+          source: "de",
+          target: "ar",
+          original: "qwerty zxcv",
+          translated: "x",
+          createdAt: Date.parse("2026-11-10T09:00:00Z"),
+        },
+      ],
+      "UTC",
+    );
+    const profile = practiceProfile(unknown, { from: "2026-11-10", to: "2026-11-10", days: 1 });
+    expect(profile.domains).toEqual([]);
+    expect(profile.focus).toBeNull();
   });
 });

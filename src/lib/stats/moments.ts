@@ -1,4 +1,4 @@
-import { addDays, type Slice, type StatRecord } from "./engine";
+import { addDays, distribution, type Bounds, type Slice, type StatRecord } from "./engine";
 
 /**
  * The second layer of Translation Statistics: shape over time rather than totals.
@@ -76,6 +76,46 @@ export function rhythm(records: StatRecord[], timeZone?: string): Rhythm {
     if (weekdays[i]! > 0 && (peakWeekday === null || weekdays[i]! > weekdays[peakWeekday]!))
       peakWeekday = i;
   return { hours, weekdays, parts, peakHour, peakWeekday, total: records.length };
+}
+
+/* --------------------------------------------------------- practice profile */
+
+/**
+ * A compact, inspectable portrait of a period. This intentionally exposes its raw
+ * measures instead of turning a person into an opaque score: focus is a real topic,
+ * variety is a count of observed topics, rhythm is active calendar days, and return
+ * means a saved phrase whose `uses` count proves it was translated again.
+ */
+export interface PracticeProfile {
+  domains: Slice[];
+  focus: Slice | null;
+  activeDomains: number;
+  activeDays: number;
+  possibleDays: number;
+  revisitedPhrases: number;
+  repeatUses: number;
+}
+
+export function practiceProfile(records: StatRecord[], bounds: Bounds | null): PracticeProfile {
+  const domains = distribution(records, "domain").filter((slice) => slice.id !== "none");
+  const activeDays = new Set(records.map((record) => record.day)).size;
+  let revisitedPhrases = 0;
+  let repeatUses = 0;
+  for (const record of records) {
+    if (record.uses > 1) {
+      revisitedPhrases++;
+      repeatUses += record.uses - 1;
+    }
+  }
+  return {
+    domains,
+    focus: domains[0] ?? null,
+    activeDomains: domains.length,
+    activeDays,
+    possibleDays: bounds?.days ?? activeDays,
+    revisitedPhrases,
+    repeatUses,
+  };
 }
 
 /* ------------------------------------------------------------------ streaks */

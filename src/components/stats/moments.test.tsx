@@ -1,9 +1,22 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { distribution, summarize, toRecords } from "@/lib/stats/engine";
-import { highlights, languageFlow, milestones, rhythm, streaks } from "@/lib/stats/moments";
+import {
+  highlights,
+  languageFlow,
+  milestones,
+  practiceProfile,
+  rhythm,
+  streaks,
+} from "@/lib/stats/moments";
 import { statsT } from "@/lib/stats/labels";
-import { LanguageFlowMap, MilestonesBlock, RecordsBlock, RhythmBlock } from "./moments";
+import {
+  LanguageFlowMap,
+  MilestonesBlock,
+  PracticeLandscape,
+  RecordsBlock,
+  RhythmBlock,
+} from "./moments";
 import { makeFormat } from "./format";
 
 const entries = [
@@ -133,5 +146,27 @@ describe("statistics blocks use the archive they are given", () => {
       screen.getByRole("button", { name: `${fmt.pair(first.pair)}: ${fmt.num(first.count)}` }),
     );
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(first.pair);
+  });
+
+  it("renders the topic landscape as an actionable, factual map", () => {
+    const onOpenDomain = vi.fn();
+    const profile = practiceProfile(records, { from: "2026-10-01", to: "2026-11-12", days: 43 });
+    render(
+      <PracticeLandscape
+        profile={profile}
+        fmt={fmt}
+        t={t}
+        locale="en"
+        onOpenDomain={onOpenDomain}
+      />,
+    );
+    expect(screen.getByText(t("landscapeFocus"))).toBeTruthy();
+    const focus = profile.focus!;
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Daily life in Germany: ${fmt.num(focus.count)}`,
+      }),
+    );
+    expect(onOpenDomain).toHaveBeenCalledExactlyOnceWith(focus.id);
   });
 });

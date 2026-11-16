@@ -10,7 +10,7 @@ export const STYLE_GUIDANCE: Record<StyleOverride, string> = {
     "CASUAL — clearly relaxed, how friends text: de: du, everyday contractions (hab, geht's, 'n, gern), short and loose, colloquial words (echt, kurz, mal) but no crude slang; ar: spoken dialect, never فصحى (Levantine unless a dialect is given: شو، بدّي، فيك، كتير، تسلم), short",
 };
 
-export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually ""),"situation":"chat"|"work"|"official"|"general","tags":{"kind":"word"|"phrase"|"sentence"|"text"|"idiom"|"slang"|"proverb","domain":"daily"|"work"|"study"|"social"|"feelings"|"travel"|"shopping"|"food"|"services"|"tech"|"health"|"culture"|"none","intent":"greet"|"ask"|"request"|"thank"|"apologize"|"feel"|"praise"|"complain"|"agree"|"describe"|"humor"|"none"}}`;
+export const SCHEMA_SHAPE = `{"translation":str,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"tone":1-2 words,"formality":"casual"|"neutral"|"formal","confidence":0-1,"isAmbiguous":bool,"alternativeTranslations":[0-2, only for a truly different reading],"notes":str (<=140 chars, usually ""),"situation":"chat"|"work"|"official"|"general","tags":{"kind":"word"|"phrase"|"sentence"|"text"|"question"|"dialogue"|"instruction"|"idiom"|"slang"|"proverb","domain":"daily"|"work"|"study"|"social"|"feelings"|"travel"|"shopping"|"food"|"services"|"tech"|"health"|"culture"|"home"|"finance"|"legal"|"science"|"sports"|"entertainment"|"parenting"|"none","intent":"greet"|"ask"|"request"|"thank"|"apologize"|"feel"|"praise"|"complain"|"agree"|"describe"|"humor"|"invite"|"congratulate"|"decline"|"clarify"|"warn"|"plan"|"negotiate"|"none"}}`;
 
 export function buildSystemPrompt(): string {
   return `Expert native-level translator. Carry meaning, intent, tone, register and cultural nuance, never literal words; output must read as written by a fluent native.
@@ -21,7 +21,7 @@ Typos, missing letters/hamza/diacritics, swapped letters, Arabizi and ae/oe/ue/s
 ar→de: German syntax and cases, particles (mal/doch/halt) only when natural, not over-formal for casual text. de→ar: conversational German → natural spoken-leaning Arabic, not rigid MSA; correct gender agreement. Understand every Arabic dialect (Levantine, Egyptian, Gulf, Iraqi, Maghrebi) and its idioms, e.g. شلونك/إزيك/كيفك = wie geht's.
 sourceLanguage = the language the text is ACTUALLY written in. The given source is only a hint; if the text is in another language, translate from the language it is really in.
 situation: chat = personal/friends, work = colleagues/business, official = authorities/letters/formal requests.
-tags describe the SOURCE text, last and briefly: kind (idiom = fixed figurative expression, slang = colloquial/street wording, proverb = saying), domain = topic, intent = what it does; "none" when unclear.
+tags describe the SOURCE text, last and briefly: kind (question = asks, dialogue = speaker exchange, instruction = directive; idiom = fixed figurative expression, slang = colloquial/street wording, proverb = saying), domain = topic, intent = what it does; "none" when unclear.
 Reply ONLY minified JSON, translation first:
 ${SCHEMA_SHAPE}`;
 }

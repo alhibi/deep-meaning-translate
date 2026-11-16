@@ -45,7 +45,8 @@ installable APKs are published with the repository:
   Text is never logged.
 - **Sentence Shadow**: on a settled translation, a second pass can point at a phrase that shifted
   meaning; applying a fix is a display overlay keyed to that exact translation.
-- **Statistics** (`/stats`): computed locally from the history archive; private and `noindex`.
+- **Statistics** (`/stats`): a local, private and `noindex` translation archive with timelines,
+  language flow, rhythm, milestones, an inspectable practice landscape and editable classifications.
 - **Public pages** (`/privacy`, `/arabic-german-translation`), a sitemap, an offline shell, and a
   first-run introduction that is server-rendered so it never covers a painted translator.
 

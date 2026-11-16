@@ -5,7 +5,18 @@
  * Adding a category = one line here + one label per locale in labels.ts.
  */
 
-export const KINDS = ["word", "phrase", "sentence", "text", "idiom", "slang", "proverb"] as const;
+export const KINDS = [
+  "word",
+  "phrase",
+  "sentence",
+  "text",
+  "question",
+  "dialogue",
+  "instruction",
+  "idiom",
+  "slang",
+  "proverb",
+] as const;
 export const DOMAINS = [
   "daily",
   "work",
@@ -19,6 +30,13 @@ export const DOMAINS = [
   "tech",
   "health",
   "culture",
+  "home",
+  "finance",
+  "legal",
+  "science",
+  "sports",
+  "entertainment",
+  "parenting",
 ] as const;
 export const INTENTS = [
   "greet",
@@ -32,6 +50,13 @@ export const INTENTS = [
   "agree",
   "describe",
   "humor",
+  "invite",
+  "congratulate",
+  "decline",
+  "clarify",
+  "warn",
+  "plan",
+  "negotiate",
 ] as const;
 export const REGISTERS = ["natural", "casual", "formal", "colloquial", "idiomatic"] as const;
 
@@ -57,7 +82,7 @@ export const isRegister = (v: unknown): v is Register => REGISTERS.includes(v as
 export const isDimensionValue = (d: Dimension, v: unknown): boolean =>
   typeof v === "string" && DIMENSION_VALUES[d].includes(v);
 
-/** Colour tokens live in styles.css as --cat-1 … --cat-12 (+ --cat-none), themed for dark and light. */
+/** Colour tokens live in styles.css as --cat-1 … --cat-18 (+ --cat-none), themed for dark and light. */
 const C = (n: number) => `var(--cat-${n})`;
 export const NONE_COLOR = "var(--cat-none)";
 
@@ -67,6 +92,9 @@ const COLORS: Record<Dimension, Record<string, string>> = {
     phrase: C(7),
     sentence: C(1),
     text: C(8),
+    question: C(9),
+    dialogue: C(13),
+    instruction: C(14),
     idiom: C(4),
     slang: C(6),
     proverb: C(5),
@@ -84,6 +112,13 @@ const COLORS: Record<Dimension, Record<string, string>> = {
     tech: C(10),
     health: C(11),
     culture: C(12),
+    home: C(13),
+    finance: C(14),
+    legal: C(15),
+    science: C(16),
+    sports: C(17),
+    entertainment: C(18),
+    parenting: C(4),
     none: NONE_COLOR,
   },
   intent: {
@@ -98,6 +133,13 @@ const COLORS: Record<Dimension, Record<string, string>> = {
     agree: C(9),
     describe: C(11),
     humor: C(10),
+    invite: C(12),
+    congratulate: C(3),
+    decline: C(6),
+    clarify: C(2),
+    warn: C(15),
+    plan: C(17),
+    negotiate: C(14),
     none: NONE_COLOR,
   },
   register: {

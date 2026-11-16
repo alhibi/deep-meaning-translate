@@ -21,11 +21,12 @@ import {
   type LanguageFlow,
   type Milestone,
   type PartOfDay,
+  type PracticeProfile,
   type Rhythm,
   type Streaks,
 } from "@/lib/stats/moments";
-import { pairColor } from "@/lib/stats/taxonomy";
-import { statsT } from "@/lib/stats/labels";
+import { colorOf, pairColor } from "@/lib/stats/taxonomy";
+import { categoryLabel, statsT } from "@/lib/stats/labels";
 import type { Fmt } from "./format";
 
 const PART_COLOR: Record<PartOfDay, string> = {
@@ -34,6 +35,108 @@ const PART_COLOR: Record<PartOfDay, string> = {
   afternoon: "var(--cat-1)",
   evening: "var(--cat-10)",
 };
+
+/* --------------------------------------------------------- practice profile */
+
+/**
+ * A tactile topic map: visual weight follows the actual share, every colored item is
+ * a button, and the surrounding figures disclose exactly what the picture means.
+ */
+export function PracticeLandscape({
+  profile,
+  fmt,
+  t,
+  locale,
+  onOpenDomain,
+}: {
+  profile: PracticeProfile;
+  fmt: Fmt;
+  t: ReturnType<typeof statsT>;
+  locale: "en" | "ar" | "de";
+  onOpenDomain: (domain: string) => void;
+}) {
+  const strongest = Math.max(1, ...profile.domains.map((domain) => domain.count));
+  return (
+    <div>
+      <p className="mb-5 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
+        {t("landscapeSub")}
+      </p>
+      <div className="grid gap-2 sm:grid-cols-4">
+        <ProfileMetric
+          label={t("landscapeFocus")}
+          value={profile.focus ? categoryLabel(locale, "domain", profile.focus.id) : "—"}
+          detail={profile.focus ? fmt.pct(profile.focus.share) : "—"}
+        />
+        <ProfileMetric
+          label={t("landscapeVariety")}
+          value={fmt.num(profile.activeDomains)}
+          detail={t("domainsTitle")}
+        />
+        <ProfileMetric
+          label={t("landscapeRhythm")}
+          value={`${fmt.num(profile.activeDays)} / ${fmt.num(profile.possibleDays)}`}
+          detail={t("daysN", { n: fmt.num(profile.activeDays) })}
+        />
+        <ProfileMetric
+          label={t("landscapeReturn")}
+          value={fmt.num(profile.revisitedPhrases)}
+          detail={profile.repeatUses ? `+${fmt.num(profile.repeatUses)}` : "—"}
+        />
+      </div>
+      {profile.domains.length ? (
+        <div
+          className="mt-5 flex flex-wrap items-end gap-2.5"
+          aria-label={profile.domains
+            .map(
+              (domain) => `${categoryLabel(locale, "domain", domain.id)} ${fmt.num(domain.count)}`,
+            )
+            .join(", ")}
+        >
+          {profile.domains.slice(0, 10).map((domain) => {
+            const color = colorOf("domain", domain.id);
+            const weight = domain.count / strongest;
+            return (
+              <button
+                key={domain.id}
+                type="button"
+                onClick={() => onOpenDomain(domain.id)}
+                className="press-soft flex max-w-full items-center gap-2 rounded-2xl border text-start motion-safe:transition-colors motion-safe:duration-300"
+                style={{
+                  minHeight: `${48 + weight * 14}px`,
+                  paddingInline: `${12 + weight * 6}px`,
+                  borderColor: `color-mix(in oklab, ${color} 52%, var(--border))`,
+                  backgroundColor: "var(--surface)",
+                  background: `color-mix(in oklab, ${color} 15%, var(--surface))`,
+                }}
+                aria-label={`${categoryLabel(locale, "domain", domain.id)}: ${fmt.num(domain.count)}`}
+              >
+                <span className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
+                <span className="max-w-40 truncate text-[12.5px] font-medium">
+                  {categoryLabel(locale, "domain", domain.id)}
+                </span>
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {fmt.pct(domain.share)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-5 text-[12.5px] leading-relaxed text-faint">{t("landscapeNoTopic")}</p>
+      )}
+    </div>
+  );
+}
+
+function ProfileMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-border bg-surface px-3 py-3">
+      <p className="truncate text-[11.5px] text-muted-foreground">{label}</p>
+      <p className="mt-2 truncate text-[16px] font-semibold leading-tight tabular-nums">{value}</p>
+      <p className="mt-1 truncate text-[11px] text-faint">{detail}</p>
+    </div>
+  );
+}
 
 function PartIcon({ part, className }: { part: PartOfDay; className?: string }) {
   const Icon =

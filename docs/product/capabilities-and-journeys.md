@@ -67,6 +67,13 @@ its translations. Colour is relative to the largest visible bucket, not a qualit
 classification estimates remain labelled and correctable. No synthetic rows, network calls,
 new storage or personal profiling are introduced by these views.
 
+The practice landscape follows the same rule: it exposes the leading classified topic, the number
+of observed topics, active days in the selected period, and phrases whose stored `uses` count shows
+they were translated again. Its topic marks are real filters, never recommendations or an opaque
+proficiency score. Classification covers text forms, everyday and specialist subjects, and
+communicative functions; model tags are validated against the shared taxonomy, while local fallback
+estimates remain visibly correctable.
+
 The rhythm, records, milestones and language-flow views follow the same rule. The hour dial counts
 the archive's own timestamps and its active hours open exactly those translations; "busiest day"
 opens that day; the longest translation opens its record. Milestones are derived from the whole
