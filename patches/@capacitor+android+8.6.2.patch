@@ -1,0 +1,20 @@
+diff --git a/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/plugin/SystemBars.java b/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/plugin/SystemBars.java
+index 243b57b..01eb6af 100644
+--- a/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/plugin/SystemBars.java
++++ b/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/plugin/SystemBars.java
+@@ -201,8 +201,13 @@ public class SystemBars extends Plugin {
+             boolean keyboardVisible = !keyboardOverlaysWebView && insets.isVisible(WindowInsetsCompat.Type.ime());
+ 
+             if (shouldPassthroughInsets) {
+-                // We need to correct for a possible shown IME
+-                v.setPadding(0, 0, 0, keyboardVisible ? imeInsets.bottom : 0);
++                // On API < 30 the window is already resized for the IME by adjustResize, and
++                // the compat ime() inset still reports the keyboard height, so padding here
++                // would shrink the WebView twice and can blank the page while typing.
++                // Only pad on API 30+, where ime() is the real overlap.
++                boolean padForIme =
++                    keyboardVisible && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R;
++                v.setPadding(0, 0, 0, padForIme ? imeInsets.bottom : 0);
+ 
+                 WindowInsetsCompat newInsets = withoutOverlayingKeyboard(
+                     new WindowInsetsCompat.Builder(insets).setInsets(

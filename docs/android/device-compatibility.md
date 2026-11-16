@@ -19,7 +19,7 @@ device (`adb devices` empty). The APKs are verified as signatures and manifests 
 
 | Concern | Behaviour |
 | --- | --- |
-| Keyboard | `windowSoftInputMode="adjustResize"` + Capacitor `Keyboard.resize: "native"`; the composer stays visible above the IME, and back closes the keyboard before navigation |
+| Keyboard | `windowSoftInputMode="adjustResize"`; the patched Capacitor `SystemBars` skips IME padding on API < 30, so the WebView resizes once instead of twice (Android 10 + WebView 140+). Back closes the keyboard before navigation |
 | Edge-to-edge | `WindowCompat.setDecorFitsSystemWindows(window, false)`; the shell uses `env(safe-area-inset-*)`, so text never sits under a cutout or gesture bar |
 | System bars | Transparent; icon style follows the palette (light theme → dark icons) after hydration |
 | Back | overlay → keyboard → previous destination → `App.exitApp()`, on gesture and button navigation (`enableOnBackInvokedCallback="false"` keeps one path) |

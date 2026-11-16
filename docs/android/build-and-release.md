@@ -20,6 +20,7 @@ a machine with JDK 21 and the Android SDK.
 
 ```bash
 npm ci                              # one package manager: npm + package-lock.json
+                                    # postinstall applies patches/@capacitor+android+8.6.2.patch
 npm run build:native:web            # SPA → android-web/ (no service worker)
 npx cap sync android                # copy assets + plugin config into android/
 export JAVA_HOME=$PWD/.android-toolchain/jdk-21
@@ -36,13 +37,13 @@ cd android
 
 | File | Size | SHA-256 |
 | --- | --- | --- |
-| `android/app/build/outputs/apk/debug/app-debug.apk` | 6 391 079 B | `0c4cab37b7fab77cdb79e72ca7e67b78f5868ab04f05e5324a312ebb19205a6b` |
-| `android/app/build/outputs/apk/release/app-release.apk` | 2 171 156 B | `55854ecc05c80190d8221047fce899bd1ae7678c5bbdcde3aa123eaa2648f628` |
+| `android/app/build/outputs/apk/debug/app-debug.apk` | 6 391 079 B | `edcca1a50edb1736dc4f5c4a0d656a41a62644f1d143a1f90e899603196ad367` |
+| `android/app/build/outputs/apk/release/app-release.apk` | 2 171 156 B | `842019bf89a44607a3271974aba7f2d6e6fcdd01e6a9898151590a3f9326076d` |
 
 Manifest facts (from `aapt2 dump badging`):
 
 ```text
-package: today.fluently.app.debug  versionCode 2  versionName 1.0.1-debug
+package: today.fluently.app.debug  versionCode 3  versionName 1.0.2-debug
 targetSdkVersion 36
 uses-permission: INTERNET, RECORD_AUDIO, VIBRATE
 native-code: arm64-v8a armeabi-v7a x86 x86_64

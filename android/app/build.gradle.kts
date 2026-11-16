@@ -23,8 +23,8 @@ android {
         applicationId = "today.fluently.app"
         minSdk = (rootProject.extra["minSdkVersion"] as Int)
         targetSdk = (rootProject.extra["targetSdkVersion"] as Int)
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The translator is Arabic-first: keep the app usable in RTL and German.
         resourceConfigurations += listOf("en", "ar", "de")

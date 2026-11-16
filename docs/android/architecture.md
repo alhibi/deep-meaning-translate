@@ -64,6 +64,12 @@ screen; the translator opens with in-memory defaults and Data settings states th
 is unavailable. As a last native ceiling, `capacitor.config.ts` auto-hides the splash after
 6 seconds even if JavaScript never runs, and an inline boot guard replaces a blank body with a localized retry message after 9 seconds.
 
+On Android 10 (API 29) with WebView 140+, Capacitor 8.6.2's `SystemBars` added the IME
+inset as padding even though `adjustResize` had already resized the window. Opening the
+keyboard therefore shrank the WebView twice and could blank the whole page, leaving the
+composer invisible. `patches/@capacitor+android+8.6.2.patch` (applied by the `postinstall`
+script) only adds that padding on API 30+, where `ime()` is the real overlap.
+
 ## One source of truth
 
 - Native: Room is the record store. `localStorage` is not used for records and is never

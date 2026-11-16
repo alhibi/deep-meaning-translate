@@ -25,7 +25,8 @@
     "cap:sync": "npm run build:native:web && cap sync android",
     "android:assembleDebug": "cd android && ./gradlew :app:assembleDebug",
     "android:assembleRelease": "cd android && ./gradlew :app:assembleRelease",
-    "android:test": "cd android && ./gradlew :app:testDebugUnitTest"
+    "android:test": "cd android && ./gradlew :app:testDebugUnitTest",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -72,6 +73,7 @@
     "globals": "^17.12.0",
     "jsdom": "^30.1.1",
     "nitro": "3.0.260603-beta",
+    "patch-package": "^8.0.1",
     "prettier": "^3.9.8",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1",
@@ -89,5 +91,5 @@
     "type": "git",
     "url": "https://github.com/alhibi/deep-meaning-translate.git"
   },
-  "version": "1.0.1"
+  "version": "1.0.2"
 }
