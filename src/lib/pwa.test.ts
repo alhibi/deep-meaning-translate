@@ -45,3 +45,16 @@ describe("service worker registrar", () => {
     expect(getRegistrations).toHaveBeenCalled();
   });
 });
+
+describe("update announcement rule", () => {
+  it("never announces the first controller that claims a fresh page", async () => {
+    const { shouldAnnounceUpdate } = await loadModule();
+    expect(shouldAnnounceUpdate(false, {}, false)).toBe(false);
+  });
+  it("announces exactly one handover for a page that already had a controller", async () => {
+    const { shouldAnnounceUpdate } = await loadModule();
+    expect(shouldAnnounceUpdate(true, {}, false)).toBe(true);
+    expect(shouldAnnounceUpdate(true, {}, true)).toBe(false);
+    expect(shouldAnnounceUpdate(true, null, false)).toBe(false);
+  });
+});

@@ -6,6 +6,7 @@ import {
   milestones,
   nextMilestones,
   practiceProfile,
+  practiceTrail,
   rhythm,
   streaks,
 } from "./moments";
@@ -165,6 +166,35 @@ describe("language flow", () => {
     const flow = languageFlow(distribution(records, "pair"), 6);
     expect(flow.total).toBe(records.length);
     expect(flow.links.length).toBeGreaterThan(0);
+  });
+});
+
+describe("practice trail", () => {
+  const bounds = { from: "2026-11-09", to: "2026-11-13", days: 5 };
+
+  it("counts one mark per calendar day, oldest first, with gaps kept as zero", () => {
+    expect(practiceTrail(records, bounds)).toEqual([0, 1, 1, 2, 0]);
+  });
+
+  it("clips to the newest days of the period and to the limit", () => {
+    const long = { from: "2026-10-01", to: "2026-11-12", days: 43 };
+    // The five newest days only: 10-01 is outside the window even though it is in range.
+    expect(practiceTrail(records, long, 5)).toEqual([0, 0, 1, 1, 2]);
+    // A limit longer than the period never invents days before it.
+    expect(practiceTrail(records, bounds, 42)).toEqual([0, 1, 1, 2, 0]);
+  });
+
+  it("stays empty when there is no period or no limit", () => {
+    expect(practiceTrail([], bounds)).toEqual([0, 0, 0, 0, 0]);
+    expect(practiceTrail(records, null)).toEqual([]);
+    expect(practiceTrail(records, bounds, 0)).toEqual([]);
+  });
+
+  it("buckets by the calendar day of each row, not by UTC", () => {
+    // In UTC+14 the 11-11T14:30Z row is already 11-12; the 11-12 rows are 11-13.
+    const shifted = toRecords(entries, "Pacific/Kiritimati");
+    const trail = practiceTrail(shifted, { from: "2026-11-12", to: "2026-11-13", days: 2 });
+    expect(trail).toEqual([1, 2]);
   });
 });
 

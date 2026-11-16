@@ -63,6 +63,15 @@ const en = {
   landscapeRhythm: "Days in rhythm",
   landscapeReturn: "Phrases revisited",
   landscapeNoTopic: "Topics appear here once enough source wording can be classified.",
+  mapSummary:
+    "Practice map: {focus} leads with {share}; {domains} topics across {active} of {possible} days.",
+  mapSummaryEmpty: "Practice map: no classified topics in this period yet.",
+  mapNode: "{label}: {count} ({pct})",
+  mapLegend:
+    "Point size and ribbon width follow frequency, the ring counts days. Pick a topic to filter.",
+  mapTrail: "last {n} days",
+  mapRepeatUses: "+{n} repeat uses",
+  mapMore: "and {n} more topics, counted in your totals.",
   rhythmTitle: "Your rhythm",
   rhythmSub: "When you translate, and which days carry the most — from this device's archive.",
   rhythmLabel: "Activity by hour of day. Busiest: {hour} with {n} translations.",
@@ -241,6 +250,14 @@ const ar: Dict = {
   landscapeRhythm: "أيام ضمن الإيقاع",
   landscapeReturn: "عبارات عدت إليها",
   landscapeNoTopic: "ستظهر المجالات هنا عندما تكفي صياغة النص الأصلي لتصنيفها.",
+  mapSummary:
+    "خريطة ممارستك: «{focus}» في المقدمة بنسبة {share}؛ {domains} مجالات على مدى {active} من {possible} يوماً.",
+  mapSummaryEmpty: "خريطة ممارستك: لا مجالات مصنّفة في هذه الفترة بعد.",
+  mapNode: "«{label}»: {count} ({pct})",
+  mapLegend: "حجم النقطة وعرض الشريط بحسب التكرار، والحلقة تعدّ الأيام. اختر مجالاً لفلترته.",
+  mapTrail: "آخر {n} يوماً",
+  mapRepeatUses: "+{n} استخداماً متكرراً",
+  mapMore: "و{n} مجالات أخرى محسوبة في الإجمالي.",
   rhythmTitle: "إيقاعك",
   rhythmSub: "متى تترجم، وأي الأيام تحمل أكثر — من أرشيف هذا الجهاز.",
   rhythmLabel: "النشاط بحسب ساعة اليوم. الأكثر نشاطاً: {hour} بـ{n} ترجمة.",
@@ -415,6 +432,15 @@ const de: Dict = {
   landscapeReturn: "Wieder aufgegriffene Sätze",
   landscapeNoTopic:
     "Themen erscheinen hier, sobald der Ausgangstext ausreichend eingeordnet werden kann.",
+  mapSummary:
+    "Übungskarte: „{focus}“ führt mit {share}; {domains} Themen an {active} von {possible} Tagen.",
+  mapSummaryEmpty: "Übungskarte: noch keine eingeordneten Themen in diesem Zeitraum.",
+  mapNode: "„{label}“: {count} ({pct})",
+  mapLegend:
+    "Punktgröße und Bandbreite folgen der Häufigkeit, der Ring zählt Tage. Ein Thema wählen, um zu filtern.",
+  mapTrail: "letzte {n} Tage",
+  mapRepeatUses: "+{n} Wiederholungen",
+  mapMore: "und {n} weitere Themen, in den Gesamtwerten gezählt.",
   rhythmTitle: "Dein Rhythmus",
   rhythmSub: "Wann du übersetzt und welche Tage am meisten tragen — aus dem Archiv dieses Geräts.",
   rhythmLabel: "Aktivität nach Tageszeit. Am aktivsten: {hour} mit {n} Übersetzungen.",

@@ -27,6 +27,43 @@ async function unregisterOurs() {
   );
 }
 
+/* ------------------------------------------------------------ update signal */
+
+/**
+ * With auto-update the new worker activates and claims this page immediately, but the
+ * document already running still holds the old chunks. A quiet, dismissible "reload"
+ * pill is the honest way to reach the new build: never a forced reload while someone is
+ * mid-sentence, never a stale page pretending to be current.
+ */
+let updateReady = false;
+const updateListeners = new Set<() => void>();
+
+export function subscribeAppUpdate(fn: () => void) {
+  updateListeners.add(fn);
+  return () => void updateListeners.delete(fn);
+}
+
+export const appUpdateAvailable = () => updateReady;
+
+/**
+ * Pure decision so the rule is testable: only a page that already had a controller can
+ * be told that a new worker took over. The first install also fires the
+ * controllerchange event when the new worker claims the page, and that is not an update.
+ */
+export function shouldAnnounceUpdate(
+  hadController: boolean,
+  nextController: unknown,
+  alreadyReady: boolean,
+): boolean {
+  return hadController && !alreadyReady && !!nextController;
+}
+
+function announceUpdate() {
+  if (updateReady) return;
+  updateReady = true;
+  for (const fn of updateListeners) fn();
+}
+
 export function initServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
   // The APK ships its shell inside the package. A worker here could only serve a stale
@@ -36,6 +73,11 @@ export function initServiceWorker() {
     void unregisterOurs().catch(() => undefined);
     return;
   }
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (shouldAnnounceUpdate(hadController, navigator.serviceWorker.controller, updateReady))
+      announceUpdate();
+  });
   const register = () =>
     navigator.serviceWorker.register(SW_URL, { scope: "/" }).catch(() => undefined);
   if (document.readyState === "complete") register();

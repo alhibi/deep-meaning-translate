@@ -3,6 +3,7 @@ import { BOOT_GUARD_SCRIPT } from "@/lib/bootGuard";
 import { THEME_BOOT, syncThemeColor } from "@/lib/theme";
 import { LOCALE_BOOT } from "@/lib/i18n";
 import { ErrorScreen, NotFoundScreen } from "@/components/FailureScreen";
+import { UpdateNotice } from "@/components/UpdateNotice";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
@@ -148,6 +149,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <UpdateNotice />
     </QueryClientProvider>
   );
 }

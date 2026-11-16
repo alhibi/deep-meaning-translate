@@ -55,6 +55,7 @@ import {
   languageFlow,
   milestones as findMilestones,
   practiceProfile,
+  practiceTrail,
   rhythm as rhythmOf,
   streaks as findStreaks,
 } from "@/lib/stats/moments";
@@ -212,6 +213,7 @@ function StatsPage() {
   );
   const rhythmData = useMemo(() => rhythmOf(visible), [visible]);
   const practice = useMemo(() => practiceProfile(visible, bounds), [visible, bounds]);
+  const practiceDays = useMemo(() => practiceTrail(visible, bounds), [visible, bounds]);
   const recordsView = useMemo(() => findHighlights(visible), [visible]);
   const milestoneList = useMemo(
     () =>
@@ -505,6 +507,8 @@ function StatsPage() {
             <Panel title={t("landscapeTitle")} className="lg:col-span-2">
               <PracticeLandscape
                 profile={practice}
+                trail={practiceDays}
+                selectedDomain={filters.domain ?? null}
                 fmt={fmt}
                 t={t}
                 locale={locale}

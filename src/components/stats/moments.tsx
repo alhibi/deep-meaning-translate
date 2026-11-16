@@ -1,17 +1,30 @@
-import { memo } from "react";
+import {
+  memo,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import {
   CalendarDays,
   Check,
   Clock,
+  Compass,
   FileText,
   Flame,
   Moon,
+  Repeat2,
+  Shapes,
   Sparkles,
   Sun,
   Sunrise,
   Sunset,
   Trophy,
+  type LucideIcon,
 } from "lucide-react";
+import type { Slice } from "@/lib/stats/engine";
 import {
   PARTS_OF_DAY,
   nextMilestones,
@@ -36,105 +49,710 @@ const PART_COLOR: Record<PartOfDay, string> = {
   evening: "var(--cat-10)",
 };
 
-/* --------------------------------------------------------- practice profile */
+/* --------------------------------------------------------- practice map */
 
 /**
- * A tactile topic map: visual weight follows the actual share, every colored item is
- * a button, and the surrounding figures disclose exactly what the picture means.
+ * The practice landscape is the visual centerpiece of the page: one plate where the
+ * strongest topic sits at the centre and the other topics orbit it. Every radius, angle
+ * and ribbon is derived from the real archive, and the typographic readout states the
+ * same measures as plain numbers — the picture is never the only way to read the data.
  */
+
+/** Plate geometry in SVG user units; the viewBox keeps the map legible at every width. */
+const PLATE_W = 400;
+const PLATE_H = 300;
+const PLATE_X = PLATE_W / 2;
+const PLATE_Y = 146;
+const FOCUS_R = 27;
+const OUTER_ORBIT = { rx: 96, ry: 78 };
+const INNER_ORBIT = { rx: 64, ry: 50 };
+const TRAIL_ORBIT = { x: PLATE_X, y: 150, rx: 190, ry: 132 };
+const MAX_SATELLITES = 9;
+const DEG = Math.PI / 180;
+
+type LabelSide = "left" | "right" | "above";
+type StatsLocale = "en" | "ar" | "de";
+
+interface SatelliteSlot {
+  /** SVG angle: 0 points right, -90 points up. */
+  angle: number;
+  orbit: "inner" | "outer";
+  side: LabelSide;
+}
+
+/**
+ * Rank-based slots: the second-strongest topic takes the first, each further topic the
+ * next. Angles are hand-chosen and label sides alternate because a plain even spread
+ * around the ring stacks labels on top of each other at the top of the plate.
+ */
+const SATELLITE_SLOTS: readonly SatelliteSlot[] = [
+  { angle: -50, orbit: "outer", side: "right" },
+  { angle: 145, orbit: "outer", side: "left" },
+  { angle: -90, orbit: "outer", side: "above" },
+  { angle: -160, orbit: "outer", side: "left" },
+  { angle: 15, orbit: "inner", side: "right" },
+  { angle: 38, orbit: "outer", side: "right" },
+  { angle: 165, orbit: "inner", side: "left" },
+  { angle: -125, orbit: "outer", side: "left" },
+  { angle: -30, orbit: "inner", side: "right" },
+];
+
+const round1 = (value: number) => Math.round(value * 10) / 10;
+
+/** Split a category name into at most two lines, balanced at a word boundary. */
+function wrapLabel(label: string, budget: number): string[] {
+  if (label.length <= budget) return [label];
+  const words = label.split(" ");
+  if (words.length < 2) return [label];
+  let split = 1;
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < words.length; index++) {
+    const head = words.slice(0, index).join(" ").length;
+    const tail = words.slice(index).join(" ").length;
+    const score = Math.max(head, tail) + Math.abs(head - tail) / 4;
+    if (score < best) {
+      best = score;
+      split = index;
+    }
+  }
+  return [words.slice(0, split).join(" "), words.slice(split).join(" ")];
+}
+
+interface PlacedTopic {
+  id: string;
+  label: string;
+  count: number;
+  share: number;
+  color: string;
+  x: number;
+  y: number;
+  radius: number;
+  /** Share of the strongest satellite (0–1): the one scale size and ribbon width need. */
+  weight: number;
+  ribbon: string;
+  lines: string[];
+  labelX: number;
+  labelY: number;
+  anchor: "start" | "middle" | "end";
+}
+
+/** Deterministic constellation: rank decides the slot, the archive decides size and path. */
+function placeTopics(profile: PracticeProfile, locale: StatsLocale): PlacedTopic[] {
+  const focus = profile.focus;
+  if (!focus) return [];
+  const rtl = locale === "ar";
+  const others = profile.domains.slice(1, 1 + MAX_SATELLITES);
+  const strongest = Math.max(1, ...others.map((slice) => slice.count));
+  return others.map((slice, index) => {
+    const slot = SATELLITE_SLOTS[index % SATELLITE_SLOTS.length]!;
+    const orbit = slot.orbit === "outer" ? OUTER_ORBIT : INNER_ORBIT;
+    const angle = slot.angle * DEG;
+    const x = PLATE_X + Math.cos(angle) * orbit.rx;
+    const y = PLATE_Y + Math.sin(angle) * orbit.ry;
+    const weight = Math.min(1, slice.count / strongest);
+    const radius = 7 + 9 * Math.sqrt(weight);
+    const label = categoryLabel(locale, "domain", slice.id);
+    const lines = wrapLabel(label, slot.side === "above" ? 12 : 10);
+    const labelY =
+      slot.side === "above"
+        ? y - radius - (lines.length > 1 ? 20 : 8)
+        : y - (lines.length > 1 ? 6 : 3.5);
+    const labelX =
+      slot.side === "above" ? x : slot.side === "right" ? x + radius + 6 : x - radius - 6;
+    const anchor: PlacedTopic["anchor"] =
+      slot.side === "above"
+        ? "middle"
+        : rtl
+          ? slot.side === "right"
+            ? "end"
+            : "start"
+          : slot.side === "right"
+            ? "start"
+            : "end";
+    const dx = x - PLATE_X;
+    const dy = y - PLATE_Y;
+    const distance = Math.hypot(dx, dy) || 1;
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const startX = PLATE_X + ux * (FOCUS_R + 6);
+    const startY = PLATE_Y + uy * (FOCUS_R + 6);
+    const endX = x - ux * (radius + 2);
+    const endY = y - uy * (radius + 2);
+    const bend = (index % 2 === 0 ? 1 : -1) * distance * 0.22;
+    const controlX = (startX + endX) / 2 - uy * bend;
+    const controlY = (startY + endY) / 2 + ux * bend;
+    const ribbon = [
+      "M",
+      round1(startX),
+      round1(startY),
+      "Q",
+      round1(controlX),
+      round1(controlY),
+      round1(endX),
+      round1(endY),
+    ].join(" ");
+    return {
+      id: slice.id,
+      label,
+      count: slice.count,
+      share: slice.share,
+      color: colorOf("domain", slice.id),
+      x,
+      y,
+      radius,
+      weight,
+      ribbon,
+      lines,
+      labelX,
+      labelY,
+      anchor,
+    };
+  });
+}
+
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(REDUCED_MOTION);
+  if (typeof query.addEventListener !== "function") return () => {};
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(REDUCED_MOTION).matches
+  );
+}
+
+/** One media-query read, no polling: a reduced-motion device gets a still plate. */
+function useReducedMotion(): boolean {
+  return useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false);
+}
+
 export function PracticeLandscape({
   profile,
+  trail,
+  selectedDomain = null,
   fmt,
   t,
   locale,
   onOpenDomain,
 }: {
   profile: PracticeProfile;
+  /** One count per day of practice, oldest first — the outer trail orbit. */
+  trail: number[];
+  selectedDomain?: string | null;
   fmt: Fmt;
   t: ReturnType<typeof statsT>;
-  locale: "en" | "ar" | "de";
+  locale: StatsLocale;
   onOpenDomain: (domain: string) => void;
 }) {
-  const strongest = Math.max(1, ...profile.domains.map((domain) => domain.count));
+  const reducedMotion = useReducedMotion();
+  const [drawn, setDrawn] = useState(false);
+  // A single post-paint flip drives the mounting transition; there is no animation loop.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-shot mount transition, not a state sync
+    setDrawn(true);
+  }, []);
+  const revealed = drawn || reducedMotion;
+  const rtl = locale === "ar";
+  const dotsId = "practice-dots-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const topics = useMemo(() => placeTopics(profile, locale), [profile, locale]);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const emphasis = hovered ?? focusedId ?? selectedDomain;
+  const focus = profile.focus;
+  const focusLabel = focus ? categoryLabel(locale, "domain", focus.id) : "";
+  const focusColor = focus ? colorOf("domain", focus.id) : "var(--faint)";
+  const focusLines = focus ? wrapLabel(focusLabel, 18) : [];
+  const trailMax = Math.max(1, ...trail);
+  const summary = focus
+    ? t("mapSummary", {
+        focus: focusLabel,
+        share: fmt.pct(focus.share),
+        domains: fmt.num(profile.activeDomains),
+        active: fmt.num(profile.activeDays),
+        possible: fmt.num(profile.possibleDays),
+      })
+    : t("mapSummaryEmpty");
+
+  /** Mount-only transition: nodes grow from their own centre, staggered by rank. */
+  const mountStyle = (x: number, y: number, delay: number): CSSProperties =>
+    reducedMotion
+      ? {}
+      : {
+          opacity: revealed ? 1 : 0,
+          transform: revealed
+            ? "translate(0px, 0px) scale(1)"
+            : "translate(" +
+              x +
+              "px, " +
+              y +
+              "px) scale(0.35) translate(" +
+              -x +
+              "px, " +
+              -y +
+              "px)",
+          transition:
+            "opacity 420ms var(--ease-out) " +
+            delay +
+            "ms, transform 520ms var(--ease-out) " +
+            delay +
+            "ms",
+        };
+
+  const countWords = (count: number) =>
+    count === 1 ? t("countOne") : t("count", { n: fmt.num(count) });
+
   return (
     <div>
       <p className="mb-5 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
         {t("landscapeSub")}
       </p>
-      <div className="grid gap-2 sm:grid-cols-4">
-        <ProfileMetric
-          label={t("landscapeFocus")}
-          value={profile.focus ? categoryLabel(locale, "domain", profile.focus.id) : "—"}
-          detail={profile.focus ? fmt.pct(profile.focus.share) : "—"}
-        />
-        <ProfileMetric
-          label={t("landscapeVariety")}
-          value={fmt.num(profile.activeDomains)}
-          detail={t("domainsTitle")}
-        />
-        <ProfileMetric
-          label={t("landscapeRhythm")}
-          value={`${fmt.num(profile.activeDays)} / ${fmt.num(profile.possibleDays)}`}
-          detail={t("daysN", { n: fmt.num(profile.activeDays) })}
-        />
-        <ProfileMetric
-          label={t("landscapeReturn")}
-          value={fmt.num(profile.revisitedPhrases)}
-          detail={profile.repeatUses ? `+${fmt.num(profile.repeatUses)}` : "—"}
-        />
-      </div>
-      {profile.domains.length ? (
-        <div
-          className="mt-5 flex flex-wrap items-end gap-2.5"
-          aria-label={profile.domains
-            .map(
-              (domain) => `${categoryLabel(locale, "domain", domain.id)} ${fmt.num(domain.count)}`,
-            )
-            .join(", ")}
-        >
-          {profile.domains.slice(0, 10).map((domain) => {
-            const color = colorOf("domain", domain.id);
-            const weight = domain.count / strongest;
-            return (
-              <button
-                key={domain.id}
-                type="button"
-                onClick={() => onOpenDomain(domain.id)}
-                className="press-soft flex max-w-full items-center gap-2 rounded-2xl border text-start motion-safe:transition-colors motion-safe:duration-300"
+      <div className="grid gap-6 lg:grid-cols-[3fr_2fr] lg:items-center lg:gap-4">
+        <div className={focus ? "min-w-0" : "min-w-0 lg:col-span-2"}>
+          <div className="mx-auto w-full max-w-[520px]">
+            <svg
+              viewBox={"0 0 " + PLATE_W + " " + PLATE_H}
+              className="w-full overflow-visible"
+              role="group"
+              aria-label={summary}
+            >
+              <defs>
+                <pattern id={dotsId} width="9" height="9" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="0.7" fill="var(--border)" />
+                </pattern>
+              </defs>
+              <rect
+                width={PLATE_W}
+                height={PLATE_H}
+                fill={"url(#" + dotsId + ")"}
+                opacity="0.55"
+                aria-hidden="true"
+              />
+              <g
+                aria-hidden="true"
+                fill="none"
                 style={{
-                  minHeight: `${48 + weight * 14}px`,
-                  paddingInline: `${12 + weight * 6}px`,
-                  borderColor: `color-mix(in oklab, ${color} 52%, var(--border))`,
-                  backgroundColor: "var(--surface)",
-                  background: `color-mix(in oklab, ${color} 15%, var(--surface))`,
+                  opacity: revealed ? 1 : 0,
+                  transition: reducedMotion ? "none" : "opacity 900ms var(--ease-out)",
                 }}
-                aria-label={`${categoryLabel(locale, "domain", domain.id)}: ${fmt.num(domain.count)}`}
               >
-                <span className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
-                <span className="max-w-40 truncate text-[12.5px] font-medium">
-                  {categoryLabel(locale, "domain", domain.id)}
-                </span>
-                <span className="text-[11px] tabular-nums text-muted-foreground">
-                  {fmt.pct(domain.share)}
-                </span>
-              </button>
-            );
-          })}
+                <ellipse
+                  cx={PLATE_X}
+                  cy={PLATE_Y}
+                  rx={OUTER_ORBIT.rx}
+                  ry={OUTER_ORBIT.ry}
+                  stroke="var(--border)"
+                />
+                <ellipse
+                  cx={PLATE_X}
+                  cy={PLATE_Y}
+                  rx={INNER_ORBIT.rx}
+                  ry={INNER_ORBIT.ry}
+                  stroke="var(--faint)"
+                  strokeDasharray="1 7"
+                  opacity="0.65"
+                />
+                <ellipse
+                  cx={TRAIL_ORBIT.x}
+                  cy={TRAIL_ORBIT.y}
+                  rx={TRAIL_ORBIT.rx}
+                  ry={TRAIL_ORBIT.ry}
+                  stroke="var(--border)"
+                  strokeDasharray="2 10"
+                  opacity="0.45"
+                />
+              </g>
+              <g aria-hidden="true">
+                {trail.map((count, index) => {
+                  const angle = -Math.PI / 2 + (index / Math.max(1, trail.length)) * Math.PI * 2;
+                  const x = TRAIL_ORBIT.x + Math.cos(angle) * TRAIL_ORBIT.rx;
+                  const y = TRAIL_ORBIT.y + Math.sin(angle) * TRAIL_ORBIT.ry;
+                  const intensity = count / trailMax;
+                  const latest = index === trail.length - 1;
+                  const style: CSSProperties = reducedMotion
+                    ? {}
+                    : {
+                        opacity: revealed ? (count ? 1 : 0.8) : 0,
+                        transition: "opacity 520ms var(--ease-out) " + (260 + index * 9) + "ms",
+                      };
+                  if (!count)
+                    return (
+                      <circle
+                        key={index}
+                        data-testid="trail-day"
+                        cx={x}
+                        cy={y}
+                        r={2.1}
+                        fill="none"
+                        stroke="var(--border)"
+                        strokeWidth="1"
+                        style={style}
+                      />
+                    );
+                  return (
+                    <circle
+                      key={index}
+                      data-testid="trail-day"
+                      cx={x}
+                      cy={y}
+                      r={1.5 + 2.4 * Math.sqrt(intensity)}
+                      fill={latest ? "var(--signal)" : "var(--muted-foreground)"}
+                      opacity={0.4 + 0.5 * intensity}
+                      style={style}
+                    />
+                  );
+                })}
+              </g>
+              <g aria-hidden="true">
+                {topics.map((topic, index) => {
+                  const active = emphasis === topic.id;
+                  const dimmed = emphasis !== null && !active;
+                  return (
+                    <path
+                      key={"ribbon-" + topic.id}
+                      d={topic.ribbon}
+                      fill="none"
+                      stroke={topic.color}
+                      strokeWidth={(1.3 + 4.6 * topic.weight) * (active ? 1.5 : 1)}
+                      strokeLinecap="round"
+                      pathLength={1}
+                      strokeDasharray="1 1"
+                      strokeDashoffset={revealed ? 0 : 1}
+                      opacity={dimmed ? 0.05 : active ? 0.75 : 0.18 + 0.3 * topic.weight}
+                      style={{
+                        transition: reducedMotion
+                          ? "none"
+                          : "opacity 240ms var(--ease-soft), stroke-width 240ms var(--ease-soft), stroke-dashoffset 760ms var(--ease-out) " +
+                            (120 + index * 45) +
+                            "ms",
+                      }}
+                    />
+                  );
+                })}
+              </g>
+              <g>
+                {topics.map((topic, index) => {
+                  const dimmed = emphasis !== null && emphasis !== topic.id;
+                  const selected = selectedDomain === topic.id;
+                  const focusedHere = focusedId === topic.id;
+                  return (
+                    <g
+                      key={topic.id}
+                      role="button"
+                      tabIndex={0}
+                      data-testid="map-topic"
+                      aria-label={t("mapNode", {
+                        label: topic.label,
+                        count: countWords(topic.count),
+                        pct: fmt.pct(topic.share),
+                      })}
+                      aria-pressed={selected}
+                      onClick={() => onOpenDomain(topic.id)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        onOpenDomain(topic.id);
+                      }}
+                      onMouseEnter={() => setHovered(topic.id)}
+                      onMouseLeave={() => setHovered(null)}
+                      onFocus={() => setFocusedId(topic.id)}
+                      onBlur={() => setFocusedId(null)}
+                      style={{
+                        cursor: "pointer",
+                        opacity: dimmed ? 0.42 : 1,
+                        transition: reducedMotion ? "none" : "opacity 240ms var(--ease-soft)",
+                      }}
+                    >
+                      <g style={mountStyle(topic.x, topic.y, 200 + index * 45)}>
+                        <circle cx={topic.x} cy={topic.y} r={topic.radius + 9} fill="transparent" />
+                        <circle
+                          cx={topic.x}
+                          cy={topic.y}
+                          r={topic.radius}
+                          fill={topic.color}
+                          opacity="0.92"
+                        />
+                        <circle
+                          cx={topic.x}
+                          cy={topic.y}
+                          r={topic.radius + 4.5}
+                          fill="none"
+                          stroke={topic.color}
+                          strokeWidth="1"
+                          opacity="0.35"
+                        />
+                        {selected ? (
+                          <circle
+                            cx={topic.x}
+                            cy={topic.y}
+                            r={topic.radius + 8}
+                            fill="none"
+                            stroke={topic.color}
+                            strokeWidth="1.4"
+                          />
+                        ) : null}
+                        {focusedHere ? (
+                          <circle
+                            cx={topic.x}
+                            cy={topic.y}
+                            r={topic.radius + 8}
+                            fill="none"
+                            stroke="var(--ring)"
+                            strokeWidth="2"
+                          />
+                        ) : null}
+                        <text
+                          x={topic.labelX}
+                          y={topic.labelY}
+                          textAnchor={topic.anchor}
+                          fill="var(--foreground)"
+                          style={{ direction: rtl ? "rtl" : "ltr", fontSize: 10, fontWeight: 500 }}
+                        >
+                          {topic.lines[0]}
+                          {topic.lines.slice(1).map((line, lineIndex) => (
+                            <tspan key={lineIndex} x={topic.labelX} dy={13}>
+                              {line}
+                            </tspan>
+                          ))}
+                          <tspan
+                            fill="var(--muted-foreground)"
+                            style={{ fontSize: 9.2, fontVariantNumeric: "tabular-nums" }}
+                          >
+                            {" "}
+                            {fmt.pct(topic.share)}
+                          </tspan>
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })}
+                {focus ? (
+                  <g
+                    role="button"
+                    tabIndex={0}
+                    data-testid="map-focus"
+                    aria-label={t("mapNode", {
+                      label: focusLabel,
+                      count: countWords(focus.count),
+                      pct: fmt.pct(focus.share),
+                    })}
+                    aria-pressed={selectedDomain === focus.id}
+                    onClick={() => onOpenDomain(focus.id)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      onOpenDomain(focus.id);
+                    }}
+                    onMouseEnter={() => setHovered(focus.id)}
+                    onMouseLeave={() => setHovered(null)}
+                    onFocus={() => setFocusedId(focus.id)}
+                    onBlur={() => setFocusedId(null)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <g style={mountStyle(PLATE_X, PLATE_Y, 80)}>
+                      <circle cx={PLATE_X} cy={PLATE_Y} r={FOCUS_R + 12} fill="transparent" />
+                      <circle
+                        cx={PLATE_X}
+                        cy={PLATE_Y}
+                        r={FOCUS_R + 10}
+                        fill="none"
+                        stroke="var(--border)"
+                      />
+                      <circle cx={PLATE_X} cy={PLATE_Y} r={FOCUS_R} fill={focusColor} />
+                      <circle
+                        cx={PLATE_X}
+                        cy={PLATE_Y}
+                        r={FOCUS_R - 6}
+                        fill="none"
+                        stroke="var(--background)"
+                        strokeWidth="1"
+                        opacity="0.28"
+                      />
+                      {selectedDomain === focus.id ? (
+                        <circle
+                          cx={PLATE_X}
+                          cy={PLATE_Y}
+                          r={FOCUS_R + 13}
+                          fill="none"
+                          stroke={focusColor}
+                          strokeWidth="1.4"
+                        />
+                      ) : null}
+                      {focusedId === focus.id ? (
+                        <circle
+                          cx={PLATE_X}
+                          cy={PLATE_Y}
+                          r={FOCUS_R + 13}
+                          fill="none"
+                          stroke="var(--ring)"
+                          strokeWidth="2"
+                        />
+                      ) : null}
+                      <text
+                        x={PLATE_X}
+                        y={PLATE_Y + FOCUS_R + 18}
+                        textAnchor="middle"
+                        fill="var(--foreground)"
+                        style={{
+                          direction: rtl ? "rtl" : "ltr",
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {focusLines[0]}
+                        {focusLines.slice(1).map((line, lineIndex) => (
+                          <tspan key={lineIndex} x={PLATE_X} dy={13}>
+                            {line}
+                          </tspan>
+                        ))}
+                      </text>
+                      <text
+                        x={PLATE_X}
+                        y={PLATE_Y + FOCUS_R + 18 + (focusLines.length - 1) * 13 + 14}
+                        textAnchor="middle"
+                        fill="var(--muted-foreground)"
+                        style={{ fontSize: 10.5, fontVariantNumeric: "tabular-nums" }}
+                      >
+                        {fmt.pct(focus.share)}
+                      </text>
+                    </g>
+                  </g>
+                ) : (
+                  <g aria-hidden="true" style={mountStyle(PLATE_X, PLATE_Y, 120)}>
+                    <circle
+                      cx={PLATE_X}
+                      cy={PLATE_Y}
+                      r={FOCUS_R}
+                      fill="none"
+                      stroke="var(--border)"
+                    />
+                    <circle
+                      cx={PLATE_X}
+                      cy={PLATE_Y}
+                      r={FOCUS_R + 11}
+                      fill="none"
+                      stroke="var(--border)"
+                      strokeDasharray="1 6"
+                    />
+                    <circle cx={PLATE_X} cy={PLATE_Y} r={3.5} fill="var(--faint)" />
+                  </g>
+                )}
+              </g>
+            </svg>
+          </div>
+          {trail.length ? (
+            <p className="mt-2 text-center text-[11px] tabular-nums text-faint">
+              {t("mapTrail", { n: fmt.num(trail.length) })}
+            </p>
+          ) : null}
+          {focus ? null : (
+            <p className="mx-auto mt-1 max-w-md text-center text-[12.5px] leading-relaxed text-muted-foreground">
+              {t("landscapeNoTopic")}
+            </p>
+          )}
         </div>
-      ) : (
-        <p className="mt-5 text-[12.5px] leading-relaxed text-faint">{t("landscapeNoTopic")}</p>
-      )}
+        {focus ? <PracticeReadout profile={profile} locale={locale} fmt={fmt} t={t} /> : null}
+      </div>
+      {focus ? (
+        <p className="mt-4 max-w-2xl text-[11.5px] leading-relaxed text-faint">
+          {t("mapLegend")}
+          {profile.domains.length > MAX_SATELLITES + 1 ? (
+            <span className="ms-2">
+              {t("mapMore", { n: fmt.num(profile.domains.length - MAX_SATELLITES - 1) })}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function ProfileMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+/** The picture restated as numbers: four hairlines, icon, label, large tabular value. */
+function PracticeReadout({
+  profile,
+  locale,
+  fmt,
+  t,
+}: {
+  profile: PracticeProfile;
+  locale: StatsLocale;
+  fmt: Fmt;
+  t: ReturnType<typeof statsT>;
+}) {
+  const share = profile.possibleDays > 0 ? profile.activeDays / profile.possibleDays : 0;
+  const rows: {
+    id: string;
+    icon: LucideIcon;
+    label: string;
+    value: string;
+    detail: string;
+    long: boolean;
+  }[] = [
+    {
+      id: "focus",
+      icon: Compass,
+      label: t("landscapeFocus"),
+      value: profile.focus ? categoryLabel(locale, "domain", profile.focus.id) : "—",
+      detail: profile.focus ? fmt.pct(profile.focus.share) : "—",
+      long: true,
+    },
+    {
+      id: "variety",
+      icon: Shapes,
+      label: t("landscapeVariety"),
+      value: fmt.num(profile.activeDomains),
+      detail: t("domainsTitle"),
+      long: false,
+    },
+    {
+      id: "rhythm",
+      icon: CalendarDays,
+      label: t("landscapeRhythm"),
+      value: fmt.num(profile.activeDays) + " / " + fmt.num(profile.possibleDays),
+      detail: fmt.pct(share),
+      long: false,
+    },
+    {
+      id: "return",
+      icon: Repeat2,
+      label: t("landscapeReturn"),
+      value: fmt.num(profile.revisitedPhrases),
+      detail: profile.repeatUses ? t("mapRepeatUses", { n: fmt.num(profile.repeatUses) }) : "—",
+      long: false,
+    },
+  ];
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-surface px-3 py-3">
-      <p className="truncate text-[11.5px] text-muted-foreground">{label}</p>
-      <p className="mt-2 truncate text-[16px] font-semibold leading-tight tabular-nums">{value}</p>
-      <p className="mt-1 truncate text-[11px] text-faint">{detail}</p>
-    </div>
+    <dl className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-4 lg:grid-cols-1 lg:gap-0 lg:border-s lg:border-border lg:ps-6">
+      {rows.map(({ id, icon: Icon, label, value, detail, long }) => (
+        <div
+          key={id}
+          className="flex min-w-0 flex-col gap-1 border-t border-border pt-3 lg:flex-row lg:items-baseline lg:justify-between lg:gap-5 lg:py-3.5"
+        >
+          <dt className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted-foreground">
+            <Icon className="size-3.5 shrink-0" strokeWidth={1.7} />
+            <span className="truncate">{label}</span>
+          </dt>
+          <dd className="m-0 flex min-w-0 flex-col lg:items-end">
+            <span
+              className={
+                long
+                  ? "text-[16.5px] font-semibold leading-snug"
+                  : "text-[25px] font-semibold leading-none tabular-nums"
+              }
+            >
+              {value}
+            </span>
+            <span className="mt-0.5 text-[11px] tabular-nums text-faint">{detail}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

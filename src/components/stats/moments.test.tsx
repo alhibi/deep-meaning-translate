@@ -6,10 +6,11 @@ import {
   languageFlow,
   milestones,
   practiceProfile,
+  practiceTrail,
   rhythm,
   streaks,
 } from "@/lib/stats/moments";
-import { statsT } from "@/lib/stats/labels";
+import { categoryLabel, statsT } from "@/lib/stats/labels";
 import {
   LanguageFlowMap,
   MilestonesBlock,
@@ -148,25 +149,139 @@ describe("statistics blocks use the archive they are given", () => {
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(first.pair);
   });
 
-  it("renders the topic landscape as an actionable, factual map", () => {
+  it("renders the practice map as a factual, actionable plate", () => {
+    const bounds = { from: "2026-10-01", to: "2026-11-12", days: 43 };
+    const profile = practiceProfile(records, bounds);
+    const trail = practiceTrail(records, bounds);
+    const focus = profile.focus!;
+    const focusLabel = categoryLabel("en", "domain", focus.id);
+    const focusName = t("mapNode", {
+      label: focusLabel,
+      count: focus.count === 1 ? t("countOne") : t("count", { n: fmt.num(focus.count) }),
+      pct: fmt.pct(focus.share),
+    });
     const onOpenDomain = vi.fn();
-    const profile = practiceProfile(records, { from: "2026-10-01", to: "2026-11-12", days: 43 });
     render(
       <PracticeLandscape
         profile={profile}
+        trail={trail}
         fmt={fmt}
         t={t}
         locale="en"
         onOpenDomain={onOpenDomain}
       />,
     );
-    expect(screen.getByText(t("landscapeFocus"))).toBeTruthy();
-    const focus = profile.focus!;
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `Daily life in Germany: ${fmt.num(focus.count)}`,
+
+    // One mark per day of the 42-day trail window, and a summary a screen reader can read.
+    expect(trail).toHaveLength(42);
+    expect(screen.getAllByTestId("trail-day")).toHaveLength(trail.length);
+    expect(
+      screen.getByRole("group", {
+        name: t("mapSummary", {
+          focus: focusLabel,
+          share: fmt.pct(focus.share),
+          domains: fmt.num(profile.activeDomains),
+          active: fmt.num(profile.activeDays),
+          possible: fmt.num(profile.possibleDays),
+        }),
       }),
-    );
+    ).toBeTruthy();
+
+    // The readout restates the same measures as real text, not just as a picture.
+    expect(screen.getByText(t("landscapeFocus"))).toBeTruthy();
+    expect(screen.getByText(t("landscapeVariety"))).toBeTruthy();
+    expect(screen.getByText(t("landscapeRhythm"))).toBeTruthy();
+    expect(screen.getByText(t("landscapeReturn"))).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: focusName }));
     expect(onOpenDomain).toHaveBeenCalledExactlyOnceWith(focus.id);
+  });
+
+  it("opens a satellite topic and marks the selected domain as pressed", () => {
+    const bounds = { from: "2026-10-01", to: "2026-11-12", days: 43 };
+    const profile = practiceProfile(records, bounds);
+    const trail = practiceTrail(records, bounds);
+    const satellite = profile.domains[1]!;
+    const satelliteName = t("mapNode", {
+      label: categoryLabel("en", "domain", satellite.id),
+      count: satellite.count === 1 ? t("countOne") : t("count", { n: fmt.num(satellite.count) }),
+      pct: fmt.pct(satellite.share),
+    });
+    const onOpenDomain = vi.fn();
+    render(
+      <PracticeLandscape
+        profile={profile}
+        trail={trail}
+        selectedDomain={satellite.id}
+        fmt={fmt}
+        t={t}
+        locale="en"
+        onOpenDomain={onOpenDomain}
+      />,
+    );
+
+    const node = screen.getByRole("button", { name: satelliteName });
+    expect(node.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("map-focus").getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(node);
+    fireEvent.keyDown(node, { key: "Enter" });
+    expect(onOpenDomain).toHaveBeenCalledTimes(2);
+    expect(onOpenDomain).toHaveBeenNthCalledWith(1, satellite.id);
+    expect(onOpenDomain).toHaveBeenNthCalledWith(2, satellite.id);
+  });
+
+  it("keeps a composed plate and a calm sentence when no topic is classified", () => {
+    const empty = {
+      domains: [],
+      focus: null,
+      activeDomains: 0,
+      activeDays: 3,
+      possibleDays: 30,
+      revisitedPhrases: 2,
+      repeatUses: 4,
+    };
+    render(
+      <PracticeLandscape
+        profile={empty}
+        trail={[1, 0, 2, 0]}
+        fmt={fmt}
+        t={t}
+        locale="en"
+        onOpenDomain={() => {}}
+      />,
+    );
+    expect(screen.getByText(t("landscapeNoTopic"))).toBeTruthy();
+    expect(screen.getAllByTestId("trail-day")).toHaveLength(4);
+    expect(screen.queryAllByTestId("map-topic")).toHaveLength(0);
+    expect(screen.queryByTestId("map-focus")).toBeNull();
+    expect(screen.queryByText(t("landscapeFocus"))).toBeNull();
+  });
+
+  it("renders the same map with reduced motion without crashing", () => {
+    const bounds = { from: "2026-10-01", to: "2026-11-12", days: 43 };
+    const profile = practiceProfile(records, bounds);
+    const trail = practiceTrail(records, bounds);
+    vi.stubGlobal("matchMedia", () => ({
+      matches: true,
+      media: "(prefers-reduced-motion: reduce)",
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      render(
+        <PracticeLandscape
+          profile={profile}
+          trail={trail}
+          fmt={fmt}
+          t={t}
+          locale="en"
+          onOpenDomain={() => {}}
+        />,
+      );
+      expect(screen.getAllByTestId("trail-day")).toHaveLength(trail.length);
+      expect(screen.getByTestId("map-focus")).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

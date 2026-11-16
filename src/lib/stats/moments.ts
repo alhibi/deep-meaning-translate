@@ -1,4 +1,11 @@
-import { addDays, distribution, type Bounds, type Slice, type StatRecord } from "./engine";
+import {
+  addDays,
+  daysBetween,
+  distribution,
+  type Bounds,
+  type Slice,
+  type StatRecord,
+} from "./engine";
 
 /**
  * The second layer of Translation Statistics: shape over time rather than totals.
@@ -116,6 +123,26 @@ export function practiceProfile(records: StatRecord[], bounds: Bounds | null): P
     revisitedPhrases,
     repeatUses,
   };
+}
+
+/**
+ * The newest "limit" calendar days of the period as one number per day, oldest first.
+ * Zero days are kept: a gap in practice is part of the picture, not something to hide.
+ * The trail never leaves the period, so a filtered or short range cannot invent days.
+ */
+export function practiceTrail(records: StatRecord[], bounds: Bounds | null, limit = 42): number[] {
+  if (!bounds || limit < 1) return [];
+  const span = daysBetween(bounds.from, bounds.to) + 1;
+  const days = Math.min(limit, bounds.days, span);
+  if (days < 1) return [];
+  const from = addDays(bounds.to, -(days - 1));
+  const trail = Array.from({ length: days }, () => 0);
+  for (const record of records) {
+    if (record.day < from || record.day > bounds.to) continue;
+    const index = daysBetween(from, record.day);
+    if (index >= 0 && index < days) trail[index] = (trail[index] ?? 0) + 1;
+  }
+  return trail;
 }
 
 /* ------------------------------------------------------------------ streaks */
