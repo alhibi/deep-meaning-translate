@@ -59,8 +59,11 @@ to a compact strip. The canvas never shrinks below its content: long text scroll
 and a capped composer scrolls inside its own stage rather than opening an empty band. When a short
 answer leaves room in the result, the action row settles at its foot, so the translation reads as a
 composed page instead of a paragraph floating above dead space. The stage mapping is covered by
-`stage.test.ts`; the split itself is CSS, not a measured height. Secondary
-pages use a readable single column. Sheets are overlays, not routes. Radii, hairlines and shadows
+`stage.test.ts`; the split itself is CSS, not a measured height. Nothing in the canvas measures its
+children or animates an inline height: a measured grow box fed its own stretched content back
+through `ResizeObserver` and clipped the panel (2,300 callbacks while typing), so the geometry is
+one flex tree, and `tests/e2e/field_layout.py` asserts that it holds still and never overlaps.
+Secondary pages use a readable single column. Sheets are overlays, not routes. Radii, hairlines and shadows
 stay restrained; depth comes from surface contrast and spacing rather than heavy elevation.
 
 ## Component inventory (verified)

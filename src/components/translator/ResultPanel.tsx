@@ -13,7 +13,6 @@ import { PACE_RATE, getVoicePrefs, useVoicePrefs } from "@/lib/voice/prefs";
 import { VoiceSheet } from "./VoiceSheet";
 import { warmVoice } from "@/lib/voice/cloud";
 import { StreamingText } from "./StreamingText";
-import { GrowBox } from "./GrowBox";
 import { SpokenText } from "./SpokenText";
 import { estimateChar, tokenAt, tokenize } from "./streamingTokens";
 import { ELEVEN_VOICES } from "@/lib/voice/elevenVoice";
@@ -565,8 +564,8 @@ export const ResultPanel = memo(function ResultPanel({
   }
 
   return (
-    <div className="result-panel relative" aria-busy={pending}>
-      <GrowBox className="relative flex min-h-full flex-col px-5 pb-5 pt-5">{body}</GrowBox>
+    <div className="result-panel relative px-5 pb-5 pt-5" aria-busy={pending}>
+      {body}
       <span className="sr-only" aria-live="polite">
         {announce}
       </span>

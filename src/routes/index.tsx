@@ -374,16 +374,26 @@ function Translator() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    // visualViewport fires on every scroll frame on a phone. Writing --vvh or state for a
+    // value that did not change re-lays out the whole canvas on each frame, so both writes
+    // are gated on a real change.
+    let lastHeight = -1;
     const apply = () => {
-      document.documentElement.style.setProperty("--vvh", `${vv.height}px`);
-      const open = vv.height < window.innerHeight - 150;
-      if (open && !kbOpen.current)
+      const height = Math.round(vv.height);
+      if (height !== lastHeight) {
+        lastHeight = height;
+        document.documentElement.style.setProperty("--vvh", `${height}px`);
+      }
+      const open = height < window.innerHeight - 150;
+      if (open === kbOpen.current) return;
+      const wasOpen = kbOpen.current;
+      kbOpen.current = open;
+      setKbUp(open);
+      if (open && !wasOpen)
         requestAnimationFrame(() => {
           const el = scrollRef.current;
           if (el) el.scrollTop = el.scrollHeight;
         });
-      kbOpen.current = open;
-      setKbUp(open);
     };
     apply();
     vv.addEventListener("resize", apply);

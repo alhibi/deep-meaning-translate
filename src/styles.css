@@ -1470,9 +1470,6 @@ html.vivid {
   flex-direction: column;
   min-height: 0;
 }
-.canvas-shell .result-panel > .grow-box {
-  flex: 1 1 auto;
-}
 
 /* Writing: the sheet is yours. */
 .canvas-shell[data-stage="writing"] {
@@ -1511,42 +1508,7 @@ html.vivid {
   --result-floor: 132px;
 }
 
-/* Translation area grows downward like a breath: springy expand, quick settle, soft leading edge. */
-.grow-box {
-  position: relative;
-  overflow: hidden;
-  transition: height 460ms cubic-bezier(0.34, 1.32, 0.5, 1);
-}
-.grow-box:not(.is-growing) {
-  transition-duration: 260ms;
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-.grow-box::after {
-  content: "";
-  position: absolute;
-  inset-inline: 12%;
-  bottom: 0;
-  height: 1px;
-  background: color-mix(in oklab, var(--signal-text) 55%, transparent);
-  box-shadow: 0 0 14px 2px color-mix(in oklab, var(--signal-text) 35%, transparent);
-  opacity: 0;
-  transform: scaleX(0.4);
-  transition:
-    opacity 420ms ease,
-    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-}
-.grow-box.is-growing::after {
-  opacity: 1;
-  transform: scaleX(1);
-}
 @media (prefers-reduced-motion: reduce) {
-  .grow-box {
-    transition: none;
-  }
-  .grow-box::after {
-    display: none;
-  }
   .canvas-shell .source-stage,
   .canvas-shell .source-stage textarea,
   .canvas-shell .result-stage {
