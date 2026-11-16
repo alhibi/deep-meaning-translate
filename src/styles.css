@@ -1427,6 +1427,90 @@ html.vivid {
   }
 }
 
+/* The canvas is the room the two fields share. It takes the height the screen leaves
+ * below the header — never less than its content, so long text scrolls the workspace
+ * instead of being cut — and divides that height by what is happening right now.
+ *
+ * Floors are in `lh` and `dvh`, never in pixels alone: `lh` follows the line height of
+ * whichever script is in the composer (Arabic is the taller line), `dvh` follows the
+ * device, and the two grow weights share whatever remains. The source floor sits on the
+ * field while its ceiling sits on the whole stage: when the stage is capped the field
+ * scrolls inside itself, so no empty band opens between the composer and its toolbar. */
+.canvas-shell {
+  flex: 1 0 auto;
+  --source-grow: 2;
+  --result-grow: 3;
+  --source-floor: clamp(3lh, 12dvh, 4.5lh);
+  --source-ceiling: min(46dvh, 460px);
+  --result-floor: clamp(200px, 24dvh, 280px);
+}
+.canvas-shell .source-stage {
+  display: flex;
+  flex-direction: column;
+  flex: var(--source-grow) 0 auto;
+  max-height: var(--source-ceiling);
+  transition: max-height 360ms var(--ease-soft);
+}
+.canvas-shell .source-stage textarea {
+  flex: 1 1 auto;
+  min-height: var(--source-floor);
+  max-height: none;
+  transition: min-height 360ms var(--ease-soft);
+}
+.canvas-shell .result-stage {
+  display: flex;
+  flex-direction: column;
+  flex: var(--result-grow) 0 auto;
+  min-height: var(--result-floor);
+  transition: min-height 360ms var(--ease-soft);
+}
+.canvas-shell .result-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.canvas-shell .result-panel > .grow-box {
+  flex: 1 1 auto;
+}
+
+/* Writing: the sheet is yours. */
+.canvas-shell[data-stage="writing"] {
+  --source-grow: 3;
+  --result-grow: 1;
+  --source-floor: clamp(3.5lh, 14dvh, 5.5lh);
+  --source-ceiling: min(52dvh, 520px);
+  --result-floor: clamp(200px, 22dvh, 260px);
+}
+
+/* A live request: the answer is arriving, so it takes the larger share already. */
+.canvas-shell[data-stage="translating"] {
+  --source-grow: 1;
+  --result-grow: 2;
+  --source-floor: clamp(2.8lh, 10dvh, 4lh);
+  --source-ceiling: min(40dvh, 380px);
+  --result-floor: clamp(200px, 26dvh, 320px);
+}
+
+/* Settled: the translation steps forward, the composer keeps a generous reading strip. */
+.canvas-shell[data-stage="settled"] {
+  --source-grow: 1;
+  --result-grow: 4;
+  --source-floor: clamp(3.2lh, 11dvh, 4.2lh);
+  --source-ceiling: min(34dvh, 320px);
+  --result-floor: clamp(220px, 38dvh, 560px);
+}
+
+/* The keyboard takes half the screen: both fields keep a small, honest strip so the
+ * composer and its answer stay in the same view while typing. */
+.canvas-shell[data-keyboard="open"] {
+  --source-grow: 1;
+  --result-grow: 1;
+  --source-floor: 2lh;
+  --source-ceiling: min(24dvh, 200px);
+  --result-floor: 132px;
+}
+
 /* Translation area grows downward like a breath: springy expand, quick settle, soft leading edge. */
 .grow-box {
   position: relative;
@@ -1462,5 +1546,10 @@ html.vivid {
   }
   .grow-box::after {
     display: none;
+  }
+  .canvas-shell .source-stage,
+  .canvas-shell .source-stage textarea,
+  .canvas-shell .result-stage {
+    transition: none;
   }
 }

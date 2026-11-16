@@ -53,6 +53,7 @@ import { LanguageNotice } from "@/components/translator/LanguageNotice";
 import { checkSource } from "@/lib/translation/languageCheck";
 import { styleSuggestion } from "@/lib/translation/suggestion";
 import { resultState } from "@/lib/translation/view";
+import { canvasStage } from "@/lib/translation/stage";
 import { history } from "@/lib/history";
 import { takePendingPick } from "@/lib/stats/useArchive";
 import { statsT } from "@/lib/stats/labels";
@@ -358,6 +359,12 @@ function Translator() {
     [baseResult, applied, text],
   );
   const pending = view.pending;
+  // One decision for the canvas geometry: what the screen is being used for right now.
+  const stage = canvasStage({
+    hasText: text.trim().length > 0,
+    hasResult: !!result,
+    live: pending || provisional,
+  });
 
   // Keyboard-aware layout: --vvh tracks the visible viewport so the canvas
   // lifts above the on-screen keyboard instead of hiding behind it.
@@ -723,8 +730,15 @@ function Translator() {
           />
 
           {/* One canvas: source writing surface, a live seam, then the result. */}
-          <div className="mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface">
-            <section dir={uiRtl ? "rtl" : "ltr"} className="input-shell relative px-5 pb-2 pt-5">
+          <div
+            className="canvas-shell mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface"
+            data-stage={stage}
+            data-keyboard={kbUp ? "open" : undefined}
+          >
+            <section
+              dir={uiRtl ? "rtl" : "ltr"}
+              className="source-stage input-shell relative px-5 pb-2 pt-5"
+            >
               <textarea
                 id="composer"
                 ref={inputRef}
@@ -899,7 +913,7 @@ function Translator() {
             ) : null}
             <div className="live-line mx-5" data-live={pending ? "true" : "false"} />
 
-            <div>
+            <div className="result-stage">
               <SafeArea>
                 <ResultPanel
                   result={result}

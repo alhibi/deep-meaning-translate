@@ -316,7 +316,7 @@ export const ResultPanel = memo(function ResultPanel({
   let body: React.ReactNode;
   if (result) {
     body = (
-      <div key="result" className="animate-reveal">
+      <div key="result" className="animate-reveal flex flex-1 flex-col">
         <div className="result-wrap relative">
           {showShadow && shadow ? (
             <ShadowInk
@@ -404,7 +404,7 @@ export const ResultPanel = memo(function ResultPanel({
         ) : null}
 
         <div
-          className={`-ms-0.5 mt-5 flex items-center transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
+          className={`-ms-0.5 mt-auto flex items-center pt-5 transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
             provisional || pending
               ? "pointer-events-none translate-y-2 opacity-0"
               : "translate-y-0 opacity-100"
@@ -565,8 +565,8 @@ export const ResultPanel = memo(function ResultPanel({
   }
 
   return (
-    <div className="relative" aria-busy={pending}>
-      <GrowBox className="relative min-h-[200px] px-5 pb-5 pt-5">{body}</GrowBox>
+    <div className="result-panel relative" aria-busy={pending}>
+      <GrowBox className="relative flex min-h-full flex-col px-5 pb-5 pt-5">{body}</GrowBox>
       <span className="sr-only" aria-live="polite">
         {announce}
       </span>
