@@ -1,16 +1,40 @@
-# Android Release Report — 1.0.3
+# Android Release Report — 1.0.4
 
-Date: 2026-11-16 · Build: `versionCode 4`, `versionName 1.0.3` · Base commit `c897209` · Final
-commit `c5e70e2` on `main` (local; not pushed).
+Date: 2026-11-16 · Build: `versionCode 5`, `versionName 1.0.4` · Base commit `c897209`.
+
+## 1.0.4 — translation-freeze hotfix (why 1.0.3 was replaced)
+
+The 1.0.3 APK could leave the result area on a skeleton forever — a person typed a short
+German word (or any text whose translation equalled the input) while the target chip said
+**Deutsch**, and no result or error ever appeared. The cause was in the route's re-route
+guard, not in the provider: a **provisional** live result carries `sourceLanguage: "auto"`,
+and the old rule also treated “translation text equals input text” as “the screen is about
+to re-route”. Since the auto-flip effect only fires when a _detected_ source equals the
+target, nothing flipped the target and the skeleton never cleared.
+
+1.0.4 fixes it in two ways:
+
+- `shouldHoldForReroute()` (`src/lib/translation/echo.ts`) holds only a **settled** result
+  whose `sourceLanguage` explicitly equals the target; a provisional result can never freeze
+  the screen. Regression tests cover the exact “Hallo / Deutsch / auto” case.
+- A detected echo (translation normalized-equals the input, ignoring case and trailing
+  punctuation) tries the other half of the Arabic/German pair once, and an echo is never
+  archived as a history row. Further: failures now show a calm line beside a kept result
+  instead of only when the panel is empty, and `AbortSignal.timeout` has a manual
+  fallback for older WebViews.
+
+Verified on the 1.0.4 **release** APK: fresh install → type “Hallo” with default Deutsch
+→ target flips to العربية and shows “مرحبًا”. Arabic→German, full-sentence auto-reroute,
+force-stop restore and the previous device matrix still pass.
 
 ## Deliverables
 
 | Artefact                                | Path                                                                  | Size        | SHA-256                                                            |
 | --------------------------------------- | --------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
-| Debug (installable, current data model) | `artifacts/android-1.0.3/today-1.0.3-debug.apk`                       | 6 550 037 B | `325aa64426024f2ea87909b5948f8d427339df45c9fc765020de886a27852500` |
-| Release review (debug-signed)           | `artifacts/android-1.0.3/today-1.0.3-release-review-debug-signed.apk` | 2 173 437 B | `bc89ac7d95de1a96aeca3d84c44265bc7752ebe6aab2d5bcdd2d06219d359c19` |
-| Checksums                               | `artifacts/android-1.0.3/SHA256SUMS.txt`                              | —           | —                                                                  |
-| Screenshots                             | `artifacts/android-1.0.3/screenshots/`                                | —           | —                                                                  |
+| Debug (installable, current data model) | `artifacts/android-1.0.4/today-1.0.4-debug.apk`                       | 6 434 755 B | `428a2a5aa78cfad477334a3041a5c27d6ed2cd889f5ecb68d9da97e7fd45c839` |
+| Release review (debug-signed)           | `artifacts/android-1.0.4/today-1.0.4-release-review-debug-signed.apk` | 2 177 457 B | `390063556cafc0b45a193e7ebaec35c8fa950bfad9e29bb92c36c63c2a4e1f52` |
+| Checksums                               | `artifacts/android-1.0.4/SHA256SUMS.txt`                              | —           | —                                                                  |
+| Screenshots                             | `artifacts/android-1.0.4/screenshots/`                                | —           | —                                                                  |
 
 The `artifacts/` directory is gitignored (built output), but the files exist on the machine that
 produced this report and are the exact files tested below.
@@ -20,7 +44,7 @@ produced this report and are the exact files tested below.
 | Fact                            | Debug                                                                              | Release review                       |
 | ------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------ |
 | package                         | `today.fluently.app.debug`                                                         | `today.fluently.app`                 |
-| versionCode / versionName       | 4 / 1.0.3-debug                                                                    | 4 / 1.0.3                            |
+| versionCode / versionName       | 5 / 1.0.4-debug                                                                    | 5 / 1.0.4                            |
 | minSdk / targetSdk / compileSdk | 24 / 36 / 36                                                                       | 24 / 36 / 36                         |
 | ABIs                            | arm64-v8a, armeabi-v7a, x86, x86_64                                                | same                                 |
 | permissions                     | INTERNET, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, VIBRATE                             | same                                 |
@@ -35,12 +59,12 @@ included `assets/*` and all `classes*.dex` `strings`.
 ## Verification outputs
 
 ```text
-apksigner verify --verbose --print-certs today-1.0.3-debug.apk
+apksigner verify --verbose --print-certs today-1.0.4-debug.apk
   Verified using v2 scheme (APK Signature Scheme v2): true
   Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
   Signer #1 certificate SHA-256: 02d5b40c0d3d3da6835511cf24d8b8da40cc0b36f22b97bd055b0a529ee5de9a
 
-apksigner verify --verbose --print-certs today-1.0.3-release-review-debug-signed.apk
+apksigner verify --verbose --print-certs today-1.0.4-release-review-debug-signed.apk
   Verified using v2 scheme (APK Signature Scheme v2): true
   Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
   Signer #1 certificate SHA-256: 02d5b40c… (same local debug key)
@@ -80,9 +104,9 @@ certificate is verified. See `docs/android/build-and-release.md`.
 ## How to install (review)
 
 ```bash
-adb install -r artifacts/android-1.0.3/today-1.0.3-debug.apk
+adb install -r artifacts/android-1.0.4/today-1.0.4-debug.apk
 # or the review release (fresh package, cannot coexist with a store install of the same id):
-adb install artifacts/android-1.0.3/today-1.0.3-release-review-debug-signed.apk
+adb install artifacts/android-1.0.4/today-1.0.4-release-review-debug-signed.apk
 ```
 
 On a phone: copy the APK to the device, allow installation from the file manager, then open “today”.

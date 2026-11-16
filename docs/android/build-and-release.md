@@ -44,14 +44,14 @@ executed and is evidence for A5-02/TD18.
 - A real upload build reads only environment variables; the build log prints the keystore path.
 - `-PallowDebugSigning=true` produces an installable review APK signed with the local debug key and
   logs a warning. It is **not publishable** (an upgrade signed with another key would be rejected).
-- This environment has no upload keystore, so the 1.0.3 release artefact is debug-signed.
+- This environment has no upload keystore, so the 1.0.4 release artefact is debug-signed.
 
 ## Outputs (this build, 2026-11-16)
 
 | File                                          | Size        | SHA-256                                                            |
 | --------------------------------------------- | ----------- | ------------------------------------------------------------------ |
-| `today-1.0.3-debug.apk`                       | 6 550 037 B | `325aa64426024f2ea87909b5948f8d427339df45c9fc765020de886a27852500` |
-| `today-1.0.3-release-review-debug-signed.apk` | 2 173 437 B | `bc89ac7d95de1a96aeca3d84c44265bc7752ebe6aab2d5bcdd2d06219d359c19` |
+| `today-1.0.4-debug.apk`                       | 6 434 755 B | `428a2a5aa78cfad477334a3041a5c27d6ed2cd889f5ecb68d9da97e7fd45c839` |
+| `today-1.0.4-release-review-debug-signed.apk` | 2 177 457 B | `390063556cafc0b45a193e7ebaec35c8fa950bfad9e29bb92c36c63c2a4e1f52` |
 
 Both verify with the v2 APK signature scheme. The review release certificate is
 `C=US, O=Android, CN=Android Debug`, SHA-256
@@ -61,8 +61,8 @@ debug certificate (normal for a debug build). Nothing in the packages contains a
 Manifest facts (`aapt2 dump badging` / merged manifest):
 
 ```text
-package: today.fluently.app           versionCode 4  versionName 1.0.3
-package: today.fluently.app.debug     versionCode 4  versionName 1.0.3-debug
+package: today.fluently.app           versionCode 5  versionName 1.0.4
+package: today.fluently.app.debug     versionCode 5  versionName 1.0.4-debug
 minSdk 24 · targetSdk 36 · compileSdk 36
 permissions: INTERNET, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, VIBRATE
 native-code: arm64-v8a, armeabi-v7a, x86, x86_64
@@ -93,7 +93,7 @@ exercised in the debug build; the evidence and limits are in `ANDROID_TEST_EVIDE
 Installable builds are attached to the repository's GitHub releases:
 **[latest Android release](https://github.com/alhibi/deep-meaning-translate/releases/latest)**.
 Each release carries both APKs and their SHA-256 checksums (also in
-`artifacts/android-1.0.3/SHA256SUMS.txt` in the build workspace).
+`artifacts/android-1.0.4/SHA256SUMS.txt` in the build workspace).
 
 The review release APK is installable on a device with “unknown sources”. It is **not** a Play
 Store or upgrade-safe production artefact: before distributing, create an upload keystore outside

@@ -11,6 +11,22 @@ export class NativeTransportError extends Error {
 }
 
 /**
+ * AbortSignal.timeout is Chrome 103+. The app supports WebViews far older than that, and
+ * on those an undefined static method made every request throw before it was sent, which
+ * looked like "translation does not work". Use the same abort semantics with a manual
+ * timer when the helper is missing.
+ */
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  const timeout = (AbortSignal as unknown as { timeout?: (value: number) => AbortSignal }).timeout;
+  if (typeof timeout === "function") return timeout.call(AbortSignal, ms);
+  if (typeof AbortController === "undefined") return undefined;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  controller.signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+  return controller.signal;
+}
+
+/**
  * One outbound call for the installed app: absolute URL, no cookies (the app has no
  * account), a bounded wait, and a failure classified into the product's existing error
  * kinds so the UI keeps its calm messages. The response body is returned untouched for
@@ -24,16 +40,17 @@ export async function nativeRequest(
   const url = nativeApiUrl(path);
   if (!url) throw new NativeTransportError("network");
   const { timeoutMs = 90_000, ...rest } = init;
-  const signal = rest.signal ?? AbortSignal.timeout(timeoutMs);
+  const signal = rest.signal ?? timeoutSignal(timeoutMs);
   try {
-    const res = await fetch(url, {
+    const request: RequestInit = {
       ...rest,
-      signal,
       credentials: "omit",
       cache: "no-store",
       // The server answers with an exact allowlist; this header is what it checks.
       mode: "cors",
-    });
+    };
+    if (signal) request.signal = signal;
+    const res = await fetch(url, request);
     return res;
   } catch (err) {
     if (typeof navigator !== "undefined" && navigator.onLine === false)

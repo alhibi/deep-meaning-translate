@@ -402,6 +402,28 @@ export const ResultPanel = memo(function ResultPanel({
           <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
         ) : null}
 
+        {error && !pending && !provisional ? (
+          <p
+            role="alert"
+            className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-relaxed text-muted-foreground"
+          >
+            <span
+              aria-hidden
+              className={`size-1.5 rounded-full ${error === "offline" || error === "rate" || error === "timeout" ? "bg-warning" : "bg-destructive"}`}
+            />
+            {t(`err_${error}`)}
+            {error !== "auth" ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="press-soft font-medium text-signal-text underline decoration-signal/40 underline-offset-4"
+              >
+                {t("retry")}
+              </button>
+            ) : null}
+          </p>
+        ) : null}
+
         <div
           className={`-ms-0.5 mt-auto flex items-center pt-5 transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
             provisional || pending

@@ -62,6 +62,7 @@ import { statsT } from "@/lib/stats/labels";
 import { persist } from "@/lib/persist";
 import { introPending, releaseIntroGate } from "@/lib/intro";
 import { restorePlan } from "@/lib/translation/restore";
+import { isEcho, languagePartner, shouldHoldForReroute } from "@/lib/translation/echo";
 import { LOCALES, LOCALE_NAME, LOCALE_SHORT, initLocale, setLocale, useI18n } from "@/lib/i18n";
 
 /*
@@ -187,6 +188,7 @@ function Translator() {
     (result: TranslationResult, original: string, provisional: boolean) => {
       if (provisional) return; // only settled thoughts reach the archive
       if (lang2(result.sourceLanguage) === lang2(target)) return; // about to re-route
+      if (isEcho(original, result)) return; // unchanged output is not a translation
       if (!result.translation.trim()) return;
       const quiet = quietRef.current !== null && quietRef.current === original.trim();
       quietRef.current = null;
@@ -340,13 +342,19 @@ function Translator() {
     };
   }, [restored]);
 
-  const detected = raw?.sourceLanguage;
-  // Same-language result (auto-detect hit the target): hold it back while we re-route.
-  const rerouting =
-    source === "auto" &&
-    !!raw &&
-    (lang2(raw.sourceLanguage) === lang2(raw.targetLanguage) ||
-      raw.translation.trim() === text.trim());
+  // Only a settled result that actually detected the target language can be held back
+  // for a re-route. A live provisional result often carries sourceLanguage "auto"; using
+  // its text to decide a re-route left short words like "Hallo" (auto → Deutsch) on a
+  // skeleton forever, because nothing was going to flip the target. An echo of the input
+  // is handled separately below by trying the Arabic/German partner once.
+  const detected =
+    raw && raw.sourceLanguage && raw.sourceLanguage !== "auto" ? raw.sourceLanguage : undefined;
+  const rerouting = shouldHoldForReroute({
+    source,
+    target,
+    result: raw,
+    provisional,
+  });
   // Hiding a stale result must never be what makes the screen "pending": pending means
   // a request is in flight, or a re-route is under way. The old expression forced a
   // skeleton when the model named a different target language, with nothing running.
@@ -465,6 +473,20 @@ function Translator() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [result, provisional]);
+
+  // The model echoed the input (a short word, a name, or auto source == target). Try the
+  // other half of the product pair once for this exact text instead of leaving the same
+  // words on screen as if they had been translated.
+  const echoTried = useRef("");
+  useEffect(() => {
+    if (source !== "auto" || !raw || provisional) return;
+    const partner = languagePartner(target);
+    if (!partner || !isEcho(text, raw)) return;
+    const attempt = text.trim();
+    if (!attempt || echoTried.current === attempt) return;
+    echoTried.current = attempt;
+    setTarget(partner);
+  }, [source, raw, provisional, target, text]);
 
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {

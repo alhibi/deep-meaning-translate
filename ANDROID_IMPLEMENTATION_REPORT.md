@@ -114,6 +114,18 @@ device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
   `versionName` 1.0.2 → **1.0.3**. Debug suffix remains `.debug` / `-debug` so both can coexist.
 - Backups now report the build that wrote them (`VITE_APP_VERSION`).
 
+## 5b. 1.0.4 — translation-freeze hotfix
+
+- `src/lib/translation/echo.ts` (new): `isEcho`, `languagePartner` and
+  `shouldHoldForReroute`; the route now holds the canvas only for a settled result that
+  detected the target language. Regression tests cover the “Hallo / Deutsch / auto” freeze.
+- `src/routes/index.tsx`: uses the helper; when a settled result is an echo, tries the
+  Arabic/German partner once; echoes are not archived.
+- `src/lib/native/transport.ts`: `AbortSignal.timeout` fallback for older WebViews (an
+  older WebView would otherwise throw before sending the request).
+- `src/components/translator/ResultPanel.tsx`: a failure is shown next to a kept result.
+- Version 1.0.4 / versionCode 5; fresh 1.0.4 APKs attached to release v1.0.4.
+
 ## 6. What was deliberately not changed
 
 - No Compose/Flutter rewrite, no second translation engine, no prompts or provider keys in Kotlin.
