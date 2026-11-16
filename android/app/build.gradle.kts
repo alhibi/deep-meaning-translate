@@ -35,8 +35,8 @@ android {
         applicationId = "today.fluently.app"
         minSdk = (rootProject.extra["minSdkVersion"] as Int)
         targetSdk = (rootProject.extra["targetSdkVersion"] as Int)
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
         buildConfigField(
             "String",
             "PERSONAL_DEEPSEEK_KEY",

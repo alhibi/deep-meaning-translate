@@ -97,13 +97,14 @@ indexed and that relative links resolve.
 
 ## Android completion reports (2026-11-16, root)
 
-| Document                           | Scope                                                  | Status   |
-| ---------------------------------- | ------------------------------------------------------ | -------- |
-| `ANDROID_DISCOVERY_REPORT.md`      | Repository/environment inventory and baseline evidence | Verified |
-| `ANDROID_GAP_ANALYSIS.md`          | Consolidated P0–P3 gaps, fixes and remaining debt      | Verified |
-| `ANDROID_IMPLEMENTATION_REPORT.md` | Changes made, by area and file                         | Verified |
-| `ANDROID_TEST_EVIDENCE.md`         | Executed gates, device matrix and classifications      | Verified |
-| `ANDROID_RELEASE_REPORT.md`        | APK identity, hashes, signing and install evidence     | Verified |
+| Document                             | Scope                                                                                       | Status                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `ANDROID_DISCOVERY_REPORT.md`        | Repository/environment inventory and baseline evidence                                      | Verified                                                    |
+| `ANDROID_GAP_ANALYSIS.md`            | Consolidated P0–P3 gaps, fixes and remaining debt                                           | Verified                                                    |
+| `ANDROID_IMPLEMENTATION_REPORT.md`   | Changes made, by area and file                                                              | Verified                                                    |
+| `ANDROID_TEST_EVIDENCE.md`           | Executed gates, device matrix and classifications                                           | Verified                                                    |
+| `ANDROID_RELEASE_REPORT.md`          | APK identity, hashes, signing and install evidence                                          | Verified                                                    |
+| `ANDROID_TRANSPORT_INVESTIGATION.md` | Request path, CORS/endpoint probes, transport diagnostics, acceptance matrix and root cause | debugging Android translation transport or the 1.0.6 report |
 
 ## Plans and working documents
 

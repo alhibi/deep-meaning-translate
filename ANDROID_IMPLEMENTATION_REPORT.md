@@ -162,6 +162,20 @@ device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
   retry through CapacitorHttp when WebView fetch fails.
 - Version 1.0.7 / versionCode 8; verified with Arabic locale, including a DOM-only value.
 
+## 5f. 1.0.8 — transport diagnostics and CORS audit
+
+- `src/lib/native/diagnostics.ts` (new): safe bounded records, request ids, URL sanitising,
+  error classification, redaction.
+- `src/components/DiagnosticsPanel.tsx` (new): Privacy → Advanced last-translation panel and
+  copy action.
+- `src/lib/translation/stream.ts`, `src/lib/native/transport.ts`,
+  `src/lib/translation/direct.ts`: record status/content-type/stage/chunks/bytes and map
+  network/CORS/DNS/TLS/HTTP failures distinctly.
+- `src/lib/native/transport.ts`: Origin header on the CapacitorHttp JSON fallback.
+- `android/.../MainActivity.kt`: WebView debugging enabled only when `BuildConfig.DEBUG`.
+- CORS preflight/error tests; no translation engine changes.
+- Version 1.0.8 / versionCode 9.
+
 ## 6. What was deliberately not changed
 
 - No Compose/Flutter rewrite, no second translation engine, no prompts or provider keys in Kotlin.

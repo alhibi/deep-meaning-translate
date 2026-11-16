@@ -1,6 +1,7 @@
 package today.fluently.app
 
 import android.os.Bundle
+import android.webkit.WebView
 import androidx.core.view.WindowCompat
 import com.getcapacitor.BridgeActivity
 import today.fluently.app.bridge.LinguaChromePlugin
@@ -25,6 +26,9 @@ class MainActivity : BridgeActivity() {
         registerPlugin(LinguaChromePlugin::class.java)
         registerPlugin(LinguaTtsPlugin::class.java)
         super.onCreate(savedInstanceState)
+        // Release builds keep the tracked capacitor config false. Debug builds are
+        // debuggable by Gradle, so allow chrome://inspect there without ever shipping it.
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         WindowCompat.setDecorFitsSystemWindows(window, false)
     }
 

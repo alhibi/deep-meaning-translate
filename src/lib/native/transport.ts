@@ -1,4 +1,5 @@
 import { isNativeApp, nativeApiUrl } from "./config";
+import { beginTransport, classifyFetchError, safeDiagnosticMessage } from "./diagnostics";
 
 export type NativeErrorKind =
   "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
@@ -67,7 +68,12 @@ async function nativeJsonViaHttp<T>(url: string, body: unknown, timeoutMs: numbe
   const { CapacitorHttp } = await import("@capacitor/core");
   const res = await CapacitorHttp.post({
     url,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // CapacitorHttp does not add the WebView Origin automatically. The native gate
+      // requires it, and without this the fallback would receive its own 403.
+      Origin: "https://localhost",
+    },
     data: body,
     responseType: "json",
     connectTimeout: Math.min(timeoutMs, 20_000),
@@ -80,7 +86,21 @@ async function nativeJsonViaHttp<T>(url: string, body: unknown, timeoutMs: numbe
   return res.data as T;
 }
 
+function classifyStatusSafe(status: number) {
+  if (status === 401) return "http-401" as const;
+  if (status === 403) return "http-403" as const;
+  if (status === 404) return "http-404" as const;
+  if (status === 429) return "http-429" as const;
+  if (status >= 500) return "http-5xx" as const;
+  if (status >= 400) return "http-other" as const;
+  return "provider" as const;
+}
+
 export async function nativeJson<T>(path: string, body: unknown, timeoutMs = 30_000): Promise<T> {
+  const url = nativeApiUrl(path);
+  const diagnostics = url
+    ? beginTransport({ transport: "server-json", method: "POST", url })
+    : null;
   try {
     const res = await nativeRequest(path, {
       method: "POST",
@@ -90,18 +110,57 @@ export async function nativeJson<T>(path: string, body: unknown, timeoutMs = 30_
     });
     if (!res.ok) {
       const payload = (await res.json().catch(() => null)) as { kind?: NativeErrorKind } | null;
+      diagnostics?.finish({
+        stage: "error",
+        status: res.status,
+        contentType: res.headers.get("content-type") ?? undefined,
+        kind: classifyStatusSafe(res.status),
+      });
       throw new NativeTransportError(payload?.kind ?? (res.status === 429 ? "rate" : "provider"));
     }
-    return (await res.json()) as T;
+    const parsed = (await res.json()) as T;
+    diagnostics?.finish({
+      stage: "done",
+      status: res.status,
+      contentType: res.headers.get("content-type") ?? undefined,
+    });
+    return parsed;
   } catch (error) {
     const kind = error instanceof NativeTransportError ? error.kind : "network";
-    if (kind !== "network" && kind !== "timeout") throw error;
-    const url = nativeApiUrl(path);
+    if (kind !== "network" && kind !== "timeout") {
+      diagnostics?.finish({
+        stage: "error",
+        kind:
+          kind === "offline"
+            ? "offline"
+            : kind === "auth"
+              ? "auth"
+              : kind === "quota"
+                ? "quota"
+                : kind === "rate"
+                  ? "rate"
+                  : kind === "input"
+                    ? "input"
+                    : "provider",
+        errorName: (error as Error)?.name,
+        errorMessage: safeDiagnosticMessage((error as Error)?.message),
+      });
+      throw error;
+    }
     if (!url) throw error;
     // WebView fetch can be blocked while the Android stack is not: retry once natively.
     try {
-      return await nativeJsonViaHttp<T>(url, body, timeoutMs);
-    } catch {
+      const parsed = await nativeJsonViaHttp<T>(url, body, timeoutMs);
+      diagnostics?.finish({ stage: "done", transport: "capacitor-http" });
+      return parsed;
+    } catch (nativeError) {
+      diagnostics?.finish({
+        stage: "error",
+        transport: "capacitor-http",
+        kind: classifyFetchError(nativeError),
+        errorName: (nativeError as Error)?.name,
+        errorMessage: safeDiagnosticMessage((nativeError as Error)?.message),
+      });
       throw error;
     }
   }

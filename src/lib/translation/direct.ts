@@ -7,6 +7,7 @@ import {
   buildUserPrompt,
 } from "./prompt";
 import { readProviderKey } from "./providerKey";
+import { beginTransport } from "../native/diagnostics";
 import { TranslationError, type TranslationRequest } from "./types";
 
 /**
@@ -146,6 +147,11 @@ export async function streamDirect(
 ): Promise<DirectResponse> {
   const key = readProviderKey();
   if (!key) return { ok: false, kind: "auth" };
+  const diagnostics = beginTransport({
+    transport: "deepseek-direct",
+    method: "POST",
+    url: DIRECT_URL,
+  });
   // Do not let a WebView that accepts a request but never receives a response hold the
   // screen for the full 90 s timeout. If the first response does not arrive quickly, fall
   // through to the Android network stack (which has no CORS and different proxy handling).
@@ -187,9 +193,16 @@ export async function streamDirect(
     clearTimeout(firstTimer);
     signal.removeEventListener("abort", abortFirst);
   }
+  diagnostics.finish({
+    stage: "response",
+    status: res.status,
+    contentType: res.headers.get("content-type") ?? undefined,
+  });
   if (!res.ok || !res.body) {
     void res.body?.cancel().catch(() => {});
-    return { ok: false, kind: res.status === 429 ? "rate" : errorKind(res.status) };
+    const kind = res.status === 429 ? "rate" : errorKind(res.status);
+    diagnostics.finish({ stage: "error", kind: res.status === 429 ? "http-429" : kind });
+    return { ok: false, kind };
   }
   // A CORS/proxy/WebView failure below is retried through the Android network stack once;
   // a real HTTP status was already classified above and must not be retried.
@@ -245,6 +258,10 @@ export async function streamDirect(
     }
   }
   raw = raw.trim();
+  diagnostics.finish({
+    stage: raw ? "done" : "error",
+    ...(raw ? {} : { kind: "empty" as const }),
+  });
   return raw ? { ok: true, text: raw } : { ok: false, kind: "provider" };
 }
 

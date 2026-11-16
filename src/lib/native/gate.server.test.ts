@@ -106,6 +106,20 @@ describe("the native gate's responses", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe(app);
   });
 
+  it("keeps CORS headers on a 429 and on a 4xx handler response", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const rate = await nativeEndpoint(withOrigin(app), () =>
+      Response.json({ ok: false, kind: "rate" }, { status: 429 }),
+    );
+    expect(rate.status).toBe(429);
+    expect(rate.headers.get("Access-Control-Allow-Origin")).toBe(app);
+    const bad = await nativeEndpoint(withOrigin(app), () =>
+      Response.json({ ok: false, kind: "input" }, { status: 400 }),
+    );
+    expect(bad.headers.get("Access-Control-Allow-Origin")).toBe(app);
+    expect(bad.headers.get("Vary")).toBe("Origin");
+  });
+
   it("does not attach a body to a 204", () => {
     const response = withNativeCors(
       new Response(null, { status: 204 }),

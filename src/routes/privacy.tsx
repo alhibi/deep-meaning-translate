@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { initLocale, useI18n } from "@/lib/i18n";
 import { DataControls } from "@/components/DataControls";
 import { ProviderKey } from "@/components/ProviderKey";
+import { DiagnosticsPanel } from "@/components/DiagnosticsPanel";
 
 export const Route = createFileRoute("/privacy")({
   // Public and indexable: a privacy page is a page people look for.
@@ -160,6 +161,7 @@ function PrivacyPage() {
       </div>
       <DataControls />
       <ProviderKey />
+      <DiagnosticsPanel />
     </main>
   );
 }
