@@ -50,6 +50,14 @@ import {
 } from "@/lib/stats/taxonomy";
 import { categoryLabel, statsT, type StatsKey } from "@/lib/stats/labels";
 import {
+  highlights as findHighlights,
+  hourOfDay,
+  languageFlow,
+  milestones as findMilestones,
+  rhythm as rhythmOf,
+  streaks as findStreaks,
+} from "@/lib/stats/moments";
+import {
   readStatsPrefs,
   setPendingPick,
   useArchive,
@@ -59,12 +67,17 @@ import { makeFormat, type Fmt } from "@/components/stats/format";
 import {
   BarList,
   CalendarChart,
-  Donut,
   Sparkline,
   StackBar,
   TimelineChart,
   type BarRow,
 } from "@/components/stats/charts";
+import {
+  LanguageFlowMap,
+  MilestonesBlock,
+  RecordsBlock,
+  RhythmBlock,
+} from "@/components/stats/moments";
 import { RecordList } from "@/components/stats/RecordList";
 import { RecordSheet } from "@/components/stats/RecordSheet";
 import { DetailSheet, type DetailSpec } from "@/components/stats/DetailSheet";
@@ -185,6 +198,29 @@ function StatsPage() {
   const registers = useMemo(() => distribution(visible, "register"), [visible]);
   const found = useMemo(() => findInsights(visible, bounds), [visible, bounds]);
   const byId = useMemo(() => new Map(records.map((r) => [r.id, r])), [records]);
+  /* The second layer: shape of the visible period, and lifetime milestones that do not
+   * change when a filter changes. Both derive from the same archive, never a new store. */
+  const lifetime = useMemo(() => summarize(records), [records]);
+  const streak = useMemo(
+    () =>
+      today
+        ? findStreaks(records, today)
+        : { current: 0, longest: 0, lastActive: null, totalDays: 0 },
+    [records, today],
+  );
+  const rhythmData = useMemo(() => rhythmOf(visible), [visible]);
+  const recordsView = useMemo(() => findHighlights(visible), [visible]);
+  const milestoneList = useMemo(
+    () =>
+      findMilestones({
+        translations: lifetime.translations,
+        words: lifetime.words,
+        pairs: lifetime.pairs,
+        activeDays: lifetime.activeDays,
+        longestStreak: streak.longest,
+      }),
+    [lifetime, streak.longest],
+  );
 
   /* ---------------- navigation state lives in the URL; Back keeps period and filters ---------------- */
   const setSearch = useCallback((patch: Partial<StatsSearch>) => {
@@ -242,6 +278,8 @@ function StatsPage() {
     }
     if (detail.bucket)
       list = list.filter((r) => r.day >= detail.bucket!.from && r.day <= detail.bucket!.to);
+    if (detail.hour !== undefined)
+      list = list.filter((r) => hourOfDay(r.createdAt) === detail.hour);
     return list;
   }, [detail, visible, pairs, t]);
 
@@ -458,6 +496,25 @@ function StatsPage() {
                 : t("noCompareAll")}
             </p>
 
+            {/* Rhythm & milestones */}
+            <Panel title={t("rhythmTitle")} className="lg:col-span-2">
+              <p className="mb-4 max-w-lg text-[12.5px] leading-relaxed text-muted-foreground">
+                {t("rhythmSub")}
+              </p>
+              <RhythmBlock
+                data={rhythmData}
+                streak={streak}
+                fmt={fmt}
+                t={t}
+                selectedHour={detail?.hour ?? null}
+                onPickHour={(hour) => setDetail({ title: fmt.hour(hour), hour })}
+              />
+              <div className="mt-6 border-t border-border pt-5">
+                <h3 className="mb-3 text-[16px] font-semibold">{t("milestonesTitle")}</h3>
+                <MilestonesBlock all={milestoneList} fmt={fmt} t={t} />
+              </div>
+            </Panel>
+
             {/* Activity */}
             <Panel
               title={t("activity")}
@@ -556,14 +613,31 @@ function StatsPage() {
               <TimelineSummary buckets={buckets} metric={metric} gran={gran} fmt={fmt} t={t} />
             </Panel>
 
+            {/* Records */}
+            <Panel title={t("recordsTitle")} className="lg:col-span-2">
+              <RecordsBlock
+                records={recordsView}
+                fmt={fmt}
+                t={t}
+                onOpenDay={(day) =>
+                  setDetail({
+                    title: fmt.dayLong(day),
+                    bucket: { from: day, to: day },
+                  })
+                }
+                onOpenRecord={setRecordId}
+              />
+            </Panel>
+
             {/* Pairs */}
-            <Panel title={t("pairsTitle")}>
+            <Panel title={t("pairsTitle")} className="lg:col-span-2">
               <PairsBlock
                 pairs={pairs}
                 total={visible.length}
                 selected={filters.pair ?? null}
                 fmt={fmt}
                 t={t}
+                rtl={rtl}
                 onOpen={(id) => openDim("pair", id)}
               />
             </Panel>
@@ -1069,6 +1143,7 @@ function PairsBlock({
   selected,
   fmt,
   t,
+  rtl,
   onOpen,
 }: {
   pairs: ReturnType<typeof distribution>;
@@ -1076,42 +1151,39 @@ function PairsBlock({
   selected: string | null;
   fmt: Fmt;
   t: ReturnType<typeof statsT>;
+  rtl: boolean;
   onOpen: (id: string) => void;
 }) {
   const { top, others } = topWithOthers(pairs, 5);
   const all = others ? [...top, others] : top;
+  const flow = useMemo(() => languageFlow(pairs, 6), [pairs]);
   const color = (id: string) => (id === "__others" ? OTHERS_COLOR : pairColor(id));
   const name = (id: string) => (id === "__others" ? t("others") : fmt.pair(id));
   return (
-    <div className="grid items-center gap-4 sm:grid-cols-[188px_1fr]">
-      <Donut
-        slices={all.map((s) => ({
-          id: s.id,
-          value: s.count,
-          color: color(s.id),
-          label: `${name(s.id)}: ${fmt.num(s.count)}`,
-        }))}
-        selected={selected}
-        onSelect={onOpen}
-        center={fmt.num(pairs.length)}
-        caption={t("k_pairs")}
-        label={all.map((s) => `${name(s.id)} ${fmt.pct(s.share)}`).join(", ")}
-      />
-      <BarList
-        rows={all.map((s) => ({
-          id: s.id,
-          label: name(s.id),
-          count: s.count,
-          share: s.share,
-          color: color(s.id),
-        }))}
+    <div className="flex flex-col gap-4">
+      <LanguageFlowMap
+        flow={flow}
         selected={selected}
         onSelect={onOpen}
         fmt={fmt}
+        t={t}
+        rtl={rtl}
       />
-      <p className="text-[11.5px] text-faint sm:col-span-2">
-        {t("ofVisible", { n: fmt.num(total) })}
-      </p>
+      <div className="border-t border-border pt-2">
+        <BarList
+          rows={all.map((s) => ({
+            id: s.id,
+            label: name(s.id),
+            count: s.count,
+            share: s.share,
+            color: color(s.id),
+          }))}
+          selected={selected}
+          onSelect={onOpen}
+          fmt={fmt}
+        />
+      </div>
+      <p className="text-[11.5px] text-faint">{t("ofVisible", { n: fmt.num(total) })}</p>
     </div>
   );
 }

@@ -96,7 +96,23 @@ Offline, timeout, rate limit, auth/quota, provider and validation failures map t
 The draft and the last good result stay on screen. Transient failures retry once. A rate-limited
 live request is silent while typing. Cancellation is a quiet end, not an error.
 
-## 10. Known limits
+## 10. Throughput and admission
+
+- Live typing and settled sentences spend **separate** per-client admission buckets. A burst of
+  provisional streams cannot starve the finished sentence that follows it, and background repair
+  remains a third budget.
+- The warm-up request preloads both provider modules and opens the TLS connection **without text or
+  credentials**. The first keystroke therefore does not also pay for module resolution.
+- `max_tokens` is bounded from the source length (`budget.ts`): a short sentence always has room to
+  finish, while a pathological generation for a long paste stops at a finite ceiling. This is a
+  runaway guard, not a target or a quality trade.
+- When the writer is DeepSeek and the sentence has no deterministic issue, no repair round trip is
+  made: with Luna paused there is no second brain that could change the result. A result with a lost
+  number or link still gets its repair.
+- A newer stream cancels the older prefix stream as soon as it has caught up on screen, and a
+  committed result cancels it immediately; two providers never finish the same sentence.
+
+## 11. Known limits
 
 - Streaming providers may emit partial JSON; only a complete protocol completion is committed.
 - Deterministic verification cannot detect a fluent but semantically wrong sentence.

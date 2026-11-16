@@ -6,12 +6,15 @@ import { addDays, daysBetween, weekKey } from "@/lib/stats/engine";
 /** Every point represents one actual bucket, including days with no activity. */
 export function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(1, ...values);
-  const points = values
-    .map(
-      (value, i) =>
-        `${values.length > 1 ? (i / (values.length - 1)) * 120 : 60},${29 - (value / max) * 25}`,
-    )
-    .join(" ");
+  const coords = values.map((value, i) => ({
+    x: values.length > 1 ? (i / (values.length - 1)) * 120 : 60,
+    y: 29 - (value / max) * 25,
+  }));
+  const points = coords.map((p) => `${p.x},${p.y}`).join(" ");
+  const area = coords.length
+    ? `M0 29 L${coords.map((p) => `${p.x} ${p.y}`).join(" L")} L120 29 Z`
+    : "";
+  const last = coords[coords.length - 1];
   return (
     <svg
       viewBox="0 0 120 32"
@@ -20,6 +23,7 @@ export function Sparkline({ values }: { values: number[] }) {
       className="h-8 w-full text-muted-foreground"
     >
       <path d="M0 29H120" stroke="var(--border-strong)" fill="none" />
+      {area ? <path d={area} fill="currentColor" opacity="0.08" /> : null}
       {values.length === 1 ? (
         <circle cx="60" cy={29 - ((values[0] ?? 0) / max) * 25} r="2" fill="currentColor" />
       ) : (
@@ -32,6 +36,9 @@ export function Sparkline({ values }: { values: number[] }) {
           strokeLinejoin="round"
         />
       )}
+      {last && values.length > 1 ? (
+        <circle cx={last.x} cy={last.y} r="2.2" fill="var(--signal)" />
+      ) : null}
     </svg>
   );
 }

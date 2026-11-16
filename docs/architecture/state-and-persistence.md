@@ -27,6 +27,8 @@ invented.
 | `lingua.saved.v1` | saved phrases | validated phrase objects |
 | `lingua.memory.v1` | settled translation memory | bounded rows/bytes, TTL, validated on read |
 | `lingua.stats.v1` | statistics-related local state | see `lib/stats` |
+| `lingua.recent-langs` | last five languages picked | validated two-letter codes, de-duplicated |
+| `lingua.language-favorites.v1` | pinned languages in the picker | validated two-letter codes, at most eight |
 | `lingua.voice.v1`, `lingua.voice.v2` | voice preferences | versioned migration preserves device choice |
 | `lingua.feel.v1` | haptics/sound preferences | read at call time |
 | `lingua.intro.seen.v1` | first-run gate | pre-paint decision |

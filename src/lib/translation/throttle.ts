@@ -39,11 +39,17 @@ export function createLimiter(capacity = 30, refillPerSecond = 0.8) {
 }
 
 /**
- * Translation and streamed live typing. Sized for a person working continuously:
- * one live request per pause, one full request per finished sentence, plus its review.
- * Sustained ceiling ≈ 1.5 requests/second per client, burst 60.
+ * Settled translations: one full request per finished sentence, plus its repair when one
+ * is actually needed. A burst of provisional typing must never spend this budget.
  */
 export const takeToken = createLimiter(60, 1.5);
+
+/**
+ * Live, still-typing streams. They are cheap, superseded quickly and are the thing a
+ * person feels as "translation is alive"; they therefore get their own, wider bucket so
+ * rapid typing can never starve the settled sentence that follows it.
+ */
+export const takeLiveToken = createLimiter(90, 2.5);
 
 /**
  * Optional enrichment: the mini dictionary and the Sentence Shadow. Both are quiet

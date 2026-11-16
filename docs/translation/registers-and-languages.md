@@ -47,6 +47,24 @@ The picker is hidden when Arabic is not the target, and the request normalizes t
   the intended word and never mirrored into the output.
 - Names, numbers, dates, URLs, emoji and line breaks are preserved exactly.
 
+## Language coverage
+
+The picker offers the designed Arabic ⇄ German pair first and a broad table of more than seventy
+languages: European, Middle Eastern, South and East Asian, and further African and Asian
+languages with their native names, right-to-left flags, search aliases and localized names from
+`Intl.DisplayNames`. Every code is two letters, because the request schema, the session validator,
+the archive and the server all store two-letter codes.
+
+The picker groups without hiding: pinned favorites, recent choices, the natural partners of the
+current source, the most used languages, then the complete alphabetical list. Search normalizes
+case, Latin diacritics and Arabic letter variants (hamza/alef, teh marbuta, tatweel), so
+`الألمانية`, `الالمانيه` and `Deutsch` all find German. Favorites and recent choices are device-only,
+bounded and validated; a damaged list is dropped, never rendered.
+
+The writing-system check covers the scripts of the offered languages, not only Latin and Arabic,
+and distinguishes Urdu, Pashto, Sindhi and Uyghur before falling back to Arabic. A wrong-script
+pick still sends `auto` to the model instead of misleading it.
+
 ## What the app does not claim
 
 - Equal quality for every language pair. Arabic ⇄ German is the designed pair.

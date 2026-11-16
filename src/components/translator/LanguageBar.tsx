@@ -1,6 +1,12 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
-import { LANGUAGES, TARGET_LANGUAGES, isRtl, languageLabel } from "@/lib/translation/languages";
+import {
+  LANGUAGES,
+  TARGET_LANGUAGES,
+  isRtl,
+  languageLabel,
+  partnerCandidates,
+} from "@/lib/translation/languages";
 import { feel } from "@/lib/feel";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSheet, pushRecent, readRecent, type PickerItem } from "./LanguageSheet";
@@ -22,6 +28,7 @@ function Side({
   end,
   swapped,
   detected,
+  suggested,
 }: {
   value: string;
   options: PickerItem[];
@@ -30,12 +37,14 @@ function Side({
   end?: boolean;
   swapped: number;
   detected?: string | undefined;
+  suggested?: string[] | undefined;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const label =
     value === "auto" ? (detected ? languageLabel(detected) : t("detect")) : languageLabel(value);
+  const detectedNow = value === "auto" && !!detected;
   const close = useCallback(() => setOpen(false), []);
   const select = useCallback(
     (code: string) => {
@@ -53,11 +62,21 @@ function Side({
           setOpen(true);
         }}
         aria-haspopup="dialog"
-        aria-label={end ? t("targetLang") : t("sourceLang")}
+        aria-label={
+          detectedNow
+            ? `${t("sourceLang")}: ${label} — ${t("detect")}`
+            : end
+              ? t("targetLang")
+              : t("sourceLang")
+        }
+        title={detectedNow ? `${t("detect")}: ${languageLabel(detected)}` : undefined}
         className={`press-soft relative flex min-w-0 flex-1 cursor-pointer flex-col py-2 ${end ? "items-end text-end" : "items-start text-start"}`}
       >
-        <span className="pointer-events-none text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
+        <span className="pointer-events-none flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
           {caption}
+          {detectedNow ? (
+            <span aria-hidden className="size-1 rounded-full bg-signal align-middle" />
+          ) : null}
         </span>
         <span
           key={`${value}-${swapped}`}
@@ -80,6 +99,7 @@ function Side({
         items={options}
         value={value}
         recent={recent}
+        suggested={suggested}
         onSelect={select}
         onClose={close}
       />
@@ -104,6 +124,7 @@ export const LanguageBar = memo(function LanguageBar({
   }, [onSwap]);
 
   const sourceCaption = source === "auto" ? `${t("from")} · ${t("auto")}` : t("from");
+  const suggestions = useMemo(() => partnerCandidates(source), [source]);
 
   return (
     <div className="flex items-center gap-3 px-6 pb-4 pt-2">
@@ -134,6 +155,7 @@ export const LanguageBar = memo(function LanguageBar({
         caption={t("to")}
         end
         swapped={swapped}
+        suggested={suggestions}
       />
     </div>
   );

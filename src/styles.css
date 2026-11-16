@@ -925,6 +925,33 @@ html:not([data-intro="open"]) .intro-screen {
   outline-offset: 2px;
 }
 
+/* Rhythm bars and flow ribbons are SVG buttons: the hit shape carries the focus ring. */
+.stats-rhythm-hit:focus-visible,
+.stats-flow-hit:focus-visible {
+  outline: none;
+}
+.stats-rhythm-hit:focus-visible line[data-hit],
+.stats-flow-hit:focus-visible[data-hit] {
+  stroke: var(--ring);
+  opacity: 0.45;
+}
+.stats-rhythm-bar {
+  transition:
+    opacity 240ms var(--ease-soft),
+    stroke-width 240ms var(--ease-soft);
+}
+.stats-flow-link,
+.stats-flow-hit {
+  transition: opacity 240ms var(--ease-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stats-rhythm-bar,
+  .stats-flow-link,
+  .stats-flow-hit {
+    transition: none;
+  }
+}
+
 ::selection {
   background: var(--signal-soft);
 }

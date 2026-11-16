@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Search, X } from "lucide-react";
-import { useI18n } from "@/lib/i18n";
+import { Check, Search, Star, X } from "lucide-react";
+import { useI18n, type Key } from "@/lib/i18n";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { feel } from "@/lib/feel";
+import { normalizeLanguageQuery } from "@/lib/translation/languages";
 
 export interface PickerItem {
   code: string;
@@ -11,6 +12,7 @@ export interface PickerItem {
   name: string;
   rtl?: boolean;
   aliases?: string[];
+  popular?: boolean;
 }
 
 interface Props {
@@ -19,6 +21,8 @@ interface Props {
   items: PickerItem[];
   value: string;
   recent?: string[];
+  /** Codes worth offering before the full list (the natural partners of the source). */
+  suggested?: string[] | undefined;
   searchable?: boolean;
   /** Items aren't languages (e.g. dialects): show names as given, no locale lookups. */
   plain?: boolean;
@@ -26,12 +30,89 @@ interface Props {
   onClose: () => void;
 }
 
-const norm = (s: string) =>
-  s
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f\u064B-\u065F]/g, "")
-    .trim();
+const codeOk = (v: unknown): v is string => typeof v === "string" && /^[a-z]{2}$/.test(v);
+
+function LanguageRow({
+  it,
+  value,
+  plain,
+  localized,
+  favorite,
+  onPick,
+  onToggleFavorite,
+  t,
+}: {
+  it: PickerItem;
+  value: string;
+  plain: boolean;
+  localized: (code: string) => string;
+  favorite: boolean;
+  onPick: (code: string) => void;
+  onToggleFavorite: (code: string) => void;
+  t: (key: Key) => string;
+}) {
+  const active = it.code === value;
+  const sub = plain ? "" : localized(it.code);
+  const secondary =
+    sub && normalizeLanguageQuery(sub) !== normalizeLanguageQuery(it.native)
+      ? sub
+      : it.name !== it.native
+        ? it.name
+        : "";
+  return (
+    <li className="flex items-center gap-0.5">
+      <button
+        type="button"
+        data-picker-row
+        onClick={() => onPick(it.code)}
+        aria-pressed={active}
+        className="press-soft flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-4 py-3 text-start transition-colors hover:bg-card"
+      >
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span
+            dir="auto"
+            className={`truncate ${active ? "text-foreground" : "text-foreground/90"} ${
+              it.rtl
+                ? "font-arabic text-[19px] leading-[1.35]"
+                : "text-[17px] leading-[1.35] tracking-[-0.01em]"
+            } ${active ? "font-semibold" : "font-medium"}`}
+          >
+            {it.code === "auto" && !plain ? t("detect") : it.native}
+          </span>
+          {secondary && it.code !== "auto" ? (
+            <span dir="auto" className="truncate text-[12px] text-faint">
+              {secondary}
+            </span>
+          ) : null}
+        </span>
+        <span
+          className={`grid size-6 shrink-0 place-items-center ${active ? "text-signal" : "text-transparent"}`}
+        >
+          <Check className="size-[18px]" strokeWidth={2} />
+        </span>
+      </button>
+      {!plain && it.code !== "auto" ? (
+        <button
+          type="button"
+          onClick={() => onToggleFavorite(it.code)}
+          aria-label={favorite ? t("langUnfavorite") : t("langFavorite")}
+          aria-pressed={favorite}
+          className={`press-soft grid size-10 shrink-0 place-items-center rounded-full ${
+            favorite ? "text-signal-text" : "text-faint hover:text-foreground"
+          }`}
+        >
+          <Star
+            className="size-[17px]"
+            strokeWidth={1.75}
+            fill={favorite ? "currentColor" : "none"}
+          />
+        </button>
+      ) : (
+        <span className="w-1" aria-hidden />
+      )}
+    </li>
+  );
+}
 
 export function LanguageSheet({
   open,
@@ -39,6 +120,7 @@ export function LanguageSheet({
   items,
   value,
   recent = [],
+  suggested = [],
   searchable = true,
   plain = false,
   onSelect,
@@ -48,6 +130,7 @@ export function LanguageSheet({
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState("");
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [drag, setDrag] = useState(0);
   const startY = useRef<number | null>(null);
   const pushed = useRef(false);
@@ -80,6 +163,7 @@ export function LanguageSheet({
       setClosing(false);
       setQuery("");
       setDrag(0);
+      setFavorites(readFavorites());
     } else if (mounted) {
       setClosing(true);
       const id = window.setTimeout(() => {
@@ -125,25 +209,62 @@ export function LanguageSheet({
     [onSelect, onClose],
   );
 
-  const q = norm(query);
+  const toggleFavorite = useCallback((code: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(code)
+        ? prev.filter((c) => c !== code)
+        : [code, ...prev].slice(0, 8);
+      writeFavorites(next);
+      feel.tap();
+      return next;
+    });
+  }, []);
+
+  const q = normalizeLanguageQuery(query);
   const filtered = useMemo(() => {
     if (!q) return items;
     return items.filter((it) =>
       [it.native, it.name, localized(it.code), it.code, ...(it.aliases ?? [])].some(
-        (s) => s && norm(s).includes(q),
+        (s) => s && normalizeLanguageQuery(s).includes(q),
       ),
     );
   }, [items, q, localized]);
 
-  const recentItems = useMemo(
-    () =>
-      q
-        ? []
-        : recent
-            .map((c) => items.find((i) => i.code === c))
-            .filter((i): i is PickerItem => Boolean(i))
-            .slice(0, 3),
-    [recent, items, q],
+  /* Sections keep a 76-language list navigable without a second screen: what this person
+   * uses, what this pair needs, what most people need, then everyone else. A code appears
+   * once — the first section that claims it. */
+  const sections = useMemo(() => {
+    if (q) return [{ key: "search", label: null as string | null, items: filtered }];
+    const byCode = new Map(items.map((i) => [i.code, i]));
+    const seen = new Set<string>();
+    const take = (codes: readonly string[], limit = Infinity) => {
+      const out: PickerItem[] = [];
+      for (const code of codes) {
+        if (out.length >= limit || seen.has(code)) continue;
+        const item = byCode.get(code);
+        if (!item) continue;
+        seen.add(code);
+        out.push(item);
+      }
+      return out;
+    };
+    const out: { key: string; label: string | null; items: PickerItem[] }[] = [];
+    const fav = take(favorites, 6);
+    if (fav.length) out.push({ key: "favorites", label: t("langFavorites"), items: fav });
+    const rec = take(recent, 4);
+    if (rec.length) out.push({ key: "recent", label: t("langRecent"), items: rec });
+    const sug = take(suggested, 4);
+    if (sug.length) out.push({ key: "suggested", label: t("langSuggested"), items: sug });
+    const popular = take(items.filter((i) => i.popular).map((i) => i.code));
+    if (popular.length) out.push({ key: "popular", label: t("langPopular"), items: popular });
+    const all = take(items.filter((i) => i.code !== "auto").map((i) => i.code));
+    if (all.length) out.push({ key: "all", label: t("langAll"), items: all });
+    return out;
+  }, [q, filtered, items, favorites, recent, suggested, t]);
+
+  const auto = useMemo(
+    () => (q ? null : (items.find((i) => i.code === "auto") ?? null)),
+    [items, q],
   );
 
   if (!mounted || typeof document === "undefined") return null;
@@ -161,42 +282,24 @@ export function LanguageSheet({
     startY.current = null;
   };
 
-  const Row = ({ it }: { it: PickerItem }) => {
-    const active = it.code === value;
-    const sub = plain ? "" : localized(it.code);
-    const secondary =
-      sub && norm(sub) !== norm(it.native) ? sub : it.name !== it.native ? it.name : "";
-    return (
-      <li>
-        <button
-          type="button"
-          onClick={() => pick(it.code)}
-          aria-pressed={active}
-          className="press-soft flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-start transition-colors hover:bg-card"
-        >
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span
-              style={{ textAlign: rtl ? "right" : "left" }}
-              className={`truncate ${active ? "text-foreground" : "text-foreground/90"} ${
-                it.rtl
-                  ? "font-arabic text-[19px] leading-[1.35]"
-                  : "text-[17px] leading-[1.35] tracking-[-0.01em]"
-              } ${active ? "font-semibold" : "font-medium"}`}
-            >
-              {it.code === "auto" && !plain ? t("detect") : it.native}
-            </span>
-            {secondary && it.code !== "auto" ? (
-              <span className="truncate text-[12px] text-faint">{secondary}</span>
-            ) : null}
-          </span>
-          <span
-            className={`grid size-6 shrink-0 place-items-center ${active ? "text-signal" : "text-transparent"}`}
-          >
-            <Check className="size-[18px]" strokeWidth={2} />
-          </span>
-        </button>
-      </li>
+  /** Arrow keys move between rows, so a long list never requires 70 Tab presses. */
+  const onListKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    const rows = Array.from(
+      e.currentTarget.querySelectorAll<HTMLButtonElement>("[data-picker-row]"),
     );
+    if (!rows.length) return;
+    const at = rows.indexOf(document.activeElement as HTMLButtonElement);
+    const next =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? rows.length - 1
+          : at < 0
+            ? 0
+            : (at + (e.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+    e.preventDefault();
+    rows[next]?.focus();
   };
 
   return createPortal(
@@ -272,31 +375,56 @@ export function LanguageSheet({
             </label>
           </div>
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {recentItems.length ? (
-            <>
-              <p className="px-4 pb-1 pt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
-                {t("langRecent")}
-              </p>
+        <div
+          onKeyDown={onListKeyDown}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          {auto ? (
+            <ul>
+              <LanguageRow
+                it={auto}
+                value={value}
+                plain={plain}
+                localized={localized}
+                favorite={false}
+                onPick={pick}
+                onToggleFavorite={toggleFavorite}
+                t={t}
+              />
+            </ul>
+          ) : null}
+          {sections.map((section) => (
+            <div key={section.key}>
+              {section.label ? (
+                <p className="px-4 pb-1 pt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
+                  {section.label}
+                </p>
+              ) : null}
               <ul>
-                {recentItems.map((it) => (
-                  <Row key={`r-${it.code}`} it={it} />
+                {section.items.map((it) => (
+                  <LanguageRow
+                    key={`${section.key}-${it.code}`}
+                    it={it}
+                    value={value}
+                    plain={plain}
+                    localized={localized}
+                    favorite={favorites.includes(it.code)}
+                    onPick={pick}
+                    onToggleFavorite={toggleFavorite}
+                    t={t}
+                  />
                 ))}
               </ul>
-              <p className="px-4 pb-1 pt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
-                {t("langAll")}
-              </p>
-            </>
-          ) : null}
-          {filtered.length ? (
-            <ul>
-              {filtered.map((it) => (
-                <Row key={it.code} it={it} />
-              ))}
-            </ul>
-          ) : (
+            </div>
+          ))}
+          {!auto && !sections.some((s) => s.items.length) ? (
             <p className="px-4 py-8 text-center text-[14px] text-faint">{t("langNone")}</p>
-          )}
+          ) : null}
+          {!plain && !q ? (
+            <p className="px-4 pb-3 pt-4 text-[11px] leading-relaxed text-faint">
+              {t("langOptimizedFor")}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>,
@@ -305,20 +433,42 @@ export function LanguageSheet({
 }
 
 const RECENT_KEY = "lingua.recent-langs";
+const FAVORITES_KEY = "lingua.language-favorites.v1";
+
 export function readRecent(): string[] {
   try {
     const v = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
-    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+    return Array.isArray(v) ? [...new Set(v.filter(codeOk))].slice(0, 5) : [];
   } catch {
     return [];
   }
 }
 export function pushRecent(code: string) {
-  if (code === "auto") return;
+  if (!codeOk(code)) return;
   try {
     const next = [code, ...readRecent().filter((c) => c !== code)].slice(0, 5);
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch {
     /* ignore */
+  }
+}
+
+/** Device-only, bounded and validated — a damaged list must never reach the picker. */
+export function readFavorites(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]");
+    return Array.isArray(v) ? [...new Set(v.filter(codeOk))].slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+function writeFavorites(codes: string[]) {
+  try {
+    localStorage.setItem(
+      FAVORITES_KEY,
+      JSON.stringify([...new Set(codes.filter(codeOk))].slice(0, 8)),
+    );
+  } catch {
+    /* non-essential */
   }
 }

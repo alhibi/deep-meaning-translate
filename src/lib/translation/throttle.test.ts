@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLimiter, takeEnrichmentToken, takeToken } from "./throttle";
+import { createLimiter, takeEnrichmentToken, takeLiveToken, takeToken } from "./throttle";
 
 /**
  * Admission is the app's only defence in front of paid providers, so the properties
@@ -41,6 +41,14 @@ describe("rate admission", () => {
     expect(take("d", 2)).toBe(false);
     expect(take("d")).toBe(true);
     expect(take("d")).toBe(false);
+  });
+
+  it("keeps provisional typing from spending the settled-sentence budget", () => {
+    const client = `live-${Math.random()}`;
+    for (let i = 0; i < 90; i++) expect(takeLiveToken(client)).toBe(true);
+    expect(takeLiveToken(client)).toBe(false);
+    // The final sentence still has its full allowance while the live bucket is empty.
+    expect(takeToken(client)).toBe(true);
   });
 
   it("keeps translation and enrichment budgets separate", () => {

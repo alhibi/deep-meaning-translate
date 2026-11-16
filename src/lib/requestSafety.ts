@@ -31,7 +31,7 @@ export async function boundedJson(request: Request, maxBytes = 96 * 1024): Promi
 export async function parseAdmittedJson<T>(
   request: Request,
   schema: { parse(value: unknown): T },
-  take: () => boolean,
+  take: (data: T) => boolean,
 ): Promise<{ ok: true; data: T } | { ok: false; kind: "input" | "rate" }> {
   let data: T;
   try {
@@ -39,7 +39,8 @@ export async function parseAdmittedJson<T>(
   } catch {
     return { ok: false, kind: "input" };
   }
-  if (!take()) return { ok: false, kind: "rate" };
+  // The parsed body picks its purpose-specific budget (live vs settled translation).
+  if (!take(data)) return { ok: false, kind: "rate" };
   return { ok: true, data };
 }
 

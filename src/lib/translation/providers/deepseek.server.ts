@@ -11,6 +11,7 @@ import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { textDeltas } from "./opencode.server";
 import { providerFetch } from "./request.server";
+import { outputTokenBudget } from "../budget";
 
 /**
  * Second brain: DeepSeek V4.1 Flash on DeepSeek's own OpenAI-compatible API.
@@ -33,6 +34,7 @@ async function send(
   signal: AbortSignal | undefined,
   stream: boolean,
   json: boolean,
+  chars = user.length,
 ): Promise<Response> {
   const cancelled = () => Object.assign(new Error("cancelled"), { name: "AbortError" });
   if (signal?.aborted) throw cancelled();
@@ -48,7 +50,7 @@ async function send(
           stream,
           thinking: { type: "disabled" },
           temperature: 0.3,
-          max_tokens: 4096,
+          max_tokens: outputTokenBudget(chars, json),
           ...(json ? { response_format: { type: "json_object" } } : {}),
           messages: [
             { role: "system", content: system },
@@ -74,8 +76,14 @@ async function send(
   return res;
 }
 
-export async function call(apiKey: string, system: string, user: string, signal?: AbortSignal) {
-  const res = await send(apiKey, system, user, signal, false, true);
+export async function call(
+  apiKey: string,
+  system: string,
+  user: string,
+  signal?: AbortSignal,
+  chars = user.length,
+) {
+  const res = await send(apiKey, system, user, signal, false, true, chars);
   const payload = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };
   const text = payload.choices?.[0]?.message?.content;
   if (typeof text !== "string") throw new TranslationError("provider", "Empty DeepSeek reply.");
@@ -94,6 +102,7 @@ export async function streamDeepSeekLive(
     signal,
     true,
     false,
+    req.text.length,
   );
   if (!res.body) throw new TranslationError("provider", "Empty DeepSeek stream.");
   return textDeltas(res.body);
@@ -104,7 +113,15 @@ export async function streamDeepSeekFull(
   req: TranslationRequest,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true, true);
+  const res = await send(
+    apiKey,
+    buildSystemPrompt(),
+    buildUserPrompt(req),
+    signal,
+    true,
+    true,
+    req.text.length,
+  );
   if (!res.body) throw new TranslationError("provider", "Empty DeepSeek stream.");
   return textDeltas(res.body);
 }
@@ -114,7 +131,7 @@ export function createDeepSeekProvider(apiKey: string): TranslationProvider {
     id: "deepseek",
     async translate(req, signal) {
       return parseResult(
-        await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal),
+        await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, req.text.length),
         req,
       );
     },
@@ -124,6 +141,7 @@ export function createDeepSeekProvider(apiKey: string): TranslationProvider {
         buildSystemPrompt(),
         buildRepairPrompt(req, previous, issues),
         signal,
+        req.text.length,
       );
       return parseResult(raw, req);
     },
@@ -140,7 +158,13 @@ export async function reviewTranslation(
   previous: TranslationResult,
   signal?: AbortSignal,
 ): Promise<TranslationResult | null> {
-  const raw = await call(apiKey, buildSystemPrompt(), buildReviewPrompt(req, previous), signal);
+  const raw = await call(
+    apiKey,
+    buildSystemPrompt(),
+    buildReviewPrompt(req, previous),
+    signal,
+    req.text.length,
+  );
   return parseReview(raw, req);
 }
 

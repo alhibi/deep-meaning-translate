@@ -4,7 +4,7 @@ import { repairTranslation } from "./translate.functions";
 import { parseResult } from "./parse";
 import { verifyTranslation } from "./verify";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
-import { DEFAULT_BRAIN, type Brain } from "./types";
+import { DEFAULT_BRAIN, LUNA_ENABLED, type Brain } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
 import { streamTranslate, warmTranslation } from "./stream";
@@ -184,6 +184,10 @@ export function useTranslator(opts: {
     (key: string, value: TranslationResult, prov: boolean, norm: string) => {
       committedKey.current = key;
       shownLen.current = value.translation.length;
+      // The answer is final: an older prefix stream has nothing left to contribute and
+      // must stop spending provider work on a sentence nobody is waiting for.
+      lingering.current?.abort();
+      lingering.current = null;
       setResult(value);
       setProvisional(prov);
       setError(null);
@@ -244,6 +248,7 @@ export function useTranslator(opts: {
           lingering.current = prev.ctrl; // still useful: its text is a prefix of what's typed now
         } else {
           prev.ctrl.abort();
+          dropLingering();
           metrics.cancel();
         }
       }
@@ -296,6 +301,12 @@ export function useTranslator(opts: {
         const onText = (partialText: string) => {
           if (token < shown.current || ctrl.signal.aborted) return;
           if (token > shown.current && partialText.length < shownLen.current) return;
+          // A newer stream has caught up with what is on screen: the older prefix stream
+          // has done its job, so cancel it instead of letting two providers finish.
+          if (lingering.current && lingering.current !== ctrl) {
+            lingering.current.abort();
+            lingering.current = null;
+          }
           shown.current = token;
           shownLen.current = partialText.length;
           setStreaming(true);
@@ -339,10 +350,11 @@ export function useTranslator(opts: {
           // plain text that never went through `verify`, so storing it would let an
           // unchecked reading answer for this sentence forever after.
           if (!prov) memorySet(key, res.result);
-          if (!prov) {
-            // Shown already. Finished sentences get a quiet second look (repair for
-            // lost numbers/links, otherwise the second brain's review); the result is
-            // swapped in only if it is still on screen.
+          if (!prov && (res.needsRepair || LUNA_ENABLED)) {
+            // Shown already. Finished sentences get a quiet second look only when it can
+            // change something: deterministic issues need a repair, and a second brain
+            // needs to exist to review. With Luna paused, a clean DeepSeek result would
+            // make a guaranteed-null round trip, so it is not sent at all.
             void callRepair({ data: { request: data, previous: res.result } })
               .then((r) => {
                 if (

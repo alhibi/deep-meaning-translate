@@ -23,6 +23,8 @@ export interface DetailSpec {
   filter?: { key: Dimension | "pair"; value: string };
   /** Restricts to a time bucket from the activity chart. */
   bucket?: { from: string; to: string };
+  /** Restricts to one hour of the day from the rhythm dial. */
+  hour?: number;
 }
 
 /**

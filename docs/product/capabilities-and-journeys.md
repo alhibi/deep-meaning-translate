@@ -67,6 +67,13 @@ its translations. Colour is relative to the largest visible bucket, not a qualit
 classification estimates remain labelled and correctable. No synthetic rows, network calls,
 new storage or personal profiling are introduced by these views.
 
+The rhythm, records, milestones and language-flow views follow the same rule. The hour dial counts
+the archive's own timestamps and its active hours open exactly those translations; "busiest day"
+opens that day; the longest translation opens its record. Milestones are derived from the whole
+local archive and show their real progress. The flow graph draws only real directions, reports what
+it left out instead of hiding it, and each ribbon opens its direction. None of these views writes
+to storage or sends anything anywhere.
+
 **C.** The translator mounts with the remembered values already present: the draft, the pair and
 the translation are on the first paint. The pending pick replaces them intentionally when the
 record is opened in the translator. A return without a pick restores the session — **not** the
@@ -110,6 +117,21 @@ opens without a connection and keeps the draft on the device; translation requir
 preview environment can bypass registration with `?sw=off` (see
 `docs/architecture/decisions/0004-service-worker-and-offline-shell.md`).
 
+## 9. Choose a language pair
+
+**A.** The bar shows the remembered pair; on a first visit it is `auto → de`. The target picker
+opens with the natural partners of the current source first, then recently used languages, pinned
+favorites, the most used languages and the complete alphabetical list. Arabic ⇄ German is labelled
+as the tuned pair rather than implying equal quality everywhere.
+
+**B.** Search matches native names, the interface-language name, the code and aliases; Arabic
+search also matches hamza/alef and teh-marbuta variants. Arrow keys move through the list, Enter
+selects, and the star pins a language. Picking the language already on the other side trades the
+pair instead of producing X→X. Favorites and recents are bounded, validated device state.
+
+**C.** The chosen pair is persisted and restored with the session it belongs to. The detected
+source is shown as the source label with a quiet marker, while the model still receives `auto`.
+
 ## Acceptance criteria (testable)
 
 1. Typing then pausing produces a translation; a newer edit never shows an older answer.
@@ -120,3 +142,7 @@ preview environment can bypass registration with `?sw=off` (see
 6. Theme and direction are correct before the first paint.
 7. Statistics open a record in the translator intentionally, without corrupting the session.
 8. No private text appears in server logs or metrics.
+9. The language picker finds every offered language by native name, localized name, code or alias;
+   favorites and recents survive reload through validation and never exceed their bounds.
+10. Every statistics visual opens only records that exist in the filtered archive; it introduces no
+    synthetic data, network call or second store.

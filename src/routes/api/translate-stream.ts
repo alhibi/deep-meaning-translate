@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { InputSchema } from "@/lib/translation/translate.functions";
-import { takeToken, takeWarmToken } from "@/lib/translation/throttle";
+import { takeLiveToken, takeToken, takeWarmToken } from "@/lib/translation/throttle";
 import { z } from "zod";
 import { clientAddress, parseAdmittedJson, sameOrigin } from "@/lib/requestSafety";
 
@@ -23,8 +23,13 @@ export const Route = createFileRoute("/api/translate-stream")({
         // Free work for us, but still an outbound request: bounded per client, or the
         // endpoint becomes a request amplifier for anyone who knows the URL.
         if (!takeWarmToken(clientAddress(request))) return noContent;
-        // DeepSeek writes everything while Luna is paused.
-        await fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {});
+        // Resolve the provider modules and open the TLS connection before the first
+        // keystroke needs them. No text and no credentials are sent by the HEAD.
+        await Promise.allSettled([
+          fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {}),
+          import("@/lib/translation/providers/deepseek.server"),
+          import("@/lib/translation/providers/opencode.server"),
+        ]);
         return noContent;
       },
       POST: async ({ request }) => {
@@ -40,8 +45,10 @@ export const Route = createFileRoute("/api/translate-stream")({
             },
           );
         if (!sameOrigin(request)) return fail("input", 403);
-        const admitted = await parseAdmittedJson(request, StreamInput, () =>
-          takeToken(clientAddress(request)),
+        // A provisional stream and a settled sentence are different budgets: a burst of
+        // typing must never spend the allowance the finished sentence needs.
+        const admitted = await parseAdmittedJson(request, StreamInput, (data) =>
+          (data.mode === "full" ? takeToken : takeLiveToken)(clientAddress(request)),
         );
         if (!admitted.ok) return fail(admitted.kind, admitted.kind === "rate" ? 429 : 400);
         const data = admitted.data;

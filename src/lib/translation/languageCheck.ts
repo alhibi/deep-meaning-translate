@@ -6,27 +6,116 @@
  * a wrong warning is worse than none.
  */
 
-type Script = "arabic" | "hebrew" | "cyrillic" | "kana" | "han" | "hangul" | "latin";
+type Script =
+  | "arabic"
+  | "hebrew"
+  | "cyrillic"
+  | "greek"
+  | "kana"
+  | "han"
+  | "hangul"
+  | "devanagari"
+  | "bengali"
+  | "thai"
+  | "georgian"
+  | "armenian"
+  | "ethiopic"
+  | "sinhala"
+  | "khmer"
+  | "lao"
+  | "myanmar"
+  | "latin";
 
 const SCRIPT_RE: [Script, RegExp][] = [
   ["arabic", /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/u],
   ["hebrew", /[\u0590-\u05FF]/u],
   ["cyrillic", /[\u0400-\u04FF]/u],
+  ["greek", /[\u0370-\u03FF]/u],
   ["kana", /[\u3040-\u30FF]/u],
   ["han", /[\u4E00-\u9FFF]/u],
   ["hangul", /[\uAC00-\uD7AF]/u],
+  ["devanagari", /[\u0900-\u097F]/u],
+  ["bengali", /[\u0980-\u09FF]/u],
+  ["thai", /[\u0E00-\u0E7F]/u],
+  ["georgian", /[\u10A0-\u10FF]/u],
+  ["armenian", /[\u0530-\u058F]/u],
+  ["ethiopic", /[\u1200-\u137F]/u],
+  ["sinhala", /[\u0D80-\u0DFF]/u],
+  ["khmer", /[\u1780-\u17FF]/u],
+  ["lao", /[\u0E80-\u0EFF]/u],
+  ["myanmar", /[\u1000-\u109F]/u],
   ["latin", /[A-Za-z\u00C0-\u024F]/u],
 ];
 
 /** Languages each writing system can be (only those the app offers). */
 const FAMILY: Record<Script, string[]> = {
-  arabic: ["ar", "fa", "ur"],
-  hebrew: ["he"],
-  cyrillic: ["ru"],
+  arabic: ["ar", "fa", "ur", "ps", "sd", "ug"],
+  hebrew: ["he", "yi"],
+  cyrillic: ["ru", "uk", "bg", "sr", "bs", "mk", "kk", "mn"],
+  greek: ["el"],
   kana: ["ja"],
   han: ["zh", "ja"],
-  hangul: [],
-  latin: ["de", "en", "fr", "es", "tr", "it", "nl", "pt"],
+  hangul: ["ko"],
+  devanagari: ["hi", "ne"],
+  bengali: ["bn"],
+  thai: ["th"],
+  georgian: ["ka"],
+  armenian: ["hy"],
+  ethiopic: ["am"],
+  sinhala: ["si"],
+  khmer: ["km"],
+  lao: ["lo"],
+  myanmar: ["my"],
+  latin: [
+    "de",
+    "en",
+    "fr",
+    "es",
+    "tr",
+    "it",
+    "nl",
+    "pt",
+    "pl",
+    "cs",
+    "sk",
+    "hu",
+    "hr",
+    "sr",
+    "bs",
+    "sl",
+    "sq",
+    "lt",
+    "lv",
+    "et",
+    "ca",
+    "gl",
+    "eu",
+    "cy",
+    "ga",
+    "mt",
+    "lb",
+    "af",
+    "sw",
+    "so",
+    "ha",
+    "yo",
+    "ig",
+    "zu",
+    "az",
+    "uz",
+    "id",
+    "ms",
+    "vi",
+    "tl",
+    "jv",
+    "fi",
+    "sv",
+    "da",
+    "no",
+    "is",
+    "ro",
+    "ku",
+  ],
 };
 
 /** Dominant writing system, only when it clearly carries the text (≥ 70% of letters). */
@@ -52,12 +141,25 @@ export function dominantScript(text: string): { script: Script; letters: number 
   return best && n >= letters * 0.7 ? { script: best, letters } : null;
 }
 
-/** Arabic, Persian or Urdu from letters only these languages use. */
+/**
+ * Arabic-script languages from letters only they use. Order matters: Urdu, Pashto and
+ * Sindhi share the Persian letter shapes, so they are tested before Persian and Arabic.
+ * A returned `strong: false` means "possibly, but not proof" and only produces a hint.
+ */
 function arabicScriptLanguage(text: string): { code: string; strong: boolean } {
-  const urdu = (text.match(/[ٹڈڑںےۓ]/gu) ?? []).length;
-  const persian = (text.match(/[پچژگکی]/gu) ?? []).length;
-  const arabic = (text.match(/[ةىيك]/gu) ?? []).length;
-  if (urdu > 0 && urdu >= arabic) return { code: "ur", strong: true };
+  const count = (re: RegExp) => (text.match(re) ?? []).length;
+  const urdu = count(/[ٹڈڑںےۓ]/gu);
+  const sindhi = count(/[ڪڳڱڻڀٻٿٽٺڄڃڌڏڊڍڙڦ]/gu);
+  const pashto = count(/[ځڅډړږښګڼېۍ]/gu);
+  const uyghur = count(/[ەۆۈۋ]/gu);
+  const persian = count(/[پچژگکی]/gu);
+  const arabic = count(/[ةىيك]/gu);
+  // Urdu, Pashto and Sindhi also use Persian letter shapes, so their exclusive letters are
+  // checked first and an Urdu letter is never outweighed by a shared Persian one.
+  if (sindhi > 0 && sindhi >= urdu && sindhi >= pashto) return { code: "sd", strong: true };
+  if (pashto > 0 && pashto >= urdu) return { code: "ps", strong: true };
+  if (uyghur > 0 && uyghur >= urdu) return { code: "ug", strong: true };
+  if (urdu > 0) return { code: "ur", strong: true };
   if (persian > 0 && persian > arabic) return { code: "fa", strong: true };
   return { code: "ar", strong: arabic > 0 };
 }

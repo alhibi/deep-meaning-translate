@@ -7,7 +7,7 @@ keys); response quality and provider uptime are **NOT_VERIFIED**.
 
 | Endpoint | Method | Purpose | Protection |
 | --- | --- | --- | --- |
-| `/api/translate-stream` | `GET` | Warm the provider connection; sends no text | `takeWarmToken` per client |
+| `/api/translate-stream` | `GET` | Preload provider modules and open the connection; sends no text | `takeWarmToken` per client |
 | `/api/translate-stream` | `POST` | Stream live plain text or a full structured translation | same-origin, `takeToken`, bounded JSON, Zod schema |
 | `/api/speak` | `POST` | Cloud speech (Gemini PCM) | same-origin, speech throttle, server key |
 | `/api/eleven-speak` | `POST` | Cloud speech with timestamps | same-origin, speech throttle, server key |
@@ -72,9 +72,13 @@ does not spend the client's token. Only a schema-valid body reaches the rate lim
 
 ## Rate limiting
 
-Process-local bounded token buckets, one per purpose: translation, warm-up, repair, enrichment,
-speech, and dictation token minting. Background work cannot spend the typing budget. This protects a single instance; it is not
-a deployment-wide abuse defence, and the documentation says so rather than implying otherwise.
+Process-local bounded token buckets, one per purpose: **live typing**, **settled translation**,
+warm-up, repair, enrichment, speech, and dictation token minting. The live and settled budgets are
+deliberate separate buckets: a person typing continuously can spend the provisional allowance
+without ever touching the allowance their finished sentence needs. Background work cannot spend
+either, and a hidden repair is the first thing to shed under load. Admission is chosen from the
+validated `mode` after the body is parsed. This protects a single instance; it is not a
+deployment-wide abuse defence, and the documentation says so rather than implying otherwise.
 
 ## Provider failure UX
 

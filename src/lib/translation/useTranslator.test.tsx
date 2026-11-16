@@ -210,6 +210,18 @@ describe("useTranslator", () => {
     expect(h.current.result?.translation).toBe("مصححة 3");
   });
 
+  it("does not spend a quiet repair round trip when a clean result has no reviewer", async () => {
+    call.mockResolvedValue({ ok: true, result: result("أهلاً") });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Hallo."),
+    });
+    await flush(600);
+    expect(h.current.result?.translation).toBe("أهلاً");
+    expect(h.current.phase).toBe("COMPLETE");
+    // DeepSeek wrote a clean sentence while Luna is paused: there is nobody to review it.
+    expect(repairCall).not.toHaveBeenCalled();
+  });
+
   it("keeps an earlier live stream flowing while typing continues", async () => {
     const signals: AbortSignal[] = [];
     let resolveFirst: (v: unknown) => void = () => {};

@@ -28,6 +28,14 @@ export function makeFormat(locale: Locale) {
   const monthF = new Intl.DateTimeFormat(tag, { month: "short", year: "numeric", timeZone: "UTC" });
   const stampF = new Intl.DateTimeFormat(tag, { dateStyle: "medium", timeStyle: "short" });
   const weekdayF = new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: "UTC" });
+  const hourF = new Intl.DateTimeFormat(tag, {
+    hour: "numeric",
+    hourCycle: "h23",
+    timeZone: "UTC",
+  });
+  // 2024-01-01 was a Monday: a stable anchor for Monday-first weekday labels.
+  const weekdayOf = (i: number) => weekdayF.format(new Date(Date.UTC(2024, 0, 1 + i, 12)));
+  const hourOf = (h: number) => hourF.format(new Date(Date.UTC(2024, 0, 1, h, 12)));
   let names: Intl.DisplayNames | null = null;
   try {
     names = new Intl.DisplayNames([locale], { type: "language" });
@@ -53,6 +61,8 @@ export function makeFormat(locale: Locale) {
     day: (key: string) => dayF.format(utc(key)),
     dayLong: (key: string) => dayLongF.format(utc(key)),
     weekday: (key: string) => weekdayF.format(utc(key)),
+    weekdayOf,
+    hour: hourOf,
     bucket: (from: string, to: string, g: Granularity) =>
       g === "day"
         ? dayLongF.format(utc(from))
