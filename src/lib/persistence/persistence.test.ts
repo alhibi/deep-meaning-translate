@@ -2,7 +2,14 @@ import { webcrypto } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { BACKUP_SETTING_KEYS, type HistoryEntry, type Session } from "./contracts";
 import { countOf, createBackup, mergeData, parseBackup } from "./backup";
-import { webPort } from "./web";
+import {
+  nextSessionTimestamp,
+  readSessionMeta,
+  readSessionRecord,
+  webPort,
+  writeSessionState,
+} from "./web";
+import { persist, resetPersistCache, resetPersistRecency } from "../persist";
 
 /**
  * The port's contract on the web adapter, plus the backup envelope that both platforms
@@ -34,6 +41,10 @@ const session: Session = {
   target: "ar",
   style: "natural",
 };
+
+const SESSION_KEY = "lingua.session.v1";
+
+const withText = (text: string): Session => ({ ...session, text });
 
 describe("web persistence adapter", () => {
   beforeEach(async () => {
@@ -67,6 +78,41 @@ describe("web persistence adapter", () => {
     await webPort.historyUpsert([entry("a", "Hallo", 1_000)]);
     await webPort.clearAll();
     expect((await webPort.hydrate()).history).toEqual([]);
+  });
+
+  it("reads a legacy bare session unchanged and upgrades it on the next save", async () => {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    expect(readSessionMeta()).toBeNull();
+    expect((await webPort.hydrate()).session).toEqual(session);
+    await webPort.saveSession(session);
+    expect(readSessionMeta()?.at).toBeGreaterThan(0);
+  });
+
+  it("round-trips the session through its recency envelope", async () => {
+    await webPort.saveSession(session);
+    const raw = JSON.parse(window.localStorage.getItem(SESSION_KEY) ?? "null") as {
+      at?: unknown;
+      origin?: unknown;
+    };
+    expect(typeof raw.at).toBe("number");
+    expect(typeof raw.origin).toBe("string");
+    expect(raw.at).toBe(readSessionMeta()?.at);
+    expect((await webPort.hydrate()).session).toEqual(session);
+    const snapshot = await webPort.snapshot();
+    expect(snapshot.session).toEqual(session);
+    // A backup carries the validated draft, never the tab metadata.
+    expect(Object.keys(snapshot.session ?? {})).not.toContain("at");
+    expect(Object.keys(snapshot.session ?? {})).not.toContain("origin");
+  });
+
+  it("keeps an empty draft as a record that resolves to no session", async () => {
+    await webPort.saveSession(session);
+    await webPort.saveSession(null);
+    expect(window.localStorage.getItem(SESSION_KEY)).not.toBeNull();
+    expect(readSessionRecord()).toBeNull();
+    expect(readSessionMeta()?.at).toBeGreaterThan(0);
+    expect((await webPort.hydrate()).session).toBeNull();
+    expect((await webPort.snapshot()).session).toBeNull();
   });
 
   it("merges without duplicating and keeps the newer row", async () => {
@@ -250,5 +296,121 @@ describe("backup envelope", () => {
     const merged = mergeData(local, incoming);
     expect(merged.data.history[0]?.translated).toBe("محلي");
     expect(merged.report.skipped.history).toBe(1);
+  });
+});
+
+/**
+ * TD14: the pagehide flush writes the tab's current snapshot, and an empty draft used to
+ * remove the shared session key — so a second, empty tab that closed could erase another
+ * tab's draft. An empty draft is now an empty record, and a write whose recency is older
+ * than the stored record is refused. These tests simulate a second tab by writing its
+ * record directly: a same-document localStorage write fires no `storage` event, which is
+ * exactly the stale case.
+ */
+describe("session recency across tabs (TD14)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    resetPersistCache();
+    resetPersistRecency();
+  });
+
+  it("refuses a stale tab's flush so it cannot clear a newer draft", async () => {
+    expect(persist.session()).toBeNull(); // this tab's boot read
+    writeSessionState(withText("Neuer Entwurf"), {
+      at: Date.now() + 60_000,
+      origin: "other-tab",
+    });
+    const storedAt = readSessionMeta()?.at;
+
+    expect(await persist.saveSession(null)).toBe("refused-stale");
+    expect(await persist.saveSession(withText("stale draft"))).toBe("refused-stale");
+    expect(readSessionRecord()?.text).toBe("Neuer Entwurf");
+    expect(readSessionMeta()?.at).toBe(storedAt);
+    // This tab still remembers what it believed, so its own screen is unchanged.
+    expect(persist.remembered().session?.text).toBe("stale draft");
+  });
+
+  it("adopts a newer draft from a storage event, then the next write wins", async () => {
+    expect(persist.session()).toBeNull();
+    writeSessionState(withText("Neuer Entwurf"), {
+      at: Date.now() + 60_000,
+      origin: "other-tab",
+    });
+    const storedAt = readSessionMeta()?.at ?? 0;
+
+    window.dispatchEvent(new StorageEvent("storage", { key: SESSION_KEY }));
+
+    expect(persist.remembered().session?.text).toBe("Neuer Entwurf");
+    expect(await persist.saveSession(withText("mein Entwurf"))).toBe("saved");
+    expect(readSessionRecord()?.text).toBe("mein Entwurf");
+    expect(readSessionMeta()?.at).toBeGreaterThan(storedAt);
+  });
+
+  it("remembers an empty draft instead of deleting the key", async () => {
+    expect(await persist.saveSession(null)).toBe("saved");
+    expect(readSessionRecord()).toBeNull();
+    expect(persist.session()).toBeNull();
+    const raw = JSON.parse(window.localStorage.getItem(SESSION_KEY) ?? "null") as {
+      text?: unknown;
+      at?: unknown;
+    };
+    expect(raw.text).toBe("");
+    expect(typeof raw.at).toBe("number");
+  });
+
+  it("clearAll resets the recency epoch so the next write wins", async () => {
+    expect(persist.session()).toBeNull();
+    writeSessionState(withText("other tab"), { at: Date.now() + 60_000, origin: "other-tab" });
+    expect(await persist.saveSession(null)).toBe("refused-stale");
+
+    await persist.clearAll();
+    expect(window.localStorage.getItem(SESSION_KEY)).toBeNull();
+
+    expect(await persist.saveSession(withText("nach dem Löschen"))).toBe("saved");
+    expect(readSessionRecord()?.text).toBe("nach dem Löschen");
+  });
+});
+
+describe("cross-tab sync for prefs and session", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    resetPersistCache();
+    resetPersistRecency();
+  });
+
+  it("updates remembered prefs from a storage event and notifies subscribers", async () => {
+    const calls: string[] = [];
+    const unsubscribe = persist.subscribe(() => calls.push("changed"));
+    const prefs = { source: "de", target: "en", style: "formal" as const };
+
+    window.localStorage.setItem("lingua.prefs.v1", JSON.stringify(prefs));
+    window.dispatchEvent(new StorageEvent("storage", { key: "lingua.prefs.v1" }));
+
+    expect(persist.remembered().prefs).toEqual(prefs);
+    expect(calls).toHaveLength(1);
+
+    // A local write notifies the same tab too, so a mounted view can re-read.
+    await persist.savePrefs(prefs);
+    expect(calls.length).toBeGreaterThan(1);
+    unsubscribe();
+  });
+
+  it("notifies on a local session write and keeps the snapshot stable between changes", async () => {
+    const calls: number[] = [];
+    const unsubscribe = persist.subscribe(() => calls.push(1));
+    const before = persist.remembered();
+    expect(persist.remembered()).toBe(before);
+    await persist.saveSession(withText("Hallo"));
+    expect(calls).toHaveLength(1);
+    expect(persist.remembered().session?.text).toBe("Hallo");
+    unsubscribe();
+  });
+
+  it("treats a cleared key as a fresh epoch and an empty draft", async () => {
+    await persist.saveSession(withText("Hallo"));
+    window.localStorage.removeItem(SESSION_KEY);
+    window.dispatchEvent(new StorageEvent("storage", { key: SESSION_KEY }));
+    expect(persist.remembered().session).toBeNull();
+    expect(await persist.saveSession(withText("Neu"))).toBe("saved");
   });
 });

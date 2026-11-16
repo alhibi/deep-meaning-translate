@@ -60,6 +60,89 @@ function parse<T>(raw: string | null): unknown {
   }
 }
 
+/* ------------------------------------------------------------ session recency (TD14) */
+
+/**
+ * The session record is the validated `Session` plus two extra fields: `at` (the epoch-ms
+ * this tab wrote it) and `origin` (an id for that tab). The shape is flat on purpose: a
+ * record written before recency metadata existed is the same object without those two
+ * fields, so a legacy bare session still parses, and an older build reads a new record
+ * through `parseSession` and ignores the extras (the rollback path).
+ *
+ * Why the metadata exists: a second, empty tab used to remove `lingua.session.v1` when it
+ * was closed, erasing another tab's newer draft. `persist.ts` refuses a write whose
+ * recency is older than the record it would overwrite; the empty draft is written as an
+ * empty record instead of a deletion, so `parseSession` still resolves it to "no draft".
+ */
+export interface SessionMeta {
+  at: number;
+  origin: string;
+}
+
+export type SessionRecord = Session & SessionMeta;
+
+/** The stored draft, from either a legacy bare Session or a metadata record. */
+export function readSessionRecord(): Session | null {
+  if (typeof window === "undefined") return null;
+  return parseSession(parse(get(SESSION)));
+}
+
+/** Recency metadata of the stored record; null when absent, legacy or damaged. */
+export function readSessionMeta(): SessionMeta | null {
+  if (typeof window === "undefined") return null;
+  const raw = parse(get(SESSION));
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as { at?: unknown; origin?: unknown };
+  if (typeof record.at !== "number" || !Number.isFinite(record.at) || record.at < 0) return null;
+  return { at: record.at, origin: typeof record.origin === "string" ? record.origin : "unknown" };
+}
+
+/**
+ * A write time newer than the stored record. Wall clock plus the +1 guard keeps saves in
+ * the same millisecond (and after a legacy clock was rolled back) monotonic; `seenAt` is
+ * the newest recency this tab knows about, so this tab's next write always wins over it.
+ */
+export function nextSessionTimestamp(seenAt = 0): number {
+  const stored = readSessionMeta()?.at ?? 0;
+  return Math.max(Date.now(), stored + 1, seenAt + 1);
+}
+
+let tabOriginId: string | null = null;
+
+/** Stable id for this tab, stamped into every session write it makes. */
+export function tabOrigin(): string {
+  if (tabOriginId) return tabOriginId;
+  tabOriginId = newOriginId();
+  return tabOriginId;
+}
+
+function newOriginId(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+      return crypto.randomUUID();
+  } catch {
+    /* a browser without randomUUID still needs a tab id */
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Persist a session with its recency metadata. `null` is an empty draft, never a key
+ * removal: deleting here is what let a closing empty tab erase another tab's draft.
+ */
+export function writeSessionState(session: Session | null, meta: SessionMeta): boolean {
+  if (typeof window === "undefined") return false;
+  const record: SessionRecord | { text: ""; at: number; origin: string } = session
+    ? { ...session, at: meta.at, origin: meta.origin }
+    : { text: "", at: meta.at, origin: meta.origin };
+  try {
+    window.localStorage.setItem(SESSION, JSON.stringify(record));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function readHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
   const parsed = parse(get(HISTORY));
@@ -160,7 +243,7 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
     return {
       settings: deviceSettingValues(),
       prefs: parsePrefs(parse(get(PREFS))),
-      session: parseSession(parse(get(SESSION))),
+      session: readSessionRecord(),
       history,
       historyTotal: history.length,
       saved: readSaved(),
@@ -178,8 +261,11 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
   },
 
   async saveSession(session: Session | null) {
-    if (!session) return removeDeviceValue(SESSION);
-    return writeDeviceValue(SESSION, JSON.stringify(session));
+    // One code path for both shapes: `null` becomes an empty record, never a key removal.
+    return writeSessionState(parseSession(session), {
+      at: nextSessionTimestamp(),
+      origin: tabOrigin(),
+    });
   },
 
   async historyPage(limit, offset) {
@@ -259,7 +345,8 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
     return {
       settings: deviceSettingValues(),
       prefs: parsePrefs(parse(get(PREFS))),
-      session: parseSession(parse(get(SESSION))),
+      // Backups carry the validated draft, not the tab that wrote it or when.
+      session: readSessionRecord(),
       history: readHistory(),
       saved: readSaved(),
       memory: readMemory(),

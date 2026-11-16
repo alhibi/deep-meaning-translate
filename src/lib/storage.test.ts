@@ -261,13 +261,16 @@ describe("data integrity (edit, delete, restore)", () => {
     expect(persist.session()?.result).toBeNull();
     localStorage.setItem("lingua.session.v1", JSON.stringify({ text: 42 }));
     expect(persist.session()).toBeNull();
-    persist.saveSession({
+    await persist.saveSession({
       text: "   ",
       result: null,
       source: "de",
       target: "ar",
       style: "natural",
     });
-    expect(localStorage.getItem("lingua.session.v1")).toBeNull();
+    // TD14: an empty draft is an empty record, not a deletion, so a stale tab cannot erase
+    // another tab's newer draft. The app still sees no draft.
+    expect(persist.session()).toBeNull();
+    expect(localStorage.getItem("lingua.session.v1")).not.toBeNull();
   });
 });

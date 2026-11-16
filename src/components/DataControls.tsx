@@ -1,6 +1,15 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { persist } from "@/lib/persist";
+import { HISTORY_LIMIT, history } from "@/lib/history";
+import { saved } from "@/lib/saved";
 import { port } from "@/lib/persistence";
+import {
+  formatStorageBytes,
+  formatStoragePercent,
+  readStorageHealth,
+  type StorageHealth,
+} from "@/lib/persistence/health";
 import type { BackupData, ImportReport } from "@/lib/persistence/contracts";
 import {
   backupFilename,
@@ -54,6 +63,20 @@ const copy = {
     unreadable: "The file could not be read.",
     noData: "Nothing to export yet.",
     note: "A backup contains your archive, phrasebook, translation memory, draft and settings. Uninstalling the app or clearing its data in Android settings deletes the device copy — the exported file is the only copy that survives.",
+    storageTitle: "Storage",
+    storageArchive: "Archive rows",
+    storageSaved: "Saved phrases",
+    storageUsage: "{used} of {quota} used",
+    storageNotReported: "Storage usage is not reported by this browser.",
+    storageDurableOn: "This browser will not evict the app's data to free space.",
+    storageDurableOff: "This browser may evict the app's data when space is low.",
+    storageDurableUnknown: "This browser does not report whether storage is durable.",
+    storageMakeDurable: "Make storage durable",
+    storageDurableGranted: "Storage is now durable.",
+    storageDurableDeclined: "The browser did not grant durable storage. The data is still saved.",
+    storageNative: "Stored in app-private storage on this device.",
+    storageWriteFailed: "The last save could not be written. The device may be out of space.",
+    storageTrimmed: "Older archive rows dropped to fit the device quota: {count}",
     storage:
       "Device storage could not be opened, so this session is not being saved. Translation still works; reopen the app to try storage again.",
   },
@@ -88,6 +111,20 @@ const copy = {
     unreadable: "تعذّر قراءة الملف.",
     noData: "لا يوجد ما يُصدَّر بعد.",
     note: "تحتوي النسخة على الأرشيف ودفتر العبارات وذاكرة الترجمة والمسودة والإعدادات. إلغاء تثبيت التطبيق أو مسح بياناته من إعدادات Android يحذف نسخة الجهاز — الملف المصدَّر هو النسخة الوحيدة الباقية.",
+    storageTitle: "التخزين",
+    storageArchive: "سجل الترجمة",
+    storageSaved: "العبارات المحفوظة",
+    storageUsage: "{used} من {quota} مستخدم",
+    storageNotReported: "هذا المتصفح لا يُبلّغ عن مساحة التخزين المستخدمة.",
+    storageDurableOn: "هذا المتصفح لن يحذف بيانات التطبيق لتحرير مساحة.",
+    storageDurableOff: "قد يحذف هذا المتصفح بيانات التطبيق عند امتلاء المساحة.",
+    storageDurableUnknown: "هذا المتصفح لا يُبلّغ عن ديمومة التخزين.",
+    storageMakeDurable: "اجعل التخزين دائماً",
+    storageDurableGranted: "أصبح التخزين دائماً الآن.",
+    storageDurableDeclined: "لم يمنح المتصفح تخزيناً دائماً. البيانات محفوظة كما هي.",
+    storageNative: "محفوظة في تخزين التطبيق الخاص على هذا الجهاز.",
+    storageWriteFailed: "تعذّرت كتابة آخر حفظ. قد يكون الجهاز ممتلئاً.",
+    storageTrimmed: "صفوف أقدم من الأرشيف حُذفت لتناسب مساحة الجهاز: {count}",
     storage:
       "تعذّر فتح تخزين الجهاز، لذا لا تُحفظ هذه الجلسة. الترجمة تعمل، وأعد فتح التطبيق للمحاولة مرة أخرى.",
   },
@@ -123,6 +160,24 @@ const copy = {
     unreadable: "Die Datei konnte nicht gelesen werden.",
     noData: "Noch nichts zu exportieren.",
     note: "Eine Sicherung enthält Archiv, Phrasenbuch, Übersetzungsspeicher, Entwurf und Einstellungen. Deinstallation oder das Löschen der App-Daten in Android entfernt die Gerätekopie — die exportierte Datei ist die einzige, die bleibt.",
+    storageTitle: "Speicher",
+    storageArchive: "Archivzeilen",
+    storageSaved: "Gespeicherte Phrasen",
+    storageUsage: "{used} von {quota} belegt",
+    storageNotReported: "Dieser Browser meldet die Speichernutzung nicht.",
+    storageDurableOn: "Dieser Browser entfernt die Daten der App nicht, um Platz zu schaffen.",
+    storageDurableOff:
+      "Dieser Browser kann die Daten der App entfernen, wenn der Platz knapp wird.",
+    storageDurableUnknown: "Dieser Browser meldet nicht, ob der Speicher dauerhaft ist.",
+    storageMakeDurable: "Speicher dauerhaft sichern",
+    storageDurableGranted: "Der Speicher ist jetzt dauerhaft gesichert.",
+    storageDurableDeclined:
+      "Der Browser hat dauerhaften Speicher nicht gewährt. Die Daten sind weiterhin gespeichert.",
+    storageNative: "In app-privatem Speicher auf diesem Gerät gespeichert.",
+    storageWriteFailed:
+      "Der letzte Speichervorgang konnte nicht geschrieben werden. Möglicherweise ist das Gerät voll.",
+    storageTrimmed:
+      "Ältere Archivzeilen wurden entfernt, um in den Gerätespeicher zu passen: {count}",
     storage:
       "Der Gerätespeicher ließ sich nicht öffnen; diese Sitzung wird nicht gespeichert. Übersetzen funktioniert weiter — öffne die App neu, um es erneut zu versuchen.",
   },
@@ -137,6 +192,11 @@ interface Preview {
   digest: string;
 }
 
+/** Replace {placeholders} in a copy string. Keeps every sentence in the copy dict. */
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match: string, key: string) => values[key] ?? match);
+}
+
 export function DataControls() {
   const { locale, rtl } = useI18n();
   const c = copy[locale];
@@ -149,6 +209,56 @@ export function DataControls() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const native = isNativeApp();
+  /**
+   * Storage facts are read after hydration, never during render: SSR and the first client
+   * paint agree (the section appears once the browser has answered), and no storage call
+   * runs on the server. Native shows its own app-private storage line instead of a quota.
+   */
+  const [storageView, setStorageView] = useState<{
+    archiveRows: number;
+    savedRows: number;
+    lastWriteOk: boolean;
+    lastEvicted: number;
+    health: StorageHealth | null;
+  } | null>(null);
+  const [durableState, setDurableState] = useState<"idle" | "requesting" | "granted" | "declined">(
+    "idle",
+  );
+
+  const loadStorage = useCallback(async () => {
+    const archiveRows = history.count();
+    const savedRows = saved.list().length;
+    // A refused/trimmed archive write matters on both platforms, so it is read here rather
+    // than only from the web estimate.
+    const lastWriteOk = history.lastWriteOk();
+    const lastEvicted = history.lastEvicted();
+    const health = native
+      ? null
+      : await readStorageHealth({
+          archiveRows,
+          archiveLimit: HISTORY_LIMIT,
+          savedRows,
+          lastWriteOk,
+          lastEvicted,
+        });
+    setStorageView({ archiveRows, savedRows, lastWriteOk, lastEvicted, health });
+  }, [native]);
+
+  useEffect(() => {
+    // Storage facts can only be read after hydration: SSR has no storage APIs and the first
+    // client paint must agree with it. Reading them is synchronising with an external system.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
+    void loadStorage();
+  }, [loadStorage]);
+
+  const makeDurable = useCallback(async () => {
+    setDurableState("requesting");
+    const granted = await persist.requestDurable();
+    setDurableState(granted ? "granted" : "declined");
+    // persisted() can still report false right after the grant in some browsers; re-read.
+    if (granted) await loadStorage();
+  }, [loadStorage]);
 
   const exportBackup = useCallback(async () => {
     setError(null);
@@ -265,13 +375,15 @@ export function DataControls() {
         if (!reloaded) setError(c.storage);
         setReport(result);
         setPreview(null);
+        // The archive/phrasebook counts just changed; re-read them and the quota.
+        void loadStorage();
       } catch {
         setError(c.unreadable);
       } finally {
         setBusy(false);
       }
     },
-    [preview, c],
+    [preview, c, loadStorage],
   );
 
   return (
@@ -429,6 +541,107 @@ export function DataControls() {
       ) : null}
 
       <p className="mt-5 text-[12px] leading-relaxed text-faint">{c.note}</p>
+
+      {storageView ? (
+        <section aria-labelledby="storage-title" className="mt-8 border-t border-border pt-5">
+          <h3 id="storage-title" className="text-[15px] font-semibold">
+            {c.storageTitle}
+          </h3>
+          <dl className="mt-2 space-y-1 text-[13px] text-muted-foreground">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt>{c.storageArchive}</dt>
+              <dd className="tabular-nums text-foreground" dir="ltr">
+                {storageView.archiveRows} / {HISTORY_LIMIT}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt>{c.storageSaved}</dt>
+              <dd className="tabular-nums text-foreground" dir="ltr">
+                {storageView.savedRows}
+              </dd>
+            </div>
+          </dl>
+          {storageView.health ? (
+            <>
+              {storageView.health.fill !== null &&
+              storageView.health.usage !== null &&
+              storageView.health.quota !== null ? (
+                <div className="mt-3">
+                  <div className="flex items-baseline justify-between gap-3 text-[13px] text-muted-foreground">
+                    <span>
+                      {fill(c.storageUsage, {
+                        used: formatStorageBytes(storageView.health.usage, locale),
+                        quota: formatStorageBytes(storageView.health.quota, locale),
+                      })}
+                    </span>
+                    <span className="tabular-nums text-faint">
+                      {formatStoragePercent(storageView.health.fill, locale)}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-border"
+                    aria-hidden="true"
+                  >
+                    <div
+                      className="h-full rounded-full bg-foreground"
+                      style={{ width: `${storageView.health.fill}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                  {c.storageNotReported}
+                </p>
+              )}
+              {storageView.health.durableSupported ? (
+                <div className="mt-3">
+                  <p className="text-[13px] leading-relaxed text-muted-foreground">
+                    {storageView.health.durable === true
+                      ? c.storageDurableOn
+                      : storageView.health.durable === false
+                        ? c.storageDurableOff
+                        : c.storageDurableUnknown}
+                  </p>
+                  {storageView.health.durable !== true ? (
+                    <button
+                      type="button"
+                      onClick={() => void makeDurable()}
+                      disabled={durableState === "requesting"}
+                      className="press mt-2 min-h-11 rounded-full border border-border bg-surface px-4 text-[14px] text-foreground disabled:opacity-50"
+                    >
+                      {c.storageMakeDurable}
+                    </button>
+                  ) : null}
+                  {durableState === "granted" ? (
+                    <p role="status" className="mt-2 text-[12px] text-muted-foreground">
+                      {c.storageDurableGranted}
+                    </p>
+                  ) : null}
+                  {durableState === "declined" ? (
+                    <p role="status" className="mt-2 text-[12px] text-faint">
+                      {c.storageDurableDeclined}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+              {c.storageNative}
+            </p>
+          )}
+          {!storageView.lastWriteOk ? (
+            <p role="status" className="mt-3 text-[13px] text-signal-text">
+              {c.storageWriteFailed}
+            </p>
+          ) : null}
+          {storageView.lastEvicted > 0 ? (
+            <p role="status" className="mt-2 text-[13px] text-signal-text">
+              {fill(c.storageTrimmed, { count: String(storageView.lastEvicted) })}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
     </section>
   );
 }
