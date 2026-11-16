@@ -46,10 +46,11 @@ describe("direct provider request lifetime", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
   it("never puts a provider error body into the error message", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response("SECRET private sentence", { status: 500 })),
+    // A fresh Response per attempt: the bounded retry consumes the first one's body.
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response("SECRET private sentence", { status: 500 })),
     );
+    vi.stubGlobal("fetch", fetchMock);
     const request: TranslationRequest = {
       text: "مرحبا",
       source: "ar",
@@ -63,6 +64,7 @@ describe("direct provider request lifetime", () => {
       .translate(request)
       .then(() => null)
       .catch((e: Error & { kind?: string }) => e)) as (Error & { kind?: string }) | null;
+    expect(fetchMock).toHaveBeenCalledTimes(2); // one bounded retry, never the body text
     expect(error?.kind).toBe("provider");
     expect(error?.message).not.toContain("SECRET");
   });

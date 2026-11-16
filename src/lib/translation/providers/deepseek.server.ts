@@ -10,7 +10,7 @@ import type { TranslationProvider, TranslationRequest, TranslationResult } from 
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { textDeltas } from "./opencode.server";
-import { providerFetch } from "./request.server";
+import { fetchWithRetry } from "./retry.server";
 import { outputTokenBudget } from "../budget";
 
 /**
@@ -40,7 +40,7 @@ async function send(
   if (signal?.aborted) throw cancelled();
   let res: Response;
   try {
-    res = await providerFetch(
+    res = await fetchWithRetry(
       `${BASE}/chat/completions`,
       {
         method: "POST",

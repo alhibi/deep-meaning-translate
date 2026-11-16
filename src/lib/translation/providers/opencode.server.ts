@@ -9,7 +9,7 @@ import type { TranslationProvider, TranslationRequest, TranslationResult } from 
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { parseLexicon, type LexiconResult } from "../lexicon";
-import { providerFetch } from "./request.server";
+import { fetchWithRetry } from "./retry.server";
 
 const BASE = "https://opencode.ai/zen/go/v1";
 const DEFAULT_MODEL = "gpt-6-luna";
@@ -63,7 +63,7 @@ async function send(
   // undici's internal AbortError escape as an unhandled runtime error.
   let res: Response;
   try {
-    res = await providerFetch(
+    res = await fetchWithRetry(
       `${BASE}/responses`,
       {
         method: "POST",
@@ -107,7 +107,25 @@ async function call(
   return extractText(await res.json());
 }
 
-/** Reads the provider's SSE stream and yields only the answer-text deltas. */
+/** One parsed SSE event, narrowed to the fields both provider protocols use. */
+interface StreamEvent {
+  type?: unknown;
+  delta?: unknown;
+  error?: unknown;
+  choices?: { delta?: { content?: unknown }; finish_reason?: unknown }[];
+}
+
+/**
+ * Reads the provider's SSE stream and yields only the answer-text deltas.
+ *
+ * A complete answer is a protocol fact, not a guess from the closing bytes: an
+ * OpenAI-compatible stream says `choices[0].finish_reason === "stop"`, a Responses stream
+ * says `response.completed`. `finish_reason: "length"` and `response.incomplete` mean the
+ * provider hit its output cap — the answer is cut, so the stream must reject as a provider
+ * error instead of committing a truncated result. `[DONE]` is only tolerated after a
+ * normal reason (or by a provider that sends no reason at all); it never overrides
+ * truncation, which throws before the terminator is read.
+ */
 export async function* textDeltas(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -125,26 +143,38 @@ export async function* textDeltas(body: ReadableStream<Uint8Array>): AsyncGenera
         const data = line.slice(5).trim();
         if (!data) continue;
         if (data === "[DONE]") {
+          // The protocol terminator. A truncated stream has already thrown above, so this
+          // can no longer turn a cut answer into a success.
           completed = true;
           continue;
         }
+        let evt: StreamEvent;
         try {
-          const evt = JSON.parse(data);
-          if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string")
-            yield evt.delta;
-          else if (typeof evt?.choices?.[0]?.delta?.content === "string")
-            yield evt.choices[0].delta.content;
-          else if (evt?.type === "response.completed") completed = true;
-          else if (
-            evt?.error ||
-            evt?.type === "response.failed" ||
-            evt?.type === "response.incomplete" ||
-            evt?.type === "error"
-          )
-            throw new TranslationError("provider", "The provider stream failed.");
-        } catch (err) {
-          if (err instanceof TranslationError) throw err;
+          evt = JSON.parse(data) as StreamEvent;
+        } catch {
+          continue; // tolerant: keep-alive or non-JSON line, not an answer
         }
+        if (evt?.error || evt?.type === "response.failed" || evt?.type === "error") {
+          throw new TranslationError("provider", "The provider stream failed.");
+        }
+        if (evt?.type === "response.incomplete") {
+          throw new TranslationError("provider", "The provider reply was truncated.");
+        }
+        if (evt?.type === "response.completed") completed = true;
+        if (evt?.type === "response.output_text.delta" && typeof evt.delta === "string") {
+          yield evt.delta;
+        }
+        const choice = evt?.choices?.[0];
+        if (!choice) continue;
+        if (typeof choice.delta?.content === "string") yield choice.delta.content;
+        const reason = choice.finish_reason;
+        if (reason === undefined || reason === null) continue;
+        if (reason === "stop") completed = true;
+        else if (reason === "length")
+          throw new TranslationError("provider", "The provider reply was truncated.");
+        else if (reason === "content_filter")
+          throw new TranslationError("provider", "The provider filtered the reply.");
+        else throw new TranslationError("provider", "The provider ended the reply unexpectedly.");
       }
       if (done) break;
     }

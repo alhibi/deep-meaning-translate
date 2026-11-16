@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createLimiter, takeEnrichmentToken, takeLiveToken, takeToken } from "./throttle";
+import {
+  createLimiter,
+  takeEnrichmentToken,
+  takeLiveToken,
+  takeRepairToken,
+  takeToken,
+  takeWarmToken,
+} from "./throttle";
 
 /**
  * Admission is the app's only defence in front of paid providers, so the properties
@@ -45,17 +52,45 @@ describe("rate admission", () => {
 
   it("keeps provisional typing from spending the settled-sentence budget", () => {
     const client = `live-${Math.random()}`;
-    for (let i = 0; i < 90; i++) expect(takeLiveToken(client)).toBe(true);
+    for (let i = 0; i < 120; i++) expect(takeLiveToken(client)).toBe(true);
     expect(takeLiveToken(client)).toBe(false);
     // The final sentence still has its full allowance while the live bucket is empty.
     expect(takeToken(client)).toBe(true);
   });
 
+  it("admits a sustained 4 requests/s live load for at least 30 seconds", () => {
+    let now = 2_000_000;
+    const realNow = Date.now;
+    Date.now = () => now;
+    try {
+      const client = `typist-${Math.random()}`;
+      // 120 provisional requests in 30 s (one every 250 ms) is a very fast human
+      // typist; refill must keep up so the live bucket never drains under that load.
+      for (let i = 0; i < 120; i++) {
+        expect(takeLiveToken(client)).toBe(true);
+        now += 250;
+      }
+      expect(takeLiveToken(client)).toBe(true);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
   it("keeps translation and enrichment budgets separate", () => {
     const client = `separate-${Math.random()}`;
-    for (let i = 0; i < 60; i++) expect(takeToken(client)).toBe(true);
-    expect(takeToken(client)).toBe(false); // the typing budget is spent …
+    for (let i = 0; i < 90; i++) expect(takeToken(client)).toBe(true);
+    expect(takeToken(client)).toBe(false); // the settled budget is spent …
     expect(takeEnrichmentToken(client)).toBe(true); // … the dictionary still answers
+    expect(takeRepairToken(client)).toBe(true); // … and the quiet repair still runs
+  });
+
+  it("gives connection warm-ups their own bounded allowance", () => {
+    const client = `warm-${Math.random()}`;
+    for (let i = 0; i < 20; i++) expect(takeWarmToken(client)).toBe(true);
+    expect(takeWarmToken(client)).toBe(false);
+    // A warm-up never spends a translation budget.
+    expect(takeLiveToken(client)).toBe(true);
+    expect(takeToken(client)).toBe(true);
   });
 
   it("bounds memory: a full table of identities evicts idle ones instead of growing", () => {
