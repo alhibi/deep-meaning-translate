@@ -46,7 +46,12 @@ installable APKs are published with the repository:
 - **Sentence Shadow**: on a settled translation, a second pass can point at a phrase that shifted
   meaning; applying a fix is a display overlay keyed to that exact translation.
 - **Statistics** (`/stats`): a local, private and `noindex` translation archive with timelines,
-  language flow, rhythm, milestones, an inspectable practice landscape and editable classifications.
+  language flow, rhythm, milestones, an interactive **practice map** (centre topic, ranked orbits,
+  a day-trail ring and a typographic readout) and editable classifications.
+- **A web app that feels installed**: the streamed answer arrives word by word on a deliberate
+  "whirlwind" while a caret marks live generation; provider deltas are coalesced to one paint per
+  animation frame; a dismissible update pill appears when a new service worker takes over; storage
+  health (quota, durability, archive rows, failed/trimmed writes) is visible on the privacy page.
 - **Public pages** (`/privacy`, `/arabic-german-translation`), a sitemap, an offline shell, and a
   first-run introduction that is server-rendered so it never covers a painted translator.
 
@@ -84,8 +89,10 @@ npm run build            # build + security headers + PWA precache check
 npm run verify           # typecheck + lint + tests + contrast
 ```
 
-At the close of the 2026-11-07 audit: **300 tests passed, 4 skipped, 50 files**; **51 contrast
-pairs** passed; the build precached **37 files**; typecheck and lint were clean.
+At the close of the 2026-11-16 web upgrade: **461 tests passed, 4 skipped, 75 files**; **51
+contrast pairs** passed; the build precached **56 files / 54 hashed assets**; typecheck and lint were
+clean and the production preview served an offline relaunch from its service worker. The CI
+workflow's verify and Android jobs both passed on GitHub for the final commit (run 43975244977).
 
 `npm run test:e2e` runs the phone-sized Playwright scripts in `tests/e2e/` against a running app
 (`http://localhost:8080`). They need `playwright` for Python and are **not** part of CI.
@@ -100,18 +107,18 @@ npm run build && npm run preview   # http://localhost:8080
 
 ## Where things live
 
-| Path                    | Responsibility                                                         |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `src/routes/index.tsx`  | The translator screen: composition, boot restore, session persistence  |
-| `src/routes/__root.tsx` | Shell, pre-paint theme/locale/intro scripts, error screens             |
-| `src/lib/translation/`  | Scheduler, streaming, prompt, providers, parsing, verification, memory |
-| `src/lib/persist.ts`    | Validated device persistence and the tab's remembered values           |
-| `src/lib/theme.ts`      | Three validated themes, pre-paint boot, browser-chrome colour          |
-| `src/lib/i18n.ts`       | Interface locale, pre-paint direction, RTL                             |
-| `src/lib/voice/`        | Device and cloud speech, PCM player, timing                            |
-| `src/lib/stats/`        | Pure statistics engine and taxonomy                                    |
-| `scripts/`              | Build guarantees: headers, PWA, contrast, docs, social card, preview   |
-| `docs/`                 | The authoritative engineering knowledge base                           |
+| Path                                      | Responsibility                                                         |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| `src/routes/index.tsx`                    | The translator screen: composition, boot restore, session persistence  |
+| `src/routes/__root.tsx`                   | Shell, pre-paint theme/locale/intro scripts, error screens             |
+| `src/lib/translation/`                    | Scheduler, streaming, prompt, providers, parsing, verification, memory |
+| `src/lib/persist.ts`                      | Validated device persistence and the tab's remembered values           |
+| `src/lib/theme.ts`                        | Three validated themes, pre-paint boot, browser-chrome colour          |
+| `src/lib/i18n.ts`                         | Interface locale, pre-paint direction, RTL                             |
+| `src/lib/voice/`                          | Device and cloud speech, PCM player, timing                            |
+| `src/lib/stats/`, `src/components/stats/` | Pure statistics engine, taxonomy, practice map and charts              |
+| `scripts/`                                | Build guarantees: headers, PWA, contrast, docs, social card, preview   |
+| `docs/`                                   | The authoritative engineering knowledge base                           |
 
 ## Documentation
 

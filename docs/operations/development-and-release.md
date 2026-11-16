@@ -51,18 +51,20 @@ serves static assets with the generated headers, and streams responses. Use it f
 - `vite-plugin-pwa` writes `sw.js` and the precache into `.output/public`; the worker serves
   `/offline.html` only when a navigation fetch fails and no document is cached.
 - Environment secrets are configured in the hosting environment, never in the repository.
-- The audit did **not** deploy, push, or verify the live hosting configuration.
+- The web-upgrade audit pushed the verified commits to the connected branch and exercised
+  GitHub Actions: the verify and Android jobs both succeeded (run 43975244977). It did **not**
+  publish the live `fluently.today` origin — that is a Lovable publish step, not a Git push.
 
 ## Diagnostics
 
-| Symptom | First checks |
-| --- | --- |
-| App shows a calm error after switching builds | a service worker may be serving an old shell; unregister it, clear caches, retry with `?sw=off` |
-| Translation fails immediately | provider key present? provider status? server logs show outcome/kind, never text |
-| 403 on a preview host | host allowlist / preview authentication; a `.style.dev` preview rejects requests without the owner's session |
-| No offline page | `check:pwa` output, `sw.js` in `.output/public`, `_headers` |
-| Theme/background wrong on one route | `theme-color` sync, `html` background, `--color-background` token |
-| Draft lost after navigation | `persist.remembered()`, session write/flush, restore plan tests |
+| Symptom                                       | First checks                                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| App shows a calm error after switching builds | a service worker may be serving an old shell; unregister it, clear caches, retry with `?sw=off`              |
+| Translation fails immediately                 | provider key present? provider status? server logs show outcome/kind, never text                             |
+| 403 on a preview host                         | host allowlist / preview authentication; a `.style.dev` preview rejects requests without the owner's session |
+| No offline page                               | `check:pwa` output, `sw.js` in `.output/public`, `_headers`                                                  |
+| Theme/background wrong on one route           | `theme-color` sync, `html` background, `--color-background` token                                            |
+| Draft lost after navigation                   | `persist.remembered()`, session write/flush, restore plan tests                                              |
 
 The production adapter logs request errors to its own output; provider logs are structured JSON with
 metrics only. Do not add text to them while debugging.

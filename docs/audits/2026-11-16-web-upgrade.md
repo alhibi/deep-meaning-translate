@@ -41,28 +41,65 @@ web app only; the Android shell was not changed.
   widened; these are admission ceilings above human writing speed, not model throttles.
 - **Touch/selection polish:** press controls are not selectable / do not show a touch callout; the
   update pill and practice map respect safe areas and the three themes.
+- **CI lockfile:** the connected branch's CI had been failing at its very first step on every push
+  because `package-lock.json` no longer satisfied `package.json` (missing the nested
+  `typescript@5.9.3` required by `tsconfck`, so `npm ci` refused). The lock was regenerated with
+  the npm 10 line CI uses and `npm ci --ignore-scripts --dry-run` now validates. The verify job
+  passed on GitHub for the final commit (run `43975244977`, verify job success).
 
 ## Executed evidence
 
 All commands ran from the project root on 2026-11-16.
 
-| Check                | Command                                                  | Result                                                                                                                                                                                                                                                                                            |
-| -------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full gate            | `npm run verify`                                         | **exit 0** — tsc clean, eslint `--max-warnings 0` clean, **75 test files / 461 passed / 4 skipped**, contrast **51/51** pairs, docs **52 documents / 18 links** indexed                                                                                                                           |
-| Production build     | `npm run build`                                          | **exit 0** — rolldown build, security headers written                                                                                                                                                                                                                                             |
-| PWA integrity        | `node scripts/check-pwa.mjs`                             | **PWA ok — 56 precached files, 54 hashed assets**                                                                                                                                                                                                                                                 |
-| Production preview   | `PORT=8090 npm run preview` + Chromium                   | **LCP 108 ms / DOMContentLoaded 65 ms / load 88 ms** (localhost), composer present, service worker `ready` and controlling; CSP/HSTS/X-Frame-Options/Permissions-Policy present                                                                                                                   |
-| Offline relaunch     | kill the preview server, reload                          | **loaded from the precached shell**, composer present, only the expected `ERR_CONNECTION_REFUSED` console line; screenshot `evidence/.../offline-relaunch.jpg`                                                                                                                                    |
-| Streaming smoothness | Playwright rAF sampling at 390×844, real DeepSeek stream | unthrottled **60 fps, 0 long tasks, max frame gap 17 ms**; 6× CPU throttle avg **22–23 ms (~44 fps)**, 10–13 long tasks ≤73 ms, max gap 100–117 ms; disabling the whirlwind gave the same long-task count (React + text layout dominate, not the blur); reduced-motion emulation rendered cleanly |
-| Layout stillness     | same run                                                 | composer **122.4 px** in every sample, no overlap with the result, result text streamed visibly                                                                                                                                                                                                   |
-| Long translation     | `POST /api/translate-stream`, mode=full, 5,000 chars     | before: 13,061 bytes, invalid JSON; after: **valid JSON, 7,016 chars, 6.53 s**; a 2,926-char varied text → valid 4,297-char JSON in 5.37 s                                                                                                                                                        |
-| Live latency         | same endpoint, real key                                  | first byte **0.29–0.36 s**, complete **0.68–0.90 s**; formal German→Arabic full reply 1.34 s                                                                                                                                                                                                      |
-| Statistics page      | Playwright, 6× CPU throttle, 240 rows                    | map ready **550 ms**, scroll **60 fps / 0 long tasks**, 9 topics, 30 trail dots                                                                                                                                                                                                                   |
-| Map resilience       | 3 locales × 3 themes × 320 & 390 px                      | 18/18 combinations: **no horizontal overflow, no label outside the viewport, no page errors**, 9 topic buttons and 30 trail marks each                                                                                                                                                            |
-| Browser smoke        | mobile + desktop Chromium, seeded archive                | **0 page errors, 0 console errors** on home, statistics and privacy (first visit with data)                                                                                                                                                                                                       |
+| Check                       | Command                                                  | Result                                                                                                                                                                                                                                                                                            |
+| --------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full gate                   | `npm run verify`                                         | **exit 0** — tsc clean, eslint `--max-warnings 0` clean, **75 test files / 461 passed / 4 skipped**, contrast **51/51** pairs, docs **52 documents / 18 links** indexed                                                                                                                           |
+| Production build            | `npm run build`                                          | **exit 0** — rolldown build, security headers written                                                                                                                                                                                                                                             |
+| PWA integrity               | `node scripts/check-pwa.mjs`                             | **PWA ok — 56 precached files, 54 hashed assets**                                                                                                                                                                                                                                                 |
+| Production preview          | `PORT=8090 npm run preview` + Chromium                   | **LCP 108 ms / DOMContentLoaded 65 ms / load 88 ms** (localhost), composer present, service worker `ready` and controlling; CSP/HSTS/X-Frame-Options/Permissions-Policy present                                                                                                                   |
+| Offline relaunch            | kill the preview server, reload                          | **loaded from the precached shell**, composer present, only the expected `ERR_CONNECTION_REFUSED` console line; screenshot `evidence/.../offline-relaunch.jpg`                                                                                                                                    |
+| Streaming smoothness        | Playwright rAF sampling at 390×844, real DeepSeek stream | unthrottled **60 fps, 0 long tasks, max frame gap 17 ms**; 6× CPU throttle avg **22–23 ms (~44 fps)**, 10–13 long tasks ≤73 ms, max gap 100–117 ms; disabling the whirlwind gave the same long-task count (React + text layout dominate, not the blur); reduced-motion emulation rendered cleanly |
+| Layout stillness            | same run                                                 | composer **122.4 px** in every sample, no overlap with the result, result text streamed visibly                                                                                                                                                                                                   |
+| Long translation            | `POST /api/translate-stream`, mode=full, 5,000 chars     | before: 13,061 bytes, invalid JSON; after: **valid JSON, 7,016 chars, 6.53 s**; a 2,926-char varied text → valid 4,297-char JSON in 5.37 s                                                                                                                                                        |
+| Live latency                | same endpoint, real key                                  | first byte **0.29–0.36 s**, complete **0.68–0.90 s**; formal German→Arabic full reply 1.34 s                                                                                                                                                                                                      |
+| Statistics page             | Playwright, 6× CPU throttle, 240 rows                    | map ready **550 ms**, scroll **60 fps / 0 long tasks**, 9 topics, 30 trail dots                                                                                                                                                                                                                   |
+| Map resilience              | 3 locales × 3 themes × 320 & 390 px                      | 18/18 combinations: **no horizontal overflow, no label outside the viewport, no page errors**, 9 topic buttons and 30 trail marks each                                                                                                                                                            |
+| Browser smoke               | mobile + desktop Chromium, seeded archive                | **0 page errors, 0 console errors** on home, statistics and privacy (first visit with data)                                                                                                                                                                                                       |
+| Long translation through UI | Playwright, 2,893-char Arabic draft, fill + Enter        | **4,073-char German result in 5.53 s**, no console/page errors, copy action present, composer stayed 122.4 px                                                                                                                                                                                     |
+| GitHub CI                   | `gh run view 43975244977`                                | **Both jobs success**: verify (types, lint, docs, tests, contrast, build, PWA) and Android (Room/migration tests, debug APK, identity/signing/secret scan); see D48                                                                                                                               |
 
 Measured classifications: all of the above are **VERIFIED** on this machine/browser unless a row says
 otherwise. The offline and production numbers are from a local preview process, not a deployed edge.
+
+## Visual evidence
+
+Before — the landscape was four metric cards and a pill row:
+
+![Practice landscape before the redesign](evidence/2026-11-16-web-upgrade/practice-map-before.jpg)
+
+After — the mobile map with its typographic readout:
+
+![Practice map on mobile after the redesign](evidence/2026-11-16-web-upgrade/practice-map-after-mobile.jpg)
+
+The same panel on desktop:
+
+![Practice map on desktop](evidence/2026-11-16-web-upgrade/practice-map-after-desktop.jpg)
+
+The restored streamed-word whirlwind (mid-arrival; new words condense from a warm haze):
+
+![The translation whirlwind mid-stream](evidence/2026-11-16-web-upgrade/streaming-whirlwind.jpg)
+
+Storage health on the privacy page:
+
+![Storage health in Arabic](evidence/2026-11-16-web-upgrade/storage-privacy-ar.jpg)
+
+The production build relaunched from its service worker after the preview server was stopped:
+
+![Offline relaunch](evidence/2026-11-16-web-upgrade/offline-relaunch.jpg)
+
+The live `fluently.today` origin was **NOT_VERIFIED** as updated by this audit: the repository is
+connected to Lovable, and publishing that build to the public origin is a Lovable publish step, not
+a Git push. The connected branch contains the verified build.
 
 ## Not verified (stated, not implied)
 
@@ -71,7 +108,9 @@ otherwise. The offline and production numbers are from a local preview process, 
   order was not reproduced end-to-end).
 - Luna/OpenCode, Gemini, ElevenLabs and AssemblyAI paths: no keys in this environment.
 - The native Android adapter for the new web session envelope/cross-tab rules; the native path is
-  deliberately unchanged and only unit-tested against the existing port.
+  deliberately unchanged and only unit-tested against the existing port. The Android **CI** build
+  and its Room/migration/APK-integrity gates did pass (run 43975244977); physical-device coverage
+  remains TD17, outside this audit.
 - Long-run memory, battery and thermal behaviour.
 
 ## Documents updated
