@@ -16,16 +16,16 @@
 This file is the operating contract. It is deliberately short on architecture detail: the
 knowledge lives in `docs/`, and this file says which document wins and how to change code safely.
 
-| Question | Source of truth |
-| --- | --- |
-| What the product is, and what it refuses to become | `PROJECT_CONSTITUTION.md`, `docs/product/` |
-| Where code lives and what depends on what | `PROJECT_MAP.md`, `docs/architecture/overview.md` |
-| Why navigation, theme and restore behave this way | `docs/architecture/navigation-and-lifecycle.md` |
-| How a translation is produced and verified | `docs/translation/` (prompts live only in `src/lib/translation/prompt.ts`) |
-| What must be true before calling work done | `DEFINITION_OF_DONE.md` |
-| How to test, build and release | `docs/quality/testing.md`, `docs/operations/development-and-release.md` |
-| Security boundaries and privacy claims | `docs/security/privacy-and-threat-model.md` |
-| Known debt and unverified areas | `docs/audits/technical-debt.md` |
+| Question                                           | Source of truth                                                            |
+| -------------------------------------------------- | -------------------------------------------------------------------------- |
+| What the product is, and what it refuses to become | `PROJECT_CONSTITUTION.md`, `docs/product/`                                 |
+| Where code lives and what depends on what          | `PROJECT_MAP.md`, `docs/architecture/overview.md`                          |
+| Why navigation, theme and restore behave this way  | `docs/architecture/navigation-and-lifecycle.md`                            |
+| How a translation is produced and verified         | `docs/translation/` (prompts live only in `src/lib/translation/prompt.ts`) |
+| What must be true before calling work done         | `DEFINITION_OF_DONE.md`                                                    |
+| How to test, build and release                     | `docs/quality/testing.md`, `docs/operations/development-and-release.md`    |
+| Security boundaries and privacy claims             | `docs/security/privacy-and-threat-model.md`                                |
+| Known debt and unverified areas                    | `docs/audits/technical-debt.md`                                            |
 
 Authority order when documents disagree: **verified implementation and executable gates** →
 approved decisions (`docs/architecture/decisions/`) → current specifications → this file →
@@ -104,7 +104,6 @@ npm run preview          # serve the built Worker on Node
 - The suggestion of a different style is a pure function (`src/lib/translation/suggestion.ts`), shown once per text and style, and only when the model's reading of the situation disagrees with the chosen style.
 - Top-bar controls live in `src/components/translator/AppHeader.tsx`, and the animated name in `Wordmark.tsx`; `src/routes/index.tsx` composes them instead of inlining markup, and Testing Library cleanup is registered in `src/test/setup.ts` (globals are off, so it does not happen by itself).
 - The canvas takes the height the screen leaves and divides it by `canvasStage` (`idle`, `writing`, `translating`, `settled`): the composer keeps the room while you write, the result owns it once an answer settles, and the canvas never shrinks below its content (`flex: 1 0 auto`) so long text scrolls the workspace instead of being clipped. Floors and ceilings live in `styles.css` in `lh` (script) and `dvh` (device), the composer's ceiling sits on its stage so a capped field scrolls instead of opening an empty band, and an open keyboard collapses both fields to a strip — why: a fixed 200 px result left a third of the screen unused, while per-state pixel heights would need retuning for every device, script and keyboard. The geometry is **plain CSS**: no `ResizeObserver`, no measured or inline-animated heights, no `overflow: hidden` around the result. A resize must never feed another resize — the measured grow box fed itself through its stretched child, ran 2,300 callbacks while typing and visibly clipped the panel; `tests/e2e/field_layout.py` guards the stillness.
-
 
 ### Android shell (added 2026-11-16)
 

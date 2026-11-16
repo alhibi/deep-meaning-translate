@@ -432,11 +432,22 @@ function Translator() {
               if (el) el.scrollTop = el.scrollHeight;
             });
         });
+        // The component can unmount while the first listener is still being attached;
+        // remove it immediately instead of leaking a listener on the dead instance.
+        if (disposed) {
+          void show.remove();
+          return;
+        }
         const hide = await Keyboard.addListener("keyboardWillHide", () => {
           if (disposed) return;
           kbOpen.current = false;
           setKbUp(false);
         });
+        if (disposed) {
+          void show.remove();
+          void hide.remove();
+          return;
+        }
         handles = [show, hide];
       } catch {
         /* plugin absent: the visualViewport fallback still applies */
@@ -708,8 +719,9 @@ function Translator() {
   const [localeOpen, setLocaleOpen] = useState(false);
   const closeLocale = useCallback(() => setLocaleOpen(false), []);
 
-  // Android back: close what is open, dismiss the keyboard, go back a route, and only
-  // then leave the app. It never reloads the document or clears the draft.
+  // Android back: claim the press when one of this screen's sheets/the keyboard is open.
+  // `platform.dispatchBack()` owns the route/exit decision after every listener ran, so
+  // this handler must never exit the app itself.
   useEffect(() => {
     const onBack = (event: Event) => {
       // An overlay (LanguageSheet/VoiceSheet) already handled and cancelled this press.

@@ -8,15 +8,15 @@ edge behaviour and abuse at scale remain **NOT_VERIFIED**.
 
 The installed app calls the same engine as the website through a versioned native surface:
 
-| Native route | Purpose | Web counterpart |
-| --- | --- | --- |
-| `/api/native/v1/translate-stream` | streaming translation | `/api/translate-stream` |
-| `/api/native/v1/repair` | targeted repair of a result | server function `repair` |
-| `/api/native/v1/lexicon` | dictionary/lexicon enrichment | server function `lexicon` |
-| `/api/native/v1/shadow` | shadowing script | server function `shadow` |
-| `/api/native/v1/dictation-token` | short-lived AssemblyAI token | server function |
-| `/api/native/v1/speak` | Gemini PCM speech | `/api/speak` |
-| `/api/native/v1/eleven-speak` | ElevenLabs timestamped speech | `/api/eleven-speak` |
+| Native route                      | Purpose                       | Web counterpart           |
+| --------------------------------- | ----------------------------- | ------------------------- |
+| `/api/native/v1/translate-stream` | streaming translation         | `/api/translate-stream`   |
+| `/api/native/v1/repair`           | targeted repair of a result   | server function `repair`  |
+| `/api/native/v1/lexicon`          | dictionary/lexicon enrichment | server function `lexicon` |
+| `/api/native/v1/shadow`           | shadowing script              | server function `shadow`  |
+| `/api/native/v1/dictation-token`  | short-lived AssemblyAI token  | server function           |
+| `/api/native/v1/speak`            | Gemini PCM speech             | `/api/speak`              |
+| `/api/native/v1/eleven-speak`     | ElevenLabs timestamped speech | `/api/eleven-speak`       |
 
 Each native route reuses the web handler and its validation, providers, throttles and
 prompts. There is no second implementation and no secret in the APK: provider keys stay
@@ -59,12 +59,12 @@ control is per-purpose throttling plus server-side keys.
 
 ## Device surface
 
-| Permission | Why | When |
-| --- | --- | --- |
-| `INTERNET` | translation and cloud voice | always required |
-| `RECORD_AUDIO` | dictation | requested when the person first records |
-| `MODIFY_AUDIO_SETTINGS` | required by Capacitor's WebView audio-capture gate; it asks for both this and `RECORD_AUDIO` and denies when either is undeclared | normal permission, granted at install |
-| `VIBRATE` | feel/haptics (Capacitor plugin) | optional |
+| Permission              | Why                                                                                                                               | When                                    |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `INTERNET`              | translation and cloud voice                                                                                                       | always required                         |
+| `RECORD_AUDIO`          | dictation                                                                                                                         | requested when the person first records |
+| `MODIFY_AUDIO_SETTINGS` | required by Capacitor's WebView audio-capture gate; it asks for both this and `RECORD_AUDIO` and denies when either is undeclared | normal permission, granted at install   |
+| `VIBRATE`               | feel/haptics (Capacitor plugin)                                                                                                   | optional                                |
 
 No storage, location, contacts, camera or background permissions. Backups use the
 Storage Access Framework, so the app never receives broad file access.
@@ -100,11 +100,11 @@ APK (TD18). "Release" in build logs always names the signer.
 
 ## Threat notes
 
-| Threat | Mitigation |
-| --- | --- |
-| Malicious web page calling the native API | exact Origin allowlist; `*` never returned |
-| Extracting a key from the APK | no provider key is in the APK; keys live in Worker env |
-| Intercepting traffic | HTTPS only, cleartext disabled, system trust anchors |
-| Tampered backup file | SHA-256 digest; wrong digest refused before writing |
-| Reading the archive from a backup | OS backup disabled; manual export only, optionally encrypted |
-| A webview XSS reading records | records are validated on read/write, rendered as text, no `innerHTML` for user content; storage exposed only through the typed bridge |
+| Threat                                    | Mitigation                                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Malicious web page calling the native API | exact Origin allowlist; `*` never returned                                                                                            |
+| Extracting a key from the APK             | no provider key is in the APK; keys live in Worker env                                                                                |
+| Intercepting traffic                      | HTTPS only, cleartext disabled, system trust anchors                                                                                  |
+| Tampered backup file                      | SHA-256 digest; wrong digest refused before writing                                                                                   |
+| Reading the archive from a backup         | OS backup disabled; manual export only, optionally encrypted                                                                          |
+| A webview XSS reading records             | records are validated on read/write, rendered as text, no `innerHTML` for user content; storage exposed only through the typed bridge |

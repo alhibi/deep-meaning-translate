@@ -2,9 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      Two permissions, both required by a feature the person can see:
-      INTERNET for translation/speech, RECORD_AUDIO for dictation only.
-      No storage permission: backups go through the Storage Access Framework.
+      Three permissions, each required by a visible feature: INTERNET for
+      translation/speech, RECORD_AUDIO + MODIFY_AUDIO_SETTINGS for dictation (Capacitor
+      asks for both in the WebView capture gate). No storage permission: backups go
+      through the Storage Access Framework.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />

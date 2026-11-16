@@ -1,33 +1,33 @@
 # Android Release Report — 1.0.3
 
-Date: 2026-11-16 · Build: `versionCode 4`, `versionName 1.0.3` · Base commit `c897209` plus this
-working tree.
+Date: 2026-11-16 · Build: `versionCode 4`, `versionName 1.0.3` · Base commit `c897209` · Final
+commit `c5e70e2` on `main` (local; not pushed).
 
 ## Deliverables
 
-| Artefact | Path | Size | SHA-256 |
-| --- | --- | --- | --- |
-| Debug (installable, current data model) | `artifacts/android-1.0.3/today-1.0.3-debug.apk` | 6 549 963 B | `29bf06266a02c54688edf168bdd66c0fc4593ee603a0f3d2e8c74b2a8e80dc46` |
-| Release review (debug-signed) | `artifacts/android-1.0.3/today-1.0.3-release-review-debug-signed.apk` | 2 173 393 B | `a5c75769eed0b717b5deda9e5050221672f451e8c854339438edf4d57936258e` |
-| Checksums | `artifacts/android-1.0.3/SHA256SUMS.txt` | — | — |
-| Screenshots | `artifacts/android-1.0.3/screenshots/` | — | — |
+| Artefact                                | Path                                                                  | Size        | SHA-256                                                            |
+| --------------------------------------- | --------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| Debug (installable, current data model) | `artifacts/android-1.0.3/today-1.0.3-debug.apk`                       | 6 550 037 B | `325aa64426024f2ea87909b5948f8d427339df45c9fc765020de886a27852500` |
+| Release review (debug-signed)           | `artifacts/android-1.0.3/today-1.0.3-release-review-debug-signed.apk` | 2 173 437 B | `bc89ac7d95de1a96aeca3d84c44265bc7752ebe6aab2d5bcdd2d06219d359c19` |
+| Checksums                               | `artifacts/android-1.0.3/SHA256SUMS.txt`                              | —           | —                                                                  |
+| Screenshots                             | `artifacts/android-1.0.3/screenshots/`                                | —           | —                                                                  |
 
 The `artifacts/` directory is gitignored (built output), but the files exist on the machine that
 produced this report and are the exact files tested below.
 
 ## Package facts
 
-| Fact | Debug | Release review |
-| --- | --- | --- |
-| package | `today.fluently.app.debug` | `today.fluently.app` |
-| versionCode / versionName | 4 / 1.0.3-debug | 4 / 1.0.3 |
-| minSdk / targetSdk / compileSdk | 24 / 36 / 36 | 24 / 36 / 36 |
-| ABIs | arm64-v8a, armeabi-v7a, x86, x86_64 | same |
-| permissions | INTERNET, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, VIBRATE | same |
-| packaged shell | 65 `assets/public` entries, `index.html` with CSP meta, no service worker | same |
-| Capacitor config | `webContentsDebuggingEnabled=false`, mixed content off, origin `https://localhost` | same |
-| R8 / shrink | no | yes |
-| signer | `CN=Android Debug` (expected for debug) | `CN=Android Debug` (**review only**) |
+| Fact                            | Debug                                                                              | Release review                       |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------ |
+| package                         | `today.fluently.app.debug`                                                         | `today.fluently.app`                 |
+| versionCode / versionName       | 4 / 1.0.3-debug                                                                    | 4 / 1.0.3                            |
+| minSdk / targetSdk / compileSdk | 24 / 36 / 36                                                                       | 24 / 36 / 36                         |
+| ABIs                            | arm64-v8a, armeabi-v7a, x86, x86_64                                                | same                                 |
+| permissions                     | INTERNET, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS, VIBRATE                             | same                                 |
+| packaged shell                  | 65 `assets/public` entries, `index.html` with CSP meta, no service worker          | same                                 |
+| Capacitor config                | `webContentsDebuggingEnabled=false`, mixed content off, origin `https://localhost` | same                                 |
+| R8 / shrink                     | no                                                                                 | yes                                  |
+| signer                          | `CN=Android Debug` (expected for debug)                                            | `CN=Android Debug` (**review only**) |
 
 No provider key, keystore, `.env` or debug-flag `true` appears in either package. The APK scans
 included `assets/*` and all `classes*.dex` `strings`.

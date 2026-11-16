@@ -3,6 +3,7 @@ package today.fluently.app.bridge
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.view.View
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
@@ -20,6 +21,8 @@ import com.getcapacitor.annotation.CapacitorPlugin
 @CapacitorPlugin(name = "LinguaChrome")
 class LinguaChromePlugin : Plugin() {
     private val hex = Regex("^#[0-9a-fA-F]{6}$")
+    private var pendingRepaint: Runnable? = null
+    private var pendingDecor: View? = null
 
     companion object {
         /** Last canvas colour, so the Activity can repaint the strip after the splash theme. */
@@ -47,11 +50,22 @@ class LinguaChromePlugin : Plugin() {
                 apply(activity, color)
                 // The Android 12 splash applies postSplashScreenTheme asynchronously after
                 // hide(); that restores the launch window background. Repaint once it has
-                // certainly finished, so the strip matches the restored canvas too.
-                activity.window.decorView.postDelayed(
-                    { lastColor?.let { apply(activity, it) } },
-                    4_000,
-                )
+                // certainly finished, so the strip matches the restored canvas too. Keep at
+                // most one scheduled repaint and cancel it with the bridge.
+                pendingRepaint?.let { pendingDecor?.removeCallbacks(it) }
+                val decor = activity.window.decorView
+                val repaint = object : Runnable {
+                    override fun run() {
+                        lastColor?.let { apply(activity, it) }
+                        if (pendingRepaint === this) {
+                            pendingRepaint = null
+                            pendingDecor = null
+                        }
+                    }
+                }
+                pendingDecor = decor
+                pendingRepaint = repaint
+                decor.postDelayed(repaint, 4_000)
                 call.resolve()
             } catch (error: Throwable) {
                 call.reject("chrome-unavailable")
@@ -61,5 +75,11 @@ class LinguaChromePlugin : Plugin() {
 
     private fun apply(activity: Activity, color: Int) {
         activity.window.setBackgroundDrawable(ColorDrawable(color))
+    }
+
+    override fun handleOnDestroy() {
+        pendingRepaint?.let { pendingDecor?.removeCallbacks(it) }
+        pendingRepaint = null
+        pendingDecor = null
     }
 }

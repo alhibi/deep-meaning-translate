@@ -37,12 +37,12 @@ Read end-to-end (current working tree):
   `docs/architecture/state-and-persistence.md`, `docs/architecture/decisions/0006-*`,
   `docs/quality/testing.md`, `docs/audits/technical-debt.md` (TD17–TD20).
 
-Verdicts use the project's own classifications. "VERIFIED" here therefore means *source
-inspection confirms it*; it does not mean a device or JVM test was run by me.
+Verdicts use the project's own classifications. "VERIFIED" here therefore means _source
+inspection confirms it_; it does not mean a device or JVM test was run by me.
 
 ## 2. Summary verdict
 
-**Architecture is sound; the guarantees around *when a store may be rewritten* are not.**
+**Architecture is sound; the guarantees around _when a store may be rewritten_ are not.**
 
 The design (one owner per store, Room for records + DataStore for scalars, a validated
 persistence port, one-transaction imports, a real v1→v2 migration, no destructive fallback,
@@ -75,14 +75,14 @@ TD19 (no SQLCipher) is known and correctly registered; nothing in this audit re-
 
 ## 3. Current state (what the code actually does)
 
-| Data | Native owner | Web owner | Read back through | Write path |
-| --- | --- | --- | --- | --- |
-| Archive | Room `history_entries` | `lingua.history.v1` | `isEntry`+`sanitizeEntry` (`contracts.ts:129-164`), Kotlin `Mapping.historyFromJson` (`Mapping.kt:22-53`) | `history.add/retag/remove/clear` (`history.ts:141-253`) |
-| Saved phrases | Room `saved_phrases` | `lingua.saved.v1` | `isPhrase` (`contracts.ts:179-193`) | **whole list rewrite**: `saved.write` (`saved.ts:34-43`) → `savedWrite` clear+insert (`LinguaRepository.kt:121-126`) |
-| Translation memory | Room `memory_rows` | `lingua.memory.v1` | `isMemoryRow`+TTL (`contracts.ts:205-214`, `memory.ts:79-98`) | **whole list rewrite** (`memory.ts:61-76`, `LinguaRepository.kt:128-133`) |
-| Draft/session | Room `session_state` (one row, `seq`) | `lingua.session.v1` | `parseSession` (`contracts.ts:72-86`) | debounce 400 ms + flush (`routes/index.tsx:312-339`) |
-| Settings | DataStore **individual string keys** (`SettingsStore.kt:19-46`) | same keys in `localStorage` | validators in `theme/intro/i18n/voice/feel` | queued/coalesced (`settings.ts:73-101,128-169`) |
-| Backup | file via SAF | download/upload | `parseBackup` digest/AES-GCM (`backup.ts:207-248`) | `replaceAll` (`native.ts:161-176`; `web.ts:266-292`) |
+| Data               | Native owner                                                    | Web owner                   | Read back through                                                                                         | Write path                                                                                                           |
+| ------------------ | --------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Archive            | Room `history_entries`                                          | `lingua.history.v1`         | `isEntry`+`sanitizeEntry` (`contracts.ts:129-164`), Kotlin `Mapping.historyFromJson` (`Mapping.kt:22-53`) | `history.add/retag/remove/clear` (`history.ts:141-253`)                                                              |
+| Saved phrases      | Room `saved_phrases`                                            | `lingua.saved.v1`           | `isPhrase` (`contracts.ts:179-193`)                                                                       | **whole list rewrite**: `saved.write` (`saved.ts:34-43`) → `savedWrite` clear+insert (`LinguaRepository.kt:121-126`) |
+| Translation memory | Room `memory_rows`                                              | `lingua.memory.v1`          | `isMemoryRow`+TTL (`contracts.ts:205-214`, `memory.ts:79-98`)                                             | **whole list rewrite** (`memory.ts:61-76`, `LinguaRepository.kt:128-133`)                                            |
+| Draft/session      | Room `session_state` (one row, `seq`)                           | `lingua.session.v1`         | `parseSession` (`contracts.ts:72-86`)                                                                     | debounce 400 ms + flush (`routes/index.tsx:312-339`)                                                                 |
+| Settings           | DataStore **individual string keys** (`SettingsStore.kt:19-46`) | same keys in `localStorage` | validators in `theme/intro/i18n/voice/feel`                                                               | queued/coalesced (`settings.ts:73-101,128-169`)                                                                      |
+| Backup             | file via SAF                                                    | download/upload             | `parseBackup` digest/AES-GCM (`backup.ts:207-248`)                                                        | `replaceAll` (`native.ts:161-176`; `web.ts:266-292`)                                                                 |
 
 Single-source-of-truth holds in code: the records adapters are chosen once (`persistence/index.ts:11`),
 `history.ts:36`, `saved.ts:17`, `memory.ts:36` compute `native` at module load, and every web read/write
@@ -99,40 +99,38 @@ Impact, root cause, proposed fix and required regression test for every finding 
 (details for A3-01…A3-12, condensed bullets for A3-13…A3-20); the table below is the index,
 the details are the record.
 
-| ID | Sev | Area | Finding | Evidence |
-| --- | --- | --- | --- | --- |
-| A3-01 | **P0** | Bridge availability | As shipped, the Capacitor plugin proxy is treated as a thenable, so every `LinguaStore` call rejects and the Android app runs with no persistence; fix is uncommitted in the working tree | `src/lib/native/plugin.ts:80-106`, new `plugin.test.ts`; `native.ts:36-40` |
-| A3-02 | **P0** | Boot/degraded mode | After a failed or timed-out native boot, the phrasebook cache is empty but native writes are enabled; first save clears and rewrites `saved_phrases` from RAM | `platform.ts:78-98`, `saved.ts:22-43`, `LinguaRepository.kt:121-126` |
-| A3-03 | **P1** | Import/caches | Import replaces Room/DataStore but no module cache is refreshed; before the offered reload, the next phrasebook/memory save rewrites the imported tables from stale RAM (imported rows lost, replaced rows resurrected) | `DataControls.tsx:249-265,397-419`, `saved.ts:22-43`, `memory.ts:51-76` |
-| A3-04 | **P1** | Concurrency | Bridge calls are independent IO coroutines (only the session has a Mutex); whole-document writes and import vs. normal saves can be applied out of order | `LinguaStorePlugin.kt:32,71-81`, `LinguaRepository.kt:24,76-87`, `saved.ts:34-43`, `persist.ts:60-65` |
-| A3-05 | P2 | Import atomicity | Room transaction commits before the DataStore write; rollback is best-effort and is skipped when the coroutine is cancelled; `import_meta` insert is outside the transaction and can fail after a successful import | `LinguaRepository.kt:196-238`, `docs/android/data-import-export.md:61-65` |
-| A3-06 | P2 | Session durability | `seq` guard is wall-clock derived and not seeded from the stored value; a clock rollback (or a backdated import stamp) silently rejects every later draft write; the boolean result is ignored | `native.ts:30-34,81-88`, `LinguaRepository.kt:76-87,205-210`, `routes/index.tsx:319-330` |
-| A3-07 | P2 | Import report | Android returns a fabricated report (added = whole dataset, skipped = 0, replaced = true), overriding the accurate TS report; `import_meta` file name/digest are never passed and never read | `LinguaRepository.kt:229-245`, `native.ts:168-175`, `native/plugin.ts:58`, `Daos.kt:86-93` |
-| A3-08 | P2 | Forget everything | Clear is fire-and-forget and silent on failure; a queued setting write can land after the clear; `import_meta` is never cleared | `stats.tsx:294-297`, `clearData.ts:15-22`, `settings.ts:128-169`, `LinguaRepository.kt:248-257` |
-| A3-09 | P2 | Settings read path | On the Android success boot path the DataStore snapshot is never applied to the document: saved theme is ignored (dark/system every launch) and the intro gate still reads `localStorage` | `platform.ts:56-69,78-95`, `theme.ts:32-34,62-74`, `intro.ts:7-9,24,27-29`, `index.tsx:261`, `__root.tsx:118-136` |
-| A3-10 | P2 | Corruption recovery | No recovery path for corrupt DB / corrupted DataStore: boot degrades permanently for the session, export and reset are unavailable, only uninstall remains; no DataStore corruption handler | `platform.ts:86-101`, `SettingsStore.kt:17`, `LinguaDatabase.kt:74-79`, `DataControls.tsx:277-284` |
-| A3-11 | P2 | Backup contract vs docs | "Merge matches by id, newer wins" — code matches by target+normalised text; settings are overwritten unconditionally by an older backup; invalid rows are dropped without being counted; encrypted digest/error semantics differ; envelope example in docs has wrong field names | `backup.ts:250-357,90-119,236-245`, `contracts.ts:245-263`, `data-import-export.md:12-38,56-77` |
-| A3-12 | P2 | Web import integrity | Web `replaceAll` ignores failed history/`savedWrite`/`writeMemory` (quota errors are swallowed), so an import can report success with the archive not written; rollback only on thrown errors | `web.ts:266-292,99-125,240-253` |
-| A3-13 | P3 | Migration realism | No exported v1 schema (only `2.json`), test hand-writes v1 (another agent is strengthening it in the working tree), DB was born at v2, backfill normaliser differs from `Mapping.normalize` | `MigrationTest.kt:26-73`, `schemas/…/2.json`, `LinguaDatabase.kt:49-72`, `Mapping.kt:20`, `persistence-and-migrations.md:60-63` |
-| A3-14 | P3 | Validator drift | TS backup validation accepts rows Kotlin refuses (`createdAt<=0`, blank text, long ids) and the drop is not counted | `contracts.ts:114-141`, `Mapping.kt:22-53,72-91` |
-| A3-15 | P3 | Bounds at the boundary | "Memory re-checked in Kotlin" is false: Kotlin caps rows only; `replaceAll`/boot apply no byte/TTL bound; `replaceAll` does not cap `saved` rows | `LinguaRepository.kt:128-133,203,269`, `Mapping.kt:105-115`, `persistence-and-migrations.md:71` |
-| A3-16 | P3 | Stats read path | `history.status` never returns to "ok" after a transient failure (stats keeps the error screen); `reload()` zeroes the native count; full archive is refetched only on mount | `history.ts:33,110-127`, `stats.tsx:139,313-326` |
-| A3-17 | P3 | Cross-device backup | Web export has no size limit but Android refuses >8 MB; UTF-8 decode per 1 MB chunk can split a code point; PBKDF2/parse run on the WebView main thread; up to ~10 MB of JSON crosses the bridge in one string on full-archive reads/imports (SUSPECTED memory spike on minSdk-24 devices) | `LinguaFilesPlugin.kt:83-93`, `DataControls.tsx:233-247`, `backup.ts:220-238`, `LinguaStorePlugin.kt:184-189`, `LinguaRepository.kt:174-178` |
-| A3-18 | P3 | Draft on process death | Flush is fire-and-forget; `flushPlatform` awaits only settings, so the last ≤400 ms of typing can still be lost when Android kills the process | `routes/index.tsx:312-339`, `platform.ts:140-148` |
-| A3-19 | P3 | Failure surfacing | Phrasebook/memory/prefs write failures are returned but never surfaced where the action happens; only the stats page shows the history flag | `saved.ts:34-43`, `memory.ts:61-76`, `index.tsx:308-309,716-724`, `stats.tsx:396-410` |
-| A3-20 | P3 | Docs/impl drift | DataStore is **not** "one JSON map"; boot sequence doc says `applyStoredAppearance()` runs (it is only on the failure branch); "web adapter is not imported at runtime" is false (it is imported and guarded) | `SettingsStore.kt:19-46`, `architecture.md:46-58,76-82`, `persistence-and-migrations.md:87`, `state-and-persistence.md:110`, `history.ts:11` |
+| ID    | Sev    | Area                    | Finding                                                                                                                                                                                                                                                                                    | Evidence                                                                                                                                     |
+| ----- | ------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| A3-01 | **P0** | Bridge availability     | As shipped, the Capacitor plugin proxy is treated as a thenable, so every `LinguaStore` call rejects and the Android app runs with no persistence; fix is uncommitted in the working tree                                                                                                  | `src/lib/native/plugin.ts:80-106`, new `plugin.test.ts`; `native.ts:36-40`                                                                   |
+| A3-02 | **P0** | Boot/degraded mode      | After a failed or timed-out native boot, the phrasebook cache is empty but native writes are enabled; first save clears and rewrites `saved_phrases` from RAM                                                                                                                              | `platform.ts:78-98`, `saved.ts:22-43`, `LinguaRepository.kt:121-126`                                                                         |
+| A3-03 | **P1** | Import/caches           | Import replaces Room/DataStore but no module cache is refreshed; before the offered reload, the next phrasebook/memory save rewrites the imported tables from stale RAM (imported rows lost, replaced rows resurrected)                                                                    | `DataControls.tsx:249-265,397-419`, `saved.ts:22-43`, `memory.ts:51-76`                                                                      |
+| A3-04 | **P1** | Concurrency             | Bridge calls are independent IO coroutines (only the session has a Mutex); whole-document writes and import vs. normal saves can be applied out of order                                                                                                                                   | `LinguaStorePlugin.kt:32,71-81`, `LinguaRepository.kt:24,76-87`, `saved.ts:34-43`, `persist.ts:60-65`                                        |
+| A3-05 | P2     | Import atomicity        | Room transaction commits before the DataStore write; rollback is best-effort and is skipped when the coroutine is cancelled; `import_meta` insert is outside the transaction and can fail after a successful import                                                                        | `LinguaRepository.kt:196-238`, `docs/android/data-import-export.md:61-65`                                                                    |
+| A3-06 | P2     | Session durability      | `seq` guard is wall-clock derived and not seeded from the stored value; a clock rollback (or a backdated import stamp) silently rejects every later draft write; the boolean result is ignored                                                                                             | `native.ts:30-34,81-88`, `LinguaRepository.kt:76-87,205-210`, `routes/index.tsx:319-330`                                                     |
+| A3-07 | P2     | Import report           | Android returns a fabricated report (added = whole dataset, skipped = 0, replaced = true), overriding the accurate TS report; `import_meta` file name/digest are never passed and never read                                                                                               | `LinguaRepository.kt:229-245`, `native.ts:168-175`, `native/plugin.ts:58`, `Daos.kt:86-93`                                                   |
+| A3-08 | P2     | Forget everything       | Clear is fire-and-forget and silent on failure; a queued setting write can land after the clear; `import_meta` is never cleared                                                                                                                                                            | `stats.tsx:294-297`, `clearData.ts:15-22`, `settings.ts:128-169`, `LinguaRepository.kt:248-257`                                              |
+| A3-09 | P2     | Settings read path      | On the Android success boot path the DataStore snapshot is never applied to the document: saved theme is ignored (dark/system every launch) and the intro gate still reads `localStorage`                                                                                                  | `platform.ts:56-69,78-95`, `theme.ts:32-34,62-74`, `intro.ts:7-9,24,27-29`, `index.tsx:261`, `__root.tsx:118-136`                            |
+| A3-10 | P2     | Corruption recovery     | No recovery path for corrupt DB / corrupted DataStore: boot degrades permanently for the session, export and reset are unavailable, only uninstall remains; no DataStore corruption handler                                                                                                | `platform.ts:86-101`, `SettingsStore.kt:17`, `LinguaDatabase.kt:74-79`, `DataControls.tsx:277-284`                                           |
+| A3-11 | P2     | Backup contract vs docs | "Merge matches by id, newer wins" — code matches by target+normalised text; settings are overwritten unconditionally by an older backup; invalid rows are dropped without being counted; encrypted digest/error semantics differ; envelope example in docs has wrong field names           | `backup.ts:250-357,90-119,236-245`, `contracts.ts:245-263`, `data-import-export.md:12-38,56-77`                                              |
+| A3-12 | P2     | Web import integrity    | Web `replaceAll` ignores failed history/`savedWrite`/`writeMemory` (quota errors are swallowed), so an import can report success with the archive not written; rollback only on thrown errors                                                                                              | `web.ts:266-292,99-125,240-253`                                                                                                              |
+| A3-13 | P3     | Migration realism       | No exported v1 schema (only `2.json`), test hand-writes v1 (another agent is strengthening it in the working tree), DB was born at v2, backfill normaliser differs from `Mapping.normalize`                                                                                                | `MigrationTest.kt:26-73`, `schemas/…/2.json`, `LinguaDatabase.kt:49-72`, `Mapping.kt:20`, `persistence-and-migrations.md:60-63`              |
+| A3-14 | P3     | Validator drift         | TS backup validation accepts rows Kotlin refuses (`createdAt<=0`, blank text, long ids) and the drop is not counted                                                                                                                                                                        | `contracts.ts:114-141`, `Mapping.kt:22-53,72-91`                                                                                             |
+| A3-15 | P3     | Bounds at the boundary  | "Memory re-checked in Kotlin" is false: Kotlin caps rows only; `replaceAll`/boot apply no byte/TTL bound; `replaceAll` does not cap `saved` rows                                                                                                                                           | `LinguaRepository.kt:128-133,203,269`, `Mapping.kt:105-115`, `persistence-and-migrations.md:71`                                              |
+| A3-16 | P3     | Stats read path         | `history.status` never returns to "ok" after a transient failure (stats keeps the error screen); `reload()` zeroes the native count; full archive is refetched only on mount                                                                                                               | `history.ts:33,110-127`, `stats.tsx:139,313-326`                                                                                             |
+| A3-17 | P3     | Cross-device backup     | Web export has no size limit but Android refuses >8 MB; UTF-8 decode per 1 MB chunk can split a code point; PBKDF2/parse run on the WebView main thread; up to ~10 MB of JSON crosses the bridge in one string on full-archive reads/imports (SUSPECTED memory spike on minSdk-24 devices) | `LinguaFilesPlugin.kt:83-93`, `DataControls.tsx:233-247`, `backup.ts:220-238`, `LinguaStorePlugin.kt:184-189`, `LinguaRepository.kt:174-178` |
+| A3-18 | P3     | Draft on process death  | Flush is fire-and-forget; `flushPlatform` awaits only settings, so the last ≤400 ms of typing can still be lost when Android kills the process                                                                                                                                             | `routes/index.tsx:312-339`, `platform.ts:140-148`                                                                                            |
+| A3-19 | P3     | Failure surfacing       | Phrasebook/memory/prefs write failures are returned but never surfaced where the action happens; only the stats page shows the history flag                                                                                                                                                | `saved.ts:34-43`, `memory.ts:61-76`, `index.tsx:308-309,716-724`, `stats.tsx:396-410`                                                        |
+| A3-20 | P3     | Docs/impl drift         | DataStore is **not** "one JSON map"; boot sequence doc says `applyStoredAppearance()` runs (it is only on the failure branch); "web adapter is not imported at runtime" is false (it is imported and guarded)                                                                              | `SettingsStore.kt:19-46`, `architecture.md:46-58,76-82`, `persistence-and-migrations.md:87`, `state-and-persistence.md:110`, `history.ts:11` |
 
 ## 5. Finding details
 
 ### A3-01 — P0 — the shipped Android build cannot persist anything (fix uncommitted)
 
 **Evidence.** `src/lib/native/plugin.ts:80-106` (working tree, new comment + `asNonThenable`):
-Capacitor registers each plugin as a Proxy whose fallback getter manufactures a method for *any*
+Capacitor registers each plugin as a Proxy whose fallback getter manufactures a method for _any_
 property. `load()` is an `async` function returning that proxy, so promise resolution calls
-`plugin.then()`, which the bridge answers with *`"LinguaStore.then()" is not implemented on
-android`*`; the rejection propagates out of `await storePlugin()` (`native.ts:36-40`), `hydrate()`
-fails, and every later `store()` fails the same way. The new regression test
-`src/lib/native/plugin.test.ts` reproduces the proxy shape and asserts the `then` call count is 0.
+`plugin.then()`, which the bridge answers with _`"LinguaStore.then()" is not implemented on
+android`_`; the rejection propagates out of `await storePlugin()` (`native.ts:36-40`), `hydrate()`fails, and every later`store()`fails the same way. The new regression test`src/lib/native/plugin.test.ts`reproduces the proxy shape and asserts the`then` call count is 0.
 
 **Impact.** In the APK as built from `c897209`, the installed app runs with **no durable storage at
 all** (no Room, no DataStore): drafts, archive, phrasebook and settings are lost on every process
@@ -143,7 +141,7 @@ death while the UI otherwise works. The teammate's comment states this was obser
 function makes it a thenable.
 
 **Fix (in progress, uncommitted).** Keep `asNonThenable`; commit it with the test and add it to
-DEFINITION_OF_DONE/evidence. Also add one *call-path* test (mock `registerPlugin` returning the
+DEFINITION_OF_DONE/evidence. Also add one _call-path_ test (mock `registerPlugin` returning the
 throwing thenable proxy, then `port.hydrate()` must fail gracefully, not throw synchronously). The
 working tree now also carries `android/app/src/androidTest/java/today/fluently/app/BridgeInstrumentedTest.kt`
 (TD20, uncommitted, no device run by me): it launches `MainActivity`, waits for
@@ -162,7 +160,7 @@ branch is entered: `hydratePersist/hydrateHistory/hydrateSaved/hydrateMemory` ar
 `saved.ts` keeps `cache === null` (`saved.ts:19`) and `read()` resolves it to `[]` for native
 (`saved.ts:22-26`). A later phrase save calls `write([...new, ...read()])` → `port.savedWrite(cache)`
 (`saved.ts:34-43`) → Kotlin `savedWrite` **clears the table then inserts only the rows RAM currently knows**
-(`LinguaRepository.kt:121-126`). The bridge now works (the boot *call* failed, not the database), so
+(`LinguaRepository.kt:121-126`). The bridge now works (the boot _call_ failed, not the database), so
 the clear succeeds. Same class: `memorySet` flushes the whole memory table (`memory.ts:61-76`).
 Reachable triggers: 3 s cold-boot timeout on a low-end API-24 device with a large archive
 (boot reads DataStore + session + 400 history rows + all saved + all memory through the bridge,
@@ -202,7 +200,7 @@ snapshot (`settings.ts:16-17`: subsequent export/preview/settings reads see pre-
 `history` (`history.ts:38`: `history.list()`/stats on web show the old archive). The web adapter has
 the same cache issue (`saved.ts`/web imports), so this is not Android-only.
 
-**Impact.** A user who imports a backup and keeps using the app *without* pressing the reload button
+**Impact.** A user who imports a backup and keeps using the app _without_ pressing the reload button
 loses the imported phrasebook on the next save. The report screen itself invites continued use; the
 reload is optional.
 
@@ -227,8 +225,8 @@ on a shared `CoroutineScope(SupervisorJob() + Dispatchers.IO)` (`LinguaStorePlug
 is no queue and no dispatcher confinement. `LinguaRepository` has exactly one `Mutex`, for the session
 (`LinguaRepository.kt:24,76-87`). Therefore two phrasebook calls issued back-to-back from JS
 (e.g. `void saved.toggle(o1)` then `void saved.toggle(o2)`, or `mark` while a `toggle` is in flight)
-each perform `clear(); upsert(rows)` (`LinguaRepository.kt:121-126`) and the *last writer by thread
-schedule* wins, not the last writer by user action. The same applies to `memoryWrite`
+each perform `clear(); upsert(rows)` (`LinguaRepository.kt:121-126`) and the _last writer by thread
+schedule_ wins, not the last writer by user action. The same applies to `memoryWrite`
 (`LinguaRepository.kt:128-133`), `prefsWrite` (whole prefs JSON, `LinguaRepository.kt:64-69`) and
 `saveSession` vs. `replaceAll`'s session write (the import does **not** take `sessionMutex`,
 `LinguaRepository.kt:205-210`). Import also snapshots via `snapshot()` (`native.ts:161-176`) and then
@@ -262,6 +260,7 @@ second-called one wins / a stale revision is rejected. Vitest: `replaceAll` star
 `settings.replaceAll(newSettings)` (`LinguaRepository.kt:196-214`). If that call throws, the `catch`
 re-runs a second Room transaction and `settings.replaceAll(previousSettings)` inside
 `runCatching { ... }` (`LinguaRepository.kt:215-227`) and rethrows. Two problems:
+
 1. the rollback is **best-effort**: if restoring settings or records also fails (disk full, process
    death), the DB is already replaced while settings are old — a mixed state the docs promise cannot
    happen ("The write is one Room transaction. Any failure rolls back, leaving the previous state
@@ -270,10 +269,10 @@ re-runs a second Room transaction and `settings.replaceAll(previousSettings)` in
    cancelled (`handleOnDestroy`, `LinguaStorePlugin.kt:62-67`) during import, the
    `withContext(io)` inside `runCatching` re-throws immediately on the cancelled context and the
    rollback never runs. Process death after the Room commit has the same effect.
-Also, the previous dataset is materialised fully in RAM (`previousHistory = db.history().all()`,
-up to 2000 rows × 5000 chars, `LinguaRepository.kt:175`), and `import_meta` is inserted **after**
-the transaction (`LinguaRepository.kt:229-238`), so a failure there fails an import that succeeded.
-No JVM test covers any rollback path (`RepositoryTest.kt:102-139` only covers the happy path).
+   Also, the previous dataset is materialised fully in RAM (`previousHistory = db.history().all()`,
+   up to 2000 rows × 5000 chars, `LinguaRepository.kt:175`), and `import_meta` is inserted **after**
+   the transaction (`LinguaRepository.kt:229-238`), so a failure there fails an import that succeeded.
+   No JVM test covers any rollback path (`RepositoryTest.kt:102-139` only covers the happy path).
 
 **Impact.** Worst case an import failure leaves records replaced with settings old (recoverable by
 re-running the import); at minimum the user sees "file could not be read" for an import that actually
@@ -305,7 +304,7 @@ reads (`routes/index.tsx:319;325-330` call `void persist.saveSession(...)`), so 
 stops being saved while the UI shows nothing. The import path stamps the row with
 `System.currentTimeMillis()` (`LinguaRepository.kt:205-210`), intersecting this with a store that JS
 did not observe. (The guard itself is correctly placed inside a `Mutex` and compares against the
-stored row, so *ordering within one process* is protected when the clock behaves.)
+stored row, so _ordering within one process_ is protected when the clock behaves.)
 
 **Impact.** Draft durability can be silently lost for a whole session after a clock change; a pending
 pre-import session save may be wrongly rejected/overwrite depending on the timing against import.
@@ -362,7 +361,7 @@ forgetSettingsCache`; each step can reject (`port.clearAll` throws, `saved.clear
 fail), and the unhandled rejection leaves the remaining stores uncleared while the UI has already
 closed the confirmation. Settings writes are queued asynchronously (`settings.ts:73-101`); a write
 already dispatched/queued when the clear happens can land **after** `clearAll` cleared DataStore
-(`forgetSettingsCache` only clears the queue *after* `persist.clearAll()` returns,
+(`forgetSettingsCache` only clears the queue _after_ `persist.clearAll()` returns,
 `clearData.ts:20-21`), so a just-changed setting survives "forget everything". `LinguaRepository.clearAll`
 clears history/saved/memory/session and `settings.clear()` (`LinguaRepository.kt:248-257`), but
 **not `import_meta`** (table stays with backup file names/digests/timestamps; `Entities.kt:80-89`).
@@ -397,7 +396,7 @@ resolves `dark`/system; `useTheme` (`theme.ts:62-74`) then takes `current()` fro
 `document.documentElement.dataset.theme` (`theme.ts:32-34`), never from `readDeviceValue(THEME_KEY)`.
 Net effect: a saved `vivid`/`light` theme is ignored on every cold start and reverts to
 dark/system after the first toggle-free launch. Likewise `INTRO_BOOT` (`intro.ts:24`) tests
-`localStorage`, `shouldShowIntro()` (`intro.ts:7-9`, which *does* read the snapshot) is never called,
+`localStorage`, `shouldShowIntro()` (`intro.ts:7-9`, which _does_ read the snapshot) is never called,
 and the translator decides with `introPending()` (`index.tsx:261`): with no draft restored the intro
 can be shown on every launch even though `lingua.intro.seen.v1 === "1"` is in DataStore.
 `docs/android/architecture.md:46-58` documents `applyStoredAppearance()` as part of the success boot
@@ -443,7 +442,7 @@ everything is lost; the backup feature is unreachable exactly when it is needed.
 
 **Root cause.** Fail-safe (don't destroy) was chosen without a corresponding user-consented repair.
 
-**Fix.** Add a Data-settings action that opens the DB with a *quarantine* path (copy the file aside,
+**Fix.** Add a Data-settings action that opens the DB with a _quarantine_ path (copy the file aside,
 recreate) and restores from an imported backup; add a DataStore `ReplaceFileCorruptionHandler` that
 quarantines the corrupt file and starts from defaults (settings are re-importable); make
 `platformError()` visible on the Data settings screen with an export attempt that streams the raw
@@ -459,6 +458,7 @@ new contract.
 ### A3-11 — P2 — documented backup contract differs from the implementation in four places
 
 **Evidence.**
+
 1. `docs/android/data-import-export.md:57-60` says merge matches **by id**, newer `updated_at`/`created_at`
    wins, "existing rows are never deleted". Code: `mergeData` builds `historyByText` keyed by
    `target|normalized(original)` (`backup.ts:255-285`), and a same-id/different-text incoming row is
@@ -475,7 +475,7 @@ new contract.
    where the code writes `createdAt`/`data`/`cipher.text`, labels the KDF `PBKDF2-SHA256` where the
    code writes `kdf: "PBKDF2"`, says the digest covers "the canonical payload" while encrypted files
    digest the **ciphertext** (`contracts.ts:245-263`, `backup.ts:127-146,236-241`), and the
-   encrypted-file error is reported as `password` for *any* crypto failure (`backup.ts:243-245`).
+   encrypted-file error is reported as `password` for _any_ crypto failure (`backup.ts:243-245`).
    `appVersion` is read from `import.meta.env.VITE_APP_VERSION` (`DataControls.tsx:157`) which no
    build defines, so every backup says "1.0.0" (`.output` grep shows no define).
 
@@ -512,7 +512,7 @@ import evicted rows, the user has neither the import nor their old data (the evi
 **Root cause.** The port contract ("writes report failure") is not honoured inside this method.
 
 **Fix.** Check `writeHistorySync(...).ok` and throw (→ rollback), return false from
-`savedWrite`/`writeMemory` (or throw) and abort before reporting; take the snapshot *after* a
+`savedWrite`/`writeMemory` (or throw) and abort before reporting; take the snapshot _after_ a
 successful write is impossible, so keep a rollback copy and verify by re-read.
 
 **Regression test.** Vitest: stub `localStorage.setItem` to throw `QuotaExceededError` for the history
@@ -603,47 +603,47 @@ key and call `webPort.replaceAll`; must reject and leave the pre-import archive 
 
 ## 6. Verified vs unverified matrix
 
-| Claim / behaviour | Classification | Evidence |
-| --- | --- | --- |
-| One source of truth per platform; no dual write in native mode | **VERIFIED (source)** | `persistence/index.ts:11`; `history.ts:36,190-206`; `saved.ts:17,22-26`; `memory.ts:36,51-55`; `settings.ts:45-54,73-86`; only writer of `localStorage` is `web.ts`/`settings.ts` web branch |
-| Android records live in Room, settings in DataStore | **VERIFIED (source)** | `LinguaRepository.kt:36-48,102-137`; `SettingsStore.kt`; `Entities.kt`; schema `2.json` |
-| Boot script gets a validated snapshot and degrades safely | **VERIFIED (source)**, timing NOT_VERIFIED | `platform.ts:71-101`; `platform.test.ts:40-64` (web tests exist; not run by me) |
-| Degraded boot is *safe for existing phrasebook* | **FAIL (source)** — see A3-02 | `platform.ts:86-98`; `saved.ts:22-43`; `LinguaRepository.kt:121-126` |
-| Backup create/parse/digest/AES-GCM/version logic | **VERIFIED (source)**; executed tests **NOT_VERIFIED by me** | `backup.ts:44-248`; `persistence.test.ts:115-207` exists |
-| Backup merge/replace semantics match docs | **FAIL (source)** — see A3-11 | `backup.ts:250-384` vs `data-import-export.md:56-65` |
-| Import is one atomic transaction incl. settings | **FAIL (source)** — see A3-05 | `LinguaRepository.kt:196-227` |
-| Import rollback proven by test | **NOT_VERIFIED** (no such test) | `RepositoryTest.kt:102-139` happy path only |
-| Kotlin JVM tests pass (10 on disk now, 8 at first read; docs say 9) | **NOT_VERIFIED by me** (not run: Gradle build was owned by the Lead) | `android/app/src/test/**`; `docs/quality/testing.md:27` |
-| Migration v1→v2 tested against a real exported v1 schema | **NOT_VERIFIED / SUSPECTED** — no v1 schema exists; test hand-builds one (working tree expands coverage to `saved_phrases`/production open, still not an exported schema) | A3-13, `MigrationTest.kt:26-73`, `schemas/…/2.json` |
-| Session stale-write guard correct within one process | **VERIFIED (source)** for ordering; clock-robustness **FAIL** (A3-06) | `LinguaRepository.kt:76-87`; `native.ts:30-34` |
-| Session survives force-stop / process death | **NOT_VERIFIED** (no device run) | `platform.ts:150-175`; `routes/index.tsx:312-339` |
-| Statistics derived from the archive, no second store | **VERIFIED (source)** | `engine.ts`; `useArchive.ts`; `agreements` in AGENTS.md |
-| Statistics read-path recovery (retry/status) | **FAIL (source)** — A3-16 | `history.ts:110-127`; `stats.tsx:139,313-326` |
-| "Forget everything" removes all device data | **FAIL (source)** — A3-08/A3-09 | `clearData.ts`; `LinguaRepository.kt:248-257`; `stats.tsx:294-297` |
-| Android app persists anything **as shipped** (1.0.2) | **NOT_VERIFIED by me / teammate-reported FAIL**, fix uncommitted | A3-01, `native/plugin.ts:80-106` + `plugin.test.ts` |
-| DataStore settings applied before first native frame | **FAIL (source)** — A3-09 | `platform.ts:91` only failure branch |
-| Corrupt DB / disk-full behaviour matches docs ("rollback, previous intact") | **SUSPECTED / NOT_VERIFIED** | A3-05/A3-10; no fault-injection test |
-| Backup → restore on device (SAF) | **NOT_VERIFIED** | TD17; no device run by me |
-| Encrypted backup round-trip inside the Android WebView | **NOT_VERIFIED** | TD17; Capacitor origin is `https://localhost` so `crypto.subtle` should exist, not tested |
-| Data at rest: Room plaintext, OS backup disabled | **VERIFIED (source)** for manifest/known debt; TD19 remains open | `AndroidManifest.xml:14-16`; `technical-debt.md:24` |
+| Claim / behaviour                                                           | Classification                                                                                                                                                            | Evidence                                                                                                                                                                                     |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One source of truth per platform; no dual write in native mode              | **VERIFIED (source)**                                                                                                                                                     | `persistence/index.ts:11`; `history.ts:36,190-206`; `saved.ts:17,22-26`; `memory.ts:36,51-55`; `settings.ts:45-54,73-86`; only writer of `localStorage` is `web.ts`/`settings.ts` web branch |
+| Android records live in Room, settings in DataStore                         | **VERIFIED (source)**                                                                                                                                                     | `LinguaRepository.kt:36-48,102-137`; `SettingsStore.kt`; `Entities.kt`; schema `2.json`                                                                                                      |
+| Boot script gets a validated snapshot and degrades safely                   | **VERIFIED (source)**, timing NOT_VERIFIED                                                                                                                                | `platform.ts:71-101`; `platform.test.ts:40-64` (web tests exist; not run by me)                                                                                                              |
+| Degraded boot is _safe for existing phrasebook_                             | **FAIL (source)** — see A3-02                                                                                                                                             | `platform.ts:86-98`; `saved.ts:22-43`; `LinguaRepository.kt:121-126`                                                                                                                         |
+| Backup create/parse/digest/AES-GCM/version logic                            | **VERIFIED (source)**; executed tests **NOT_VERIFIED by me**                                                                                                              | `backup.ts:44-248`; `persistence.test.ts:115-207` exists                                                                                                                                     |
+| Backup merge/replace semantics match docs                                   | **FAIL (source)** — see A3-11                                                                                                                                             | `backup.ts:250-384` vs `data-import-export.md:56-65`                                                                                                                                         |
+| Import is one atomic transaction incl. settings                             | **FAIL (source)** — see A3-05                                                                                                                                             | `LinguaRepository.kt:196-227`                                                                                                                                                                |
+| Import rollback proven by test                                              | **NOT_VERIFIED** (no such test)                                                                                                                                           | `RepositoryTest.kt:102-139` happy path only                                                                                                                                                  |
+| Kotlin JVM tests pass (10 on disk now, 8 at first read; docs say 9)         | **NOT_VERIFIED by me** (not run: Gradle build was owned by the Lead)                                                                                                      | `android/app/src/test/**`; `docs/quality/testing.md:27`                                                                                                                                      |
+| Migration v1→v2 tested against a real exported v1 schema                    | **NOT_VERIFIED / SUSPECTED** — no v1 schema exists; test hand-builds one (working tree expands coverage to `saved_phrases`/production open, still not an exported schema) | A3-13, `MigrationTest.kt:26-73`, `schemas/…/2.json`                                                                                                                                          |
+| Session stale-write guard correct within one process                        | **VERIFIED (source)** for ordering; clock-robustness **FAIL** (A3-06)                                                                                                     | `LinguaRepository.kt:76-87`; `native.ts:30-34`                                                                                                                                               |
+| Session survives force-stop / process death                                 | **NOT_VERIFIED** (no device run)                                                                                                                                          | `platform.ts:150-175`; `routes/index.tsx:312-339`                                                                                                                                            |
+| Statistics derived from the archive, no second store                        | **VERIFIED (source)**                                                                                                                                                     | `engine.ts`; `useArchive.ts`; `agreements` in AGENTS.md                                                                                                                                      |
+| Statistics read-path recovery (retry/status)                                | **FAIL (source)** — A3-16                                                                                                                                                 | `history.ts:110-127`; `stats.tsx:139,313-326`                                                                                                                                                |
+| "Forget everything" removes all device data                                 | **FAIL (source)** — A3-08/A3-09                                                                                                                                           | `clearData.ts`; `LinguaRepository.kt:248-257`; `stats.tsx:294-297`                                                                                                                           |
+| Android app persists anything **as shipped** (1.0.2)                        | **NOT_VERIFIED by me / teammate-reported FAIL**, fix uncommitted                                                                                                          | A3-01, `native/plugin.ts:80-106` + `plugin.test.ts`                                                                                                                                          |
+| DataStore settings applied before first native frame                        | **FAIL (source)** — A3-09                                                                                                                                                 | `platform.ts:91` only failure branch                                                                                                                                                         |
+| Corrupt DB / disk-full behaviour matches docs ("rollback, previous intact") | **SUSPECTED / NOT_VERIFIED**                                                                                                                                              | A3-05/A3-10; no fault-injection test                                                                                                                                                         |
+| Backup → restore on device (SAF)                                            | **NOT_VERIFIED**                                                                                                                                                          | TD17; no device run by me                                                                                                                                                                    |
+| Encrypted backup round-trip inside the Android WebView                      | **NOT_VERIFIED**                                                                                                                                                          | TD17; Capacitor origin is `https://localhost` so `crypto.subtle` should exist, not tested                                                                                                    |
+| Data at rest: Room plaintext, OS backup disabled                            | **VERIFIED (source)** for manifest/known debt; TD19 remains open                                                                                                          | `AndroidManifest.xml:14-16`; `technical-debt.md:24`                                                                                                                                          |
 
 ## 7. Documented guarantees that the code does not enforce
 
-| Documented guarantee | Where | Actual behaviour |
-| --- | --- | --- |
-| "The write is one Room transaction; any failure rolls back, leaving the previous state intact" | `data-import-export.md:61-62` | Room records in one transaction; settings written after it; rollback best-effort (A3-05) |
-| "The UI reports added/skipped per entity and the import is recorded in import_meta with file name, digest, mode, counts and timestamp" | `data-import-export.md:62-65` | Android report is fabricated (skipped 0, replaced true); file name/digest are `null`; table never read (A3-07) |
-| "Merge matches by id; the newer row wins; existing rows are never deleted" | `data-import-export.md:57-58` | Matches by target+normalised text; settings overwritten unconditionally (A3-11) |
-| "Rows failing validation are skipped and counted" | `persistence-and-migrations.md:75-76` | Silently dropped, not counted (A3-11/A3-14) |
-| "Settings snapshot: one Preferences key containing a JSON object" | `persistence-and-migrations.md:87`, `architecture.md:78`, `state-and-persistence.md:110` | One DataStore string preference per key (A3-20) |
-| "Device-only preferences stay on the device" | `persistence-and-migrations.md:91-93` | True in that they are not in backups; but a **replace** import clears every DataStore key not in the file, so a future device-only key would be deleted by an import (today every key happens to be whitelisted) |
-| "First paint already has the saved theme … `applyStoredAppearance()` runs in the boot sequence" | `architecture.md:46-58`, `state-and-persistence.md:115-117`, `__root.tsx:109-111` | Only the degraded branch applies it; saved theme/intro are ignored on the success path (A3-09) |
-| "The session is flushed on visibilitychange/pagehide so the last keystrokes are not lost" | `state-and-persistence.md:55-57` | Flush is fire-and-forget; `flushPlatform` waits only for settings (A3-18) |
-| "Writes report failure instead of swallowing it" | `persistence/port.ts:32-37` | Port reports; callers for saved/memory/prefs/theme discard the boolean (A3-19) |
-| "Memory bounded twice … re-checked in Kotlin" | `persistence-and-migrations.md:71` | Kotlin checks rows only; byte budget is TS-only (A3-15) |
-| "Migrations are additive and transactional; exportSchema + androidTest assets for MigrationTestHelper" | `persistence-and-migrations.md:56-63` | v1 schema not exported; no androidTest assets; hand-written v1 test (A3-13) |
-| "Every migration ships with a test that opens the previous schema with real rows" | `persistence-and-migrations.md:60-61` | Test opens a hand-written schema (not an exported v1 schema); v1 backfill coverage is being expanded in the working tree (A3-13) |
-| "clearAll deletes records and settings inside a transaction" | `persistence-and-migrations.md:97-98` | Records in a Room transaction, then `settings.clear()` separately; `import_meta` not cleared (A3-08) |
+| Documented guarantee                                                                                                                   | Where                                                                                    | Actual behaviour                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "The write is one Room transaction; any failure rolls back, leaving the previous state intact"                                         | `data-import-export.md:61-62`                                                            | Room records in one transaction; settings written after it; rollback best-effort (A3-05)                                                                                                                         |
+| "The UI reports added/skipped per entity and the import is recorded in import_meta with file name, digest, mode, counts and timestamp" | `data-import-export.md:62-65`                                                            | Android report is fabricated (skipped 0, replaced true); file name/digest are `null`; table never read (A3-07)                                                                                                   |
+| "Merge matches by id; the newer row wins; existing rows are never deleted"                                                             | `data-import-export.md:57-58`                                                            | Matches by target+normalised text; settings overwritten unconditionally (A3-11)                                                                                                                                  |
+| "Rows failing validation are skipped and counted"                                                                                      | `persistence-and-migrations.md:75-76`                                                    | Silently dropped, not counted (A3-11/A3-14)                                                                                                                                                                      |
+| "Settings snapshot: one Preferences key containing a JSON object"                                                                      | `persistence-and-migrations.md:87`, `architecture.md:78`, `state-and-persistence.md:110` | One DataStore string preference per key (A3-20)                                                                                                                                                                  |
+| "Device-only preferences stay on the device"                                                                                           | `persistence-and-migrations.md:91-93`                                                    | True in that they are not in backups; but a **replace** import clears every DataStore key not in the file, so a future device-only key would be deleted by an import (today every key happens to be whitelisted) |
+| "First paint already has the saved theme … `applyStoredAppearance()` runs in the boot sequence"                                        | `architecture.md:46-58`, `state-and-persistence.md:115-117`, `__root.tsx:109-111`        | Only the degraded branch applies it; saved theme/intro are ignored on the success path (A3-09)                                                                                                                   |
+| "The session is flushed on visibilitychange/pagehide so the last keystrokes are not lost"                                              | `state-and-persistence.md:55-57`                                                         | Flush is fire-and-forget; `flushPlatform` waits only for settings (A3-18)                                                                                                                                        |
+| "Writes report failure instead of swallowing it"                                                                                       | `persistence/port.ts:32-37`                                                              | Port reports; callers for saved/memory/prefs/theme discard the boolean (A3-19)                                                                                                                                   |
+| "Memory bounded twice … re-checked in Kotlin"                                                                                          | `persistence-and-migrations.md:71`                                                       | Kotlin checks rows only; byte budget is TS-only (A3-15)                                                                                                                                                          |
+| "Migrations are additive and transactional; exportSchema + androidTest assets for MigrationTestHelper"                                 | `persistence-and-migrations.md:56-63`                                                    | v1 schema not exported; no androidTest assets; hand-written v1 test (A3-13)                                                                                                                                      |
+| "Every migration ships with a test that opens the previous schema with real rows"                                                      | `persistence-and-migrations.md:60-61`                                                    | Test opens a hand-written schema (not an exported v1 schema); v1 backfill coverage is being expanded in the working tree (A3-13)                                                                                 |
+| "clearAll deletes records and settings inside a transaction"                                                                           | `persistence-and-migrations.md:97-98`                                                    | Records in a Room transaction, then `settings.clear()` separately; `import_meta` not cleared (A3-08)                                                                                                             |
 
 ## 8. Highest-priority actions (for the Lead)
 

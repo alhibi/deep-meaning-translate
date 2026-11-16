@@ -30,27 +30,27 @@ described device behaviour that had never been executed.
 
 ## 2. Environment discovered (measured, not assumed)
 
-| Item | Actual value |
-| --- | --- |
-| Node / npm | 26.13.1 / 11.20.0 |
-| JDK | OpenJDK 21.0.13 (Homebrew, arm64) |
-| Android SDK | platforms android-34/36/36.1/37.0; build-tools 34/35/36/36.1/37; NDK 28.2/30.0 |
-| Gradle | wrapper 8.14.3, Android Gradle Plugin 8.13.0, Kotlin 2.1.21 |
-| Emulator | **emulator-5554**, Android 15 (API 35), arm64-v8a, 1080×2400 @420 dpi, WebView 124.0.6367.219, software GPU |
-| AVDs | `almani` (running), `api37_google_apis`, `vitalis_api35`; **no API 24/29 system image** |
-| Host locale | `AppleLocale=ar_DE`, JVM `user.language=ar` — a build hazard (see below) |
-| Secrets | no `.env`; no keystore; provider keys only on the deployed Worker |
-| Git | clean working tree at `c897209`; no local changes to preserve |
+| Item        | Actual value                                                                                                |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| Node / npm  | 26.13.1 / 11.20.0                                                                                           |
+| JDK         | OpenJDK 21.0.13 (Homebrew, arm64)                                                                           |
+| Android SDK | platforms android-34/36/36.1/37.0; build-tools 34/35/36/36.1/37; NDK 28.2/30.0                              |
+| Gradle      | wrapper 8.14.3, Android Gradle Plugin 8.13.0, Kotlin 2.1.21                                                 |
+| Emulator    | **emulator-5554**, Android 15 (API 35), arm64-v8a, 1080×2400 @420 dpi, WebView 124.0.6367.219, software GPU |
+| AVDs        | `almani` (running), `api37_google_apis`, `vitalis_api35`; **no API 24/29 system image**                     |
+| Host locale | `AppleLocale=ar_DE`, JVM `user.language=ar` — a build hazard (see below)                                    |
+| Secrets     | no `.env`; no keystore; provider keys only on the deployed Worker                                           |
+| Git         | clean working tree at `c897209`; no local changes to preserve                                               |
 
 ## 3. Baseline gates executed before any change
 
-| Gate | Result |
-| --- | --- |
-| `npm ci` | pass; `patch-package` applied `@capacitor/android+8.6.2.patch` |
-| `npm run verify` | **exit 0** — typecheck, eslint zero warnings, vitest with coverage floors, 51/51 contrast pairs, docs inventory |
-| `npm run build` (web/Worker) | pass (baseline run of the repository's production build) |
+| Gate                                  | Result                                                                                                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm ci`                              | pass; `patch-package` applied `@capacitor/android+8.6.2.patch`                                                                                                                         |
+| `npm run verify`                      | **exit 0** — typecheck, eslint zero warnings, vitest with coverage floors, 51/51 contrast pairs, docs inventory                                                                        |
+| `npm run build` (web/Worker)          | pass (baseline run of the repository's production build)                                                                                                                               |
 | Android build `assembleDebug/Release` | **FAILED on this host**: Room/KSP emitted Arabic-Indic digits (`TableInfo.Column(..., ٠, ...)`) because the JVM locale is Arabic; `compileDebugKotlin` / `compileReleaseKotlin` failed |
-| Emulator available | yes (API 35); the repository's docs/TD17 claimed none was available |
+| Emulator available                    | yes (API 35); the repository's docs/TD17 claimed none was available                                                                                                                    |
 
 The locale failure is itself a discovery: the committed tree could not be built on an
 Arabic-locale host, and the docs did not mention the requirement.

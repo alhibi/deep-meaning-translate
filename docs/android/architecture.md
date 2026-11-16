@@ -31,16 +31,16 @@ contracts the Kotlin layer implements.
 
 ## Layers
 
-| Layer | Files | Responsibility |
-| --- | --- | --- |
-| UI | `src/routes/*`, `src/components/*` | The translator as designed; no Android-specific rendering |
-| Application | `src/lib/history.ts`, `saved.ts`, `translation/memory.ts`, `persist.ts` | Merge rules, bounds, validation, store caches |
-| Port | `src/lib/persistence/port.ts`, `native.ts`, `web.ts` | Chooses the adapter once, at boot |
-| Bridge (JS side) | `src/lib/native/plugin.ts`, `rpc.ts` | Registered Capacitor plugins, typed calls, JSON DTOs |
-| Bridge (native) | `android/.../bridge/LinguaStorePlugin.kt` | One method per port operation; IO dispatcher only |
-| Data | `android/.../data/*.kt` | Room entities/DAOs, repository transactions, DataStore, mapping |
-| Transport | `src/lib/native/transport.ts`, `stream.ts`, `voice/cloud.ts` | Absolute native URLs, error classification |
-| Server | `src/routes/api/native/v1/*`, `gate.server.ts`, `handlers.server.ts` | Origin allowlist, CORS, the same engine and prompts |
+| Layer            | Files                                                                   | Responsibility                                                  |
+| ---------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
+| UI               | `src/routes/*`, `src/components/*`                                      | The translator as designed; no Android-specific rendering       |
+| Application      | `src/lib/history.ts`, `saved.ts`, `translation/memory.ts`, `persist.ts` | Merge rules, bounds, validation, store caches                   |
+| Port             | `src/lib/persistence/port.ts`, `native.ts`, `web.ts`                    | Chooses the adapter once, at boot                               |
+| Bridge (JS side) | `src/lib/native/plugin.ts`, `rpc.ts`                                    | Registered Capacitor plugins, typed calls, JSON DTOs            |
+| Bridge (native)  | `android/.../bridge/LinguaStorePlugin.kt`                               | One method per port operation; IO dispatcher only               |
+| Data             | `android/.../data/*.kt`                                                 | Room entities/DAOs, repository transactions, DataStore, mapping |
+| Transport        | `src/lib/native/transport.ts`, `stream.ts`, `voice/cloud.ts`            | Absolute native URLs, error classification                      |
+| Server           | `src/routes/api/native/v1/*`, `gate.server.ts`, `handlers.server.ts`    | Origin allowlist, CORS, the same engine and prompts             |
 
 The Kotlin layer never contains a prompt, a provider name, a model name or a translation
 rule. Those stay in `src/lib/translation/` and on the server, exactly as the constitution
@@ -82,7 +82,8 @@ script) only adds that padding on API 30+, where `ime()` is the real overlap.
 ## One source of truth
 
 - Native: Room is the record store. `localStorage` is not used for records and is never
-  written in parallel. The web adapter is not imported at runtime, only type-shared.
+  written in parallel. The web adapter module is imported for its shared storage helpers, but
+  every native path guards on `isNativeApp()` and never enters it.
 - Web: `localStorage` keeps the same keys as before; the native adapter is never loaded.
 - Settings: DataStore holds one string preference per `lingua.*` key (not one JSON map). The
   app reads a snapshot synchronously (hydrated at boot) and queues writes; it does not maintain
@@ -95,7 +96,7 @@ The native shell dispatches one cancelable `lingua:back` event and `dispatchBack
 nobody claimed it:
 
 ```text
-open overlay/sheet (any component) → close it, cancel the event
+an overlay that registered useAndroidBack (language/model/voice) → close it, cancel
 keyboard visible                    → blur the field, cancel the event
 non-root route (/stats, /privacy)   → history.back()
 root translator                     → App.exitApp()
@@ -111,13 +112,13 @@ the same handler on Android 13+, so the order is identical on every API level.
 
 ## Failure philosophy
 
-| Failure | Behaviour |
-| --- | --- |
-| Room cannot open (corrupt, disk full) | App still runs; native reads/writes fail closed; Data settings says storage is unavailable. There is no in-app reset yet (TD26). |
-| Bridge does not answer within 3 s | Boot times out, the app opens with in-memory defaults, and the splash is still hidden after React commits |
-| Import is malformed or fails mid-write | Transaction rolls back; the previous archive is intact |
-| No network | Translation and cloud voice show the existing calm error; local history, phrasebook and backups keep working |
-| WebView has no speech synthesis | `LinguaTts` reads the translation with the Android engine (no word timings) |
+| Failure                                | Behaviour                                                                                                                        |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Room cannot open (corrupt, disk full)  | App still runs; native reads/writes fail closed; Data settings says storage is unavailable. There is no in-app reset yet (TD26). |
+| Bridge does not answer within 3 s      | Boot times out, the app opens with in-memory defaults, and the splash is still hidden after React commits                        |
+| Import is malformed or fails mid-write | Transaction rolls back; the previous archive is intact                                                                           |
+| No network                             | Translation and cloud voice show the existing calm error; local history, phrasebook and backups keep working                     |
+| WebView has no speech synthesis        | `LinguaTts` reads the translation with the Android engine (no word timings)                                                      |
 
 ## Related
 

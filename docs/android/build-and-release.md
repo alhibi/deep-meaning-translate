@@ -6,14 +6,14 @@ TD18 therefore remains open for a publishable build.
 
 ## Toolchain actually used
 
-| Tool | Version | Location |
-| --- | --- | --- |
-| JDK | OpenJDK 21.0.13 (arm64) | `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` |
-| Android SDK | platforms 34/36/36.1/37.0, build-tools 36.0.0 | `ANDROID_HOME=~/Library/Android/sdk` |
-| Gradle | wrapper 8.14.3 (AGP 8.13.0) | `android/gradlew` |
-| Kotlin / KSP | 2.1.21 / 2.1.21-2.0.1 | `android/app/build.gradle.kts` |
-| Node | 26.13.1 | — |
-| Emulator | API 35, arm64, 1080×2400, WebView 124.0.6367.219 | AVD `almani` |
+| Tool         | Version                                          | Location                                                                   |
+| ------------ | ------------------------------------------------ | -------------------------------------------------------------------------- |
+| JDK          | OpenJDK 21.0.13 (arm64)                          | `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` |
+| Android SDK  | platforms 34/36/36.1/37.0, build-tools 36.0.0    | `ANDROID_HOME=~/Library/Android/sdk`                                       |
+| Gradle       | wrapper 8.14.3 (AGP 8.13.0)                      | `android/gradlew`                                                          |
+| Kotlin / KSP | 2.1.21 / 2.1.21-2.0.1                            | `android/app/build.gradle.kts`                                             |
+| Node         | 26.13.1                                          | —                                                                          |
+| Emulator     | API 35, arm64, 1080×2400, WebView 124.0.6367.219 | AVD `almani`                                                               |
 
 **Locale pin (required):** `android/gradle.properties` sets
 `-Duser.language=en -Duser.country=US` for both the Gradle daemon and the Kotlin daemon. On an
@@ -48,10 +48,10 @@ executed and is evidence for A5-02/TD18.
 
 ## Outputs (this build, 2026-11-16)
 
-| File | Size | SHA-256 |
-| --- | --- | --- |
-| `today-1.0.3-debug.apk` | 6 549 963 B | `29bf06266a02c54688edf168bdd66c0fc4593ee603a0f3d2e8c74b2a8e80dc46` |
-| `today-1.0.3-release-review-debug-signed.apk` | 2 173 393 B | `a5c75769eed0b717b5deda9e5050221672f451e8c854339438edf4d57936258e` |
+| File                                          | Size        | SHA-256                                                            |
+| --------------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| `today-1.0.3-debug.apk`                       | 6 550 037 B | `325aa64426024f2ea87909b5948f8d427339df45c9fc765020de886a27852500` |
+| `today-1.0.3-release-review-debug-signed.apk` | 2 173 437 B | `bc89ac7d95de1a96aeca3d84c44265bc7752ebe6aab2d5bcdd2d06219d359c19` |
 
 Both verify with the v2 APK signature scheme. The review release certificate is
 `C=US, O=Android, CN=Android Debug`, SHA-256

@@ -3,10 +3,11 @@ import { useEffect } from "react";
 /**
  * Let an open overlay claim the Android back gesture.
  *
- * The native shell dispatches a cancelable `lingua:back` event. Listeners run in
- * registration order (child effects before the route effect), so a sheet can close and
- * mark the event handled before `index.tsx` decides to leave the app. Without this a
- * language/model/voice sheet closed *and* the app quit on the same back press (A4-03).
+ * `dispatchBack()` in the native shell dispatches the cancelable `lingua:back` event and
+ * only decides the route/exit **after** every listener has run, by checking
+ * `defaultPrevented`. That is what makes listener order safe: a mounted sheet closes and
+ * cancels; the root sees the cancellation and does not exit. Without it a language/model/
+ * voice sheet closed *and* the app quit on the same back press (A4-03).
  */
 export function useAndroidBack(active: boolean, onBack: () => void) {
   useEffect(() => {

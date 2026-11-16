@@ -1,16 +1,16 @@
 # Persistence and migrations (Android)
 
-Status: **Implemented; JVM tests pass** (`:app:testDebugUnitTest`: 10 tests — 7 repository/contracts
-+ 3 migration, plus 3 backup-reader tests). Device behaviour was executed on emulator-5554
+Status: **Implemented; JVM tests pass** (`:app:testDebugUnitTest`: 13 tests — 7 repository/contracts,
+3 migration, 3 backup-reader). Device behaviour was executed on emulator-5554
 (API 35) for draft restore, phrasebook/history/memory persistence, force-stop and import; API
 24–29 and physical devices remain **NOT_VERIFIED** (TD17/TD21).
 
 ## Two stores, one owner each
 
-| Data | Store | Why |
-| --- | --- | --- |
-| Archive (translation history), saved phrases, translation memory, session, import metadata | Room (`lingua.db`) | Queryable, bounded, transactional; the archive is the product's memory |
-| Small settings (theme, locale, voice, feel, style defaults, install hint) | Preferences DataStore (`lingua.prefs.v1`) | A few dozen scalars; no schema churn |
+| Data                                                                                       | Store                                     | Why                                                                    |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------- |
+| Archive (translation history), saved phrases, translation memory, session, import metadata | Room (`lingua.db`)                        | Queryable, bounded, transactional; the archive is the product's memory |
+| Small settings (theme, locale, voice, feel, style defaults, install hint)                  | Preferences DataStore (`lingua.prefs.v1`) | A few dozen scalars; no schema churn                                   |
 
 `localStorage` is not used for records in the installed app. There is no dual write.
 
@@ -68,13 +68,13 @@ Rules that hold for every future migration:
 
 ## Bounds
 
-| Limit | Value | Enforced by |
-| --- | --- | --- |
-| Archive | 2000 | TypeScript merge + `historyTrim` |
-| Saved phrases | 300 | TypeScript write bound |
+| Limit              | Value                                 | Enforced by                                       |
+| ------------------ | ------------------------------------- | ------------------------------------------------- |
+| Archive            | 2000                                  | TypeScript merge + `historyTrim`                  |
+| Saved phrases      | 300                                   | TypeScript write bound                            |
 | Translation memory | 120 entries / 200 000 bytes / 30 days | TypeScript memory trim; Kotlin caps rows on write |
-| Text per field | 5000 chars | `Mapping` and TS validators |
-| Session writes | newest `seq` wins | `session_state.seq` compared in SQL |
+| Text per field     | 5000 chars                            | `Mapping` and TS validators                       |
+| Session writes     | newest `seq` wins                     | `session_state.seq` compared in SQL               |
 
 A row that fails validation is skipped, counted as skipped during import, and never
 aborts the rest of the batch.

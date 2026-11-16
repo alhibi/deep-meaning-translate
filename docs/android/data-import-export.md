@@ -1,7 +1,10 @@
 # Data import and export
 
-Status: **Implemented** (web download/upload and Android SAF), covered by TypeScript
-round-trip tests. On-device SAF interaction is **NOT_VERIFIED** (no device available).
+Status: **Implemented and device-verified** (emulator API 35, 2026-11-16): SAF export produced a
+valid envelope in Downloads, a merge import reported “already present”, a full restore after
+`pm clear` returned archive/phrasebook/memory/session/theme, and an edited file with a stale
+digest was refused. Web download/upload has TypeScript round-trip tests; the web file path has no
+size cap (TD27).
 
 The only user-facing controls live in `/privacy` → "Your data" (`DataControls.tsx`).
 Nothing is uploaded: export writes a file the person chooses, import reads one file the
@@ -74,15 +77,15 @@ person chooses.
 
 ## What is refused
 
-| Input | Result |
-| --- | --- |
-| Not JSON / wrong `format` | "not a today backup" — no write |
-| `schemaVersion` newer than supported | "from a newer version" — no write |
-| Digest mismatch | "damaged after export" — no write (a recomputed digest is accepted; see above) |
-| Encrypted file without password | prompts once, then refuses — no write |
-| Oversized file (> 8 MB) | refused while reading the stream |
-| Rows failing validation | skipped and counted; valid rows still import |
-| Write failure (disk full, corrupt DB) | rollback, previous data intact |
+| Input                                 | Result                                                                                    |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Not JSON / wrong `format`             | "not a today backup" — no write                                                           |
+| `schemaVersion` newer than supported  | "from a newer version" — no write                                                         |
+| Digest mismatch                       | "damaged after export" — no write (a recomputed digest is accepted; see above)            |
+| Encrypted file without password       | prompts once, then refuses — no write                                                     |
+| Oversized file (> 8 MB, Android SAF)  | refused while reading the stream (`BackupReader`); the web file input is unbounded (TD27) |
+| Rows failing validation               | skipped and counted; valid rows still import                                              |
+| Write failure (disk full, corrupt DB) | rollback, previous data intact                                                            |
 
 ## Limits
 

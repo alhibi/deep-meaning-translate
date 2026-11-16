@@ -96,10 +96,11 @@ kotlin {
     }
 }
 
-// Fail before packaging, not after: no release artefact may be produced silently with the
-// debug key. `-PallowDebugSigning=true` is the explicit local-review escape hatch.
+// Fail before packaging, not after: the guard is attached to the packaging tasks, so no
+// unsigned/accidentally-debug-signed artefact can be produced. `-PallowDebugSigning=true`
+// is the explicit local-review escape hatch.
 tasks.configureEach {
-    if (name == "assembleRelease" || name == "bundleRelease") {
+    if (name == "packageRelease" || name == "packageReleaseBundle") {
         doFirst {
             if (!releaseReady && !allowDebugSigning) {
                 throw GradleException(

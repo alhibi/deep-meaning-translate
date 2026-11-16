@@ -22,6 +22,20 @@ const source = path.join(root, ".output", "public");
 const target = path.join(root, "android-web");
 const EXCLUDED = new Set(["_headers", "sw.js", "manifest.webmanifest", "offline.html"]);
 
+/** The native API base is compiled in through the same env var the app validates. */
+function apiOrigin() {
+  const raw = process.env.NATIVE_API_BASE ?? "https://fluently.today";
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && url.hostname === "10.0.2.2"))
+      throw new Error("invalid base");
+    return url.origin;
+  } catch {
+    return "https://fluently.today";
+  }
+}
+const API_ORIGIN = apiOrigin();
+
 const CSP = [
   "default-src 'self'",
   // Boot scripts and the router's inline hydration payload require inline script.
@@ -32,7 +46,7 @@ const CSP = [
   "media-src 'self' blob: data:",
   // AudioWorklet for dictation is created from a blob.
   "worker-src 'self' blob:",
-  "connect-src 'self' https://fluently.today wss://streaming.assemblyai.com wss://api.assemblyai.com",
+  `connect-src 'self' ${API_ORIGIN} wss://streaming.assemblyai.com wss://api.assemblyai.com`,
   "object-src 'none'",
   "frame-src 'none'",
   "base-uri 'self'",

@@ -1,5 +1,5 @@
 import { isNativeApp } from "./native/config";
-import { nativePort } from "./persistence/native";
+import { markNativeHydrated, nativePort, resetNativeHydrationForTests } from "./persistence/native";
 import {
   setNativeSettingsMode,
   setNativeSettingsReady,
@@ -97,6 +97,7 @@ export async function hydratePlatform(): Promise<boolean> {
       /* a blocked DOM is still not a reason to keep the cover up */
     }
     setNativeSettingsReady(true);
+    markNativeHydrated();
     lastError = null;
   } catch (error) {
     // A broken or slow bridge must not brick the translator. The app opens with in-memory
@@ -273,6 +274,7 @@ export async function rehydrateDeviceData(): Promise<boolean> {
     hydrateMemory(snapshot.memory);
     applyStoredAppearance();
     setNativeSettingsReady(true);
+    markNativeHydrated();
     lastError = null;
     return true;
   } catch {
@@ -287,5 +289,6 @@ export function resetPlatformForTests() {
   booted = false;
   lastError = null;
   setNativeSettingsReady(false);
+  resetNativeHydrationForTests();
   forgetSettingsCache();
 }

@@ -45,6 +45,21 @@ const nextSeq = () => {
  */
 let hydrated = false;
 
+/**
+ * Explicitly allow native reads/writes. Called by the boot path only **after** the
+ * snapshot has been applied to the module caches. A late-arriving hydrate that lost the
+ * boot race must not open writes on its own: its values were never applied, so the first
+ * whole-table save would run from an empty cache (the A3-02 failure mode).
+ */
+export function markNativeHydrated() {
+  hydrated = true;
+}
+
+/** Test seam: boot tests must be able to return to the closed state. */
+export function resetNativeHydrationForTests() {
+  hydrated = false;
+}
+
 async function rawStore() {
   const plugin = await storePlugin();
   if (!plugin) throw new Error("bridge-unavailable");
@@ -87,7 +102,6 @@ export const nativePort: PersistencePort = {
         .filter(isMemoryRow)
         .slice(0, MEMORY_MAX_ENTRIES),
     };
-    hydrated = true;
     return snapshot;
   },
 

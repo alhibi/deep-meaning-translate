@@ -1,7 +1,7 @@
 # Android Implementation Report — 1.0.3
 
-Date: 2026-11-16 · Base commit: `c897209` · Working tree: the changes described here (branch `main`,
-not pushed; the connected Lovable branch remains in a working state).
+Date: 2026-11-16 · Base commit: `c897209` · Final commit: `c5e70e2` on `main` (local; **not
+pushed** — the connected Lovable branch is left in a working state for the owner to review/push).
 
 No capability was removed to make the APK build. The one-screen meaning-first translator, prompts,
 verification, repair, memory, history, saved phrases, statistics, shadow, voice and privacy controls
@@ -84,7 +84,7 @@ path around them.
   in 1.0.3; OS FBE + sandbox + explicit encrypted backups; revisit conditions).
 - Docs updated to match reality: `AGENTS.md` (Android hard rules), `DOCUMENTATION_INDEX.md`,
   `docs/android/{architecture,persistence-and-migrations,data-import-export,network-and-security,
-  device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
+device-compatibility,build-and-release}.md`, `docs/quality/testing.md`,
   `docs/audits/technical-debt.md` (TD17/18 updated, TD19/20 closed, TD21–TD29 added, 24 closures
   recorded).
 
@@ -103,6 +103,10 @@ path around them.
   storage round trip, namespace refusal, session draft + stale-write guard (3); placeholders that
   asserted the wrong package id were deleted.
 - Device-level evidence is recorded in `ANDROID_TEST_EVIDENCE.md`.
+- An independent A8 review (`docs/audits/android-team/08-final-review.md`) re-checked the final
+  diff; its P1 late-hydrate race and P2 signing-guard placement/docs findings were fixed before
+  the final commit (late-hydrate regression test, guard attached to `packageRelease`, doc
+  corrections).
 
 ## 5. Versioning
 
