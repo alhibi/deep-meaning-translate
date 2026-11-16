@@ -7,6 +7,22 @@ app.
 
 Live: https://fluently.today/
 
+## Android app (1.0.3)
+
+The same translator is packaged as an Android app: the React shell runs in a Capacitor WebView,
+while Kotlin/Room/DataStore own device records, settings, backups and the native lifecycle. The
+installable APKs are published with the repository:
+
+- **[Download the latest Android build](https://github.com/alhibi/deep-meaning-translate/releases/latest)**
+  — attach the debug APK (package `today.fluently.app.debug`) for daily use or the release-review
+  APK (package `today.fluently.app`, debug-signed) to test the minified build.
+- Every release lists its SHA-256 checksums and signing type; the release-review APK is **not** a
+  Play Store artefact until an upload key is configured (see TD18 in
+  `docs/audits/technical-debt.md`).
+- Android evidence: [ANDROID_TEST_EVIDENCE.md](ANDROID_TEST_EVIDENCE.md),
+  [ANDROID_RELEASE_REPORT.md](ANDROID_RELEASE_REPORT.md), and
+  [docs/android/build-and-release.md](docs/android/build-and-release.md).
+
 ## What the product actually does
 
 - **Meaning-first translation** into Arabic or German, with Natural / Formal / Casual register.
@@ -79,18 +95,18 @@ npm run build && npm run preview   # http://localhost:8080
 
 ## Where things live
 
-| Path                     | Responsibility                                                        |
-| ------------------------ | --------------------------------------------------------------------- |
-| `src/routes/index.tsx`   | The translator screen: composition, boot restore, session persistence |
-| `src/routes/__root.tsx`  | Shell, pre-paint theme/locale/intro scripts, error screens             |
-| `src/lib/translation/`   | Scheduler, streaming, prompt, providers, parsing, verification, memory |
-| `src/lib/persist.ts`     | Validated device persistence and the tab's remembered values          |
-| `src/lib/theme.ts`       | Three validated themes, pre-paint boot, browser-chrome colour         |
-| `src/lib/i18n.ts`        | Interface locale, pre-paint direction, RTL                            |
-| `src/lib/voice/`         | Device and cloud speech, PCM player, timing                           |
-| `src/lib/stats/`         | Pure statistics engine and taxonomy                                   |
-| `scripts/`               | Build guarantees: headers, PWA, contrast, docs, social card, preview  |
-| `docs/`                  | The authoritative engineering knowledge base                          |
+| Path                    | Responsibility                                                         |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `src/routes/index.tsx`  | The translator screen: composition, boot restore, session persistence  |
+| `src/routes/__root.tsx` | Shell, pre-paint theme/locale/intro scripts, error screens             |
+| `src/lib/translation/`  | Scheduler, streaming, prompt, providers, parsing, verification, memory |
+| `src/lib/persist.ts`    | Validated device persistence and the tab's remembered values           |
+| `src/lib/theme.ts`      | Three validated themes, pre-paint boot, browser-chrome colour          |
+| `src/lib/i18n.ts`       | Interface locale, pre-paint direction, RTL                             |
+| `src/lib/voice/`        | Device and cloud speech, PCM player, timing                            |
+| `src/lib/stats/`        | Pure statistics engine and taxonomy                                    |
+| `scripts/`              | Build guarantees: headers, PWA, contrast, docs, social card, preview   |
+| `docs/`                 | The authoritative engineering knowledge base                           |
 
 ## Documentation
 

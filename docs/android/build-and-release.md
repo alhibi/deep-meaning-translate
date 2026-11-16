@@ -90,6 +90,11 @@ exercised in the debug build; the evidence and limits are in `ANDROID_TEST_EVIDE
 
 ## Distribution note
 
+Installable builds are attached to the repository's GitHub releases:
+**[latest Android release](https://github.com/alhibi/deep-meaning-translate/releases/latest)**.
+Each release carries both APKs and their SHA-256 checksums (also in
+`artifacts/android-1.0.3/SHA256SUMS.txt` in the build workspace).
+
 The review release APK is installable on a device with “unknown sources”. It is **not** a Play
 Store or upgrade-safe production artefact: before distributing, create an upload keystore outside
 the repository, set the four environment variables, rebuild without `allowDebugSigning`, verify the
