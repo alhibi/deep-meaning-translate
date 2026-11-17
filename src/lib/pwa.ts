@@ -83,3 +83,21 @@ export function initServiceWorker() {
   if (document.readyState === "complete") register();
   else window.addEventListener("load", register, { once: true });
 }
+
+/** Update the app icon badge (e.g. phrases due for review) when supported by the OS/PWA. */
+export function updateAppBadge(count: number) {
+  if (typeof navigator === "undefined") return;
+  const nav = navigator as unknown as {
+    setAppBadge?: (contents?: number) => Promise<void>;
+    clearAppBadge?: () => Promise<void>;
+  };
+  try {
+    if (count > 0 && nav.setAppBadge) {
+      void nav.setAppBadge(count).catch(() => {});
+    } else if (nav.clearAppBadge) {
+      void nav.clearAppBadge().catch(() => {});
+    }
+  } catch {
+    /* badge API optional */
+  }
+}

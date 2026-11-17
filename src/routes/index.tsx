@@ -2,6 +2,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowDown,
   ArrowDownToLine,
   Bookmark,
   ChevronDown,
@@ -11,8 +12,10 @@ import {
   Mic,
   X,
 } from "lucide-react";
-import { initServiceWorker } from "@/lib/pwa";
+import { initServiceWorker, updateAppBadge } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
+import { IosInstallSheet } from "@/components/IosInstallSheet";
+import { OfflinePill } from "@/components/OfflinePill";
 import { useTodayKey } from "@/lib/useTodayKey";
 import { AppHeader } from "@/components/translator/AppHeader";
 import { Intro } from "@/components/Intro";
@@ -176,7 +179,7 @@ function Translator() {
   const textRef = useRef(text);
   // eslint-disable-next-line react-hooks/refs -- latest-value ref, read only from a DOM listener
   textRef.current = text;
-  const { canInstall, install } = useInstallPrompt();
+  const { canInstall, install, showIosGuide, closeIosGuide } = useInstallPrompt();
 
   // A restored draft re-shows its old translation: recorded quietly, never as a new use.
   const quietRef = useRef<string | null>(null);
@@ -251,6 +254,14 @@ function Translator() {
       if (prefs.shadow === false) setShadowOn(false);
     }
     const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    if (action === "saved") {
+      setSavedOpen(true);
+      window.history.replaceState(null, "", "/");
+    } else if (action === "new") {
+      setText("");
+      window.history.replaceState(null, "", "/");
+    }
     const shared = [params.get("title"), params.get("text"), params.get("url")]
       .filter(Boolean)
       .join("\n")
@@ -574,6 +585,41 @@ function Translator() {
     setText("");
     inputRef.current?.focus();
   }, []);
+
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullStartY = useRef<number | null>(null);
+
+  const onComposerTouchStart = useCallback((e: React.TouchEvent) => {
+    const textarea = inputRef.current;
+    if (textarea && textarea.scrollTop > 0) {
+      pullStartY.current = null;
+      return;
+    }
+    pullStartY.current = e.touches[0]?.clientY ?? null;
+  }, []);
+
+  const onComposerTouchMove = useCallback((e: React.TouchEvent) => {
+    if (pullStartY.current === null) return;
+    const dy = (e.touches[0]?.clientY ?? 0) - pullStartY.current;
+    if (dy > 0) {
+      setPullDistance(Math.min(dy * 0.45, 80));
+    } else {
+      setPullDistance(0);
+    }
+  }, []);
+
+  const onComposerTouchEnd = useCallback(() => {
+    if (pullDistance > 50) {
+      feel.tap();
+      clear();
+    }
+    setPullDistance(0);
+    pullStartY.current = null;
+  }, [pullDistance, clear]);
+
+  useEffect(() => {
+    updateAppBadge(savedList.length ? saved.reviewQueue().length : 0);
+  }, [savedList]);
 
   const { t, locale, rtl: uiRtl } = useI18n();
   const { lexicon, loading: lexiconLoading } = useLexicon({
@@ -919,6 +965,7 @@ function Translator() {
         inert={introOpen}
         className="mx-auto flex h-[100dvh] max-h-[var(--vvh,100dvh)] w-full max-w-xl flex-col overflow-hidden bg-background"
       >
+        <OfflinePill />
         <AppHeader
           tagline={tagline}
           onToggleTagline={toggleTagline}
@@ -935,8 +982,8 @@ function Translator() {
 
         <div
           ref={scrollRef}
-          className={`flex flex-1 flex-col overflow-y-auto overscroll-contain ${
-            kbUp ? "justify-start pb-3 pt-1" : "justify-start pb-[6dvh] pt-[3dvh]"
+          className={`flex flex-1 flex-col overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
+            kbUp ? "justify-start pt-1" : "justify-start pt-1.5"
           }`}
         >
           <h1 dir={uiRtl ? "rtl" : "ltr"} className="sr-only">
@@ -958,8 +1005,31 @@ function Translator() {
           >
             <section
               dir={uiRtl ? "rtl" : "ltr"}
+              onTouchStart={onComposerTouchStart}
+              onTouchMove={onComposerTouchMove}
+              onTouchEnd={onComposerTouchEnd}
               className="source-stage input-shell relative px-5 pb-2 pt-5"
             >
+              {pullDistance > 6 ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-1.5 z-10 flex justify-center"
+                >
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm transition-all ${
+                      pullDistance > 50
+                        ? "bg-signal text-signal-foreground"
+                        : "bg-card text-muted-foreground"
+                    }`}
+                  >
+                    <ArrowDown
+                      className={`size-3 transition-transform ${pullDistance > 50 ? "rotate-180" : ""}`}
+                      strokeWidth={2}
+                    />
+                    {pullDistance > 50 ? t("releaseToClear") : t("pullToClear")}
+                  </span>
+                </div>
+              ) : null}
               <textarea
                 id="composer"
                 ref={inputRef}
@@ -1217,10 +1287,10 @@ function Translator() {
             </Link>
           </nav>
         </div>
-        <div className="h-3 pad-safe-bottom" />
 
         <SafeArea silent>
           <Suspense fallback={null}>
+            <IosInstallSheet open={showIosGuide} onClose={closeIosGuide} />
             <LanguageSheet
               open={dialectOpen}
               title={t("dialect")}

@@ -24,6 +24,25 @@ function Shell({
   const pushed = useRef(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [drag, setDrag] = useState(0);
+  const startY = useRef<number | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0]?.clientY ?? null;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (startY.current === null) return;
+    const dy = (e.touches[0]?.clientY ?? 0) - startY.current;
+    if (dy > 0) setDrag(dy);
+  };
+
+  const onTouchEnd = () => {
+    if (drag > 75) onClose();
+    setDrag(0);
+    startY.current = null;
+  };
+
   useFocusTrap(open, sheetRef);
   useEffect(() => {
     if (!open) return;
@@ -64,8 +83,22 @@ function Shell({
       aria-label={label}
     >
       <div onClick={onClose} className="animate-sheet-scrim absolute inset-0 bg-background/70" />
-      <div className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[78dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
-        <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4">
+      <div
+        style={{
+          transform: drag ? `translateY(${drag}px)` : undefined,
+          transition: drag ? "none" : undefined,
+        }}
+        className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[78dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface"
+      >
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="flex shrink-0 touch-none cursor-grab justify-center py-2.5 active:cursor-grabbing"
+        >
+          <span aria-hidden className="h-1.5 w-10 rounded-full bg-border-strong" />
+        </div>
+        <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-1">
           <h2 className="flex min-w-0 items-center gap-2 truncate text-[15px] font-semibold text-foreground">
             <span aria-hidden className="shadow-clear" />
             {label}

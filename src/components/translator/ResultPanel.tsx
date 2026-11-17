@@ -427,7 +427,7 @@ export const ResultPanel = memo(function ResultPanel({
         ) : null}
 
         <div
-          className={`-ms-0.5 mt-auto flex items-center pt-5 transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
+          className={`-ms-0.5 mt-auto flex items-center pt-3 sm:pt-3.5 transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
             provisional || pending
               ? "pointer-events-none translate-y-2 opacity-0"
               : "translate-y-0 opacity-100"
@@ -588,7 +588,7 @@ export const ResultPanel = memo(function ResultPanel({
   }
 
   return (
-    <div className="result-panel relative px-5 pb-5 pt-5" aria-busy={pending}>
+    <div className="result-panel relative px-4 sm:px-5 py-3 sm:py-3.5" aria-busy={pending}>
       {body}
       <span className="sr-only" aria-live="polite">
         {announce}

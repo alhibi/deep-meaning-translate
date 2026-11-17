@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
@@ -79,8 +79,26 @@ export function Sheet({
 }) {
   const closeRef = useRef(onClose);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState(0);
+  const startY = useRef<number | null>(null);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   closeRef.current = onClose;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0]?.clientY ?? null;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (startY.current === null) return;
+    const dy = (e.touches[0]?.clientY ?? 0) - startY.current;
+    if (dy > 0) setDrag(dy);
+  };
+
+  const onTouchEnd = () => {
+    if (drag > 75) onClose();
+    setDrag(0);
+    startY.current = null;
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -122,8 +140,22 @@ export function Sheet({
       aria-label={label}
     >
       <div onClick={onClose} className="animate-sheet-scrim absolute inset-0 bg-background/70" />
-      <div className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[86dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface">
-        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2 pt-4">
+      <div
+        style={{
+          transform: drag ? `translateY(${drag}px)` : undefined,
+          transition: drag ? "none" : undefined,
+        }}
+        className="animate-sheet-in absolute inset-x-0 bottom-0 mx-auto flex max-h-[86dvh] w-full max-w-xl flex-col rounded-t-[26px] border-t border-border bg-surface"
+      >
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="flex shrink-0 touch-none cursor-grab justify-center py-2.5 active:cursor-grabbing"
+        >
+          <span aria-hidden className="h-1.5 w-10 rounded-full bg-border-strong" />
+        </div>
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2 pt-1">
           <div className="min-w-0 flex-1">{title}</div>
           <button
             type="button"

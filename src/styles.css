@@ -387,11 +387,16 @@ html.theme-fade *::after {
 }
 
 @utility pad-safe-top {
-  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0.75rem));
 }
 
 @utility pad-safe-bottom {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
+}
+
+@utility pad-safe-x {
+  padding-inline-start: max(1rem, env(safe-area-inset-left, 1rem));
+  padding-inline-end: max(1rem, env(safe-area-inset-right, 1rem));
 }
 
 /* ---------- Motion language: short, compositor-only (opacity + transform) ---------- */
@@ -1498,7 +1503,7 @@ html.vivid {
  * capped composer scrolls inside itself. */
 .canvas-shell {
   flex: 1 0 auto;
-  --result-floor: clamp(168px, 20dvh, 240px);
+  --result-floor: clamp(96px, 12dvh, 142px);
 }
 .canvas-shell .source-stage {
   display: flex;
@@ -1526,7 +1531,7 @@ html.vivid {
 /* The keyboard takes half the screen: the composer keeps two honest lines and the
  * answer stays in the same view while typing. */
 .canvas-shell[data-keyboard="open"] {
-  --result-floor: 120px;
+  --result-floor: 76px;
 }
 .canvas-shell[data-keyboard="open"] .source-stage textarea,
 .canvas-shell[data-keyboard="open"] .speech-echo {
