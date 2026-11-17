@@ -656,7 +656,7 @@ html.theme-fade *::after {
  * growing. It never measures its content: an auto-growing textarea reflowed the whole
  * canvas on every line while an answer streamed beside it. */
 @utility composer-field {
-  height: calc(3lh);
+  height: calc(2lh);
   min-height: 0;
   max-height: none;
   overflow-y: auto;
@@ -1535,13 +1535,13 @@ html.vivid {
 }
 .canvas-shell[data-keyboard="open"] .source-stage textarea,
 .canvas-shell[data-keyboard="open"] .speech-echo {
-  height: calc(2lh);
+  height: calc(1.5lh);
 }
 
 /* Dictation echo: it must occupy exactly the composer's strip and scroll with the newest
  * words, never paint over the toolbar or the result. */
 .speech-echo {
-  height: calc(3lh);
+  height: calc(2lh);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
