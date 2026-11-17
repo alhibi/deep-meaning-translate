@@ -652,11 +652,11 @@ html.theme-fade *::after {
   }
 }
 
-/* A compact writing surface with a fixed three-line height that scrolls instead of
+/* A compact writing surface with a fixed two-line height that scrolls instead of
  * growing. It never measures its content: an auto-growing textarea reflowed the whole
  * canvas on every line while an answer streamed beside it. */
 @utility composer-field {
-  height: calc(3lh);
+  height: calc(2lh);
   min-height: 0;
   max-height: none;
   overflow-y: auto;
@@ -1493,7 +1493,7 @@ html.vivid {
 }
 
 /* The canvas is the room the two fields share. The composer is a fixed three-line
- * strip (two while the keyboard is up) and the result owns every pixel below it.
+ * strip (a line and a half while the keyboard is up) and the result owns every pixel below it.
  *
  * The split is deliberately *not* a function of typing or streaming state. Animating
  * `min-height` between writing and translating moved the field under the thumb on every
@@ -1528,20 +1528,20 @@ html.vivid {
   min-height: 0;
 }
 
-/* The keyboard takes half the screen: the composer keeps two honest lines and the
+/* The keyboard takes half the screen: the composer keeps a line and a half and the
  * answer stays in the same view while typing. */
 .canvas-shell[data-keyboard="open"] {
   --result-floor: 76px;
 }
 .canvas-shell[data-keyboard="open"] .source-stage textarea,
 .canvas-shell[data-keyboard="open"] .speech-echo {
-  height: calc(2lh);
+  height: calc(1.5lh);
 }
 
 /* Dictation echo: it must occupy exactly the composer's strip and scroll with the newest
  * words, never paint over the toolbar or the result. */
 .speech-echo {
-  height: calc(3lh);
+  height: calc(2lh);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
