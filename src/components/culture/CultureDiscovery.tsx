@@ -84,9 +84,9 @@ export function CultureDiscovery({ adapter, locale }: CultureDiscoveryProps) {
       data-culture-section
       data-state={feed.status}
       data-saved-view={feed.savedOnly ? "true" : "false"}
-      className="mx-auto w-full max-w-[764px] px-4 pb-10 pt-8 sm:px-6"
+      className="mx-auto w-full max-w-[764px] px-8 pb-8 pt-7 sm:px-10"
     >
-      <header className="border-t border-foreground/25 pt-3">
+      <header className="animate-reveal border-t border-foreground/25 pt-3 motion-reduce:animate-none">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-[10.5px] uppercase tracking-[0.18em] text-signal-text">
             {copy.sectionLabel}
@@ -97,7 +97,7 @@ export function CultureDiscovery({ adapter, locale }: CultureDiscoveryProps) {
         </div>
         <h2
           id={headingId}
-          className="mt-4 max-w-[22ch] text-balance font-display text-[clamp(1.7rem,4.6vw,2.6rem)] font-medium leading-[1.12] tracking-[-0.025em] text-foreground"
+          className="mt-4 max-w-[22ch] text-balance font-display text-[clamp(1.6rem,4.2vw,2.3rem)] font-medium leading-[1.14] tracking-[-0.02em] text-foreground"
         >
           {copy.feedLabel}
         </h2>
@@ -132,7 +132,7 @@ export function CultureDiscovery({ adapter, locale }: CultureDiscoveryProps) {
       </div>
 
       {featuredVisible && feed.featured ? (
-        <div data-culture-featured className="mt-6">
+        <div data-culture-featured className="animate-rise mt-6 motion-reduce:animate-none">
           <FeatureComposition
             entry={feed.featured}
             locale={locale}
@@ -193,16 +193,17 @@ export function CultureDiscovery({ adapter, locale }: CultureDiscoveryProps) {
           />
         ) : null}
         {feed.status === "ready" ? (
-          <div data-culture-feed className="space-y-8">
+          <div data-culture-feed className="culture-feed space-y-8">
             {feedEntries.map((entry) => (
-              <CultureCard
-                key={entry.id}
-                entry={entry}
-                locale={locale}
-                saved={feed.isSaved(entry.id)}
-                onOpen={openEntry}
-                onToggleSaved={toggleSaved}
-              />
+              <div key={entry.id} className="culture-entry">
+                <CultureCard
+                  entry={entry}
+                  locale={locale}
+                  saved={feed.isSaved(entry.id)}
+                  onOpen={openEntry}
+                  onToggleSaved={toggleSaved}
+                />
+              </div>
             ))}
           </div>
         ) : null}

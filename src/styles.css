@@ -401,6 +401,12 @@ html.theme-fade *::after {
 
 /* ---------- Motion language: short, compositor-only (opacity + transform) ---------- */
 :root {
+  /* One duration scale for the whole app. Motion utilities below reference these, so an
+   * entrance cannot drift to 240ms in one component and 320ms in another. */
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-enter: 260ms;
+  --dur-slow: 340ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
   /*
@@ -521,43 +527,70 @@ html.theme-fade *::after {
 }
 
 @utility animate-rise {
-  animation: rise 220ms var(--ease-out) both;
+  animation: rise var(--dur-enter) var(--ease-out) both;
 }
 @utility animate-reveal {
-  animation: reveal 320ms var(--ease-out) both;
+  animation: reveal var(--dur-slow) var(--ease-out) both;
 }
 @utility animate-reveal-late {
-  animation: fade 260ms var(--ease-soft) 90ms both;
+  animation: fade var(--dur-base) var(--ease-soft) 90ms both;
 }
 @utility animate-fade {
-  animation: fade 200ms var(--ease-soft) both;
+  animation: fade var(--dur-base) var(--ease-soft) both;
 }
 @utility animate-from-start {
-  animation: from-start 240ms var(--ease-out) both;
+  animation: from-start var(--dur-enter) var(--ease-out) both;
 }
 @utility animate-from-end {
-  animation: from-end 240ms var(--ease-out) both;
+  animation: from-end var(--dur-enter) var(--ease-out) both;
 }
 @utility animate-cross-from-start {
-  animation: cross-from-start 320ms var(--ease-out) both;
+  animation: cross-from-start var(--dur-slow) var(--ease-out) both;
 }
 @utility animate-cross-from-end {
-  animation: cross-from-end 320ms var(--ease-out) both;
+  animation: cross-from-end var(--dur-slow) var(--ease-out) both;
 }
 @utility animate-exchange {
-  animation: exchange 300ms var(--ease-out);
+  animation: exchange var(--dur-slow) var(--ease-out);
 }
 @utility animate-breathe {
   animation: breathe 1.4s ease-in-out infinite;
 }
 
+/* One shared entrance for editorial cards and section content: a small rise, capped
+ * two-line distance, with a 45ms cascade for the first six cards only (never an endless
+ * waterfall while scrolling). Composite properties only; reduced motion fades it. */
+@utility culture-entry {
+  animation: rise var(--dur-enter) var(--ease-out) both;
+}
+@layer utilities {
+  .culture-feed > .culture-entry:nth-child(2) {
+    animation-delay: 45ms;
+  }
+  .culture-feed > .culture-entry:nth-child(3) {
+    animation-delay: 90ms;
+  }
+  .culture-feed > .culture-entry:nth-child(4) {
+    animation-delay: 135ms;
+  }
+  .culture-feed > .culture-entry:nth-child(5) {
+    animation-delay: 180ms;
+  }
+  .culture-feed > .culture-entry:nth-child(6) {
+    animation-delay: 225ms;
+  }
+  .culture-feed > .culture-entry:nth-child(n + 7) {
+    animation-delay: 240ms;
+  }
+}
+
 /* Tactile press: tiny, immediate on touch, soft release. */
 @utility press {
   transition:
-    transform 160ms var(--ease-out),
-    background-color 160ms var(--ease-soft),
-    color 160ms var(--ease-soft),
-    opacity 200ms var(--ease-soft);
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-soft),
+    color var(--dur-fast) var(--ease-soft),
+    opacity var(--dur-base) var(--ease-soft);
   touch-action: manipulation;
   /* A control is not text: a long-press should act, not start a selection. */
   user-select: none;
@@ -581,8 +614,8 @@ html.theme-fade *::after {
 }
 @utility press-soft {
   transition:
-    opacity 160ms var(--ease-soft),
-    background-color 160ms var(--ease-soft);
+    opacity var(--dur-fast) var(--ease-soft),
+    background-color var(--dur-fast) var(--ease-soft);
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
@@ -738,6 +771,7 @@ html.theme-fade *::after {
   }
   .animate-reveal,
   .animate-rise,
+  .culture-entry,
   .animate-from-start,
   .animate-from-end,
   .animate-cross-from-start,
@@ -756,6 +790,10 @@ html.theme-fade *::after {
   }
   .press:active {
     transform: none;
+  }
+  .culture-feed > .culture-entry {
+    animation-delay: 0ms !important;
+    animation-duration: var(--dur-fast) !important;
   }
 }
 
@@ -1047,13 +1085,13 @@ textarea:focus-visible {
   }
 }
 @utility animate-sheet-in {
-  animation: sheet-in 260ms var(--ease-out) both;
+  animation: sheet-in var(--dur-enter) var(--ease-out) both;
 }
 @utility animate-sheet-out {
   animation: sheet-out 180ms var(--ease-soft) both;
 }
 @utility animate-sheet-scrim {
-  animation: fade 200ms var(--ease-soft) both;
+  animation: fade var(--dur-base) var(--ease-soft) both;
 }
 @utility animate-sheet-scrim-out {
   animation: sheet-scrim-out 180ms var(--ease-soft) both;

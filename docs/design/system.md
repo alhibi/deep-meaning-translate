@@ -159,6 +159,35 @@ expression/example/misunderstanding blocks, context, quiet references, related r
 Arabic RTL and German/English LTR are first-class; mixed-script expressions carry their own dir and
 lang; motion is one entrance and reduced-motion aware.
 
+## Motion system (2026-11-17 coherence pass)
+
+One duration scale and one easing family are shared by every surface: --dur-fast 140ms (press,
+hover, tiny state), --dur-base 200ms (fades), --dur-enter 260ms (rises, sheets), --dur-slow 340ms
+(reveals, cross-fades), with --ease-out for entrances and --ease-soft for state. Motion utilities
+reference these tokens, so a card cannot drift to a different duration than a sheet.
+
+Rules:
+
+- Entrances are opacity + small translate only; the editorial feed uses one 260ms rise with a 45ms
+  cascade for the first six cards and no delay afterwards (a new page of cards animates as it
+  arrives, an endless waterfall never happens). Sheets scrim-fade and slide in; the reading view
+  uses the same sheet entrance; results still arrive on the whirlwind (paint-only).
+- Press feedback is immediate (40ms to scale .94), release uses the shared easing; hover
+  translation and rotate transitions list their exact properties (never transition: all).
+- Reduced motion keeps state legible: rises become a 140ms fade, cascades drop to 0ms, the live
+  line/progress animations stop, and press scaling is removed.
+- Scroll and dialog restoration stays instant; nothing animates layout (no height/width
+  transitions), and no continuous loop competes with the composer.
+
+## Alignment system
+
+Cards (translator canvas and the weather strip) share the same 12px page inset and the same 20px
+inner gutter, so their text sits on one 32px axis; the cultural library uses the same 32px content
+axis for its rules, labels, headings and article text. Section rhythm is a single top rule plus a
+24px gap; the footer entry keeps the same horizontal axis and one line of breathing room. Controls
+use a 44px minimum touch height; inline text links keep a 36px exception only inside editorial
+prose, never for primary controls.
+
 ## UI states## UI states
 
 For the translator and result:

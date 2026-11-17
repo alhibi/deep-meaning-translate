@@ -266,5 +266,7 @@ function LocationSurface({
 
 /** Row budget: 2 × 10 padding + 34 + 4 + 16 + 4 + 17 = 95 logical px (min 72 declared). */
 const STRIP_SHELL =
-  "flex min-h-[72px] w-full flex-col gap-1 rounded-2xl bg-surface px-3.5 py-2.5 text-start";
+  // Same card inset and inner gutter as the translator canvas: the strip shares the
+  // canvas' left and right edges (12px) and its text starts on the canvas text axis (32px).
+  "mx-3 flex min-h-[72px] w-auto flex-col gap-1 rounded-2xl bg-surface px-5 py-2.5 text-start";
 const STRIP_BUTTON = "press flex w-full flex-col gap-1 rounded-xl";

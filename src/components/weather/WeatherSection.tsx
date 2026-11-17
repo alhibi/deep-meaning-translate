@@ -23,7 +23,11 @@ export function WeatherSection({ locale, paused }: { locale: Locale; paused: boo
   const rtl = locale === "ar";
 
   return (
-    <section dir={rtl ? "rtl" : "ltr"} aria-label={COPY[locale].title} className="shrink-0">
+    <section
+      dir={rtl ? "rtl" : "ltr"}
+      aria-label={COPY[locale].title}
+      className="mt-6 shrink-0 motion-safe:animate-fade"
+    >
       <WeatherStrip
         locale={locale}
         units={weather.units}

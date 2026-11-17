@@ -1213,7 +1213,7 @@ function Translator() {
           <nav
             dir={uiRtl ? "rtl" : "ltr"}
             aria-label={t("aboutEntry")}
-            className="flex shrink-0 flex-wrap items-center justify-center gap-4 py-3 text-[11px] text-faint"
+            className="flex shrink-0 flex-wrap items-center justify-center gap-4 py-4 text-[11px] text-faint"
           >
             <Link
               viewTransition

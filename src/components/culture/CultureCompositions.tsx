@@ -201,7 +201,7 @@ export function FeatureComposition(props: CultureCardProps) {
         entry={entry}
         locale={locale}
         onOpen={onOpen}
-        className="mt-5 text-[clamp(2rem,6vw,3.4rem)] font-medium leading-[1.02]"
+        className="mt-5 text-[clamp(1.85rem,5.4vw,2.9rem)] font-medium leading-[1.04] tracking-[-0.02em]"
       />
       <p className="mt-4 max-w-[58ch] text-[17px] leading-[1.55] text-muted-foreground">
         {localized(entry.teaser, locale)}
