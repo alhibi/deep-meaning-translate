@@ -2,7 +2,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowDown,
   ArrowDownToLine,
   Bookmark,
   ChevronDown,
@@ -19,6 +18,11 @@ import { OfflinePill } from "@/components/OfflinePill";
 import { useTodayKey } from "@/lib/useTodayKey";
 import { AppHeader } from "@/components/translator/AppHeader";
 import { Intro } from "@/components/Intro";
+import { DictationText } from "@/components/translator/DictationText";
+import { ComposerField } from "@/components/translator/ComposerField";
+import { appendDictation, draftDirection, limitDraft, MAX_DRAFT_LENGTH } from "@/lib/composer";
+import { isRtl } from "@/lib/translation/languages";
+import { normalize, worthTranslating } from "@/lib/translation/scheduler";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
@@ -26,7 +30,6 @@ import { SavedSheet } from "@/components/translator/SavedSheet";
 import { SafeArea } from "@/components/SafeArea";
 import { feel } from "@/lib/feel";
 import { useClipboardHint } from "@/lib/clipboardHint";
-import { joinSpeech } from "@/lib/speech";
 import { stopSpeaking } from "@/lib/tts";
 import { isNativeApp } from "@/lib/native/config";
 import { useAssemblySpeech } from "@/lib/useAssemblySpeech";
@@ -144,7 +147,7 @@ export const Route = createFileRoute("/")({
   component: Translator,
 });
 
-const MAX_CHARS = 5000;
+const MAX_CHARS = MAX_DRAFT_LENGTH;
 
 function Translator() {
   // Returning from another route must not paint an empty translator first: the tab's
@@ -175,10 +178,7 @@ function Translator() {
   const todayKey = useTodayKey();
   const [dismissedFor, setDismissedFor] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  /** Latest visible value, read by the native reconciliation path without re-binding it. */
-  const textRef = useRef(text);
-  // eslint-disable-next-line react-hooks/refs -- latest-value ref, read only from a DOM listener
-  textRef.current = text;
+  const [composing, setComposing] = useState(false);
   const { canInstall, install, showIosGuide, closeIosGuide } = useInstallPrompt();
 
   // A restored draft re-shows its old translation: recorded quietly, never as a new use.
@@ -218,6 +218,10 @@ function Translator() {
     result: raw,
     pending: rawPending,
     provisional,
+    stale,
+    settled,
+    working,
+    streaming,
     error,
     retry,
     translateNow,
@@ -230,6 +234,7 @@ function Translator() {
     style,
     dialect,
     brain,
+    composing,
     restored: boot.session?.result ?? null,
     onSuccess: handleSuccess,
   });
@@ -277,11 +282,11 @@ function Translator() {
       setTarget(pick.target);
       submitNext();
       quietRef.current = pick.original.trim();
-      setText(pick.original.slice(0, MAX_CHARS));
+      setText(limitDraft(pick.original));
     } else if (shared) {
       window.history.replaceState(null, "", "/");
       submitNext();
-      setText(shared.slice(0, MAX_CHARS));
+      setText(limitDraft(shared));
     } else if (session?.text) {
       // The session owns the pair it was written in. Restoring the preference pair
       // instead primed a key the first request could not find: the draft came back,
@@ -326,11 +331,17 @@ function Translator() {
   const sessionRef = useRef<Parameters<typeof persist.saveSession>[0]>(null);
   useEffect(() => {
     if (!restored) return;
-    const snapshot = { text, result: provisional ? null : raw, source, target, style };
+    const snapshot = {
+      text: limitDraft(text),
+      result: settled ? raw : null,
+      source,
+      target,
+      style,
+    };
     sessionRef.current = snapshot;
     const id = setTimeout(() => void persist.saveSession(snapshot), 400);
     return () => clearTimeout(id);
-  }, [restored, text, raw, provisional, source, target, style]);
+  }, [restored, text, raw, settled, source, target, style]);
   useEffect(() => {
     if (!restored) return;
     const flush = () => {
@@ -356,13 +367,17 @@ function Translator() {
   // skeleton forever, because nothing was going to flip the target. An echo of the input
   // is handled separately below by trying the Arabic/German partner once.
   const detected =
-    raw && raw.sourceLanguage && raw.sourceLanguage !== "auto" ? raw.sourceLanguage : undefined;
-  const rerouting = shouldHoldForReroute({
-    source,
-    target,
-    result: raw,
-    provisional,
-  });
+    !stale && raw && raw.sourceLanguage && raw.sourceLanguage !== "auto"
+      ? raw.sourceLanguage
+      : undefined;
+  const rerouting =
+    !stale &&
+    shouldHoldForReroute({
+      source,
+      target,
+      result: raw,
+      provisional,
+    });
   // Hiding a stale result must never be what makes the screen "pending": pending means
   // a request is in flight, or a re-route is under way. The old expression forced a
   // skeleton when the model named a different target language, with nothing running.
@@ -388,6 +403,17 @@ function Translator() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const kbOpen = useRef(false);
   const [kbUp, setKbUp] = useState(false);
+  const keepComposerVisible = useCallback(() => {
+    const workspace = scrollRef.current;
+    const field = inputRef.current;
+    if (!workspace || !field || document.activeElement !== field) return;
+    const room = workspace.getBoundingClientRect();
+    const input = field.getBoundingClientRect();
+    // Move only when the keyboard actually occludes the field. Never chase a growing
+    // result to the bottom: doing so scrolls the caret out from under the writer.
+    if (input.top < room.top) workspace.scrollTop += input.top - room.top;
+    else if (input.bottom > room.bottom) workspace.scrollTop += input.bottom - room.bottom;
+  }, []);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
@@ -396,6 +422,7 @@ function Translator() {
     // are gated on a real change.
     let lastHeight = -1;
     const apply = () => {
+      if (vv.scale !== 1) return; // pinch zoom is not a keyboard transition
       const height = Math.round(vv.height);
       if (height !== lastHeight) {
         lastHeight = height;
@@ -406,11 +433,7 @@ function Translator() {
       const wasOpen = kbOpen.current;
       kbOpen.current = open;
       setKbUp(open);
-      if (open && !wasOpen)
-        requestAnimationFrame(() => {
-          const el = scrollRef.current;
-          if (el) el.scrollTop = el.scrollHeight;
-        });
+      if (open && !wasOpen) requestAnimationFrame(keepComposerVisible);
     };
     apply();
     vv.addEventListener("resize", apply);
@@ -420,7 +443,7 @@ function Translator() {
       vv.removeEventListener("scroll", apply);
       document.documentElement.style.removeProperty("--vvh");
     };
-  }, []);
+  }, [keepComposerVisible]);
   // Under adjustResize the window and the visual viewport shrink together, so the
   // comparison above can never fire on Android (A4-04). The native Keyboard plugin knows
   // the real show/hide transition; web keeps the visualViewport path.
@@ -436,11 +459,7 @@ function Translator() {
           const wasOpen = kbOpen.current;
           kbOpen.current = true;
           setKbUp(true);
-          if (!wasOpen)
-            requestAnimationFrame(() => {
-              const el = scrollRef.current;
-              if (el) el.scrollTop = el.scrollHeight;
-            });
+          if (!wasOpen) requestAnimationFrame(keepComposerVisible);
         });
         // The component can unmount while the first listener is still being attached;
         // remove it immediately instead of leaking a listener on the dead instance.
@@ -467,28 +486,21 @@ function Translator() {
       disposed = true;
       for (const handle of handles) void handle.remove();
     };
-  }, []);
-
-  // While the keyboard is up, keep the newest translation pinned in view.
-  useEffect(() => {
-    if (!kbOpen.current) return;
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [result, provisional]);
+  }, [keepComposerVisible]);
 
   // The model echoed the input (a short word, a name, or auto source == target). Try the
   // other half of the product pair once for this exact text instead of leaving the same
   // words on screen as if they had been translated.
   const echoTried = useRef("");
   useEffect(() => {
-    if (source !== "auto" || !raw || provisional) return;
+    if (source !== "auto" || !raw || !settled) return;
     const partner = languagePartner(target);
     if (!partner || !isEcho(text, raw)) return;
     const attempt = text.trim();
     if (!attempt || echoTried.current === attempt) return;
     echoTried.current = attempt;
     setTarget(partner);
-  }, [source, raw, provisional, target, text]);
+  }, [source, raw, settled, target, text]);
 
   // Auto-detected source equals target: flip to the Arabic↔German partner.
   useEffect(() => {
@@ -501,7 +513,7 @@ function Translator() {
   }, [source, detected, target]);
 
   // Arabic script is unambiguous: route before the first request instead of after a wasted one.
-  const arabicScript = text.trim() ? startsRtl(text) : false;
+  const arabicScript = draftDirection(text) === "rtl";
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     if (source === "auto" && arabicScript && target === "ar") setTarget("de");
@@ -509,7 +521,7 @@ function Translator() {
 
   // Gentle hint when the text isn't in the picked source language; the model's own
   // detection on a finished sentence refines it for same-script languages.
-  const modelDetected = raw && !provisional && source !== "auto" ? raw.sourceLanguage : undefined;
+  const modelDetected = raw && settled && source !== "auto" ? raw.sourceLanguage : undefined;
   const mismatch = text.trim() ? checkSource(text, source, modelDetected) : null;
   const [langDismissed, setLangDismissed] = useState("");
   const mismatchKey = mismatch ? `${source}>${mismatch.suggest}` : "";
@@ -542,80 +554,39 @@ function Translator() {
         : source;
     setSource(nextSource);
     setTarget(nextTarget === nextSource ? (nextSource === "de" ? "ar" : "de") : nextTarget);
-    if (result?.translation) {
+    if (settled && result?.translation) {
       submitNext();
-      setText(result.translation);
+      setText(limitDraft(result.translation));
     }
-  }, [source, target, detected, arabicScript, result, submitNext]);
+  }, [source, target, detected, arabicScript, result, settled, submitNext]);
 
-  const onInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value.slice(0, MAX_CHARS));
-  }, []);
-
-  // A paste is a deliberate submission: translate the whole thing right away.
-  // Android IME/WebView can paint the field while React's synthetic handler never reaches
-  // state. One native listener reconciles only a genuinely stale value: normal typing is a
-  // no-op, there is no timer writing state behind the IME, and composition events are left
-  // to the platform until they finish.
-  useEffect(() => {
-    const field = inputRef.current;
-    if (!field) return;
-    const sync = () => {
-      const value = field.value.slice(0, MAX_CHARS);
-      if (value !== textRef.current) setText(value);
-    };
-    field.addEventListener("input", sync);
-    return () => field.removeEventListener("input", sync);
-  }, []);
-  const onPaste = useCallback(() => submitNext(), [submitNext]);
+  const submitDraft = useCallback(
+    (value: string) => {
+      setText(value);
+      translateNow(value);
+    },
+    [translateNow],
+  );
   const canReadClipboard =
     restored && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
   const pasteClipboard = useCallback(async () => {
     try {
-      const value = (await navigator.clipboard.readText()).trim();
-      if (!value) return;
+      const before = inputRef.current?.value ?? "";
+      const value = await navigator.clipboard.readText();
+      // Clipboard permission can take seconds. Never replace writing that began while
+      // the operating system was asking, and preserve the pasted indentation exactly.
+      if (!value.trim() || (inputRef.current?.value ?? "") !== before) return;
       submitNext();
-      setText(value.slice(0, MAX_CHARS));
+      setText(limitDraft(value));
     } catch {
-      inputRef.current?.focus(); // permission declined — let the user paste normally
+      inputRef.current?.focus({ preventScroll: true }); // permission declined — let the user paste normally
     }
   }, [submitNext]);
 
   const clear = useCallback(() => {
     setText("");
-    inputRef.current?.focus();
+    inputRef.current?.focus({ preventScroll: true });
   }, []);
-
-  const [pullDistance, setPullDistance] = useState(0);
-  const pullStartY = useRef<number | null>(null);
-
-  const onComposerTouchStart = useCallback((e: React.TouchEvent) => {
-    const textarea = inputRef.current;
-    if (textarea && textarea.scrollTop > 0) {
-      pullStartY.current = null;
-      return;
-    }
-    pullStartY.current = e.touches[0]?.clientY ?? null;
-  }, []);
-
-  const onComposerTouchMove = useCallback((e: React.TouchEvent) => {
-    if (pullStartY.current === null) return;
-    const dy = (e.touches[0]?.clientY ?? 0) - pullStartY.current;
-    if (dy > 0) {
-      setPullDistance(Math.min(dy * 0.45, 80));
-    } else {
-      setPullDistance(0);
-    }
-  }, []);
-
-  const onComposerTouchEnd = useCallback(() => {
-    if (pullDistance > 50) {
-      feel.tap();
-      clear();
-    }
-    setPullDistance(0);
-    pullStartY.current = null;
-  }, [pullDistance, clear]);
 
   useEffect(() => {
     updateAppBadge(savedList.length ? saved.reviewQueue().length : 0);
@@ -627,11 +598,11 @@ function Translator() {
     source: result?.sourceLanguage || source,
     target,
     uiLocale: locale,
-    settled: !!result && !provisional && !pending && !error,
+    settled: settled && !!result && !pending && !error,
     translation: result?.translation,
     dialect,
   });
-  const shadowSettled = !!result && !provisional && !pending && !error;
+  const shadowSettled = settled && !!result && !pending && !error;
   const {
     state: shadowState,
     dismiss: dismissShadow,
@@ -740,7 +711,7 @@ function Translator() {
     lang: source === "auto" ? "auto" : speechLang(source, target, locale, dialect),
     onText: (spoken, final) => {
       if (final) submitNext(); // a finished phrase translates right away
-      setText(joinSpeech(speechBase.current, spoken).slice(0, MAX_CHARS));
+      setText(limitDraft(appendDictation(speechBase.current, spoken)));
     },
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
@@ -765,8 +736,7 @@ function Translator() {
   }, [stopVoice]);
 
   const toggleMic = useCallback(() => {
-    if (!speech.listening && !speech.starting)
-      speechBase.current = inputRef.current?.value.trim() ?? "";
+    if (!speech.listening && !speech.starting) speechBase.current = inputRef.current?.value ?? "";
     feel.tap();
     speech.toggle();
   }, [speech]);
@@ -858,7 +828,8 @@ function Translator() {
     introOpen,
     finishIntro,
   ]);
-  const rtlInput = text.trim() ? startsRtl(text) : uiRtl;
+  const rtlInput =
+    draftDirection(text, isRtl(source === "auto" ? locale : source) ? "rtl" : "ltr") === "rtl";
   const hasText = text.length > 0;
   // The name introduces itself on its own: once 4s after arrival, then a quiet
   // 16s rhythm — but only while the page rests (nothing written, no sheet open).
@@ -875,21 +846,21 @@ function Translator() {
 
   const isSaved = !!result && !!savedList && !!saved.find(text, target);
   const toggleSave = useCallback(() => {
-    if (!result) return;
+    if (!result || !settled) return;
     void saved.toggle({
       source: result.sourceLanguage || source,
       target,
       original: text,
       translated: result.translation,
     });
-  }, [result, source, target, text]);
+  }, [result, settled, source, target, text]);
   const pickSaved = useCallback(
     (p: SavedPhrase) => {
       setSavedOpen(false);
       setSource(p.source === "auto" ? "auto" : p.source);
       setTarget(p.target);
       submitNext();
-      setText(p.original);
+      setText(limitDraft(p.original));
     },
     [submitNext],
   );
@@ -930,7 +901,7 @@ function Translator() {
           </span>
           <span
             dir="auto"
-            className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${startsRtl(today.translated) ? "font-arabic" : ""}`}
+            className={`mt-2 block text-start text-[20px] leading-snug text-foreground ${draftDirection(today.translated) === "rtl" ? "font-arabic" : ""}`}
           >
             {today.translated}
           </span>
@@ -982,7 +953,7 @@ function Translator() {
 
         <div
           ref={scrollRef}
-          className={`flex flex-1 flex-col overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
+          className={`translator-workspace flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] ${
             kbUp ? "justify-start pt-1" : "justify-start pt-1.5"
           }`}
         >
@@ -1000,77 +971,25 @@ function Translator() {
 
           {/* One canvas: source writing surface, a live seam, then the result. */}
           <div
-            className="canvas-shell mx-3 flex flex-col overflow-hidden rounded-[22px] bg-surface"
+            className="canvas-shell mx-3 flex min-w-0 flex-col rounded-[22px] bg-surface"
             data-keyboard={kbUp ? "open" : undefined}
           >
             <section
               dir={uiRtl ? "rtl" : "ltr"}
-              onTouchStart={onComposerTouchStart}
-              onTouchMove={onComposerTouchMove}
-              onTouchEnd={onComposerTouchEnd}
-              className="source-stage input-shell relative px-5 pb-2 pt-5"
+              aria-label={t("sourceLang")}
+              className="source-stage input-shell relative rounded-t-[22px] px-5 pb-2 pt-5"
             >
-              {pullDistance > 6 ? (
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-1.5 z-10 flex justify-center"
-                >
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm transition-all ${
-                      pullDistance > 50
-                        ? "bg-signal text-signal-foreground"
-                        : "bg-card text-muted-foreground"
-                    }`}
-                  >
-                    <ArrowDown
-                      className={`size-3 transition-transform ${pullDistance > 50 ? "rotate-180" : ""}`}
-                      strokeWidth={2}
-                    />
-                    {pullDistance > 50 ? t("releaseToClear") : t("pullToClear")}
-                  </span>
-                </div>
-              ) : null}
-              <textarea
-                id="composer"
-                ref={inputRef}
+              <ComposerField
+                inputRef={inputRef}
                 value={text}
-                onChange={onInput}
-                onPaste={onPaste}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" || event.shiftKey) return;
-                  event.preventDefault();
-                  const value = event.currentTarget.value.slice(0, MAX_CHARS);
-                  if (value !== text) setText(value);
-                  translateNow(value);
-                }}
-                onCompositionEnd={(event) => {
-                  // Android IMEs can leave the visible value ahead of React state.
-                  const value = event.currentTarget.value.slice(0, MAX_CHARS);
-                  if (value !== text) {
-                    setText(value);
-                    submitNext();
-                  }
-                }}
-                onBlur={(event) => {
-                  const value = event.currentTarget.value.slice(0, MAX_CHARS);
-                  if (value !== text) {
-                    setText(value);
-                    submitNext();
-                  }
-                }}
-                dir={rtlInput ? "rtl" : "ltr"}
-                rows={2}
-                autoCapitalize="sentences"
-                autoComplete="off"
-                enterKeyHint="done"
-                spellCheck
-                placeholder={t("placeholder")}
-                aria-label={t("inputLabel")}
-                className={`composer-field block w-full resize-none bg-transparent pe-14 outline-none ${
-                  rtlInput
-                    ? "font-arabic text-[24px] leading-[1.7]"
-                    : "text-[22px] leading-[1.45] tracking-[-0.015em]"
-                } ${speech.listening ? "text-transparent caret-transparent" : ""}`}
+                onValueChange={setText}
+                onSubmit={submitDraft}
+                onPaste={submitNext}
+                onComposingChange={setComposing}
+                rtl={rtlInput}
+                lang={requestSource === "auto" ? undefined : requestSource}
+                dictating={speech.listening}
+                dictationStarting={speech.starting}
               />
               {speech.listening ? (
                 /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
@@ -1079,23 +998,11 @@ function Translator() {
                   aria-hidden
                   dir={rtlInput ? "rtl" : "ltr"}
                   className={`speech-echo pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
-                    rtlInput
-                      ? "font-arabic text-[24px] leading-[1.7]"
-                      : "text-[22px] leading-[1.45] tracking-[-0.015em]"
+                    rtlInput ? "font-arabic text-[24px]" : "text-[22px] tracking-[-0.015em]"
                   }`}
                 >
-                  {/* eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered */}
-                  {(() => {
-                    const baseLen = speechBase.current ? speechBase.current.split(/\s+/).length : 0;
-                    return text
-                      .split(/\s+/)
-                      .filter(Boolean)
-                      .map((w, i) => (
-                        <span key={i} className={i < baseLen ? undefined : "speech-word"}>
-                          {w}{" "}
-                        </span>
-                      ));
-                  })()}
+                  {/* eslint-disable-next-line react-hooks/refs -- fixed dictation base is captured on Mic; it only changes between sessions, never while rendering */}
+                  <DictationText text={text} baseLength={speechBase.current.length} />
                 </div>
               ) : null}
               <button
@@ -1106,14 +1013,17 @@ function Translator() {
                   clear();
                 }}
                 aria-label={t("clearText")}
+                onMouseDown={(event) => event.preventDefault()}
+                disabled={!hasText}
+                aria-hidden={!hasText}
                 tabIndex={hasText ? 0 : -1}
-                className={`press absolute top-4 grid size-10 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${rtlInput ? "left-3" : "right-3"} ${
+                className={`press absolute top-4 grid size-11 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${rtlInput ? "left-3" : "right-3"} ${
                   hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
                 }`}
               >
                 <X className="size-[18px]" strokeWidth={1.6} />
               </button>
-              <div className="flex h-10 items-center justify-between gap-3">
+              <div className="composer-toolbar flex min-h-11 flex-wrap items-center justify-between gap-x-2 gap-y-1">
                 <div className="flex min-w-0 items-center gap-2">
                   {speech.supported ? (
                     <button
@@ -1123,7 +1033,7 @@ function Translator() {
                       aria-pressed={speech.listening}
                       aria-busy={speech.starting}
                       data-live={speech.listening || undefined}
-                      className={`mic-orb press -ms-2 relative grid size-10 place-items-center rounded-full ${
+                      className={`mic-orb press -ms-2 relative grid size-11 place-items-center rounded-full ${
                         speech.listening
                           ? "text-signal-foreground"
                           : "text-muted-foreground hover:text-foreground"
@@ -1134,6 +1044,11 @@ function Translator() {
                       <span aria-hidden className="mic-core" />
                       <Mic className="relative size-[18px]" strokeWidth={1.7} />
                     </button>
+                  ) : null}
+                  {!speech.listening && !speech.error ? (
+                    <span aria-hidden className="hidden text-[11px] text-faint sm:inline">
+                      {t("inputHelp")}
+                    </span>
                   ) : null}
                   {speech.listening ? (
                     <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">
@@ -1168,17 +1083,24 @@ function Translator() {
                     </span>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="ms-auto flex shrink-0 items-center gap-2">
+                  {text.length > MAX_CHARS * 0.7 ? (
+                    <span
+                      aria-hidden
+                      dir="ltr"
+                      className={`text-[11px] tabular-nums ${text.length >= MAX_CHARS ? "text-signal-text" : "text-faint"}`}
+                    >
+                      {Math.min(text.length, MAX_CHARS)}/{MAX_CHARS}
+                    </span>
+                  ) : null}
                   {!speech.listening ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        const value = (inputRef.current?.value ?? text).slice(0, MAX_CHARS);
-                        if (value !== text) setText(value);
-                        translateNow(value);
-                      }}
+                      onClick={() => submitDraft(limitDraft(inputRef.current?.value ?? text))}
+                      onMouseDown={(event) => event.preventDefault()}
+                      disabled={composing || !worthTranslating(normalize(text)) || speech.starting}
                       aria-label={t("translateNow")}
-                      className={`press grid size-9 place-items-center rounded-full bg-signal text-signal-foreground transition-opacity ${hasText ? "opacity-100" : "opacity-50"}`}
+                      className="press grid size-11 place-items-center rounded-full bg-signal text-signal-foreground transition-opacity disabled:opacity-40"
                     >
                       <ArrowUp className="size-4" strokeWidth={2} />
                     </button>
@@ -1193,17 +1115,12 @@ function Translator() {
                       {t("paste")}
                     </button>
                   ) : null}
-                  {text.length > MAX_CHARS * 0.7 ? (
-                    <span className="animate-fade text-[11px] tabular-nums text-faint">
-                      {text.length}/{MAX_CHARS}
-                    </span>
-                  ) : null}
                 </div>
               </div>
             </section>
 
-            <div className="flex items-center justify-between px-3">
-              <div className="flex min-w-0 items-center">
+            <div className="flex flex-wrap items-center justify-between gap-x-1 px-3">
+              <div className="flex min-w-0 flex-wrap items-center">
                 <StyleToggle value={style} onChange={setStyle} />
                 {target === "ar" ? (
                   <button
@@ -1220,13 +1137,13 @@ function Translator() {
                 <BrainPicker value={brain} onChange={setBrain} />
               </div>
               <span
-                className={`inline-flex items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
-                  pending || provisional ? "opacity-100" : "opacity-0"
+                className={`ms-auto inline-flex shrink-0 items-center gap-1.5 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-signal-text transition-opacity duration-300 ${
+                  !error && (working || pending || provisional) ? "opacity-100" : "opacity-0"
                 }`}
                 aria-hidden
               >
                 <span className="size-1.5 animate-breathe rounded-full bg-signal" />
-                {t("live")}
+                <span className="hidden min-[440px]:inline">{t("live")}</span>
               </span>
             </div>
             {mismatch && langDismissed !== mismatchKey ? (
@@ -1247,6 +1164,8 @@ function Translator() {
                   result={result}
                   pending={pending}
                   provisional={provisional}
+                  stale={stale}
+                  streaming={streaming}
                   error={error}
                   target={target}
                   onRetry={retry}
@@ -1268,7 +1187,7 @@ function Translator() {
           <nav
             dir={uiRtl ? "rtl" : "ltr"}
             aria-label={t("pairGuide")}
-            className="flex items-center justify-center gap-4 pb-1 text-[11px] text-faint"
+            className="flex shrink-0 flex-wrap items-center justify-center gap-4 py-3 text-[11px] text-faint"
           >
             <Link
               viewTransition
@@ -1349,12 +1268,4 @@ function Translator() {
 
 function lang2(code: string | undefined) {
   return (code ?? "").slice(0, 2).toLowerCase();
-}
-
-/** Direction follows the first strong character the user typed. */
-function startsRtl(value: string) {
-  const m = value.match(
-    /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/,
-  );
-  return !!m && /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(m[0]);
 }

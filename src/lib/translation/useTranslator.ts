@@ -57,6 +57,7 @@ interface Cached {
   result: TranslationResult;
   at: number;
   provisional: boolean;
+  full: boolean;
 }
 
 const keyOf = (text: string, source: string, target: string, style: string) =>
@@ -79,24 +80,18 @@ export function translationKey(
   return keyOf(normalize(text), source, target, styleKey);
 }
 
-/** A streamed live translation keeps the last known metadata; only the text is fresh. */
-function liveResult(
-  prev: TranslationResult | null,
-  translation: string,
-  source: string,
-  target: string,
-): TranslationResult {
+/** A live reading has no detected metadata yet; never inherit another draft's language. */
+function liveResult(translation: string, source: string, target: string): TranslationResult {
   return {
-    sourceLanguage: source === "auto" ? (prev?.sourceLanguage ?? "auto") : source,
+    sourceLanguage: source,
     targetLanguage: target,
     translation,
-    tone: prev?.tone ?? "",
-    formality: prev?.formality ?? "",
-    confidence: prev?.confidence ?? 0.8,
+    tone: "",
+    formality: "",
+    confidence: 0.8,
     isAmbiguous: false,
     alternativeTranslations: [],
     notes: "",
-    ...(prev?.situation ? { situation: prev.situation } : {}),
   };
 }
 
@@ -127,6 +122,8 @@ export function useTranslator(opts: {
   style: StyleOverride;
   dialect?: Dialect;
   brain?: Brain;
+  /** An IME owns the draft until composition ends; never translate its candidate buffer. */
+  composing?: boolean;
   /**
    * A translation carried over from this tab's previous mount (returning from another
    * route). It is shown on the first paint and its key is treated as committed, so the
@@ -140,11 +137,20 @@ export function useTranslator(opts: {
   const dialect: Dialect = target === "ar" ? (opts.dialect ?? "auto") : "auto";
   const brain: Brain = opts.brain ?? DEFAULT_BRAIN;
   const styleKey = `${dialect === "auto" ? style : `${style}~${dialect}`}@${brain}`;
+  const composing = opts.composing ?? false;
+  const normalized = normalize(text);
+  const wantedKey = worthTranslating(normalized)
+    ? keyOf(normalized, source, target, styleKey)
+    : null;
   const restored = opts.restored ?? null;
   const restoredKey = restored ? keyOf(normalize(text), source, target, styleKey) : null;
 
   const [phase, setPhase] = useState<Phase>(restored ? "COMPLETE" : "EMPTY");
   const [result, setResult] = useState<TranslationResult | null>(restored);
+  // The displayed answer has its own identity. Keeping it while editing must never
+  // make it eligible for Copy, Save, enrichment or session persistence for a new draft.
+  const [displayedKey, setDisplayedKey] = useState<string | null>(restoredKey);
+  const displayedKeyRef = useRef<string | null>(restoredKey);
   const [provisional, setProvisional] = useState(false);
   const [error, setError] = useState<ErrorKind | null>(null);
   const [showPending, setShowPending] = useState(false);
@@ -180,13 +186,10 @@ export function useTranslator(opts: {
   const lastSentAt = useRef(0);
   const intervals = useRef<number[]>([]);
   const lastParams = useRef("");
-  const current = useRef({ norm: "", key: "", provisional: false });
+  const current = useRef({ norm: "", key: "", provisional: false, params: "", composing: false });
   const hasResult = useRef(false);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   hasResult.current = !!result;
-  const resultRef = useRef<TranslationResult | null>(null);
-  // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
-  resultRef.current = result;
   const successRef = useRef(onSuccess);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   successRef.current = onSuccess;
@@ -204,8 +207,11 @@ export function useTranslator(opts: {
       // must stop spending provider work on a sentence nobody is waiting for.
       lingering.current?.abort();
       lingering.current = null;
+      displayedKeyRef.current = key;
+      setDisplayedKey(key);
       setResult(value);
       setProvisional(prov);
+      setStreaming(false);
       setError(null);
       setPhase("COMPLETE");
       successRef.current?.(value, norm, prov);
@@ -215,10 +221,18 @@ export function useTranslator(opts: {
 
   const run = useCallback(
     async (norm: string, key: string, prov: boolean, attempt = 0) => {
+      if (current.current.composing || current.current.key !== key) return;
+      const active = inflight.current;
+      if (active?.key === key && (!active.prov || prov)) {
+        metrics.deduped();
+        return;
+      }
       clearRetry();
+      setError(null);
 
       const hit = cache.current.get(key);
-      if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+      // An explicit submission upgrades a cached live reading to a verified full one.
+      if (hit && (hit.full || prov) && Date.now() - hit.at < CACHE_TTL_MS) {
         cache.current.delete(key);
         cache.current.set(key, hit); // LRU touch
         shown.current = ++latest.current;
@@ -238,7 +252,7 @@ export function useTranslator(opts: {
       // request at all. Only settled text is ever stored, so a hit is a final answer.
       const stored = memoryGet(key);
       if (stored) {
-        cache.current.set(key, { result: stored, at: Date.now(), provisional: false });
+        cache.current.set(key, { result: stored, at: Date.now(), provisional: false, full: true });
         shown.current = ++latest.current;
         dropLingering();
         if (inflight.current) {
@@ -289,7 +303,13 @@ export function useTranslator(opts: {
         // the settled sentence will be translated on its own pause. Never interrupt typing
         // with a rate message — keep what is on screen and stay quiet.
         if (kind === "rate" && prov) {
-          setPhase(hasResult.current ? "COMPLETE" : "READY");
+          setPhase("READY");
+          retryTimer.current = setTimeout(() => {
+            if (token !== latest.current || current.current.key !== key) return;
+            current.current.provisional = false;
+            // eslint-disable-next-line react-hooks/immutability -- deferred self-call after initialization, guarded by the draft generation
+            void run(norm, key, false);
+          }, 1200);
           return;
         }
         const transient = kind === "rate" || kind === "network" || kind === "provider";
@@ -298,7 +318,6 @@ export function useTranslator(opts: {
           setPhase("RETRYING");
           retryTimer.current = setTimeout(
             () => {
-              // eslint-disable-next-line react-hooks/immutability -- ref-held timers/controllers are mutable by design
               if (token === latest.current) void run(norm, key, prov, 1);
             },
             kind === "rate" ? 2500 : 1200,
@@ -318,6 +337,14 @@ export function useTranslator(opts: {
         frame = 0;
         const partialText = pendingText;
         if (!partialText || token < shown.current || ctrl.signal.aborted) return;
+        const draft = current.current;
+        const ownsDraft = token === latest.current && draft.key === key;
+        const usefulPrefix =
+          prov &&
+          draft.provisional &&
+          draft.norm.startsWith(norm) &&
+          draft.params === `${source}|${target}|${styleKey}`;
+        if (draft.composing || (!ownsDraft && !usefulPrefix)) return;
         if (token > shown.current && partialText.length < shownLen.current) return;
         // A newer stream has caught up with what is on screen: the older prefix stream
         // has done its job, so cancel it instead of letting two providers finish.
@@ -327,8 +354,11 @@ export function useTranslator(opts: {
         }
         shown.current = token;
         shownLen.current = partialText.length;
+        displayedKeyRef.current = key;
+        setDisplayedKey(key);
         setStreaming(true);
-        setResult((r) => liveResult(r, partialText, source, target));
+        // Metadata from a previous draft is not evidence about this stream.
+        setResult(liveResult(partialText, source, target));
         setProvisional(true);
       };
       const onText = (partialText: string) => {
@@ -363,7 +393,7 @@ export function useTranslator(opts: {
           );
           dropFrame();
           if (!live.ok) return null;
-          const value = liveResult(resultRef.current, live.text, source, target);
+          const value = liveResult(live.text, source, target);
           // A plain-text fallback is not exempt from the deterministic checks: a model
           // that degenerates into a repetition loop must surface as an error, not as a
           // wall of invented text replacing the translation.
@@ -378,7 +408,7 @@ export function useTranslator(opts: {
           res = r.ok
             ? {
                 ok: true,
-                result: liveResult(resultRef.current, r.text, source, target),
+                result: liveResult(r.text, source, target),
                 needsRepair: false,
               }
             : r;
@@ -387,7 +417,7 @@ export function useTranslator(opts: {
           // This run was superseded while the full request was finishing. Its buffered
           // live paint may still be the newest text on screen, so leave it to land and
           // never spend a salvage request nobody is waiting for.
-          if (token !== latest.current) return;
+          if (token !== latest.current || current.current.key !== key) return;
           dropFrame();
           if (!r.ok) {
             res = r;
@@ -413,11 +443,23 @@ export function useTranslator(opts: {
             }
           }
         }
-        if (token !== latest.current) return; // superseded — shown live at most, never committed
+        if (token !== latest.current || current.current.key !== key) return; // superseded — shown live at most, never committed
         dropFrame();
+        if (timedOut) {
+          metrics.timeout();
+          setError("timeout");
+          setPhase("TIMEOUT");
+          return;
+        }
+        if (ctrl.signal.aborted) return;
         metrics.latency(performance.now() - started);
         if (res.ok) {
-          cache.current.set(key, { result: res.result, at: Date.now(), provisional: prov });
+          cache.current.set(key, {
+            result: res.result,
+            at: Date.now(),
+            provisional: prov,
+            full: !prov,
+          });
           if (cache.current.size > CACHE_LIMIT)
             cache.current.delete(cache.current.keys().next().value as string);
           shown.current = token;
@@ -463,7 +505,7 @@ export function useTranslator(opts: {
         // A paint scheduled by the failed stream must not land after the error state.
         // A superseded prefix stream is not an error for the screen: let its frame land.
         if (token === latest.current) dropFrame();
-        if (token !== latest.current) return;
+        if (token !== latest.current || current.current.key !== key) return;
         if (timedOut) {
           metrics.timeout();
           setError("timeout");
@@ -477,13 +519,16 @@ export function useTranslator(opts: {
           fail("network");
         }
       } finally {
-        if (token === latest.current) dropFrame();
+        if (token === latest.current) {
+          dropFrame();
+          setStreaming(false);
+        }
         clearTimeout(timer);
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
         if (lingering.current === ctrl) lingering.current = null;
       }
     },
-    [commit, source, target, style, dialect, brain],
+    [commit, source, target, style, dialect, brain, styleKey],
   );
 
   // Warm the path to the translation service on the first keystroke, once per visit.
@@ -513,9 +558,11 @@ export function useTranslator(opts: {
       inflight.current?.ctrl.abort();
       inflight.current = null;
       committedKey.current = null;
-      current.current = { norm: "", key: "", provisional: false };
+      current.current = { norm: "", key: "", provisional: false, params: "", composing };
       deliberate.current = false;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
+      displayedKeyRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the external request/stream snapshot when the draft becomes empty
+      setDisplayedKey(null);
       setResult(null);
       setError(null);
       setProvisional(false);
@@ -529,14 +576,56 @@ export function useTranslator(opts: {
     lastParams.current = params;
 
     const isDeliberate = deliberate.current;
-    deliberate.current = false;
+    if (!composing) deliberate.current = false;
     const prov = isProvisional(norm, text, isDeliberate);
     const key = keyOf(norm, source, target, styleKey);
-    current.current = { norm, key, provisional: prov };
+    const previous = current.current;
 
-    if (key === committedKey.current || key === inflight.current?.key) {
+    if (key !== previous.key || composing !== previous.composing) {
+      // Invalidate NOW, not when the debounced replacement eventually starts. Otherwise
+      // an old completion/retry can land during the pause and be archived for a new draft.
+      clearRetry();
+      latest.current++;
+      const append =
+        !composing &&
+        !paramsChanged &&
+        prov &&
+        previous.norm &&
+        norm.length > previous.norm.length &&
+        norm.startsWith(previous.norm);
+      const active = inflight.current;
+      if (append && active?.prov) {
+        dropLingering();
+        lingering.current = active.ctrl;
+        inflight.current = null;
+      } else if (!append || active) {
+        active?.ctrl.abort();
+        inflight.current = null;
+        dropLingering();
+        shown.current = latest.current;
+        // Catch-up is useful only for an append. Deleting/replacing words must be able
+        // to show a shorter translation from its very first chunk.
+        shownLen.current = 0;
+        setStreaming(false);
+      }
+      setError(null);
+      setShowPending(false);
+    }
+    current.current = { norm, key, provisional: prov, params, composing };
+
+    if (composing) {
+      setPhase("TYPING");
+      return;
+    }
+    if (key === committedKey.current && displayedKeyRef.current === key) {
+      setPhase("COMPLETE");
+      setStreaming(false);
       metrics.deduped();
-      return; // already on screen, or already on its way
+      return;
+    }
+    if (key === inflight.current?.key) {
+      metrics.deduped();
+      return;
     }
 
     // Continuous typing never pauses long enough for the debounce, so after
@@ -554,13 +643,13 @@ export function useTranslator(opts: {
     setPhase(delay === 0 ? "READY" : "SCHEDULED");
     const id = setTimeout(() => void run(norm, key, prov), delay);
     return () => clearTimeout(id);
-  }, [text, source, target, styleKey, run]);
+  }, [text, source, target, styleKey, run, composing]);
 
   // A watchdog for a scheduler that never fires: text is visible, worth translating, but
   // the phase is still waiting and no request is in flight. Force one after a short grace.
   useEffect(() => {
     const norm = normalize(text);
-    if (!worthTranslating(norm)) return;
+    if (composing || !worthTranslating(norm)) return;
     if (phase !== "SCHEDULED" && phase !== "READY") return;
     const key = keyOf(norm, source, target, styleKey);
     const id = setTimeout(() => {
@@ -568,21 +657,20 @@ export function useTranslator(opts: {
       void run(norm, key, isProvisional(norm, text, false));
     }, 1_800);
     return () => clearTimeout(id);
-  }, [text, phase, source, target, styleKey, run]);
+  }, [text, phase, source, target, styleKey, run, composing]);
 
-  // A live result for text without final punctuation settles once the writer pauses,
-  // so Copy/Listen/Save appear instead of waiting for a period that may never come.
+  // A pause finishes the thought, not the verification. Request one full reading even
+  // without punctuation; never relabel unchecked live text as a settled/archiveable one.
   useEffect(() => {
-    if (!provisional || phase !== "COMPLETE" || !result) return;
+    if (composing || !provisional || phase !== "COMPLETE" || !result) return;
     const id = setTimeout(() => {
-      if (committedKey.current !== current.current.key) return;
-      const c = cache.current.get(committedKey.current);
-      if (c) c.provisional = false;
-      setProvisional(false);
-      successRef.current?.(result, current.current.norm, false);
+      const draft = current.current;
+      if (committedKey.current !== draft.key || displayedKeyRef.current !== draft.key) return;
+      draft.provisional = false;
+      void run(draft.norm, draft.key, false);
     }, 1200);
     return () => clearTimeout(id);
-  }, [provisional, phase, result, text]);
+  }, [provisional, phase, result, text, composing, run]);
 
   const busy = phase === "TRANSLATING" || phase === "UPDATING" || phase === "RETRYING";
   useEffect(() => {
@@ -597,7 +685,7 @@ export function useTranslator(opts: {
 
   const retry = useCallback(() => {
     const { norm, key, provisional: prov } = current.current;
-    if (!norm) return;
+    if (!norm || current.current.composing) return;
     committedKey.current = null;
     void run(norm, key, prov);
   }, [run]);
@@ -617,11 +705,28 @@ export function useTranslator(opts: {
   const translateNow = useCallback(
     (raw: string) => {
       const norm = normalize(raw);
-      if (!worthTranslating(norm)) return;
+      if (composing || !worthTranslating(norm)) return;
+      const key = keyOf(norm, source, target, styleKey);
+      if (key !== current.current.key) {
+        // Explicit recovery may read a DOM value React has not mirrored yet.
+        shown.current = ++latest.current;
+        shownLen.current = 0;
+        inflight.current?.ctrl.abort();
+        inflight.current = null;
+        dropLingering();
+        setStreaming(false);
+      }
+      current.current = {
+        norm,
+        key,
+        provisional: false,
+        params: `${source}|${target}|${styleKey}`,
+        composing: false,
+      };
       committedKey.current = null;
-      void run(norm, keyOf(norm, source, target, styleKey), false);
+      void run(norm, key, false);
     },
-    [run, source, target, styleKey],
+    [run, source, target, styleKey, composing],
   );
 
   /** Seed a known result (e.g. restored session) so it shows without a new request. */
@@ -641,12 +746,21 @@ export function useTranslator(opts: {
         result: value,
         at: Date.now(),
         provisional: false,
+        full: true,
       });
     },
     [],
   );
 
-  // Resume automatically once the connection is back.
+  const stale = !!result && (displayedKey !== wantedKey || composing);
+  const settled = !!result && !stale && !provisional && phase === "COMPLETE";
+  const working = composing || phase === "SCHEDULED" || phase === "READY" || busy;
+
+  // Resume automatically once the connection is back. Losing connectivity must not
+  // erase the eligibility of an answer that is already complete for the current draft.
+  const settledRef = useRef(settled);
+  // eslint-disable-next-line react-hooks/refs -- latest eligibility snapshot, read only by the external offline event
+  settledRef.current = settled;
   const retryRef = useRef(retry);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   retryRef.current = retry;
@@ -659,6 +773,7 @@ export function useTranslator(opts: {
       if (p === "OFFLINE" || p === "PROVIDER_ERROR" || p === "TIMEOUT") retryRef.current();
     };
     const onOffline = () => {
+      setStreaming(false);
       dropLingering();
       if (inflight.current) {
         shown.current = ++latest.current;
@@ -666,7 +781,7 @@ export function useTranslator(opts: {
         inflight.current = null;
       }
       clearRetry();
-      if (phaseRef.current !== "EMPTY") {
+      if (phaseRef.current !== "EMPTY" && !settledRef.current) {
         setError("offline");
         setPhase("OFFLINE");
       }
@@ -682,7 +797,7 @@ export function useTranslator(opts: {
   useEffect(
     () => () => {
       shown.current = ++latest.current;
-      current.current = { norm: "", key: "", provisional: false };
+      current.current = { norm: "", key: "", provisional: false, params: "", composing: false };
       committedKey.current = null;
       inflight.current?.ctrl.abort();
       dropLingering();
@@ -696,6 +811,10 @@ export function useTranslator(opts: {
       phase,
       result,
       provisional,
+      stale,
+      settled,
+      working,
+      streaming,
       pending: showPending && !streaming,
       error: error ?? PHASE_ERROR[phase] ?? null,
       retry,
@@ -709,6 +828,9 @@ export function useTranslator(opts: {
       provisional,
       showPending,
       streaming,
+      stale,
+      settled,
+      working,
       error,
       retry,
       translateNow,

@@ -82,8 +82,8 @@ function Side({
           key={`${value}-${swapped}`}
           className={`pointer-events-none mt-1 block max-w-full truncate font-semibold ${
             isRtl(value === "auto" ? (detected ?? "") : value)
-              ? "font-arabic text-[24px] leading-[1.25]"
-              : "text-[22px] leading-[1.25] tracking-[-0.02em]"
+              ? "font-arabic text-[24px] leading-[32px]"
+              : "text-[22px] leading-[32px] tracking-[-0.02em]"
           } ${end ? "text-foreground" : "text-foreground/90"} ${swapped ? (end ? "animate-cross-from-start" : "animate-cross-from-end") : ""}`}
         >
           {label}
@@ -150,7 +150,7 @@ export const LanguageBar = memo(function LanguageBar({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       title={t("swipeSwapHint")}
-      className="flex select-none items-center gap-3 px-6 pb-3.5 pt-2 touch-pan-y"
+      className="flex shrink-0 select-none items-center gap-3 px-6 pb-3.5 pt-2 touch-pan-y"
     >
       <Side
         value={source}

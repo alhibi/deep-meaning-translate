@@ -17,11 +17,13 @@ Exit code 1 on any failure.
 """
 import asyncio
 import json
+import os
 import sys
 
 from playwright.async_api import async_playwright
+from browser_support import launch_chromium
 
-URL = "http://localhost:8080"
+URL = os.environ.get("E2E_URL", "http://localhost:8080")
 SESSION_TEXT = "Guten Morgen, wie geht es dir?"
 SESSION_RESULT = "صباح الخير، كيف حالك؟"
 failures = []
@@ -72,16 +74,25 @@ async def backgrounds(page):
 
 
 async def open_app(page):
+    # Seed BEFORE the first app boot. Writing a legacy session into an already-open
+    # translator and reloading lets that page's pagehide flush overwrite the fixture.
+    await page.add_init_script(
+        "if (!sessionStorage.getItem('__navigation_seeded')) { (" + SEED + ")(" +
+        json.dumps([SESSION_TEXT, SESSION_RESULT]) + "); sessionStorage.setItem('__navigation_seeded', '1'); }"
+    )
     await page.goto(URL + "/?sw=off", wait_until="networkidle")
-    await page.evaluate(SEED, [SESSION_TEXT, SESSION_RESULT])
-    await page.reload(wait_until="networkidle")
-    await page.wait_for_selector("#composer")
-    await page.wait_for_timeout(250)
+    await page.wait_for_function(
+        """expected => {
+          const field = document.querySelector('#composer');
+          return field && Object.keys(field).some(k => k.startsWith('__reactProps$')) &&
+            field.value === expected && document.querySelector('.result-text');
+        }""", arg=SESSION_TEXT,
+    )
 
 
 async def main():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await launch_chromium(p)
         context = await browser.new_context(viewport={"width": 390, "height": 844})
         page = await context.new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
@@ -94,6 +105,13 @@ async def main():
             else None,
         )
 
+        async def reject_translation(route):
+            if route.request.method == "GET":
+                await route.fulfill(status=204)
+            else:
+                await route.fulfill(status=503, content_type="application/json", body='{"kind":"auth"}')
+        await page.route("**/api/translate-stream", reject_translation)
+        await page.route("**/_serverFn/**", lambda route: route.fulfill(status=503, body=""))
         await open_app(page)
 
         check(
@@ -132,7 +150,7 @@ async def main():
               requestAnimationFrame(tick);
             }"""
         )
-        await page.locator('a[href="/"]').click()
+        await page.locator('a[href="/"]').first.click()
         await page.wait_for_selector("#composer")
         await page.wait_for_timeout(400)
         frames = await page.evaluate("window.__navFrames")
@@ -150,7 +168,7 @@ async def main():
         for _ in range(5):
             await page.locator('a[href="/stats"]').click()
             await page.wait_for_timeout(150)
-            await page.locator('a[href="/"]').click()
+            await page.locator('a[href="/"]').first.click()
             await page.wait_for_timeout(150)
             if await page.locator('[data-testid="error-boundary"]').count():
                 cycle_errors += 1

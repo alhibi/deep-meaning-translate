@@ -1,6 +1,7 @@
 # Translation Pipeline
 
 Status: **Verified** by source inspection, unit tests and live DeepSeek calls on 2026-11-16.
+Editing/request ownership was rechecked with unit tests and mocked browser streams on 2026-11-17.
 Live model output on `deepseek-flash` is verified for the sample set in §11 (accuracy is sampled, not
 a corpus claim); Luna and the cloud-voice providers remain **NOT_VERIFIED** (no key in this
 environment). Prompt text lives only in `src/lib/translation/prompt.ts`; this document describes its
@@ -24,8 +25,12 @@ structure, not a second copy.
 - learns from typing intervals to decide whether the current text is provisional;
 - waits for a pause, but flushes deliberately on paste/share/restore and after a maximum wait while
   typing never stops;
-- cancels or supersedes older requests, and may let a live stream for a prefix continue so words
-  do not disappear;
+- invalidates obsolete completions, retries and repairs as soon as draft identity changes, **before**
+  waiting for the replacement debounce; an append-only compatible live prefix may keep painting,
+  but cannot commit/archive for the newer draft;
+- resets the length catch-up guard on deletion, replacement or parameter changes, so a shorter answer
+  can paint from its first chunk; returning to a committed draft cancels the intervening request;
+- pauses scheduling, the watchdog and explicit submission during IME composition;
 - deduplicates a key already on screen or already in flight;
 - shows a loading state only after 260 ms; a request times out after 60 s; the in-memory cache holds
   60 entries for 30 minutes.
@@ -40,7 +45,17 @@ identity; cache, device memory and session priming all use it.
 | Live (`partial`) | while typing      | plain text stream | display only; never verified, stored or archived  |
 | Full             | finished sentence | structured JSON   | parsed, verified; eligible for memory and archive |
 
-A live result can settle after a pause; only then does it become a normal result with actions.
+After a 1,200 ms pause, an unchanged live result requests **one full reading**. It is not made final
+by flipping a flag: only that full response can settle it and expose actions. The in-memory cache
+records whether a result came from full mode, so an explicit submission cannot be answered by an
+unchecked live reading. A throttled live request stays quiet and tries the separate full-mode path
+after the pause; further editing cancels it.
+
+The displayed result has its own request key. `stale` means it belongs to another draft (or an IME is
+composing); `settled` requires the current key, a non-provisional result and a complete phase.
+Session writes, save/swap, dictionary and sentence shadow use that eligibility. A previous result can
+stay readable, but its actions are inert, its voice playback stops, and it is never persisted for the
+new source. Live metadata starts fresh instead of inheriting an earlier draft's detected language.
 
 ## 4. Prompt architecture
 

@@ -1,6 +1,6 @@
 # Design System
 
-Status: **Verified** against `src/styles.css`, components and the contrast gate on 2026-11-16.
+Status: **Verified** against `src/styles.css`, components and the contrast gate on 2026-11-17.
 Visual regression was not automated; no screenshot claim is made beyond the checks listed.
 
 ## Philosophy
@@ -69,7 +69,7 @@ tracking). Components use the same scale rather than arbitrary values.
 The translator is a fixed, phone-first workspace with safe-area padding and a viewport-aware height
 (`--vvh`) so the keyboard lifts the canvas instead of covering it. The canvas itself takes the
 height the screen leaves below the header and gives the composer a **fixed three-line strip**
-(`calc(3lh)`; two lines with the keyboard up) while the result owns every pixel below it, with a
+(`calc(3lh)`; two whole lines with the keyboard up) while the result owns every pixel below it, with a
 floor in `dvh` for small phones. The composer never grows and never animates its height: a long
 draft scrolls inside the field, and a long answer scrolls the workspace. The split is deliberately
 not a function of typing or streaming state — an earlier design divided the canvas by moment and
@@ -80,8 +80,15 @@ a paragraph floating above dead space. Nothing in the canvas measures its childr
 inline height: a measured grow box fed its own stretched content back through `ResizeObserver` and
 clipped the panel (2,300 callbacks while typing), so the geometry is one flex tree, and
 `tests/e2e/field_layout.py` asserts that it holds still, stays three lines, and never overlaps.
+The source uses the same 40 px line box for Arabic and Latin; language names use a 32 px line
+box, so changing script or detecting Arabic cannot move the editing surface. Result typography is
+also constant through streaming and settlement (24 px, 26 px at the wider breakpoint), rather than
+jumping between length thresholds. Long animated words/URLs are bounded to the paragraph width.
 The clear control is placed by the **input's** direction (not the interface's) so mixed-direction
-text can never run under it.
+text can never run under it. Digits and punctuation cannot choose that direction. Keyboard opening
+only brings an occluded composer back into view; streamed results never force-scroll to the bottom,
+and pinch zoom does not trigger a keyboard layout. The destructive pull-to-clear gesture is removed;
+clearing is an explicit labelled action.
 Secondary pages use a readable single column. Sheets are overlays, not routes. Radii, hairlines and shadows
 stay restrained; depth comes from surface contrast and spacing rather than heavy elevation.
 
@@ -93,7 +100,8 @@ stay restrained; depth comes from surface contrast and spacing rather than heavy
 | `LanguageBar`                                                | source/target selection and swap; source `auto`                   |
 | `StyleToggle`                                                | Natural / Formal / Casual                                         |
 | `BrainPicker`                                                | model selection; Luna shows as paused                             |
-| `ResultPanel`                                                | translation, copy, listen, save, shadow, states                   |
+| `ComposerField` / `DictationText`                            | native editing, IME/Enter/limit handling, exact dictation echo    |
+| `ResultPanel`                                                | translation, copy, listen, save, shadow, current/stale states     |
 | `LanguageSheet`, `ShadowSheet`, `LexiconSheet`, `SavedSheet` | lazy dialogs                                                      |
 | `Intro`                                                      | server-rendered first-run gate                                    |
 | `FailureScreen`                                              | translated error and not-found surfaces                           |
@@ -109,7 +117,10 @@ controls.
 For the translator and result:
 
 - **Initial**: empty composer, remembered pair/style, no result.
-- **Typing / scheduled**: no spinner; the scheduler is waiting for a worthwhile pause.
+- **Typing / scheduled**: no spinner; the scheduler is waiting for a worthwhile pause. A previous
+  reading may remain visible with an updating caption, but cannot be used or saved for the new draft.
+- **Composing**: the IME owns its candidate buffer; scheduling, watchdog and explicit submission wait
+  until composition ends. Enter confirms a candidate normally; Shift+Enter remains a native newline.
 - **Translating / updating**: a loading state appears only after 260 ms; streaming text may replace
   it so words are visible.
 - **Complete**: translation, actions, optional ambiguity/tone metadata.
@@ -117,7 +128,8 @@ For the translator and result:
 - **Error**: calm translated message, retry, draft preserved; previous result kept if one exists.
 - **Offline / timeout / rate**: distinct copy; a live rate limit stays silent while typing.
 - **Cancelled / superseded**: older output never overwrites newer text.
-- **Disabled**: actions that need a result are absent or disabled, never inert.
+- **Disabled**: unavailable result actions are genuinely disabled and their toolbar is `inert` and
+  hidden from accessibility APIs, not merely transparent. The draft remains editable.
 
 Sheets have open, loading, empty, error and closed states. Statistics have empty and populated
 states and a private (`noindex`) surface.

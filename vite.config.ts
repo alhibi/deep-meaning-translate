@@ -14,6 +14,10 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      host: "0.0.0.0",
+      allowedHosts: [".e2b.app"],
+    },
     plugins: [
       VitePWA({
         strategies: "generateSW",

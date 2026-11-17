@@ -1,7 +1,7 @@
 # Motion and Accessibility
 
 Status: **Verified** by source inspection, unit tests, browser frame sampling and Chromium
-reduced-motion emulation on 2026-11-16. Physical-device frame pacing is still **NOT_VERIFIED**.
+reduced-motion emulation on 2026-11-16; editing geometry rechecked on 2026-11-17. Physical-device frame pacing is still **NOT_VERIFIED**.
 
 ## Motion principles
 
@@ -74,6 +74,11 @@ the whole layer off.
 - Reduced motion: emulated in Chromium; the `word-in` animations resolve to a fade and the caret is
   static. Screen-reader announcement quality and real-device reduced-motion behavior:
   **NOT_VERIFIED** in this environment.
+- Editing follow-up, 2026-11-17: Chromium 153, 15 viewport/locale/theme combinations; no source/result
+  overlap or URL overflow, a common 120 px three-line composer, two full lines under simulated
+  keyboard opening, no forced scroll of the active field, and no font-size change on stream settle.
+  `field_layout.py` passed 23 checks and `composer_interactions.py` passed 44. These are geometry and
+  interaction observations, **not** a new physical-device frame-rate measurement.
 
 ## Adding motion
 

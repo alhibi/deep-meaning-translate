@@ -21,7 +21,18 @@ npm run dev        # http://localhost:8080
 The UI runs without keys; translation fails with a calm state. The dev server does not register a
 service worker (`src/lib/pwa.ts` refuses outside production). If a production preview was visited on
 the same origin, unregister the worker or use `?sw=off`; a stale shell can otherwise masquerade as an
-app error.
+app error. The Vite server binds to `0.0.0.0` and permits `.e2b.app` preview hosts without
+relaxing production response headers or browser-facing API origins.
+
+Focused editor checks (Python Playwright + Chromium required, no provider key):
+
+```sh
+npm run test:e2e:fields    # fixed geometry + incremental streams, editing, IME, responsive matrix
+npm run test:e2e:nav       # restore, route cycles and background continuity
+```
+
+`E2E_URL` selects a running app; `CHROMIUM_PATH` and JSON `CHROMIUM_ARGS` can select an installed
+browser. These remain local checks, not a claim that the E2E suite runs in CI.
 
 ## Gates
 
