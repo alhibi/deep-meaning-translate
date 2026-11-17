@@ -45,6 +45,13 @@ export function Intro({ onComplete }: { onComplete: () => void }) {
       return;
     }
     setShown(true);
+    // A tap that landed before hydration was remembered by the module-scope
+    // listener above; honour it now that handlers exist.
+    if ((window as unknown as Record<string, boolean>)[INTRO_TAP_KEY]) {
+      delete (window as unknown as Record<string, boolean>)[INTRO_TAP_KEY];
+      enter();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- enter is stable enough here; run once at mount
   }, [onComplete]);
 
   /*
