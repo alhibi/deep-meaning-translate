@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "measuredAt": "2026-11-17",
+  "environment": {
+    "harness": "headless Chromium 140.0.7339.16 (Playwright 1.55.0), Python 3.9",
+    "target": "dev server http://127.0.0.1:8080 (Vite dev; NOT a production bundle measurement)",
+    "provider": "in-page deterministic mock; no paid provider traffic",
+    "note": "Budgets are regression guards derived from the first real measurements in this environment, not product targets. A budget is ~2-3x the measured value for noisy latencies and a small fixed delta for resource counts."
+  },
+  "measured": {
+    "note": "First real measurements in this environment (dev server, headless Chromium 140, 390x844). Budgets were derived from these values and must never be tighter than them.",
+    "baseline": {
+      "cold_fcp_ms": 40,
+      "cold_lcp_ms": 688,
+      "typing_p95_ms": 16.8,
+      "typing_p95_4x_ms": 44.3,
+      "first_word_p95_ms": 109.5,
+      "settle_p95_ms": 172.9,
+      "navigation_to_stats_p50_ms": 120.55,
+      "navigation_to_stats_p95_ms": 124.15,
+      "navigation_back_p95_ms": 496.91,
+      "idle_js_heap_mb_max": 32.9
+    },
+    "stress": {
+      "heap_growth_mb": 4.91,
+      "heap_growth_percent": 17.3,
+      "connected_dom_growth": 36,
+      "renderer_node_growth": 6619,
+      "listener_growth": 456,
+      "final_active_timers": 1,
+      "final_active_intervals": 0,
+      "final_active_fetches": 0,
+      "memory_rows": 120,
+      "memory_bytes": 40104,
+      "settle_misses": 0,
+      "note": "300 cycles + 200 language/style changes + 50 cultural-detail open/close; the renderer-node and listener growth comes almost entirely from the 50 dialog cycles (~131 nodes and ~9 CDP listeners per open/close, not released after quiesce) — reported as SUSPECTED retention for product investigation, so the budget is set at that measured level rather than hidden."
+    },
+    "requests": {
+      "full_requests_per_settled_sentence": 2,
+      "settled_full_requests": 1,
+      "identical_text_stream_requests": 0,
+      "memory_hit_after_reload_stream_requests": 0,
+      "superseded_enrichment_aborts_at_wire": 1,
+      "note": "one settled sentence costs 1 live prefix stream (the starvation rule) + 1 full request + 1 quiet enrichment on the mocked provider"
+    },
+    "media": {
+      "images_at_load": 7,
+      "image_requests_total": 27,
+      "image_bytes_total": 1459512,
+      "weather_requests_before_consent": 0,
+      "weather_requests_during_20s_idle": 0,
+      "weather_requests_during_typing": 0
+    }
+  },
+  "baseline": {
+    "cold_fcp_ms": 1500,
+    "cold_lcp_ms": 3500,
+    "typing_p95_ms": 60,
+    "typing_p95_4x_ms": 150,
+    "typing_max_ms": 400,
+    "first_word_p95_ms": 300,
+    "settle_p95_ms": 600,
+    "navigation_to_stats_p50_ms": 700,
+    "navigation_to_stats_p95_ms": 3000,
+    "navigation_back_p95_ms": 3000,
+    "connected_dom_max": 1200,
+    "idle_js_heap_mb_max": 96,
+    "idle_renderer_nodes_max": 20000,
+    "idle_timers_max": 3,
+    "idle_intervals_max": 2,
+    "idle_active_fetches_max": 0,
+    "idle_page_errors_max": 0,
+    "desktop_documents_expected": 1
+  },
+  "bundle": {
+    "js_gzip_bytes_max": 650000,
+    "css_gzip_bytes_max": 30000,
+    "all_assets_gzip_bytes_max": 1400000,
+    "entry_js_gzip_bytes_max": 220000,
+    "routes_js_gzip_bytes_max": 90000,
+    "missing_files_max": 0
+  },
+  "requests": {
+    "max_full_stream_requests_per_settled_cycle": 1,
+    "max_duplicate_full_requests": 0,
+    "max_stream_requests_for_identical_text": 0,
+    "max_stream_requests_for_memory_hit_after_reload": 0,
+    "min_enrichment_aborts_when_superseded": 1,
+    "max_page_errors": 0
+  },
+  "stress": {
+    "max_heap_growth_mb": 8,
+    "max_heap_growth_percent": 40,
+    "max_connected_dom_growth": 200,
+    "max_renderer_node_growth": 9000,
+    "max_listener_growth": 700,
+    "max_active_timers_final": 3,
+    "max_active_intervals_final": 2,
+    "max_active_fetches_final": 0,
+    "max_memory_rows": 120,
+    "max_memory_bytes": 204800,
+    "max_settle_misses": 0,
+    "max_page_errors": 0,
+    "max_duplicate_full_requests": 0
+  },
+  "media": {
+    "max_images_on_load": 12,
+    "max_bytes_on_load": 900000,
+    "max_images_total": 48,
+    "max_bytes_total": 3000000,
+    "max_failed_image_fetches": 0,
+    "max_weather_requests_before_consent": 0,
+    "max_weather_requests_during_20s_idle": 0,
+    "max_weather_requests_during_typing": 0
+  }
+}

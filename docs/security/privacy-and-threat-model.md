@@ -88,6 +88,40 @@ flowchart LR
   trade-off, documented rather than hidden.
 - HTTPS is provided by the hosting platform.
 
+## Weather, location and cultural discovery (Phase II)
+
+- **Location is opt-in, coarse and transient.** No geolocation request happens on load; only the
+  strip's explicit "Use my location" gesture (or the city picker) starts one. The browser/OS request
+  uses `enableHighAccuracy: false`, `maximumAge` 5 min and a 12 s timeout, watches nothing, and the
+  fix is rounded to two decimals (≈1 km) **before** any request or persistence. The raw fix and any
+  location history are never stored. The device-wide revocation state and the chosen coarse place
+  live under `lingua.weather.*`; removing the place or "forget everything" clears them.
+- **Forecast path:** browser → our same-origin `POST /api/weather` (and the native twin behind the
+  origin gate) → Open-Meteo. The request is POST-only so coordinates never enter a URL, query
+  string, referrer or platform access log; the route validates bounds, applies its own rate bucket,
+  `AbortSignal.timeout`, `Cache-Control: no-store`, and never logs coordinates, place names or query
+  text. The normalized snapshot carries provider, units, place, attribution (CC BY 4.0 + licence
+  URL) and provider issue time.
+- **Geocoding:** forward search goes to Open-Meteo's geocoding API; a reverse place name goes to
+  Nominatim/OpenStreetMap from **our server** through a serialized 1 req/s queue with a bounded
+  rounded-coordinate cache, a descriptive User-Agent and no coordinate logging. OSM requires visible
+  attribution; the resolved label carries "Place name © OpenStreetMap contributors" (rendered in the
+  expanded sheet and city picker). Failures degrade to an honest coordinate label or no candidate —
+  never an invented city.
+- **Cultural discovery makes no runtime API calls to museums.** The catalog and its three-language
+  metadata are bundled with the app (loaded lazily, cached offline by the service worker). The only
+  third-party contact is the artwork image host `images.metmuseum.org`, allow-listed in
+  `src/lib/culture/media-hosts.json` and in both CSPs (`tests/security/csp-image-hosts.mjs` enforces
+  exact equality and refuses wildcards). That host sees ordinary request metadata (IP) as any image
+  host does; the public page discloses it. Attribution, licence and source URLs are part of every
+  record and are rendered on the card/detail surface.
+- **No model calls for discovery**: ingestion-time machine translation is labelled
+  `provenance: machine-translated`; no user text or browsing behaviour is sent anywhere by the
+  discovery section. Saved/seen lists are device-only, bounded, validated on read and cleared by
+  "forget everything" (including their in-memory caches).
+- **Failure isolation:** a weather or discovery failure never affects translation; both are lazy,
+  mounted below the composer, and their refresh/feed work is deferred while the composer is busy.
+
 ## Android app
 
 - Same network surface as the web (`/api/native/v1/*`), same prompts and provider keys: nothing is
@@ -96,7 +130,10 @@ flowchart LR
 - `android:allowBackup="false"` and `data_extraction_rules.xml` exclude the database, preferences
   and files from Google backup and device transfer. The archive leaves the device only on an
   explicit, optionally encrypted export.
-- Permissions are INTERNET, RECORD_AUDIO (dictation) and VIBRATE. No storage permission: backups use
+- Permissions are INTERNET, RECORD_AUDIO (dictation), ACCESS_COARSE_LOCATION (opt-in local weather,
+  approximate only) and VIBRATE. No FINE location and no background location: a patch to Capacitor's
+  `BridgeWebChromeClient` (patches/, applied by `patch-package`) makes the WebView permission
+  request coarse-only, with the manifest declaring coarse alone. No storage permission: backups use
   the Storage Access Framework.
 - Cleartext HTTP is disabled; only system trust anchors are accepted.
 - Full details: `docs/android/network-and-security.md`.
@@ -111,6 +148,12 @@ flowchart LR
 | Model output cannot become HTML | VERIFIED by rendering path |
 | Device stores validated on read | VERIFIED by validators and tests |
 | CSP/headers present in built output | VERIFIED by build output; runtime header check not pen-tested |
+| Production Permissions-Policy allows self-geolocation only | VERIFIED by the generated `_headers` + `tests/security/csp-image-hosts.mjs` |
+| Culture image host allowlist = web CSP = native CSP = runtime validator | VERIFIED by the security gate (negative-tested against drift/wildcard/scheme-wide) |
+| Weather coordinates never written to URLs or logs; POST-only, no-store | VERIFIED by source inspection + route tests + live 405/403/400 probes |
+| Location is opt-in, coarse-rounded and never persisted raw | VERIFIED by unit tests (privacy suite) and by a live browser consent probe; physical GPS not verified (TD48) |
+| "Forget everything" clears weather and culture stores plus their RAM caches | VERIFIED by unit test after D81 |
+| Museum catalogue rights/provenance for the shipped corpus | VERIFIED by the ingestion validator (source URL, CC0-1.0, credit, image allowlist); human legal review NOT_VERIFIED |
 | Prompt-injection resistance | NOT_VERIFIED (design only) |
 | Dependency vulnerabilities | NOT_VERIFIED (no `npm audit` in this audit) |
 | Edge abuse protection | NOT_APPLICABLE to this repo; hosting responsibility |

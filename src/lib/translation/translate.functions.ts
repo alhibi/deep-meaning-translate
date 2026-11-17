@@ -73,9 +73,12 @@ export const repairTranslation = createServerFn({ method: "POST" })
         return { ok: true, result: null };
       const { runRepair } = await import("./engine.server");
       const started = Date.now();
+      // A disconnected client must not keep paying for a repair nobody will see: the
+      // request signal is threaded down to the provider call.
       const result = await runRepair(
         data.request,
         data.previous as import("./types").TranslationResult,
+        { signal: request.signal },
       ).catch(() => null);
       console.info(
         JSON.stringify({

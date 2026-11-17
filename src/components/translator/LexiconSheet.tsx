@@ -27,14 +27,21 @@ export function LexiconSheet({
   open,
   value,
   loading,
+  failed = false,
   onClose,
 }: {
   open: boolean;
   value: LexiconResult | null;
   loading: boolean;
+  /**
+   * The lookup failed instead of returning a reading. Forwards the hook's failure state so
+   * the content area can say "unavailable" instead of "no reading" — the two are different
+   * answers and a calm product must not blur them. Optional while the hook patch lands.
+   */
+  failed?: boolean;
   onClose: () => void;
 }) {
-  const { t, rtl } = useI18n();
+  const { t, rtl: uiRtl } = useI18n();
   const sheetRef = useRef<HTMLDivElement>(null);
   const pushed = useRef(false);
   const [drag, setDrag] = useState(0);
@@ -92,7 +99,7 @@ export function LexiconSheet({
       tabIndex={-1}
       data-testid="lexicon-sheet"
       className="fixed inset-0 z-50 outline-none"
-      dir={rtl ? "rtl" : "ltr"}
+      dir={uiRtl ? "rtl" : "ltr"}
       role="dialog"
       aria-modal="true"
       aria-label={t("lexTitle")}
@@ -149,8 +156,11 @@ export function LexiconSheet({
             <X className="size-[18px]" strokeWidth={1.75} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <LexiconPanel value={value} loading={loading} />
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]"
+          aria-busy={loading || undefined}
+        >
+          <LexiconPanel value={value} loading={loading} failed={failed} />
         </div>
       </div>
     </div>,

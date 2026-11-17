@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ENRICHMENT_GAP_MS,
+  ENRICHMENT_STARVATION_MS,
   enqueueEnrichment,
+  enrichmentActive,
   enrichmentLoad,
+  enrichmentOrphans,
   resetEnrichmentQueueForTests,
 } from "./enrichment";
 
@@ -282,6 +285,58 @@ describe("priority and bounds", () => {
     expect(order).toEqual([0, 1, 2, 3]);
   });
 
+  it("promotes long-waiting shadow work, so a review cannot starve it for the session", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const order: string[] = [];
+    const shadow = enqueueEnrichment(
+      async () => {
+        order.push("shadow");
+      },
+      { purpose: "shadow" },
+    );
+    // The shadow waits behind the door for longer than the starvation interval.
+    await flush(ENRICHMENT_STARVATION_MS * 2);
+    const review = enqueueEnrichment(
+      async () => {
+        order.push("review");
+      },
+      { purpose: "review" },
+    );
+    releaseBlocker();
+    await flush(200);
+    await Promise.all([shadow, review, blocker]);
+    // Declared priority would put the review first; aging means the shadow that waited
+    // longest is no longer starved by newer, higher-priority work.
+    expect(order).toEqual(["shadow", "review"]);
+  });
+
+  it("bounds one purpose without dropping a queued review", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000, 12, 2);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const dictionary: Promise<unknown>[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      dictionary.push(enqueueEnrichment(async () => i, { purpose: "dictionary" }));
+    }
+    const review = enqueueEnrichment(async () => "review", { purpose: "review" });
+    // The per-purpose cap drops the oldest dictionary task, never the review.
+    await expect(dictionary[0]).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    releaseBlocker();
+    await flush(100);
+    await Promise.all([...dictionary.slice(1), review, blocker]);
+    expect(enrichmentLoad()).toBe(0);
+  });
+
   it("bounds the queue by dropping the least important queued tasks", async () => {
     vi.useFakeTimers();
     resetEnrichmentQueueForTests(0, 8_000, 3);
@@ -328,5 +383,182 @@ describe("priority and bounds", () => {
     expect(dropped).not.toHaveBeenCalledWith("shadow");
     await Promise.all([dictionary1, review, dictionary2, blocker]);
     expect(enrichmentLoad()).toBe(0);
+  });
+});
+
+describe("semantic dedupe", () => {
+  it("runs one request for two callers with the same purpose and key", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const calls = vi.fn(async () => "reading");
+    const first = enqueueEnrichment(calls, { purpose: "dictionary", key: "bank" });
+    const second = enqueueEnrichment(calls, { purpose: "dictionary", key: "bank" });
+    await flush(50);
+    await expect(first).resolves.toBe("reading");
+    await expect(second).resolves.toBe("reading");
+    expect(calls).toHaveBeenCalledTimes(1);
+    expect(enrichmentLoad()).toBe(0);
+  });
+
+  it("joins a job that is already running", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const calls = vi.fn(
+      () => new Promise<string>((resolve) => setTimeout(() => resolve("late"), 20)),
+    );
+    const first = enqueueEnrichment(calls, { purpose: "shadow", key: "sentence" });
+    await flush(10); // already started
+    const second = enqueueEnrichment(calls, { purpose: "shadow", key: "sentence" });
+    await flush(50);
+    await expect(first).resolves.toBe("late");
+    await expect(second).resolves.toBe("late");
+    expect(calls).toHaveBeenCalledTimes(1);
+  });
+
+  it("one caller leaving does not cancel another caller's shared answer", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const calls = vi.fn(async () => "shared");
+    const leaving = new AbortController();
+    const first = enqueueEnrichment(calls, {
+      purpose: "dictionary",
+      key: "term",
+      signal: leaving.signal,
+    });
+    const second = enqueueEnrichment(calls, { purpose: "dictionary", key: "term" });
+    leaving.abort();
+    await expect(first).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    await flush(50);
+    await expect(second).resolves.toBe("shared");
+    expect(calls).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborting every caller skips the shared job before any request", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const calls = vi.fn(async () => "never");
+    const one = new AbortController();
+    const two = new AbortController();
+    const first = enqueueEnrichment(calls, {
+      purpose: "shadow",
+      key: "same",
+      signal: one.signal,
+    });
+    const second = enqueueEnrichment(calls, {
+      purpose: "shadow",
+      key: "same",
+      signal: two.signal,
+    });
+    one.abort();
+    two.abort();
+    await expect(first).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    await expect(second).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    await flush(10);
+    expect(calls).not.toHaveBeenCalled();
+    expect(enrichmentLoad()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not coalesce different purposes or different keys", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const calls = vi.fn(async () => "x");
+    const jobs = [
+      enqueueEnrichment(calls, { purpose: "dictionary", key: "same" }),
+      enqueueEnrichment(calls, { purpose: "shadow", key: "same" }),
+      enqueueEnrichment(calls, { purpose: "dictionary", key: "other" }),
+    ];
+    await flush(100);
+    await Promise.all(jobs);
+    expect(calls).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects every caller of a shared failure and keeps the queue moving", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const failing = vi.fn(() => Promise.reject(new Error("provider down")));
+    const first = enqueueEnrichment(failing, { purpose: "dictionary", key: "boom" });
+    const second = enqueueEnrichment(failing, { purpose: "dictionary", key: "boom" });
+    const after = enqueueEnrichment(async () => "ok", { purpose: "shadow" });
+    await flush(10); // let the shared job run
+    await expect(first).rejects.toThrow("provider down");
+    await expect(second).rejects.toThrow("provider down");
+    await flush(50);
+    await expect(after).resolves.toBe("ok");
+    expect(failing).toHaveBeenCalledTimes(1);
+    expect(enrichmentLoad()).toBe(0);
+  });
+});
+
+describe("timeout accounting", () => {
+  it("aborts the timed-out work before handing the door on", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 100);
+    const events: string[] = [];
+    let firstSignal: AbortSignal | undefined;
+    void enqueueEnrichment(
+      (signal) =>
+        new Promise<never>(() => {
+          firstSignal = signal;
+          signal.addEventListener("abort", () => events.push("first-aborted"));
+        }),
+      { purpose: "shadow" },
+    );
+    await flush(10);
+    void enqueueEnrichment(async () => {
+      events.push("second-start");
+    });
+    await flush(120);
+    // The cancellation reaches the transport before the next request is allowed to start.
+    expect(firstSignal?.aborted).toBe(true);
+    expect(events.indexOf("first-aborted")).toBeLessThan(events.indexOf("second-start"));
+    expect(events.indexOf("first-aborted")).toBeGreaterThanOrEqual(0);
+  });
+
+  it("never leaks load/active counters and forgets the orphan once the task ends", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 100);
+    let settle: (value: string) => void = () => {};
+    const job = enqueueEnrichment(
+      (signal) =>
+        new Promise<string>((resolve) => {
+          settle = resolve;
+          signal.addEventListener("abort", () => resolve("aborted"));
+        }),
+    );
+    await flush(10);
+    expect(enrichmentActive()).toBe(1);
+    await flush(100); // the door timeout fires and the cooperative task ends on abort
+    // The timed-out job stopped occupying the queue and the door is free; because the
+    // abort really reached the task, there is no orphan left behind either.
+    expect(enrichmentLoad()).toBe(0);
+    expect(enrichmentActive()).toBe(0);
+    expect(enrichmentOrphans()).toBe(0);
+    await expect(job).resolves.toBe("aborted");
+    expect(settle).toBeTypeOf("function");
+    expect(enrichmentLoad()).toBe(0);
+  });
+
+  it("reports a task that ignores its signal as an orphan, not as free capacity", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 100);
+    void enqueueEnrichment(() => new Promise<never>(() => {}));
+    await flush(200);
+    expect(enrichmentLoad()).toBe(0);
+    expect(enrichmentOrphans()).toBe(1);
+  });
+
+  it("keeps a repeated abort to one settlement and no timers", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const ctrl = new AbortController();
+    const job = enqueueEnrichment(async () => "late", { signal: ctrl.signal });
+    ctrl.abort();
+    ctrl.abort();
+    await expect(job).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    await flush(10);
+    expect(enrichmentLoad()).toBe(0);
+    expect(enrichmentActive()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

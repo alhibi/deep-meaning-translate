@@ -130,6 +130,40 @@ describe("useShadow", () => {
     });
   });
 
+  it("aborts the running analysis transport when the screen goes away", async () => {
+    resetEnrichmentQueueForTests(0, 5_000);
+    analyze.mockImplementation(
+      () =>
+        new Promise(() => {
+          // only the forwarded signal can stop a provider that never answers
+        }),
+    );
+    const { unmount } = renderHook(() => useShadow(base));
+    await flush(SHADOW_DELAY + 10);
+    expect(analyze).toHaveBeenCalledTimes(1);
+    const forwarded = analyze.mock.calls[0]![0].signal as AbortSignal | undefined;
+    expect(forwarded).toBeInstanceOf(AbortSignal);
+    expect(forwarded!.aborted).toBe(false);
+    unmount();
+    expect(forwarded!.aborted).toBe(true);
+  });
+
+  it("joins an identical in-flight analysis instead of paying twice", async () => {
+    resetEnrichmentQueueForTests(0, 5_000);
+    analyze.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ shadow: { losses: [L("a", "كيف")] } }), 20);
+        }),
+    );
+    const first = renderHook(() => useShadow(base));
+    const second = renderHook(() => useShadow(base));
+    await flush(SHADOW_DELAY + 200);
+    expect(analyze).toHaveBeenCalledTimes(1);
+    expect(first.result.current.state).toMatchObject({ status: "ready" });
+    expect(second.result.current.state).toMatchObject({ status: "ready" });
+  });
+
   it("cancels a queued analysis when the screen unmounts, before any request", async () => {
     resetEnrichmentQueueForTests(0, 5_000);
     let releaseBlocker: () => void = () => {};

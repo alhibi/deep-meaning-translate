@@ -13,6 +13,7 @@ import {
 import { initServiceWorker, updateAppBadge } from "@/lib/pwa";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { IosInstallSheet } from "@/components/IosInstallSheet";
+import { DeferredMount } from "@/components/DeferredMount";
 import { OfflinePill } from "@/components/OfflinePill";
 import { useTodayKey } from "@/lib/useTodayKey";
 import { AppHeader } from "@/components/translator/AppHeader";
@@ -81,6 +82,18 @@ const ShadowMap = lazy(() =>
 );
 const LexiconSheet = lazy(() =>
   import("@/components/translator/LexiconSheet").then((m) => ({ default: m.LexiconSheet })),
+);
+/*
+ * Phase II surfaces below the translator. Neither is part of the entry chunk: the weather
+ * strip arrives with its own cached snapshot, and the discovery catalog is deferred until
+ * the section is approached, so a sentence never waits for them and neither ever competes
+ * with the composer.
+ */
+const WeatherSection = lazy(() =>
+  import("@/components/weather/WeatherSection").then((m) => ({ default: m.WeatherSection })),
+);
+const CultureSection = lazy(() =>
+  import("@/components/culture/CultureSection").then((m) => ({ default: m.CultureSection })),
 );
 
 export const Route = createFileRoute("/")({
@@ -591,7 +604,11 @@ function Translator() {
   }, [savedList]);
 
   const { t, locale, rtl: uiRtl } = useI18n();
-  const { lexicon, loading: lexiconLoading } = useLexicon({
+  const {
+    lexicon,
+    loading: lexiconLoading,
+    failed: lexiconFailed,
+  } = useLexicon({
     text,
     source: result?.sourceLanguage || source,
     target,
@@ -920,6 +937,7 @@ function Translator() {
           onPick={pickShadow}
           onMap={() => setShadowMapOpen(true)}
           undo={validUndo ? { onUndo: undoShadow } : null}
+          incomplete={shadowState.status === "ready" ? shadowState.incomplete : undefined}
         />
       ) : null,
     [validUndo, shadowState, shadowLosses, pickShadow, undoShadow],
@@ -1164,6 +1182,30 @@ function Translator() {
               </SafeArea>
             </div>
           </div>
+
+          {/*
+           * Phase II continuation of the same page, never an overlay: local weather first,
+           * then the cultural discovery section. The weather strip is deferred only until
+           * it is near the viewport and pauses its refresh while the composer is busy; the
+           * discovery catalog mounts when approached so its weight is never part of the
+           * translator's first paint.
+           */}
+          <DeferredMount
+            placeholder={
+              <div className="mx-3 h-[95px] shrink-0" aria-hidden data-weather-placeholder="true" />
+            }
+          >
+            <Suspense fallback={<div className="mx-3 h-[95px] shrink-0" aria-hidden />}>
+              <WeatherSection locale={locale} paused={kbUp || working || pending || provisional} />
+            </Suspense>
+          </DeferredMount>
+
+          <DeferredMount>
+            <Suspense fallback={<div className="min-h-px" aria-hidden />}>
+              <CultureSection locale={locale} />
+            </Suspense>
+          </DeferredMount>
+
           {/* One quiet entry to the public page. The old pair-guide and privacy links
               (and every external link that pointed at them) now land on /about, whose
               sections carry the same content; keeping a single entry avoids splitting
@@ -1227,6 +1269,7 @@ function Translator() {
               open={lexOpen}
               value={lexicon}
               loading={lexiconLoading}
+              failed={lexiconFailed}
               onClose={closeLex}
             />
             <SavedSheet

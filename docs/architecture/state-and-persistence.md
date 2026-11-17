@@ -37,6 +37,9 @@ unit-tested with a mocked bridge. Device runtime for the native statistics chang
 | `lingua.feel.v1`                     | haptics/sound preferences                                     | read at call time                                                                                                                      |
 | `lingua.intro.seen.v1`               | first-run gate                                                | pre-paint decision                                                                                                                     |
 | `lingua.install.dismissed`           | install offer                                                 | UI preference                                                                                                                          |
+| `lingua.weather.v1`                  | last local forecasts (bounded 8 places / 48 h / 16 d / ≤190 KB) + unit preference | versioned (`WEATHER_SCHEMA_VERSION`), validated on read, coordinates stored at 2 dp, **not** in backups, cleared by "forget everything" |
+| `lingua.culture.saved.v1`            | saved discovery ids (bounded 500)                             | versioned envelope, validated on read, device-only, not in backups                                                                     |
+| `lingua.culture.seen.v1`             | short seen history for novelty (bounded 200)                  | versioned envelope, validated on read, device-only, clearable                                                                          |
 
 All reads pass a validator that mirrors the server's language/style constraints. Invalid JSON,
 foreign values and stale shapes are dropped, never sent to the server or rendered.

@@ -21,8 +21,12 @@ export async function warmTranslateStream(request: Request): Promise<Response> {
   // endpoint becomes a request amplifier for anyone who knows the URL.
   if (!takeWarmToken(clientAddress(request))) return noContent;
   // No text and no credentials are sent by the HEAD.
+  // A warm-up the caller no longer waits for is not worth an outbound request: the
+  // request signal cancels the HEAD together with the client connection.
   await Promise.allSettled([
-    fetch("https://api.deepseek.com/models", { method: "HEAD" }).catch(() => {}),
+    fetch("https://api.deepseek.com/models", { method: "HEAD", signal: request.signal }).catch(
+      () => {},
+    ),
     import("./providers/deepseek.server"),
     import("./providers/opencode.server"),
   ]);

@@ -144,6 +144,23 @@ Every dialog uses `useFocusTrap`: focus enters, Tab wraps, Escape closes, focus 
 opener. Icon-only controls carry real labels and at least a 44 px target where they are touch
 controls.
 
+## Phase II: weather and discovery below the canvas
+
+Both modules continue the same page rather than becoming cards or dashboards. The weather strip is
+content-driven (~95 px), uses only semantic tokens, one inline weather glyph set (no icon
+dependency), a quiet freshness line and the provider attribution *outside* the opening button. The
+expanded forecast is a real dialog (focus trapped, Escape/back close, scroll locked, page state
+untouched). Numbers and hour pairs carry an explicit `dir="ltr"` cluster so RTL does not mirror
+ranges or split "°C".
+
+Discovery is editorial rather than a grid of identical tiles: one daily feature, then genuinely
+different compositions (object with image, practice typographic, language/word, material/craft,
+architecture) sharing one type scale and surface palette. A missing image is an intentional
+typographic composition, never a placeholder box. Cards show category · continent, the title and a
+short source line; the detail surface shows provenance, licence, attribution and image credit.
+Motion is one entrance, reduced-motion aware and paused offscreen; no looping animation, no
+colour-only encoding, and Saved/filters are real controls with labels.
+
 ## UI states
 
 For the translator and result:

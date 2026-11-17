@@ -21,6 +21,13 @@
  * plain-answer ceilings directly: reasoning tokens share the generation, so
  * `providers/capabilities.ts` raises their ceilings above these values. Nothing here is
  * ever lowered by a profile.
+ *
+ * Measured on 2026-11-17 against the deployed model (one request per supported-size input,
+ * see tests/eval/): a 4,900-character de→ar full answer used 1,620 completion tokens under
+ * a 12,740 ceiling and finished with `stop` and valid JSON; the same size ar→de finished
+ * `stop` with a parseable answer. The repair profile (32,768) and analysis profile (65,536)
+ * likewise completed, spending 2,482 and 161 reasoning tokens. The ceilings are runaway
+ * guards, never clamps under a real answer.
  */
 export function outputTokenBudget(chars: number, structured: boolean): number {
   const min = structured ? 512 : 256;

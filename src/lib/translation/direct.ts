@@ -26,6 +26,13 @@ import { completionError, requireCompletion } from "./providers/completion";
 const DIRECT_URL = "https://api.deepseek.com/chat/completions";
 export const DIRECT_MODEL = "deepseek-flash";
 
+/** Caller cancellation is a quiet end, never a provider failure the UI could retry. */
+function abortError(): Error {
+  const error = new Error("Aborted");
+  error.name = "AbortError";
+  return error;
+}
+
 export type DirectErrorKind =
   "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
 
@@ -95,9 +102,13 @@ function errorKind(status: number): "auth" | "quota" | "rate" | "provider" {
 async function callDirectNative(
   data: Record<string, unknown>,
   mode: "live" | "full",
+  signal?: AbortSignal | undefined,
 ): Promise<string> {
   const key = readProviderKey();
   if (!key) throw new TranslationError("auth", "No personal key.");
+  // CapacitorHttp cannot cancel an in-flight call: never start one for a request whose
+  // caller already left, and discard the answer if it left while the call was running.
+  if (signal?.aborted) throw abortError();
   const { CapacitorHttp } = await import("@capacitor/core");
   const payload = JSON.parse(requestPayload(data, mode, false)) as Record<string, unknown>;
   const res = await CapacitorHttp.post({
@@ -114,6 +125,7 @@ async function callDirectNative(
   if (res.status === 401 || res.status === 403) throw new TranslationError("auth", "auth");
   if (res.status === 402) throw new TranslationError("quota", "quota");
   if (res.status === 429) throw new TranslationError("rate", "rate");
+  if (signal?.aborted) throw abortError();
   if (res.status < 200 || res.status >= 300)
     throw new TranslationError("provider", `DeepSeek responded ${res.status}`);
   const value = res.data as {
@@ -172,11 +184,24 @@ export function deltaFromSsePayload(payload: string): string {
  * premature EOF are provider errors. A cut reply must never be committed. The
  * `reasoning_content` deltas of a thinking model are ignored: only the answer is text.
  */
-export async function* directDeltas(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+export async function* directDeltas(
+  body: ReadableStream<Uint8Array>,
+  signal?: AbortSignal | undefined,
+): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let completed = false;
+  // The same discipline as the web stream reader: a caller abort must stop the active
+  // body reader instead of leaving read() pending on a body that never chunks again
+  // (TD40). The listener is removed and the reader released in the finally below.
+  const stopReading = () => {
+    void reader.cancel().catch(() => {});
+  };
+  if (signal) {
+    signal.addEventListener("abort", stopReading, { once: true });
+    if (signal.aborted) stopReading();
+  }
   const handle = (rawLine: string): string => {
     const line = rawLine.trim();
     if (!line.startsWith("data:")) return "";
@@ -208,6 +233,7 @@ export async function* directDeltas(body: ReadableStream<Uint8Array>): AsyncGene
     }
     if (!completed) throw new TranslationError("provider", "Incomplete provider stream.");
   } finally {
+    signal?.removeEventListener("abort", stopReading);
     void reader.cancel().catch(() => {});
     reader.releaseLock();
   }
@@ -263,7 +289,8 @@ export async function streamDirect(
       return { ok: false, kind: "offline" };
     // WebView fetch can fail where the Android stack succeeds (CORS/proxy quirks).
     try {
-      const text = await callDirectNative(data, mode);
+      const text = await callDirectNative(data, mode, signal);
+      if (signal.aborted) return { ok: false, kind: "provider", cancelled: true };
       onText(mode === "full" ? partialTranslation(text).trim() : text.trim());
       return { ok: true, text };
     } catch {
@@ -301,7 +328,9 @@ export async function streamDirect(
     }
   };
   try {
-    for await (const delta of directDeltas(res.body)) {
+    // The caller's abort cancels the active body reader too (TD40), not only the
+    // pre-handshake fetch: a superseded request on the phone must stop reading.
+    for await (const delta of directDeltas(res.body, signal)) {
       raw += delta;
       emit(mode === "full" ? partialTranslation(raw).trim() : raw.trim());
     }
@@ -312,12 +341,19 @@ export async function streamDirect(
     if (error instanceof TranslationError) return { ok: false, kind: error.kind };
     // The stream died mid-read; try the Android stack once before giving up.
     try {
-      const text = await callDirectNative(data, mode);
+      const text = await callDirectNative(data, mode, signal);
+      if (signal.aborted) return { ok: false, kind: "provider", cancelled: true };
       onText(mode === "full" ? partialTranslation(text).trim() : text.trim());
       return { ok: true, text };
     } catch {
       return { ok: false, kind: "network" };
     }
+  }
+  // The body ended only because the reader was cancelled: that is a cancellation, not a
+  // complete answer, and it must never be committed as one.
+  if (signal.aborted) {
+    diagnostics.finish({ stage: "error", kind: "abort", cancelled: true });
+    return { ok: false, kind: "provider", cancelled: true };
   }
   raw = raw.trim();
   diagnostics.finish({

@@ -140,10 +140,11 @@ a verified lexicon.
 
 - **Local candidate gate** (`isLexiconCandidate`): at most 96 code points and 10 words; terminal
   punctuation, a newline or a sentence separator refuses the input; beyond four words, a
-  pronoun/demonstrative scaffold refuses it. Inner commas, apostrophes and hyphens are allowed
-  because idioms contain them. The gate is deliberately conservative, but not perfect: a 5–10-word
-  prose string without such a pronoun can pass, costing one quiet request whose model reply is the
-  literal `null` (TD43).
+  pronoun/demonstrative scaffold refuses it; question/request shapes, clause scaffolds,
+  conjunctions and bounded finite-verb lists refuse prose, and Arabic strips clitics/prefixes/
+  suffixes with dialect awareness. Idioms stay admissible and a four-word floor keeps fixed
+  expressions such as "thank you", "على راسي" and "ins kalte Wasser springen". Residual: a nominal
+  Arabic sentence can still pass (heuristic limit recorded with the classifier tests; was TD43).
 - **Data model and parser:** term, lemma, part of speech, up to 10 entries each with up to 6
   ranked readings (the in-context reading first), a one-sentence definition, labelled forms (up to
   8), synonyms (up to 8),
@@ -183,11 +184,15 @@ rhythm, implied`) and a `kind` of `loss` (meaning lost) or `weakened` (tone or i
   relative position in the two texts, and a monotonic filter; a finding that cannot be anchored in
   both texts is dropped.
 - **Long text:** the whole 5,000-unit source is accepted and split into sentence-aligned,
-  overlapping windows with absolute offsets and ±240 characters of neighbouring context — at most
-  four windows (`SHADOW_MAX_WINDOWS`), analysed in parallel, each a deep analysis call with a 45 s
-  timeout. Findings from overlapping windows are merged by strength and target span; one unusable
-  window makes the whole result `null` rather than an empty "nothing lost" claim. The translation
-  side is bounded at 15,000 units.
+  overlapping windows with absolute offsets and ±240 characters of neighbouring context. A plan is
+  built under **one explicit budget** (`SHADOW_MAX_REQUESTS` = 4 requests, ≤64,000 prompt
+  characters, ≤262,144 output tokens, 65,536 per call): the planner measures real prompts and lowers
+  depth (larger windows), never coverage, to fit. One 45 s deadline and the caller's signal cover
+  the analysis. A failed window is isolated: surviving findings merge and are marked `incomplete`;
+  a partial answer with no finding stays `null` rather than claiming "nothing lost". Splitting is
+  abbreviation/decimal/date-safe; merge dedupes by target **and** source overlap with global
+  monotonic order. The translation side is bounded at 15,000 units. Live long-text cost/quality
+  remains NOT_VERIFIED (TD41).
 - **Restores:** an alternative is shown only if it keeps every number, URL and emoji of the current
   translation, uses the target language's script, changes only part of the sentence (never a full
   rewrite) and actually touches the lost words; the smallest changes are offered first (at most
@@ -266,16 +271,15 @@ a truncated sentence or an invented repetition loop must never become a settled 
 - Dictionary readings and shadow findings are model-generated estimates, not a reviewed corpus: the
   tests pin parsing, ranking, anchoring, windowing and restore validation, but linguistic accuracy
   remains sampled (TD1).
-- The dictionary gate is conservative but not perfect: a short prose string without a
-  pronoun/demonstrative can pass it, costing one quiet request whose model reply is the literal
-  `null` (TD43).
-- Long-text shadow issues up to four analysis calls (`SHADOW_MAX_WINDOWS`) per settled translation,
-  in parallel, each with a 45 s provider timeout; the long-text path's live cost and finding quality
-  are **NOT_VERIFIED** (TD41).
-- Enrichment cancellation is logical, not over the wire: a superseded dictionary/shadow/review
-  request can still complete on the server because the native transport functions carry no
-  `AbortSignal` (TD38). On the Android personal-key path, an abort is bridged only until response
-  headers; after hand-off the body keeps reading until its own timeout (TD40).
+- The dictionary gate is heuristic: a nominal Arabic sentence can still pass it, costing one quiet
+  request whose model reply is the literal `null`; classifier rules and boundary cases have tests
+  in both languages.
+- Long-text shadow runs under a bounded plan (≤4 requests, ≤64,000 prompt characters, one 45 s
+  deadline). Live long-text cost and finding quality are **NOT_VERIFIED** (TD41).
+- Cancellation now reaches the wire: hooks → rpc/transport → fetch/reader → server handler →
+  provider, with a quiet 204 for an already-disconnected native client (was TD38/TD40). Verified in
+  dev with a real aborted `Request.signal` node test; the deployed Worker runtime and an Android
+  WebView socket close are NOT_VERIFIED (TD42/TD17).
 - Live DeepSeek observations on 2026-11-16 (dev server, real key, no synthetic mocks): two live
   Arabic→German streams returned their first byte in 0.29–0.36 s and completed in 0.68–0.90 s; a
   formal German→Arabic full reply completed in 1.34 s with correct register and tags; a

@@ -5,12 +5,12 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -43,6 +43,14 @@ class LinguaStorePlugin : Plugin() {
     private var database: LinguaDatabase? = null
     private var repo: LinguaRepository? = null
     private var initError: String? = null
+    /**
+     * Teardown is not reversible. It is set under the same lock that opens the database, so
+     * a queued coroutine can never open a new Room database after the bridge is gone — the
+     * old code cancelled the scope but a coroutine already past its last suspension point
+     * could still call repository() and leak an open database for the rest of the process.
+     */
+    @Volatile
+    private var destroyed = false
 
     /**
      * Open the database on the first real call, never in `load()`.
@@ -52,8 +60,10 @@ class LinguaStorePlugin : Plugin() {
      * opening happens on the IO dispatcher, with the bridge fully alive.
      */
     private fun repository(): LinguaRepository {
-        repo?.let { return it }
         synchronized(this) {
+            // Teardown and lazy opening share this lock, so a coroutine that was already
+            // queued when the bridge died cannot reopen Room after handleOnDestroy closed it.
+            check(!destroyed) { "storage-destroyed" }
             repo?.let { return it }
             try {
                 val db = LinguaDatabase.open(context)
@@ -70,21 +80,41 @@ class LinguaStorePlugin : Plugin() {
         }
     }
 
+    /**
+     * Idempotent teardown: cancel first (no new work is scheduled), then close the one open
+     * database exactly once. Nothing resolves or rejects after this point — the WebView is
+     * being torn down, so a late call.resolve() has no listener to answer.
+     */
     override fun handleOnDestroy() {
+        val openDatabase = synchronized(this) {
+            if (destroyed) return
+            destroyed = true
+            val db = database
+            database = null
+            repo = null
+            db
+        }
         scope.cancel()
-        database?.close()
-        database = null
-        repo = null
+        openDatabase?.let { db -> runCatching { db.close() } }
     }
     private inline fun run(call: PluginCall, crossinline block: suspend (LinguaRepository) -> JSObject) {
+        if (destroyed) {
+            call.reject("device storage unavailable")
+            return
+        }
         scope.launch {
             operations.withLock {
                 try {
+                    if (destroyed) return@withLock
                     val result = block(repository())
-                    call.resolve(result)
+                    if (!destroyed) call.resolve(result)
+                } catch (error: CancellationException) {
+                    // Teardown, not a storage failure: never turn cancellation into a reject
+                    // on a bridge that is already gone.
+                    throw error
                 } catch (error: Throwable) {
                     // Never include SQL, values or stack traces in the message a person can see.
-                    call.reject("device storage unavailable")
+                    if (!destroyed) call.reject("device storage unavailable")
                 }
             }
         }

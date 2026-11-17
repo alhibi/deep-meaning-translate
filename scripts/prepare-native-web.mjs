@@ -41,7 +41,9 @@ const CSP = [
   // Boot scripts and the router's inline hydration payload require inline script.
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // Same exact-host list as the web CSP (see src/lib/culture/media-hosts.json): remote
+  // museum images are shown only from their own origin, never from an arbitrary one.
+  "img-src 'self' data: blob: https://images.metmuseum.org",
   "font-src 'self' data:",
   "media-src 'self' blob: data:",
   // AudioWorklet for dictation is created from a blob.

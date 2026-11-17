@@ -33,6 +33,8 @@ describe("lexicon provider independence", () => {
   });
 
   it("the hook cache identity carries the version and every ranking input", () => {
+    // The payload shape is unchanged by the lexical-quality work (parser/prompt/ranking
+    // semantics only), so the version stays at 2 with real lexicon quality landing on top.
     expect(hookSource).toMatch(/const LEXICON_CACHE_VERSION = 2;/);
     const start = hookSource.indexOf("const key = JSON.stringify([");
     expect(start).toBeGreaterThan(-1);
@@ -50,5 +52,33 @@ describe("lexicon provider independence", () => {
     ]) {
       expect(key).toContain(field);
     }
+  });
+
+  it("the candidate gate is a local classifier, never a second model call", () => {
+    // The gate must stay a pure function in the client-safe module: no provider, no fetch,
+    // no analysis entry, no signal plumbing — sending text to decide candidacy would spend
+    // a paid request to ask a question a rule already answers.
+    expect(modelSource).toMatch(/export function classifyLexiconCandidate/);
+    expect(modelSource).toMatch(/export function isLexiconCandidate/);
+    expect(modelSource).not.toMatch(/fetch\(|runAnalysis|AbortSignal|await import\("\.\/engine/);
+    // The server path applies the same gate before spending the analysis call.
+    const gate = functionsSource.indexOf("isLexiconCandidate");
+    const analysis = functionsSource.indexOf("await runLexiconAnalysis(");
+    expect(gate).toBeGreaterThan(-1);
+    expect(analysis).toBeGreaterThan(gate);
+  });
+
+  it("the analysis path carries caller cancellation into the provider signal", () => {
+    // A superseded dictionary lookup must stop on the wire, not only drop its result.
+    expect(functionsSource).toMatch(/signal\?: AbortSignal/);
+    expect(functionsSource).toMatch(/admission\.request\.signal/);
+    expect(functionsSource).toMatch(/composeSignals\(\[caller, timeout\]\)/);
+    expect(functionsSource).toMatch(/signal: composed\?\.signal \?\? timeout/);
+    expect(functionsSource).toMatch(/composed\?\.dispose\(\)/);
+  });
+
+  it("the hook still uses the local gate instead of requesting a reading for prose", () => {
+    expect(hookSource).toMatch(/isLexiconCandidate\(normalized\)/);
+    expect(hookSource).toMatch(/enqueueEnrichment/);
   });
 });

@@ -48,6 +48,9 @@ export function useLexicon(opts: {
   const lookup = callLexicon;
   const [lexicon, setLexicon] = useState<LexiconResult | null>(null);
   const [loading, setLoading] = useState(false);
+  // "No reading for this term" and "the lookup failed" are different states for the panel;
+  // only a real failure (not a superseded/cancelled effect) may paint the failure state.
+  const [failed, setFailed] = useState(false);
   const generation = useRef(0);
   /** Set when the effect tears down (dependency change or unmount): late continuations are inert. */
   const disposed = useRef(false);
@@ -69,6 +72,7 @@ export function useLexicon(opts: {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
     setLexicon(null);
     setLoading(false);
+    setFailed(false);
     if (!settled || !isLexiconCandidate(normalized)) return () => controller.abort();
     // (text, direction, style, dialect, uiLocale, sentence context, data-model version) —
     // one exact identity, or an answer for "bank" would surface under a different register,
@@ -91,6 +95,7 @@ export function useLexicon(opts: {
       cache.current.delete(key);
       cache.current.set(key, cached);
       setLexicon(cached);
+      setFailed(false);
       return () => controller.abort();
     }
 
@@ -111,9 +116,13 @@ export function useLexicon(opts: {
       };
       // The dictionary is quiet work: it shares one paced door with the shadow and the
       // settled review, and a superseded lookup is skipped before it spends a request.
-      void enqueueEnrichment(() => lookup({ data: payload }), {
+      // The queue's signal is the task's signal: when this hook tears down, a running
+      // lookup aborts its transport instead of finishing into a screen that is gone.
+      // Identical requests dedupe on the same cache identity.
+      void enqueueEnrichment((signal) => lookup({ data: payload, signal }), {
         purpose: "dictionary",
         signal: controller.signal,
+        key,
         isValid: () => token === generation.current && !disposed.current,
       })
         .then((response) => {
@@ -125,11 +134,16 @@ export function useLexicon(opts: {
             if (typeof first === "string") cache.current.delete(first);
           }
           setLexicon(value);
+          setFailed(false);
         })
         .catch(() => {
           // A dictionary failure — including a cancelled obsolete lookup — is isolated:
-          // it clears the panel and never touches the translation on screen.
-          if (token === generation.current && !disposed.current) setLexicon(null);
+          // it clears the panel and never touches the translation on screen. The effect
+          // guards keep a superseded lookup from painting a false failure.
+          if (token === generation.current && !disposed.current) {
+            setLexicon(null);
+            setFailed(true);
+          }
         })
         .finally(() => {
           if (token === generation.current && !disposed.current) setLoading(false);
@@ -145,5 +159,5 @@ export function useLexicon(opts: {
     };
   }, [text, source, target, uiLocale, settled, dialect, style, lookup, translation, context]);
 
-  return { lexicon, loading };
+  return { lexicon, loading, failed };
 }

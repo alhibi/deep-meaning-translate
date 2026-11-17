@@ -109,6 +109,41 @@ describe("streamTranslate", () => {
     expect(res).toMatchObject({ cancelled: true });
   });
 
+  it("cannot commit an answer that arrives after the caller cancelled", async () => {
+    const ctrl = new AbortController();
+    // A hostile/mocked transport that resolves even though its signal fired: the client
+    // must still classify the result as cancelled and never commit it.
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("نص متأخر"));
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(body, { status: 200 })),
+    );
+    ctrl.abort();
+    const painted: string[] = [];
+    const res = await streamTranslate({}, ctrl.signal, (t) => painted.push(t), "live");
+    expect(res).toMatchObject({ ok: false, cancelled: true });
+    expect(painted).toEqual([]);
+  });
+
+  it("tolerates a repeated abort and a late abort after completion", async () => {
+    const ctrl = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => streamedResponse([new TextEncoder().encode("تمام")])),
+    );
+    const res = await streamTranslate({}, ctrl.signal, () => {}, "live");
+    expect(res).toEqual({ ok: true, text: "تمام" });
+    // Aborting after the answer completed is a no-op for the finished request.
+    ctrl.abort();
+    ctrl.abort();
+    expect(res).toEqual({ ok: true, text: "تمام" });
+  });
+
   it("releases the response body of a failed request nobody reads", async () => {
     const cancel = vi.fn();
     vi.stubGlobal(

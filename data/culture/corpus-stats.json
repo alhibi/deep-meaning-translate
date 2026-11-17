@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/culture/build.mjs",
+  "source": {
+    "organization": "The Metropolitan Museum of Art",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "api": "https://collectionapi.metmuseum.org/public/collection/v1",
+    "ingestedAt": "2026-11-17T17:12:06.198Z"
+  },
+  "totals": {
+    "published": 595,
+    "ingestedRecordsInSnapshot": 595,
+    "droppedFromPublished": 0,
+    "rejectedByCurrentRules": 0,
+    "chunkSize": 80,
+    "chunkCount": 8
+  },
+  "counts": {
+    "byContinent": {
+      "africa": 97,
+      "asia": 237,
+      "europe": 116,
+      "north-america": 55,
+      "oceania": 1,
+      "south-america": 89
+    },
+    "byCategory": {
+      "architecture": 4,
+      "crafts": 160,
+      "design": 15,
+      "everyday-life": 84,
+      "landscapes": 23,
+      "language": 16,
+      "medicine-knowledge": 1,
+      "music": 42,
+      "objects": 25,
+      "ritual-objects": 19,
+      "storytelling": 11,
+      "textiles": 109,
+      "tools": 47,
+      "trade": 39
+    },
+    "byCountry": {
+      "(non-state-bound)": 71,
+      "AL": 7,
+      "BG": 1,
+      "CA": 1,
+      "CD": 1,
+      "CN": 91,
+      "CO": 54,
+      "CY": 40,
+      "DE": 3,
+      "DZ": 1,
+      "EG": 92,
+      "ES": 2,
+      "FR": 11,
+      "GB": 6,
+      "GR": 3,
+      "IN": 11,
+      "IR": 9,
+      "IT": 11,
+      "JP": 47,
+      "KR": 1,
+      "MA": 1,
+      "MK": 1,
+      "MX": 26,
+      "PA": 1,
+      "PE": 35,
+      "PG": 1,
+      "PK": 1,
+      "PS": 3,
+      "PT": 1,
+      "RS": 1,
+      "RU": 1,
+      "SA": 4,
+      "SY": 14,
+      "TH": 1,
+      "TN": 1,
+      "TR": 12,
+      "US": 27,
+      "UZ": 1
+    },
+    "withEmptyCountries": 71,
+    "withMediaBlock": 595,
+    "provenance": {
+      "machine-translated": 595
+    }
+  },
+  "coverage": {
+    "en": 100,
+    "ar": 100,
+    "de": 100,
+    "machineTranslated": 595
+  },
+  "categoryRules": [
+    {
+      "category": "music",
+      "evidence": "Met department Musical Instruments, or a source classification/objectName that names an instrument"
+    },
+    {
+      "category": "astronomy",
+      "evidence": "source classification/objectName/medium names an astrolabe, celestial globe, armillary sphere, sundial or astronomical instrument"
+    },
+    {
+      "category": "games",
+      "evidence": "source classification/objectName names a game, game board, chess piece, die, playing card or toy"
+    },
+    {
+      "category": "medicine-knowledge",
+      "evidence": "source classification/objectName/medium names medical, surgical, anatomical or apothecary material"
+    },
+    {
+      "category": "agriculture",
+      "evidence": "source classification/objectName names an agricultural implement or practice (plow, sickle, harvest, granary)"
+    },
+    {
+      "category": "trade",
+      "evidence": "source classification/objectName is a coin or other documented medium of exchange"
+    },
+    {
+      "category": "landscapes",
+      "evidence": "a painting/print/drawing/photograph whose source title, object name or tags name a landscape, view, coast, garden or cityscape"
+    },
+    {
+      "category": "language",
+      "evidence": "source classification/objectName/tags explicitly name calligraphy, script or an inscription (writing/script heritage)"
+    },
+    {
+      "category": "storytelling",
+      "evidence": "source classification/objectName is a manuscript, book, folio or codex (a text-carrying object)"
+    },
+    {
+      "category": "architecture",
+      "evidence": "source classification/objectName names an architectural element (column, capital, window, door, mihrab, stucco, dome, facade)"
+    },
+    {
+      "category": "ritual-objects",
+      "evidence": "source classification/objectName names a religious or ritual object, vessel or site (reliquary, votive, amulet, censer, altar, deity, funerary, sarcophagus, Qur'an, chalice, mask)"
+    },
+    {
+      "category": "textiles",
+      "evidence": "source classification/objectName/medium names textile or costume material (textile, tapestry, carpet, embroidery, costume, silk, velvet, garment)"
+    },
+    {
+      "category": "design",
+      "evidence": "source classification/objectName names furniture, a clock/watch or a designed household/lighting object"
+    },
+    {
+      "category": "everyday-life",
+      "evidence": "source classification/objectName names a domestic vessel, container or utensil (bowl, plate, cup, jar, bottle, vessel, box, basket)"
+    },
+    {
+      "category": "tools",
+      "evidence": "source classification/objectName names a weapon, armor, tool or implement (arrow, sword, dagger, helmet, shield, sickle, hammer, chisel, adze)"
+    },
+    {
+      "category": "crafts",
+      "evidence": "source classification/objectName/medium names a crafted object or material (jewelry, ceramics, glass, metalwork, sculpture, figurine, ivory, lacquer, woodwork, inlay)"
+    }
+  ],
+  "sizes": {
+    "indexModuleBytes": 285947,
+    "indexCompactBytes": 231198,
+    "indexGzipBytes": 23541,
+    "chunkBytes": {
+      "chunk-0.ts": 151028,
+      "chunk-1.ts": 135065,
+      "chunk-2.ts": 130693,
+      "chunk-3.ts": 129997,
+      "chunk-4.ts": 126709,
+      "chunk-5.ts": 139822,
+      "chunk-6.ts": 127352,
+      "chunk-7.ts": 58127
+    }
+  },
+  "files": {
+    "index.ts": {
+      "bytes": 285947,
+      "sha256": "280c015d5dd76e30262762f148162805ac82a02a1d0878c41365e0db9cf4dfd2"
+    },
+    "chunk-0.ts": {
+      "bytes": 151028,
+      "sha256": "00b9fe4980d58e1d80e3e8c597ddbed42c1ed4e01b7775b891d3b7c056df60fd"
+    },
+    "chunk-1.ts": {
+      "bytes": 135065,
+      "sha256": "1ed2b3ff1e31609c2e35d23e39fe9b77abc1ab7a80b323b646981c4ab7c2eb01"
+    },
+    "chunk-2.ts": {
+      "bytes": 130693,
+      "sha256": "27fb8adbf243fcde4277ed412547bacf3118af86eede13ff22731e68a6bdd447"
+    },
+    "chunk-3.ts": {
+      "bytes": 129997,
+      "sha256": "71f7e32f202e129129c20993aadda19c8210f44d0ea9f9a36a9155b2ead5a222"
+    },
+    "chunk-4.ts": {
+      "bytes": 126709,
+      "sha256": "60daaf73857a99282981f6243adc6c0a6a19eab8719ecb97eabd787087bfabb6"
+    },
+    "chunk-5.ts": {
+      "bytes": 139822,
+      "sha256": "6decf48b1fc9d7cfc8a18a81a831b6687f4afa059ba397adc66ad57b910344af"
+    },
+    "chunk-6.ts": {
+      "bytes": 127352,
+      "sha256": "31624fd91531c6fce3c24b196480937b038b847f6464b40b7f52f3d777ac609b"
+    },
+    "chunk-7.ts": {
+      "bytes": 58127,
+      "sha256": "7244a20adbfbd19b3a2ac6af954baeb23b118c17172e699a89952a5440aecd11"
+    }
+  },
+  "loaderContract": {
+    "index": "src/lib/culture/data/index.ts -> default { version: 1, chunkSize, entries: CultureIndexEntry[] }",
+    "chunks": "src/lib/culture/data/chunk-<k>.ts -> default { version: 1, items: CultureItem[] }",
+    "ordering": "entries are in the same global order as the concatenated chunks; chunk = floor(position / chunkSize)",
+    "version": "compare index.version / manifest.CULTURE_DATA_VERSION with CULTURE_SCHEMA_VERSION from src/lib/culture/types.ts",
+    "lazy": "import the index statically; load chunk-<k>.ts on demand (import.meta.glob or explicit dynamic import); never import every chunk up front"
+  }
+}

@@ -123,6 +123,36 @@ npm run preview          # serve the built Worker on Node
 
 - The practice map (`PracticeLandscape`) is a map, not a card grid: the strongest domain is the centre, the rest orbit it, every radius/ribbon comes from the archive, and the **typographic readout always states the same measures in words** so colour is never the only encoding. Nodes are real focusable buttons with `aria-pressed`, the trail ring is labelled, mount motion is reduced under `prefers-reduced-motion`, and no CSS keyframes may be added for it (transitions only, so it composes with the theme rules).
 
+### Phase II surfaces (added 2026-11-17)
+
+- **The translator stays first.** Weather and cultural discovery are lazy sections below the canvas
+  in the same scroll container — never overlays, never part of the entry chunk, never a request that
+  can delay or fail a translation. Their failures render local calm states.
+- **Location is opt-in and coarse.** Never request geolocation on load; request it only from an
+  explicit user gesture, with `enableHighAccuracy: false`, no watch, and round to two decimals
+  *before* any request or persistence. No raw fix, no location history, no location in translation,
+  voice, dictation or discovery requests. The Android manifest declares ACCESS_COARSE_LOCATION only;
+  Capacitor's WebView prompt is patched coarse-only (`patches/`). Consent, revocation and removal are
+  code paths with tests, not copy.
+- **Weather data goes through our server.** `POST /api/weather` (and `/api/native/v1/weather`
+  behind the origin gate) → provider adapter; POST-only so coordinates never enter a URL, no-store,
+  bounded and validated, never logged. The normalized snapshot carries attribution + licence; the UI
+  renders it from the snapshot so a provider switch changes the credit automatically. The cache is
+  versioned, bounded, device-only, not in backups, and cleared by "forget everything".
+- **Culture content is sourced, licensed and traceable.** Every record carries source URL, licence,
+  attribution, image credit and ingestion date; machine-translated copy is labelled; nothing is
+  invented. The corpus is bundled (no runtime museum API), loaded lazily and precached for offline;
+  remote images may only come from hosts in `src/lib/culture/media-hosts.json`, which must equal both
+  CSPs (gate: `npm run check:security`). Discovery makes **no model calls** at browsing time.
+- **Browse deliberately.** Daily feature is a deterministic function of the local day; the feed is
+  cursor-paged with in-flight guards, a page cap and no duplicate cards; opening a record restores
+  scroll and focus. Saved/seen lists are device-only, validated, bounded and reset by
+  `clearDeviceData()`.
+- **Separation of ownership:** the route owns only composition; `src/lib/weather/*` and
+  `src/lib/culture/*` own their domains. The culture section consumes one stable adapter
+  (`createCultureDiscoveryAdapter`); a new data source changes the adapter/corpus, never the
+  translator.
+
 ### Android shell (added 2026-11-16)
 
 - The Capacitor plugin proxy is **not a thenable**. Never return it from an async function or resolve a promise with it: its fallback getter builds `then()` and the bridge rejects. Use `asNonThenable()` from `src/lib/native/plugin.ts` for every plugin, including `LinguaTts` — this defect shipped in 1.0.2 and silently disabled all persistence.

@@ -149,6 +149,75 @@ describe("direct request capability shapes", () => {
   });
 });
 
+describe("direct post-hand-off cancellation (TD40)", () => {
+  it("cancels the active SSE body reader when the caller aborts mid-stream", async () => {
+    const ctrl = new AbortController();
+    let cancelled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(delta));
+        // never close: the phone has to be able to walk away from a live stream
+      },
+      cancel() {
+        cancelled += 1;
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(body, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const painted: string[] = [];
+    const pending = streamDirect(request, ctrl.signal, (t) => painted.push(t), "live");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(painted.length).toBeGreaterThan(0); // the response was already handed off
+    ctrl.abort();
+    const result = await Promise.race([
+      pending,
+      new Promise((resolve) => setTimeout(() => resolve("still-reading"), 100)),
+    ]);
+    // Before the fix this promise never settled: abort only reached the pre-header fetch.
+    expect(result).not.toBe("still-reading");
+    expect(result).toMatchObject({ ok: false, cancelled: true });
+    expect(cancelled).toBeGreaterThan(0);
+    // Aborting after hand-off is a cancellation, never a reason to replay the buffered
+    // Android transport for an answer nobody wants.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not commit a reply that completed after the caller left", async () => {
+    const ctrl = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => streamResponse(delta + stop)),
+    );
+    // Cancel from inside the paint callback: the protocol completion arrives afterwards,
+    // so only the post-loop cancellation check can classify this correctly.
+    const result = await streamDirect(request, ctrl.signal, () => ctrl.abort(), "live");
+    expect(result).toMatchObject({ ok: false, cancelled: true });
+  });
+
+  it("releases the reader on abort and tolerates repeated aborts", async () => {
+    const ctrl = new AbortController();
+    let cancelled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(delta));
+      },
+      cancel() {
+        cancelled += 1;
+      },
+    });
+    const consume = (async () => {
+      for await (const _chunk of directDeltas(body, ctrl.signal)) {
+        // first event arrives, then the caller leaves
+      }
+    })();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    ctrl.abort();
+    ctrl.abort();
+    await expect(consume).rejects.toMatchObject({ kind: "provider" });
+    expect(cancelled).toBeGreaterThan(0);
+  });
+});
+
 describe("direct non-streaming completion contract (TD35)", () => {
   const reply = (content: string, finishReason: unknown) =>
     Response.json({ choices: [{ message: { content }, finish_reason: finishReason }] });

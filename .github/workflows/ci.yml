@@ -40,6 +40,9 @@ jobs:
       - name: Documentation links and inventory
         run: npm run check:docs
 
+      - name: Security policy (culture image hosts ≡ CSP, Permissions-Policy)
+        run: npm run check:security
+
       - name: Unit tests (coverage floors enforced)
         run: npm run test
         env:

@@ -8,6 +8,12 @@
       through the Storage Access Framework.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Approximate location only, requested at runtime after the person opts in to the
+         local weather strip. No precise (FINE) location and no background location: the
+         forecast needs a city, not a fix. A patch to Capacitor's BridgeWebChromeClient
+         makes the WebView permission request coarse-only (patches/@capacitor+android+...).
+         Weather failures never affect translation. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Capacitor's WebView permission gate asks for MODIFY_AUDIO_SETTINGS together with
          RECORD_AUDIO for AUDIO_CAPTURE; without it both are denied and dictation can never

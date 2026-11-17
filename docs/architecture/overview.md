@@ -52,6 +52,18 @@ route. Provider modules are server-only.
   result.
 - Details and measured evidence: `docs/architecture/navigation-and-lifecycle.md`.
 
+### Phase II surfaces (under the translator)
+
+`src/lib/weather/` (contract, provider adapter + server route, bounded cache, `useWeather`,
+`useWeatherLocation`) and `src/lib/culture/` (contract, generated corpus under `data/`, loader,
+search, discovery, saved/seen, production adapter) are **independent verticals** composed by the
+route. The route owns only the composition (`WeatherSection`, `CultureSection`, lazy + deferred by
+`DeferredMount`); the weather module owns its two hooks and its dialogs, the culture section owns
+its adapter and scroll/dialog state. Both are below the canvas in the same scroll container, never
+overlays over the composer, and neither can fail the translation: their failures are local calm
+states. Server boundaries are `POST /api/weather`, `POST /api/weather/place` and their
+`/api/native/v1/*` twins; the culture catalog is bundled (no runtime API).
+
 ## State ownership
 
 | State | Owner | Lifetime |

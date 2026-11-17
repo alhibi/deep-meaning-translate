@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 1,
+  "task": "A09 cultural corpus - Met Open Access source registry",
+  "institution": {
+    "organization": "The Metropolitan Museum of Art",
+    "apiDocs": "https://metmuseum.github.io/",
+    "openAccessPolicy": "https://www.metmuseum.org/about-the-met/policies-and-documents/open-access",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "rightsStatement": "The Met Open Access policy dedicates its public-domain object metadata to CC0 1.0; each record here carries isPublicDomain: true and an images.metmuseum.org image."
+  },
+  "enumeration": "GET https://collectionapi.metmuseum.org/public/collection/v1.1/search?q=*&departmentId=<id>&hasImages=true&isPublicDomain=true&limit=100&offset=N, then GET https://collectionapi.metmuseum.org/public/collection/v1/objects/<objectID>",
+  "query": {
+    "pageSize": 100,
+    "maxSearchPages": 6,
+    "targetTotal": 675,
+    "gapMs": 1200,
+    "mode": "offline-cache-rebuild",
+    "departments": [
+      {
+        "id": 5,
+        "name": "Arts of Africa, Oceania, and the Americas",
+        "target": 120
+      },
+      {
+        "id": 6,
+        "name": "Asian Art",
+        "target": 100
+      },
+      {
+        "id": 14,
+        "name": "Islamic Art",
+        "target": 80
+      },
+      {
+        "id": 10,
+        "name": "Egyptian Art",
+        "target": 60
+      },
+      {
+        "id": 13,
+        "name": "Greek and Roman Art",
+        "target": 55
+      },
+      {
+        "id": 3,
+        "name": "Ancient West Asian Art",
+        "target": 40
+      },
+      {
+        "id": 17,
+        "name": "Medieval Art",
+        "target": 40
+      },
+      {
+        "id": 18,
+        "name": "Musical Instruments",
+        "target": 40
+      },
+      {
+        "id": 1,
+        "name": "The American Wing",
+        "target": 30
+      },
+      {
+        "id": 4,
+        "name": "Arms and Armor",
+        "target": 30
+      },
+      {
+        "id": 12,
+        "name": "European Sculpture and Decorative Arts",
+        "target": 30
+      },
+      {
+        "id": 8,
+        "name": "The Costume Institute",
+        "target": 20
+      },
+      {
+        "id": 11,
+        "name": "European Paintings",
+        "target": 15
+      },
+      {
+        "id": 7,
+        "name": "The Cloisters",
+        "target": 15
+      }
+    ]
+  },
+  "fetchedAt": "2026-11-17T17:12:06.198Z",
+  "snapshotNote": "fetchedAt is the epoch of the resumable raw-detail cache (first polite fetch). The final published corpus was rebuilt from that cache with --offline after the lead's gate deadline; rejectedReasons therefore include not_cached_offline for candidate ids whose details were never fetched.",
+  "totals": {
+    "candidatesConsidered": 1277,
+    "detailsFetched": 0,
+    "selected": 595,
+    "cachedDetails": 1277,
+    "acceptedRecords": 595,
+    "publishedRecords": 595,
+    "rawDetailsInCache": 1277,
+    "detailsFetchedThisRun": 0
+  },
+  "departments": [
+    {
+      "id": 5,
+      "name": "Arts of Africa, Oceania, and the Americas",
+      "target": 120,
+      "pagesFetched": 0,
+      "candidates": 200,
+      "accepted": 120
+    },
+    {
+      "id": 6,
+      "name": "Asian Art",
+      "target": 100,
+      "pagesFetched": 0,
+      "candidates": 200,
+      "accepted": 100
+    },
+    {
+      "id": 14,
+      "name": "Islamic Art",
+      "target": 80,
+      "pagesFetched": 0,
+      "candidates": 300,
+      "accepted": 80
+    },
+    {
+      "id": 10,
+      "name": "Egyptian Art",
+      "target": 60,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 60
+    },
+    {
+      "id": 13,
+      "name": "Greek and Roman Art",
+      "target": 55,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 55
+    },
+    {
+      "id": 3,
+      "name": "Ancient West Asian Art",
+      "target": 40,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 40
+    },
+    {
+      "id": 17,
+      "name": "Medieval Art",
+      "target": 40,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 40
+    },
+    {
+      "id": 18,
+      "name": "Musical Instruments",
+      "target": 40,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 40
+    },
+    {
+      "id": 1,
+      "name": "The American Wing",
+      "target": 30,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 30
+    },
+    {
+      "id": 4,
+      "name": "Arms and Armor",
+      "target": 30,
+      "pagesFetched": 0,
+      "candidates": 100,
+      "accepted": 30
+    },
+    {
+      "id": 12,
+      "name": "European Sculpture and Decorative Arts",
+      "target": 30,
+      "pagesFetched": 0,
+      "candidates": 500,
+      "accepted": 0
+    },
+    {
+      "id": 8,
+      "name": "The Costume Institute",
+      "target": 20,
+      "pagesFetched": 0,
+      "candidates": 0,
+      "accepted": 0
+    },
+    {
+      "id": 11,
+      "name": "European Paintings",
+      "target": 15,
+      "pagesFetched": 0,
+      "candidates": 0,
+      "accepted": 0
+    },
+    {
+      "id": 7,
+      "name": "The Cloisters",
+      "target": 15,
+      "pagesFetched": 0,
+      "candidates": 0,
+      "accepted": 0
+    }
+  ],
+  "rejectedReasons": {
+    "no_culture_or_country": 286,
+    "not_cached_offline": 100,
+    "not_public_domain": 328,
+    "place_unmapped": 68
+  },
+  "unmappedPlaces": {
+    "Anglo-American": 1,
+    "Byzantine (Egypt)": 1,
+    "China (Miao)": 2,
+    "China (Miao-Gejia)": 1,
+    "China (Miao-Geyi)": 1,
+    "China (Miao-Juigan)": 1,
+    "China (Miao-Wuya)": 1,
+    "China (Xinjiang Autonomous Region, Turfan area)": 1,
+    "Coptic": 1,
+    "Costa Rica or Panama": 2,
+    "Crusader": 1,
+    "Early Byzantine": 4,
+    "Egypt or Nubia (Sudan)": 1,
+    "Egypt or Syria": 5,
+    "Franco-Netherlandish": 1,
+    "French or German": 1,
+    "Iraq or Syria": 1,
+    "Japanese": 6,
+    "Kassite": 1,
+    "Late Roman/Early Byzantine": 6,
+    "Malay": 1,
+    "Malaysia (Malayan)": 2,
+    "Mitanni": 3,
+    "North China": 1,
+    "North Italian": 1,
+    "Phoenician": 1,
+    "Phoenician, Cypriot": 1,
+    "Rhenish": 1,
+    "Roman or Byzantine": 1,
+    "Roman, Cypriot": 6,
+    "Roman, Eastern Mediterranean": 1,
+    "Syrian or Crusader": 1,
+    "Syro-Anatolian-Levantine": 1,
+    "Thailand (Lu Mien Yao)": 3,
+    "Tibet": 3,
+    "present-day Uzbekistan": 1,
+    "probably from Albania": 1
+  },
+  "categoryRules": [
+    {
+      "category": "music",
+      "evidence": "Met department Musical Instruments, or a source classification/objectName that names an instrument"
+    },
+    {
+      "category": "astronomy",
+      "evidence": "source classification/objectName/medium names an astrolabe, celestial globe, armillary sphere, sundial or astronomical instrument"
+    },
+    {
+      "category": "games",
+      "evidence": "source classification/objectName names a game, game board, chess piece, die, playing card or toy"
+    },
+    {
+      "category": "medicine-knowledge",
+      "evidence": "source classification/objectName/medium names medical, surgical, anatomical or apothecary material"
+    },
+    {
+      "category": "agriculture",
+      "evidence": "source classification/objectName names an agricultural implement or practice (plow, sickle, harvest, granary)"
+    },
+    {
+      "category": "trade",
+      "evidence": "source classification/objectName is a coin or other documented medium of exchange"
+    },
+    {
+      "category": "landscapes",
+      "evidence": "a painting/print/drawing/photograph whose source title, object name or tags name a landscape, view, coast, garden or cityscape"
+    },
+    {
+      "category": "language",
+      "evidence": "source classification/objectName/tags explicitly name calligraphy, script or an inscription (writing/script heritage)"
+    },
+    {
+      "category": "storytelling",
+      "evidence": "source classification/objectName is a manuscript, book, folio or codex (a text-carrying object)"
+    },
+    {
+      "category": "architecture",
+      "evidence": "source classification/objectName names an architectural element (column, capital, window, door, mihrab, stucco, dome, facade)"
+    },
+    {
+      "category": "ritual-objects",
+      "evidence": "source classification/objectName names a religious or ritual object, vessel or site (reliquary, votive, amulet, censer, altar, deity, funerary, sarcophagus, Qur'an, chalice, mask)"
+    },
+    {
+      "category": "textiles",
+      "evidence": "source classification/objectName/medium names textile or costume material (textile, tapestry, carpet, embroidery, costume, silk, velvet, garment)"
+    },
+    {
+      "category": "design",
+      "evidence": "source classification/objectName names furniture, a clock/watch or a designed household/lighting object"
+    },
+    {
+      "category": "everyday-life",
+      "evidence": "source classification/objectName names a domestic vessel, container or utensil (bowl, plate, cup, jar, bottle, vessel, box, basket)"
+    },
+    {
+      "category": "tools",
+      "evidence": "source classification/objectName names a weapon, armor, tool or implement (arrow, sword, dagger, helmet, shield, sickle, hammer, chisel, adze)"
+    },
+    {
+      "category": "crafts",
+      "evidence": "source classification/objectName/medium names a crafted object or material (jewelry, ceramics, glass, metalwork, sculpture, figurine, ivory, lacquer, woodwork, inlay)"
+    }
+  ],
+  "definitionOfDoneForData": {
+    "selectionRequires": [
+      "isPublicDomain === true",
+      "primaryImage and primaryImageSmall are https URLs on images.metmuseum.org",
+      "a non-empty institutional title",
+      "a non-empty culture or country label",
+      "a non-empty objectDate or medium",
+      "country/culture resolves to a documented continent (unmapped labels are rejected, not guessed)"
+    ],
+    "englishCopy": "title.en is the institution's title verbatim (also copied to title.original with originalLanguage 'en'); the English summary is a deterministic template over documented fields (object name, place, date, medium).",
+    "translation": "title.ar/de and summary.ar/de are machine translations produced by scripts/culture/translate.mjs (DeepSeek, JSON batches) and the record provenance is machine-translated; no data record claims institutional wording for translated copy.",
+    "weight": "0.4 base + 0.15 date + 0.10 culture&country + 0.10 medium + 0.10 source tags + 0.15 Met isHighlight (curatorial flag). Documented richness only; never rarity."
+  }
+}

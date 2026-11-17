@@ -194,6 +194,45 @@ visible while the edited sentence is re-checked, updates the archive and a saved
 Undo until the draft or the checked translation changes. A very long source is analysed in up to four
 sentence-aligned windows; the live quality of that path is **NOT_VERIFIED** (TD41).
 
+## 12. See the local weather under the translator
+
+**A.** Below the canvas a compact strip offers the weather without competing with the sentence: no
+location is requested until the person taps "Use my location". Refusing or ignoring it leaves a calm
+invitation and a manual "Choose a city" alternative.
+
+**B.** With consent, only an approximate area (rounded to ≈1 km) is used. The strip shows the place,
+the condition, the current temperature, today's range, rain probability, a short hour rail, the
+freshness ("updated …", "saved …", "offline") and the provider attribution; tapping opens a real
+dialog with current details, the next 24 hours, 7 days, sunrise/sunset, units, provider time and
+licence links. A manual search returns localized named places; a reverse name carries OpenStreetMap
+credit. The place can be changed or removed, and the browser/OS permission can be revoked.
+
+**C.** The cache is versioned, bounded and device-only: a cached forecast paints immediately, a stale
+one is labelled as such, an offline one keeps its age, and a failed refresh keeps the last valid
+forecast. No polling; refresh happens on mount/visibility/manual only and is deferred while the
+composer is busy. Weather failures never touch the translation.
+
+## 13. Discover cultures of the world below the translator
+
+**A.** The same page continues into "Culture in context": a daily featured record, then a mixed feed
+of genuinely different compositions. Every card has a real title, place, category, source, licence
+and — when the source provides one — an image with credit, or a typographic composition when it
+does not. Records can be searched (titles, tags, subjects), filtered by category/continent/country,
+saved offline and opened in a detail dialog with the full provenance, licence and attribution.
+
+**B.** Browsing is deliberate, not an infinite feed: an initial batch, an explicit "more" affordance
+plus an approach-triggered nudge with in-flight guards and a cap, a stable cursor, no duplicate
+cards, scroll position restored after closing a record, and every reading available from the
+keyboard. Content is bundled and works offline; images load lazily from the allow-listed host and
+degrade to the typographic composition when unavailable.
+
+**C.** The corpus is sourced, not invented: 595 verified Metropolitan Museum of Art Open Access
+records (CC0) with English, Arabic and German titles/summaries; machine-translated copy is labelled
+as such; every record carries its source URL, licence, attribution, image credit and ingestion date.
+Practice-based categories without a rights-cleared source are documented as a gap, not filled with
+fabricated content (TD44). The daily feature is a deterministic function of the local day and never
+repeats yesterday's record.
+
 ## Acceptance criteria (testable)
 
 1. Typing then pausing produces a translation; a newer edit never shows an older answer.
@@ -219,3 +258,11 @@ sentence-aligned windows; the live quality of that path is **NOT_VERIFIED** (TD4
 14. Sentence Shadow shows only anchored findings (at most four), states honestly when nothing
     essential was lost, and an applied restore can be undone until the draft or the checked
     translation changes.
+15. No location is requested on load; a granted location is approximate, rounded before any request
+    or storage, never kept as a raw fix, and its weather strip never replaces or delays a
+    translation. Removing the place or "forget everything" removes the cache.
+16. A weather failure, offline state or refused permission leaves a calm surface and the last valid
+    forecast with its age; the composer and result above are unchanged.
+17. Discovery content carries source, licence and attribution on every record; saved items open
+    offline; no card or feed request reaches a model; closing a detail returns to the exact scroll
+    position, and repeated browsing never duplicates a card or starts an uncontrolled request chain.

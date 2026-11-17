@@ -64,7 +64,7 @@ const copy: Record<Locale, Copy> = {
     contents: "في هذه الصفحة",
     start: "افتح المترجم",
     controlsLead:
-      "تغطي الأدوات التالية التصدير والاستيراد وحالة التخزين، وفي التطبيق المثبّت مفتاحك الخاص وتشخيص آخر طلب. التشخيص يحمل بيانات وصفية فقط: لا جملة ولا مفتاح ولا ترويسة.",
+      "تغطي الأدوات التالية التصدير والاستيراد وحالة التخزين، وفي التطبيق المثبّت مفتاحك الخاص وتشخيص آخر طلب. التشخيص يحمل بيانات وصفية فقط: لا جملة ولا مفتاح ولا ترويسة. ومن نافذة الطقس يمكنك تغيير المكان أو إزالته، ومن «المحفوظ» حذف الاكتشافات المحفوظة، و«امسح كل شيء» يزيل كليهما مع بقية المخازن.",
     sections: [
       {
         id: "meaning",
@@ -93,6 +93,7 @@ const copy: Record<Locale, Copy> = {
           "مسوّدتك الحالية، وأرشيف ترجماتك (حتى 2000 مدخل)، ودفتر عباراتك، وذاكرة ترجمة قصيرة على الجهاز (ثلاثون يوماً) تجيب جملة ترجمتَها سابقاً — كلها محفوظة على هذا الجهاز فقط. وكذلك اللغتان والأسلوب والثيم وإعدادات الصوت والواجهة، والإحصاءات المحسوبة من أرشيفك على الجهاز.",
           "في تطبيق Android يكون هذا تخزيناً خاصاً بالتطبيق، وفي المتصفح هو التخزين المحلي لهذا الموقع. لا يُرفع شيء من هذه المخازن.",
           "يمكنك تصدير ملف نسخة احتياطية، محمياً بكلمة مرور إن أردت (تشفير AES-GCM عبر WebCrypto بمفتاح مشتق بـPBKDF2). يبقى الملف في يدك ولا يرفعه التطبيق، وقبل الاستيراد يبيّن لك ما يحتويه قبل أن يغيّر شيئاً.",
+          "وتُحفظ أيضاً آخر توقعات الطقس (نسخة محدودة لآخر الأماكن فقط) وقائمة اكتشافاتك المحفوظة وسجل قصير لما شاهدته (لتفادي التكرار) — كلها على جهازك وحده، وتُمسح مع «امسح كل شيء». ولا يُحفظ موقعك الخام أبداً.",
           "المحو محلي وفوري: احذف عبارة، أو امسح الأرشيف ودفتر العبارات، أو امسح كل شيء، دون أي طلب إلى خادم.",
         ],
       },
@@ -103,6 +104,7 @@ const copy: Record<Locale, Copy> = {
           "للترجمة يُرسل النص الذي كتبته عبر HTTPS إلى DeepSeek ويعود. والمعجم وخريطة الظل والقراءة الثانية ترسل الكلمة أو الجملة التي تحلّلها مع الاتجاه والأسلوب. لا يُرسل شيء قبل أن يكون هناك ما يُترجم.",
           "عند الضغط على «استماع» تُرسل الجملة المترجمة — لا الأصل — إلى خدمة الصوت المختارة (ElevenLabs أو Gemini)، أو يقرأها صوت جهازك. وعند استخدام الميكروفون يُرسل الصوت إلى AssemblyAI للتفريغ، ويصدر خادمنا رمزاً مؤقتاً لتلك الجلسة، فلا يوجد مفتاح دائم على الجهاز.",
           "على Android يمكنك إدخال مفتاح DeepSeek الخاص بك. في هذا الوضع تُطلب الترجمات من جهازك مباشرة إلى DeepSeek بمفتاحك: يبقى المفتاح في تخزين التطبيق الخاص، ولا يدخل النسخ الاحتياطية، ولا يُسجَّل، ولا يُرسل إلى خوادم today.",
+          "الطقس المحلي اختياري تماماً: لا يُطلب الموقع تلقائياً. إذا اخترت «استخدم موقعي»، يُطلب موقع تقريبي فقط (تُقرَّب الإحداثيات إلى منزلتين عشريتين، نحو كيلومتر واحد) ويُرسل عبر خادمنا إلى Open-Meteo للتوقعات، وإلى Open-Meteo لأسماء المدن أو إلى Nominatim/OpenStreetMap لعكس اسم الموقع إن اخترت موقعاً من جهازك. لا تتبّع في الخلفية، ولا سجل مواقع، ولا يصل موقعك إلى خدمات الترجمة أو الصوت أو التفريغ.",
           "ولا يخرج من جهازك شيء آخر: لا تحليلات ولا إعلانات ولا أدوات تتبع ولا ملفات تعريف ارتباط للتتبع؛ والطلبات من أصل الموقع نفسه وتُجرى بلا بيانات اعتماد.",
         ],
       },
@@ -112,6 +114,7 @@ const copy: Record<Locale, Copy> = {
         paras: [
           "الخدمات المذكورة أعلاه تعالج النص لإرجاع نتيجة فقط، وتخضع لشروطها وسياسات خصوصيتها. لا تخزّن خوادم تطبيقنا جملك ولا ترجماتك ولا صوتك، وسجلات التشغيل تحمل أعداداً وأزمنة ورموز حالة، لا محتوى ولا مفاتيح. ويحتفظ تحديد المعدّل بمفتاح تقريبي في الذاكرة مشتق من عنوان العميل لمدة قصيرة.",
           "تبقى مزوّدات الاستضافة والشبكة ترى بيانات وصفية عادية للطلب — عنوان IP والتوقيت والحجم — كما يرى أي خدمة ويب، وقد تحتفظ بسجلات تشغيل قصيرة الأمد وفق سياستها.",
+          "محتوى اكتشافات الثقافات محزوم داخل التطبيق ولا يطلب أي بيانات من المتاحف عند التشغيل؛ أما صور القطع فتُحمَّل من خادم صور متحف المتروبوليتان (images.metmuseum.org)، ويرى ذلك الخادم بيانات الطلب العادية — عنوان IP — كما في أي صورة على أي موقع. بيانات الطقس من Open-Meteo (رخصة CC BY 4.0، والاستخدام المجاني غير تجاري)، وأسماء الأماكن من OpenStreetMap (رخصة ODbL)، وأسماء البحث من GeoNames عبر Open-Meteo.",
           "النقل مشفّر بـHTTPS من الطرف إلى الطرف. وما بعد ذلك لا توجد طبقة تشفير إضافية في الطريق إلى النموذج، وتعامُل المزوّد نفسه خارج سيطرتنا. للمواد السرّية راجع النتيجة قبل مشاركتها.",
           "قد يُصنَّع صوت الجهاز عبر محرّك النطق في هاتفك، وقد ينزّل أصواتاً من مزوّده. وهذه الصفحة ليست موجّهة للأطفال.",
         ],
@@ -130,7 +133,7 @@ const copy: Record<Locale, Copy> = {
     contents: "On this page",
     start: "Open translator",
     controlsLead:
-      "The tools below cover export, import and storage health, and — in the installed app — your own key and the last-request diagnostics. Diagnostics hold metadata only: no sentence, key or header is stored.",
+      "The tools below cover export, import and storage health, and — in the installed app — your own key and the last-request diagnostics. Diagnostics hold metadata only: no sentence, key or header is stored. In the weather sheet you can change or remove the place; saved discoveries can be removed in “Saved”, and “forget everything” clears both together with the other local stores.",
     sections: [
       {
         id: "meaning",
@@ -159,6 +162,7 @@ const copy: Record<Locale, Copy> = {
           "Your current draft, your translation archive (up to 2,000 entries), your phrasebook, and a short on-device translation memory (thirty days) that answers a sentence you translated before are stored only on this device. So are your language pair, style, theme, voice and interface preferences, and the statistics, which are computed from your archive on the device.",
           "In the installed Android app this is app-private storage; on the web it is this browser's local storage for this site. Nothing from those stores is uploaded.",
           "You can export a backup file, optionally protected with a password (AES-GCM through WebCrypto, with a PBKDF2-derived key). It stays in your hands; the app never uploads it. Import shows what the file contains before it changes anything.",
+          "The last local forecasts (a bounded cache for recent places), your saved discoveries and a short seen history — used only to avoid repeats — are also stored on this device alone and are cleared by “forget everything”. Your raw location is never stored.",
           "Erasing is local and immediate: clear a phrase, the archive and phrasebook, or everything, without a request to a server.",
         ],
       },
@@ -169,6 +173,7 @@ const copy: Record<Locale, Copy> = {
           "To translate, the text you wrote is sent over HTTPS to DeepSeek and back. The dictionary, the sentence shadow and the second reading send the word or sentence they analyse, with the direction and style. Nothing is sent until there is something to translate.",
           "When you tap Listen, the translated sentence — not the original — is sent to the voice service you selected (ElevenLabs or Gemini), or read by your device's own voice. When you use the microphone, audio is streamed to AssemblyAI for transcription; our server issues a short-lived token for that session, so no permanent key sits on the device.",
           "On Android you can enter your own DeepSeek key. In that mode translation requests go from your device straight to DeepSeek with your key: it stays in the app's private storage, is excluded from backups, is never logged, and is never sent to today's servers.",
+          "Local weather is entirely optional: no location is requested automatically. If you choose “Use my location”, only an approximate position (rounded to two decimals, about a kilometre) is sent through our own server to Open-Meteo for the forecast, and — when a place name is needed — to Open-Meteo's geocoding or to OpenStreetMap's Nominatim for a reverse lookup. There is no background tracking, no location history, and your location never reaches the translation, voice or dictation services.",
           "Nothing else leaves your device. There is no analytics, no advertising, no tracking pixel and no tracking cookie; requests are same-origin and are made without credentials.",
         ],
       },
@@ -178,6 +183,7 @@ const copy: Record<Locale, Copy> = {
         paras: [
           "The providers named above process the text only to return a result, under their own terms and privacy policies. Our application servers do not store your sentences, translations or audio; operational logs carry counts, timings and status codes — never content, never keys. Rate limiting keeps a coarse, in-memory key derived from the client address for a short time.",
           "Hosting and network providers still see ordinary request metadata — IP address, timing, size — as any web service does, and may keep short-lived operational logs under their own policy.",
+          "Cultural discovery is bundled with the app and requests nothing from museums at runtime; artwork images are loaded from the Metropolitan Museum of Art's image host (images.metmuseum.org), which sees ordinary request metadata — the IP address — as any image host would. Weather data comes from Open-Meteo (CC BY 4.0; its free tier is non-commercial), place labels from OpenStreetMap (ODbL) and search place names from GeoNames via Open-Meteo.",
           "Transport is HTTPS end to end. Beyond that there is no additional encryption layer on the way to the model, and the provider's own handling is outside our control. For confidential material, review the result before sharing.",
           "The device voice may be synthesised by your phone's text-to-speech engine, which can download voices from its own provider. This page is not directed at children.",
         ],
@@ -196,7 +202,7 @@ const copy: Record<Locale, Copy> = {
     contents: "Auf dieser Seite",
     start: "Übersetzer öffnen",
     controlsLead:
-      "Die folgenden Werkzeuge decken Export, Import und Speicherzustand ab, in der installierten App auch deinen eigenen Schlüssel und die Diagnose der letzten Anfrage. Die Diagnose enthält nur Metadaten: keinen Satz, keinen Schlüssel, keine Header.",
+      "Die folgenden Werkzeuge decken Export, Import und Speicherzustand ab, in der installierten App auch deinen eigenen Schlüssel und die Diagnose der letzten Anfrage. Die Diagnose enthält nur Metadaten: keinen Satz, keinen Schlüssel, keine Header. In der Wetterkarte kannst du den Ort ändern oder entfernen; gespeicherte Entdeckungen lassen sich unter „Gespeichert“ löschen, und „Alles löschen“ entfernt beides samt den übrigen lokalen Speichern.",
     sections: [
       {
         id: "meaning",
@@ -225,6 +231,7 @@ const copy: Record<Locale, Copy> = {
           "Dein Entwurf, dein Übersetzungsarchiv (bis zu 2.000 Einträge), dein Phrasenbuch und ein kurzes Übersetzungsgedächtnis auf dem Gerät (dreißig Tage), das einen früher übersetzten Satz beantwortet, liegen nur auf diesem Gerät. Ebenso Sprachpaar, Stil, Farbschema, Stimme und Oberflächensprache sowie die Statistik, die auf dem Gerät aus deinem Archiv berechnet wird.",
           "In der installierten Android-App ist das app-privater Speicher, im Web der lokale Speicher dieses Browsers für diese Seite. Nichts davon wird hochgeladen.",
           "Du kannst eine Sicherungsdatei exportieren, optional mit Passwort geschützt (AES-GCM über WebCrypto mit PBKDF2-abgeleitetem Schlüssel). Sie bleibt bei dir; die App lädt sie nie hoch. Vor dem Import zeigt sie, was die Datei enthält, bevor sie etwas ändert.",
+          "Auch die letzten lokalen Wettervorhersagen (ein begrenzter Zwischenspeicher für zuletzt gewählte Orte), deine gespeicherten Entdeckungen und eine kurze Verlaufsliste — nur um Wiederholungen zu vermeiden — liegen ausschließlich auf diesem Gerät und werden mit „Alles löschen“ entfernt. Dein roher Standort wird nie gespeichert.",
           "Löschen ist lokal und sofort: eine Phrase, Archiv und Phrasenbuch oder alles — ohne Anfrage an einen Server.",
         ],
       },
@@ -235,6 +242,7 @@ const copy: Record<Locale, Copy> = {
           "Zum Übersetzen geht der geschriebene Text über HTTPS an DeepSeek und zurück. Wörterbuch, Satzschatten und die zweite Lesung senden das Wort oder den Satz, den sie untersuchen, mit Richtung und Stil. Nichts wird gesendet, solange es nichts zu übersetzen gibt.",
           "Beim Antippen von „Anhören“ geht der übersetzte Satz — nicht das Original — an den gewählten Sprachdienst (ElevenLabs oder Gemini) oder wird von der Gerätestimme gelesen. Bei Nutzung des Mikrofons wird Audio zur Transkription an AssemblyAI gestreamt; unser Server stellt für diese Sitzung ein kurzlebiges Token aus, damit kein dauerhafter Schlüssel auf dem Gerät liegt.",
           "Auf Android kannst du deinen eigenen DeepSeek-Schlüssel eintragen. Dann gehen Übersetzungsanfragen direkt von deinem Gerät an DeepSeek, mit deinem Kontingent. Der Schlüssel liegt im app-privaten Speicher, ist von Sicherungen ausgeschlossen, wird nie protokolliert und nie an today-Server gesendet.",
+          "Lokales Wetter ist vollständig optional: Es wird nie automatisch nach dem Standort gefragt. Wählst du „Standort verwenden“, wird nur eine ungefähre Position (auf zwei Nachkommastellen, etwa einen Kilometer, gerundet) über unseren eigenen Server an Open-Meteo für die Vorhersage gesendet und — wenn ein Ortsname nötig ist — an die Geokodierung von Open-Meteo oder an Nominatim von OpenStreetMap für eine Rückwärtssuche. Kein Hintergrund-Tracking, kein Standortverlauf, und dein Standort erreicht nie die Übersetzungs-, Sprach- oder Diktatdienste.",
           "Sonst verlässt nichts dein Gerät: keine Analyse, keine Werbung, keine Tracking-Pixel, keine Tracking-Cookies; Anfragen laufen gleichen Ursprungs und ohne Anmeldedaten.",
         ],
       },
@@ -245,6 +253,7 @@ const copy: Record<Locale, Copy> = {
           "Die genannten Dienste verarbeiten den Text nur, um ein Ergebnis zurückzugeben, nach ihren eigenen Bedingungen und Datenschutzhinweisen. Unsere Anwendungsserver speichern weder Sätze noch Übersetzungen noch Audio; Betriebsprotokolle enthalten Zähler, Laufzeiten und Statuscodes — keine Inhalte, keine Schlüssel. Die Ratenbegrenzung hält kurzzeitig einen groben, aus der Client-Adresse abgeleiteten Schlüssel im Speicher.",
           "Hosting- und Netzbetreiber sehen weiterhin gewöhnliche Anfrage-Metadaten — IP-Adresse, Zeitpunkt, Größe — wie bei jedem Webdienst und können kurzfristige Betriebsprotokolle nach ihrer eigenen Richtlinie führen.",
           "Der Transport ist durchgehend HTTPS. Darüber hinaus gibt es keine zusätzliche Verschlüsselung auf dem Weg zum Modell, und der Umgang des Anbieters liegt außerhalb unserer Kontrolle. Prüfe Vertrauliches vor dem Teilen.",
+          "Die kulturellen Entdeckungen sind in der App enthalten und fragen zur Laufzeit keine Museen ab; Bilder von Objekten werden vom Bildserver des Metropolitan Museum of Art (images.metmuseum.org) geladen, der dabei die üblichen Anfrage-Metadaten — die IP-Adresse — sieht. Wetterdaten kommen von Open-Meteo (CC BY 4.0; die kostenlose Stufe ist nicht-kommerziell), Ortsnamen von OpenStreetMap (ODbL) und Suchorte von GeoNames über Open-Meteo.",
           "Die Gerätestimme kann von der Text-to-Speech-Engine deines Telefons stammen, die Stimmen bei ihrem Anbieter herunterlädt. Diese Seite richtet sich nicht an Kinder.",
         ],
       },

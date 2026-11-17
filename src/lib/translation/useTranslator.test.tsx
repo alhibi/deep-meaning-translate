@@ -253,6 +253,28 @@ describe("useTranslator", () => {
     expect(h.current.result?.translation).toBe("مصححة 3");
   });
 
+  it("passes the review its own abort signal and cancels it when the draft changes", async () => {
+    // Give the quiet review headroom: this test is about cancellation, not the door
+    // timeout, so the hang timeout must not fire first and abort the transport itself.
+    resetEnrichmentQueueForTests(0, 8_000);
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("أولى") })
+      .mockImplementation(() => new Promise(() => {}));
+    repairCall.mockImplementation(() => new Promise(() => {}));
+    const { rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ich habe 3 Katzen."),
+    });
+    await flush(500);
+    expect(repairCall).toHaveBeenCalledTimes(1);
+    // TD38: the queue's cancellation must reach the review transport, not stop at the
+    // caller's promise. The old call site passed only { data }.
+    const forwarded = repairCall.mock.calls[0]![0].signal as AbortSignal | undefined;
+    expect(forwarded).toBeInstanceOf(AbortSignal);
+    expect(forwarded!.aborted).toBe(false);
+    rerender(opts("Etwas ganz Neues."));
+    expect(forwarded!.aborted).toBe(true);
+  });
+
   it("does not spend a quiet repair round trip when a clean result has no reviewer", async () => {
     call.mockResolvedValue({ ok: true, result: result("أهلاً") });
     const { result: h } = renderHook((p) => useTranslator(p), {

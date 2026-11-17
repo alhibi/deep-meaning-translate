@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setLocale } from "@/lib/i18n";
 import { LexiconPanel } from "./LexiconPanel";
 import type { LexicalEntry, LexiconResult } from "@/lib/translation/lexicon";
 
@@ -103,5 +104,94 @@ describe("LexiconPanel", () => {
     expect(headword?.getAttribute("dir")).toBe("rtl");
     expect(headword?.className).toContain("font-arabic");
     expect(within(screen.getByRole("list")).getAllByRole("listitem")).toHaveLength(3);
+  });
+});
+
+afterEach(() => {
+  // The locale is module state; a test that switches it must not leak into the next one.
+  setLocale("en", false);
+});
+
+describe("LexiconPanel loading and failure states", () => {
+  it("says the dictionary is unavailable, not that the term has no reading", () => {
+    render(<LexiconPanel value={null} loading={false} failed />);
+    const failure = screen.getByTestId("lexicon-failure");
+    expect(failure.textContent).toBe(
+      "The dictionary didn't answer this time. Your translation is unaffected.",
+    );
+    expect(failure.getAttribute("role")).toBe("status");
+    expect(screen.queryByText("No dictionary reading for this term.")).toBeNull();
+  });
+
+  it("keeps the empty reading distinct from a failure", () => {
+    render(<LexiconPanel value={null} loading={false} />);
+    expect(screen.getByText("No dictionary reading for this term.")).toBeTruthy();
+    expect(screen.queryByTestId("lexicon-failure")).toBeNull();
+  });
+
+  it("localizes the failure without an i18n.ts key", () => {
+    setLocale("ar", false);
+    const arabic = render(<LexiconPanel value={null} loading={false} failed />);
+    expect(screen.getByTestId("lexicon-failure").textContent).toBe(
+      "لم يُجب المعجم هذه المرة. ترجمتك لم تتأثر.",
+    );
+    arabic.unmount();
+    setLocale("de", false);
+    render(<LexiconPanel value={null} loading={false} failed />);
+    expect(screen.getByTestId("lexicon-failure").textContent).toBe(
+      "Das Wörterbuch hat diesmal nicht geantwortet. Deine Übersetzung ist davon unberührt.",
+    );
+  });
+});
+
+describe("LexiconPanel direction", () => {
+  const german: LexiconResult = {
+    source: "model",
+    sourceTerm: "بنك",
+    sourceLanguage: "ar",
+    targetLanguage: "de",
+    translation: "Bank",
+    context: "البيت قديم.",
+    entries: [
+      entry("Bank", 0, {
+        meanings: ["Bank", "Geldinstitut"],
+        definition: "Ein Geldinstitut.",
+        synonyms: ["Kreditinstitut", "Geldhaus"],
+      }),
+    ],
+  };
+
+  it("follows the interface direction for layout and the target direction for its words", () => {
+    setLocale("ar", false);
+    render(<LexiconPanel value={german} loading={false} />);
+    // The row (bullet, indentation, labels) belongs to the Arabic interface: RTL, while the
+    // German headword and readings stay LTR — a language's script, not the interface's.
+    expect(screen.getByTestId("lexicon-entry").getAttribute("dir")).toBe("rtl");
+    const headword = screen.getAllByText("Bank").find((node) => node.getAttribute("lang") === "de");
+    expect(headword?.getAttribute("dir")).toBe("ltr");
+    expect(headword?.className ?? "").not.toContain("font-arabic");
+    // The source sentence keeps its own direction too.
+    const context = screen.getByText("البيت قديم.");
+    expect(context.getAttribute("lang")).toBe("ar");
+    expect(context.getAttribute("dir")).toBe("rtl");
+    expect(context.className).toContain("font-arabic");
+
+    fireEvent.click(screen.getByRole("button", { name: /Bank — / }));
+    // Target-language synonyms are joined with the target language's punctuation.
+    expect(screen.getByText("Kreditinstitut · Geldhaus")).toBeTruthy();
+  });
+
+  it("keeps an Arabic target row readable in an English interface", () => {
+    setLocale("en", false);
+    render(<LexiconPanel value={value} loading={false} />);
+    expect(screen.getAllByTestId("lexicon-entry")[0]?.getAttribute("dir")).toBe("ltr");
+    const headword = screen.getAllByText("ساحر").find((node) => node.getAttribute("lang") === "ar");
+    expect(headword?.getAttribute("dir")).toBe("rtl");
+  });
+
+  it("marks a refreshing panel busy without replacing the visible reading", () => {
+    render(<LexiconPanel value={value} loading={true} />);
+    expect(screen.getByRole("region", { name: "Meanings" }).getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByText("Finding precise meanings…")).toBeNull();
   });
 });

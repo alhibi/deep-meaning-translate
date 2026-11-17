@@ -19,6 +19,8 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ApiElevenSpeakRouteImport } from './routes/api/eleven-speak'
 import { Route as ApiSpeakRouteImport } from './routes/api/speak'
 import { Route as ApiTranslateStreamRouteImport } from './routes/api/translate-stream'
+import { Route as ApiWeatherRouteImport } from './routes/api/weather'
+import { Route as ApiWeatherPlaceRouteImport } from './routes/api/weather/place'
 import { Route as ApiNativeV1DictationTokenRouteImport } from './routes/api/native/v1/dictation-token'
 import { Route as ApiNativeV1ElevenSpeakRouteImport } from './routes/api/native/v1/eleven-speak'
 import { Route as ApiNativeV1LexiconRouteImport } from './routes/api/native/v1/lexicon'
@@ -26,6 +28,8 @@ import { Route as ApiNativeV1RepairRouteImport } from './routes/api/native/v1/re
 import { Route as ApiNativeV1ShadowRouteImport } from './routes/api/native/v1/shadow'
 import { Route as ApiNativeV1SpeakRouteImport } from './routes/api/native/v1/speak'
 import { Route as ApiNativeV1TranslateStreamRouteImport } from './routes/api/native/v1/translate-stream'
+import { Route as ApiNativeV1WeatherRouteImport } from './routes/api/native/v1/weather'
+import { Route as ApiNativeV1WeatherPlaceRouteImport } from './routes/api/native/v1/weather/place'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -77,6 +81,16 @@ const ApiTranslateStreamRoute = ApiTranslateStreamRouteImport.update({
   path: '/api/translate-stream',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWeatherRoute = ApiWeatherRouteImport.update({
+  id: '/api/weather',
+  path: '/api/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWeatherPlaceRoute = ApiWeatherPlaceRouteImport.update({
+  id: '/place',
+  path: '/place',
+  getParentRoute: () => ApiWeatherRoute,
+} as any)
 const ApiNativeV1DictationTokenRoute =
   ApiNativeV1DictationTokenRouteImport.update({
     id: '/api/native/v1/dictation-token',
@@ -114,6 +128,16 @@ const ApiNativeV1TranslateStreamRoute =
     path: '/api/native/v1/translate-stream',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiNativeV1WeatherRoute = ApiNativeV1WeatherRouteImport.update({
+  id: '/api/native/v1/weather',
+  path: '/api/native/v1/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativeV1WeatherPlaceRoute = ApiNativeV1WeatherPlaceRouteImport.update({
+  id: '/place',
+  path: '/place',
+  getParentRoute: () => ApiNativeV1WeatherRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -126,6 +150,8 @@ export interface FileRoutesByFullPath {
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
+  '/api/weather': typeof ApiWeatherRouteWithChildren
+  '/api/weather/place': typeof ApiWeatherPlaceRoute
   '/api/native/v1/dictation-token': typeof ApiNativeV1DictationTokenRoute
   '/api/native/v1/eleven-speak': typeof ApiNativeV1ElevenSpeakRoute
   '/api/native/v1/lexicon': typeof ApiNativeV1LexiconRoute
@@ -133,6 +159,8 @@ export interface FileRoutesByFullPath {
   '/api/native/v1/shadow': typeof ApiNativeV1ShadowRoute
   '/api/native/v1/speak': typeof ApiNativeV1SpeakRoute
   '/api/native/v1/translate-stream': typeof ApiNativeV1TranslateStreamRoute
+  '/api/native/v1/weather': typeof ApiNativeV1WeatherRouteWithChildren
+  '/api/native/v1/weather/place': typeof ApiNativeV1WeatherPlaceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -145,6 +173,8 @@ export interface FileRoutesByTo {
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
+  '/api/weather': typeof ApiWeatherRouteWithChildren
+  '/api/weather/place': typeof ApiWeatherPlaceRoute
   '/api/native/v1/dictation-token': typeof ApiNativeV1DictationTokenRoute
   '/api/native/v1/eleven-speak': typeof ApiNativeV1ElevenSpeakRoute
   '/api/native/v1/lexicon': typeof ApiNativeV1LexiconRoute
@@ -152,6 +182,8 @@ export interface FileRoutesByTo {
   '/api/native/v1/shadow': typeof ApiNativeV1ShadowRoute
   '/api/native/v1/speak': typeof ApiNativeV1SpeakRoute
   '/api/native/v1/translate-stream': typeof ApiNativeV1TranslateStreamRoute
+  '/api/native/v1/weather': typeof ApiNativeV1WeatherRouteWithChildren
+  '/api/native/v1/weather/place': typeof ApiNativeV1WeatherPlaceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -165,6 +197,8 @@ export interface FileRoutesById {
   '/api/eleven-speak': typeof ApiElevenSpeakRoute
   '/api/speak': typeof ApiSpeakRoute
   '/api/translate-stream': typeof ApiTranslateStreamRoute
+  '/api/weather': typeof ApiWeatherRouteWithChildren
+  '/api/weather/place': typeof ApiWeatherPlaceRoute
   '/api/native/v1/dictation-token': typeof ApiNativeV1DictationTokenRoute
   '/api/native/v1/eleven-speak': typeof ApiNativeV1ElevenSpeakRoute
   '/api/native/v1/lexicon': typeof ApiNativeV1LexiconRoute
@@ -172,6 +206,8 @@ export interface FileRoutesById {
   '/api/native/v1/shadow': typeof ApiNativeV1ShadowRoute
   '/api/native/v1/speak': typeof ApiNativeV1SpeakRoute
   '/api/native/v1/translate-stream': typeof ApiNativeV1TranslateStreamRoute
+  '/api/native/v1/weather': typeof ApiNativeV1WeatherRouteWithChildren
+  '/api/native/v1/weather/place': typeof ApiNativeV1WeatherPlaceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -186,6 +222,8 @@ export interface FileRouteTypes {
     | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
+    | '/api/weather'
+    | '/api/weather/place'
     | '/api/native/v1/dictation-token'
     | '/api/native/v1/eleven-speak'
     | '/api/native/v1/lexicon'
@@ -193,6 +231,8 @@ export interface FileRouteTypes {
     | '/api/native/v1/shadow'
     | '/api/native/v1/speak'
     | '/api/native/v1/translate-stream'
+    | '/api/native/v1/weather'
+    | '/api/native/v1/weather/place'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -205,6 +245,8 @@ export interface FileRouteTypes {
     | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
+    | '/api/weather'
+    | '/api/weather/place'
     | '/api/native/v1/dictation-token'
     | '/api/native/v1/eleven-speak'
     | '/api/native/v1/lexicon'
@@ -212,6 +254,8 @@ export interface FileRouteTypes {
     | '/api/native/v1/shadow'
     | '/api/native/v1/speak'
     | '/api/native/v1/translate-stream'
+    | '/api/native/v1/weather'
+    | '/api/native/v1/weather/place'
   id:
     | '__root__'
     | '/'
@@ -224,6 +268,8 @@ export interface FileRouteTypes {
     | '/api/eleven-speak'
     | '/api/speak'
     | '/api/translate-stream'
+    | '/api/weather'
+    | '/api/weather/place'
     | '/api/native/v1/dictation-token'
     | '/api/native/v1/eleven-speak'
     | '/api/native/v1/lexicon'
@@ -231,6 +277,8 @@ export interface FileRouteTypes {
     | '/api/native/v1/shadow'
     | '/api/native/v1/speak'
     | '/api/native/v1/translate-stream'
+    | '/api/native/v1/weather'
+    | '/api/native/v1/weather/place'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -244,6 +292,7 @@ export interface RootRouteChildren {
   ApiElevenSpeakRoute: typeof ApiElevenSpeakRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
   ApiTranslateStreamRoute: typeof ApiTranslateStreamRoute
+  ApiWeatherRoute: typeof ApiWeatherRouteWithChildren
   ApiNativeV1DictationTokenRoute: typeof ApiNativeV1DictationTokenRoute
   ApiNativeV1ElevenSpeakRoute: typeof ApiNativeV1ElevenSpeakRoute
   ApiNativeV1LexiconRoute: typeof ApiNativeV1LexiconRoute
@@ -251,6 +300,7 @@ export interface RootRouteChildren {
   ApiNativeV1ShadowRoute: typeof ApiNativeV1ShadowRoute
   ApiNativeV1SpeakRoute: typeof ApiNativeV1SpeakRoute
   ApiNativeV1TranslateStreamRoute: typeof ApiNativeV1TranslateStreamRoute
+  ApiNativeV1WeatherRoute: typeof ApiNativeV1WeatherRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -325,6 +375,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTranslateStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/weather': {
+      id: '/api/weather'
+      path: '/api/weather'
+      fullPath: '/api/weather'
+      preLoaderRoute: typeof ApiWeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/weather/place': {
+      id: '/api/weather/place'
+      path: '/place'
+      fullPath: '/api/weather/place'
+      preLoaderRoute: typeof ApiWeatherPlaceRouteImport
+      parentRoute: typeof ApiWeatherRoute
+    }
     '/api/native/v1/dictation-token': {
       id: '/api/native/v1/dictation-token'
       path: '/api/native/v1/dictation-token'
@@ -374,8 +438,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNativeV1TranslateStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/native/v1/weather': {
+      id: '/api/native/v1/weather'
+      path: '/api/native/v1/weather'
+      fullPath: '/api/native/v1/weather'
+      preLoaderRoute: typeof ApiNativeV1WeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/native/v1/weather/place': {
+      id: '/api/native/v1/weather/place'
+      path: '/place'
+      fullPath: '/api/native/v1/weather/place'
+      preLoaderRoute: typeof ApiNativeV1WeatherPlaceRouteImport
+      parentRoute: typeof ApiNativeV1WeatherRoute
+    }
   }
 }
+
+interface ApiWeatherRouteChildren {
+  ApiWeatherPlaceRoute: typeof ApiWeatherPlaceRoute
+}
+
+const ApiWeatherRouteChildren: ApiWeatherRouteChildren = {
+  ApiWeatherPlaceRoute: ApiWeatherPlaceRoute,
+}
+
+const ApiWeatherRouteWithChildren = ApiWeatherRoute._addFileChildren(
+  ApiWeatherRouteChildren,
+)
+
+interface ApiNativeV1WeatherRouteChildren {
+  ApiNativeV1WeatherPlaceRoute: typeof ApiNativeV1WeatherPlaceRoute
+}
+
+const ApiNativeV1WeatherRouteChildren: ApiNativeV1WeatherRouteChildren = {
+  ApiNativeV1WeatherPlaceRoute: ApiNativeV1WeatherPlaceRoute,
+}
+
+const ApiNativeV1WeatherRouteWithChildren =
+  ApiNativeV1WeatherRoute._addFileChildren(ApiNativeV1WeatherRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -388,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiElevenSpeakRoute: ApiElevenSpeakRoute,
   ApiSpeakRoute: ApiSpeakRoute,
   ApiTranslateStreamRoute: ApiTranslateStreamRoute,
+  ApiWeatherRoute: ApiWeatherRouteWithChildren,
   ApiNativeV1DictationTokenRoute: ApiNativeV1DictationTokenRoute,
   ApiNativeV1ElevenSpeakRoute: ApiNativeV1ElevenSpeakRoute,
   ApiNativeV1LexiconRoute: ApiNativeV1LexiconRoute,
@@ -395,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiNativeV1ShadowRoute: ApiNativeV1ShadowRoute,
   ApiNativeV1SpeakRoute: ApiNativeV1SpeakRoute,
   ApiNativeV1TranslateStreamRoute: ApiNativeV1TranslateStreamRoute,
+  ApiNativeV1WeatherRoute: ApiNativeV1WeatherRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

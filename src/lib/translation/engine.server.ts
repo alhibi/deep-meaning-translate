@@ -46,26 +46,32 @@ export async function runAnalysis(
 export const shouldFallBack = (err: unknown) =>
   err instanceof TranslationError && err.kind !== "input";
 
+/** A caller-owned cancellation signal, passed through to the provider request. */
+export interface CallOptions {
+  signal?: AbortSignal | undefined;
+}
+
 async function withFallback<T>(
-  run: (p: TranslationProvider) => Promise<T>,
+  run: (p: TranslationProvider, signal?: AbortSignal) => Promise<T>,
   brain: Brain = DEFAULT_BRAIN,
+  signal?: AbortSignal,
 ): Promise<T> {
   const lunaFirst = effectiveBrain(brain) === "luna";
   const primary = lunaFirst ? luna() : await deepseek();
   const other = async () => (lunaFirst ? deepseek() : luna());
   if (primary) {
     try {
-      return await run(primary);
+      return await run(primary, signal);
     } catch (err) {
       const backup = shouldFallBack(err) ? await other() : null;
       if (!backup) throw err;
-      return run(backup);
+      return run(backup, signal);
     }
   }
   const backup = await other();
   if (!backup)
     throw new TranslationError("auth", "The translation provider is not configured yet.");
-  return run(backup);
+  return run(backup, signal);
 }
 
 export async function runTranslation(
@@ -86,22 +92,28 @@ const norm = (s: string) => s.trim().replace(/\s+/g, " ");
 export async function runRepair(
   req: TranslationRequest,
   previous: TranslationResult,
+  opts: CallOptions = {},
 ): Promise<TranslationResult | null> {
   const issues = verifyTranslation(req, previous);
   if (issues.length > 0) {
     try {
-      const repaired = await withFallback((p) => p.repair(req, previous, issues), req.brain);
+      const repaired = await withFallback(
+        (p, signal) => p.repair(req, previous, issues, signal),
+        req.brain,
+        opts.signal,
+      );
       return verifyTranslation(req, repaired).length < issues.length ? repaired : null;
     } catch {
       return null;
     }
   }
-  return runReview(req, previous);
+  return runReview(req, previous, opts);
 }
 
 export async function runReview(
   req: TranslationRequest,
   previous: TranslationResult,
+  opts: CallOptions = {},
 ): Promise<TranslationResult | null> {
   const { deepseekKey, reviewTranslation } = await import("./providers/deepseek.server");
   const key = deepseekKey();
@@ -114,7 +126,7 @@ export async function runReview(
   )
     return null;
   try {
-    const reviewed = await reviewTranslation(key, req, previous);
+    const reviewed = await reviewTranslation(key, req, previous, opts.signal);
     if (!reviewed || norm(reviewed.translation) === norm(previous.translation)) return null;
     // Never accept a "fix" that breaks a number, link or emoji the original kept.
     if (verifyTranslation(req, reviewed).length > 0) return null;

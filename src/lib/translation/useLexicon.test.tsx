@@ -132,6 +132,43 @@ describe("useLexicon", () => {
     expect([...sent].at(-1)).toBe("\u{1F600}");
   });
 
+  it("aborts the running lookup's transport when the screen goes away", async () => {
+    resetEnrichmentQueueForTests(0, 5_000);
+    lookup.mockImplementation(
+      () =>
+        new Promise(() => {
+          // a provider that never answers: only the forwarded signal can stop it
+        }),
+    );
+    const { unmount } = renderHook((p) => useLexicon(p), { initialProps: opts("sorcerer") });
+    await flush(300);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    const forwarded = lookup.mock.calls[0]![0].signal as AbortSignal | undefined;
+    // The queue hands its task a signal; the hook must forward it to the transport
+    // instead of dropping it (TD38: cancellation reached the queue, not the wire).
+    expect(forwarded).toBeInstanceOf(AbortSignal);
+    expect(forwarded!.aborted).toBe(false);
+    unmount();
+    expect(forwarded!.aborted).toBe(true);
+  });
+
+  it("joins an identical in-flight lookup instead of paying twice", async () => {
+    resetEnrichmentQueueForTests(0, 5_000);
+    lookup.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ ok: true, lexicon: entry("sorcerer") }), 20);
+        }),
+    );
+    const first = renderHook((p) => useLexicon(p), { initialProps: opts("sorcerer") });
+    const second = renderHook((p) => useLexicon(p), { initialProps: opts("sorcerer") });
+    await flush(400);
+    // Two mounted hooks, one semantic request identity: one wire call.
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(first.result.current.lexicon?.sourceTerm).toBe("sorcerer");
+    expect(second.result.current.lexicon?.sourceTerm).toBe("sorcerer");
+  });
+
   it("cancels a queued lookup when the hook unmounts, before any request", async () => {
     resetEnrichmentQueueForTests(0, 5_000);
     let releaseBlocker: () => void = () => {};
@@ -167,6 +204,64 @@ describe("useLexicon", () => {
     await flush(400);
     expect(result.current.lexicon).toBeNull();
     expect(result.current.loading).toBe(false);
+  });
+
+  it("distinguishes a failed lookup from a term with no reading", async () => {
+    lookup.mockRejectedValue(new Error("provider down"));
+    const { result } = renderHook((p) => useLexicon(p), { initialProps: opts("bank") });
+    await flush(400);
+    expect(result.current.failed).toBe(true);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lexicon).toBeNull();
+  });
+
+  it("clears the failure on a later success and on a later cached hit", async () => {
+    lookup
+      .mockRejectedValueOnce(new Error("provider down"))
+      .mockResolvedValueOnce({ ok: true, lexicon: entry("wizard") })
+      .mockRejectedValueOnce(new Error("provider down"))
+      .mockResolvedValueOnce({ ok: true, lexicon: entry("wizard") });
+    const { result, rerender } = renderHook((p) => useLexicon(p), {
+      initialProps: opts("bank"),
+    });
+    await flush(400);
+    expect(result.current.failed).toBe(true);
+    rerender(opts("wizard"));
+    await flush(400);
+    expect(result.current.failed).toBe(false);
+    expect(result.current.lexicon?.sourceTerm).toBe("wizard");
+    rerender(opts("ghost"));
+    await flush(400);
+    expect(result.current.failed).toBe(true);
+    // Back to the term that already has a cached reading: the failure state is gone even
+    // though no request is made.
+    rerender(opts("wizard"));
+    await flush(400);
+    expect(result.current.failed).toBe(false);
+    expect(result.current.lexicon?.sourceTerm).toBe("wizard");
+    expect(lookup).toHaveBeenCalledTimes(3);
+  });
+
+  it("never paints a failure for a superseded lookup", async () => {
+    let rejectOld: (reason: unknown) => void = () => {};
+    lookup
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectOld = reject;
+          }),
+      )
+      .mockResolvedValueOnce({ ok: true, lexicon: entry("wizard") });
+    const { result, rerender } = renderHook((p) => useLexicon(p), {
+      initialProps: opts("bank"),
+    });
+    await flush(300); // the first lookup is in flight
+    rerender(opts("wizard"));
+    await flush(300); // the replacement succeeds
+    rejectOld(new Error("late provider failure"));
+    await flush(20);
+    expect(result.current.failed).toBe(false);
+    expect(result.current.lexicon?.sourceTerm).toBe("wizard");
   });
 
   it("keeps the cache bounded and evicts the least recently used entry", async () => {

@@ -11,6 +11,25 @@ import type {
   LexiconResult,
 } from "@/lib/translation/lexicon";
 
+/**
+ * Copy for states the shared interface table does not own. Feature copy lives with the
+ * feature (precedent: DataControls, ProviderKey), so a calm dictionary failure needs no
+ * i18n.ts edit and the interface table never grows a feature-specific key.
+ */
+export const LEXICON_COPY = {
+  en: {
+    // State-neutral on purpose: the hook cannot tell a provider outage from the enrichment
+    // queue dropping a task at capacity, and both mean the same thing to the reader.
+    failed: "The dictionary didn't answer this time. Your translation is unaffected.",
+  },
+  ar: {
+    failed: "لم يُجب المعجم هذه المرة. ترجمتك لم تتأثر.",
+  },
+  de: {
+    failed: "Das Wörterbuch hat diesmal nicht geantwortet. Deine Übersetzung ist davon unberührt.",
+  },
+} as const;
+
 const KIND_LABEL: Record<LexicalKind, Key> = {
   noun: "lexNoun",
   adjective: "lexAdjective",
@@ -30,8 +49,8 @@ const NUANCE_LABEL: Record<NuanceKind, Key> = {
 };
 
 /** Joins readings in the punctuation the target language actually uses. */
-function joinReadings(readings: string[], rtl: boolean): string {
-  return readings.join(rtl ? "، " : " · ");
+function joinReadings(readings: string[], targetRtl: boolean): string {
+  return readings.join(targetRtl ? "، " : " · ");
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -43,14 +62,19 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+/**
+ * The details block is mostly target-language material (synonyms, examples) with
+ * UI-language labels and translations between it, so direction is set per element rather
+ * than inherited from either side of the pair.
+ */
 function EntryDetails({
   entry,
   targetLanguage,
-  rtl,
+  targetRtl,
 }: {
   entry: LexicalEntry;
   targetLanguage: string;
-  rtl: boolean;
+  targetRtl: boolean;
 }) {
   const { t } = useI18n();
   const sample = entry.examples[0];
@@ -77,8 +101,9 @@ function EntryDetails({
             {entry.collocations.map((collocation) => (
               <li
                 key={collocation}
-                dir="auto"
-                className="text-[12.5px] leading-relaxed text-muted-foreground"
+                lang={targetLanguage}
+                dir={targetRtl ? "rtl" : "ltr"}
+                className={`text-[12.5px] leading-relaxed text-muted-foreground ${targetRtl ? "font-arabic" : ""}`}
               >
                 {collocation}
               </li>
@@ -90,10 +115,10 @@ function EntryDetails({
         <Fact label={t("lexSynonyms")}>
           <p
             lang={targetLanguage}
-            dir={rtl ? "rtl" : "ltr"}
-            className={`mt-1 text-[12.5px] leading-relaxed text-muted-foreground ${rtl ? "font-arabic" : ""}`}
+            dir={targetRtl ? "rtl" : "ltr"}
+            className={`mt-1 text-[12.5px] leading-relaxed text-muted-foreground ${targetRtl ? "font-arabic" : ""}`}
           >
-            {joinReadings(entry.synonyms, rtl)}
+            {joinReadings(entry.synonyms, targetRtl)}
           </p>
         </Fact>
       ) : null}
@@ -116,8 +141,8 @@ function EntryDetails({
               <li key={example.text}>
                 <p
                   lang={targetLanguage}
-                  dir={rtl ? "rtl" : "ltr"}
-                  className={`text-[13px] leading-relaxed text-foreground ${rtl ? "font-arabic" : ""}`}
+                  dir={targetRtl ? "rtl" : "ltr"}
+                  className={`text-[13px] leading-relaxed text-foreground ${targetRtl ? "font-arabic" : ""}`}
                 >
                   {example.text}
                 </p>
@@ -160,14 +185,21 @@ function EntryDetails({
   );
 }
 
+/**
+ * One reading. The row itself follows the interface direction; only the target-language
+ * spans carry the target direction, so a German headword in an Arabic interface is never
+ * laid out right-to-left (or the reverse).
+ */
 function EntryRow({
   entry,
   targetLanguage,
-  rtl,
+  targetRtl,
+  uiRtl,
 }: {
   entry: LexicalEntry;
   targetLanguage: string;
-  rtl: boolean;
+  targetRtl: boolean;
+  uiRtl: boolean;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -184,15 +216,15 @@ function EntryRow({
   const [leading, ...otherReadings] = entry.meanings;
 
   return (
-    <li className="py-4 first:pt-3">
-      <div className="flex items-start gap-3" dir={rtl ? "rtl" : "ltr"}>
+    <li className="py-4 first:pt-3" data-testid="lexicon-entry" dir={uiRtl ? "rtl" : "ltr"}>
+      <div className="flex items-start gap-3">
         <span aria-hidden className="mt-2 size-1.5 shrink-0 rotate-45 bg-signal" />
         <div className="min-w-0 flex-1 text-start">
           <h3 className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span
               lang={targetLanguage}
-              dir={rtl ? "rtl" : "ltr"}
-              className={`text-[18px] font-medium text-foreground ${rtl ? "font-arabic" : ""}`}
+              dir={targetRtl ? "rtl" : "ltr"}
+              className={`text-[18px] font-medium text-foreground ${targetRtl ? "font-arabic" : ""}`}
             >
               {entry.term}
             </span>
@@ -203,15 +235,15 @@ function EntryRow({
               <span className="text-[10px] font-normal text-signal-text">{t("lexBest")}</span>
             ) : null}
           </h3>
-          <div dir="auto" className="mt-1 text-start">
+          <div className="mt-1 text-start">
             <p className="text-[14px] leading-relaxed text-foreground">
               {entry.primary ? (
                 <span className="text-[11px] text-faint">{t("lexInThisSentence")} </span>
               ) : null}
               <span
                 lang={targetLanguage}
-                dir={rtl ? "rtl" : "ltr"}
-                className={rtl ? "font-arabic" : undefined}
+                dir={targetRtl ? "rtl" : "ltr"}
+                className={targetRtl ? "font-arabic" : undefined}
               >
                 {leading}
               </span>
@@ -221,15 +253,17 @@ function EntryRow({
                 <span className="text-faint">{t("lexOtherMeanings")}: </span>
                 <span
                   lang={targetLanguage}
-                  dir={rtl ? "rtl" : "ltr"}
-                  className={rtl ? "font-arabic" : undefined}
+                  dir={targetRtl ? "rtl" : "ltr"}
+                  className={targetRtl ? "font-arabic" : undefined}
                 >
-                  {joinReadings(otherReadings, rtl)}
+                  {joinReadings(otherReadings, targetRtl)}
                 </span>
               </p>
             ) : null}
             {entry.definition ? (
-              <p className="mt-1.5 text-[12px] leading-relaxed text-faint">{entry.definition}</p>
+              <p dir="auto" className="mt-1.5 text-[12px] leading-relaxed text-faint">
+                {entry.definition}
+              </p>
             ) : null}
           </div>
           {hasDetails ? (
@@ -251,7 +285,11 @@ function EntryRow({
               </button>
               <div id={detailsId}>
                 {open ? (
-                  <EntryDetails entry={entry} targetLanguage={targetLanguage} rtl={rtl} />
+                  <EntryDetails
+                    entry={entry}
+                    targetLanguage={targetLanguage}
+                    targetRtl={targetRtl}
+                  />
                 ) : null}
               </div>
             </>
@@ -269,15 +307,27 @@ function EntryRow({
  * sentence the person wrote. Nothing here is presented as a verified dictionary fact — the
  * model-source line is part of the surface, and details stay collapsed so a short lookup
  * does not become a page.
+ *
+ * States are three, not one: loading (the lookup is running), empty (the term has no
+ * lexical reading) and failed (the dictionary could not be reached). A failure is quiet and
+ * explicitly says the translation is unaffected — a dictionary reading is optional
+ * enrichment, never a second translator.
  */
 export const LexiconPanel = memo(function LexiconPanel({
   value,
   loading,
+  failed = false,
 }: {
   value: LexiconResult | null;
   loading: boolean;
+  /**
+   * The last lookup failed (network/provider). Optional so an existing caller that does not
+   * know the failure keeps working; the sheet forwards it once the hook exposes it.
+   */
+  failed?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale, rtl: uiRtl } = useI18n();
+  const copy = LEXICON_COPY[locale] ?? LEXICON_COPY.en;
   const [expanded, setExpanded] = useState(false);
   const titleId = useId();
   const listId = useId();
@@ -297,24 +347,36 @@ export const LexiconPanel = memo(function LexiconPanel({
     );
   }
   if (!value) {
+    if (failed) {
+      return (
+        <p
+          role="status"
+          aria-live="polite"
+          data-testid="lexicon-failure"
+          className="px-5 py-4 text-[12.5px] leading-relaxed text-faint"
+        >
+          {copy.failed}
+        </p>
+      );
+    }
     return <p className="px-5 py-4 text-[12.5px] leading-relaxed text-faint">{t("lexEmpty")}</p>;
   }
 
-  const rtl = isRtl(value.targetLanguage);
+  const targetRtl = isRtl(value.targetLanguage);
   const sourceRtl = isRtl(value.sourceLanguage);
   const entries = expanded ? value.entries : value.entries.slice(0, 3);
   const canExpand = value.entries.length > 3;
 
   return (
-    <section className="px-5 pb-5 pt-2" aria-labelledby={titleId}>
+    <section className="px-5 pb-5 pt-2" aria-labelledby={titleId} aria-busy={loading || undefined}>
       <p className="text-[11px] leading-relaxed text-faint">{t("lexModelSource")}</p>
       {value.translation ? (
         <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
           <span className="text-[11px] text-faint">{t("lexModel")}</span>
           <span
             lang={value.targetLanguage}
-            dir={rtl ? "rtl" : "ltr"}
-            className={`text-[17px] font-medium text-foreground ${rtl ? "font-arabic" : ""}`}
+            dir={targetRtl ? "rtl" : "ltr"}
+            className={`text-[17px] font-medium text-foreground ${targetRtl ? "font-arabic" : ""}`}
           >
             {value.translation}
           </span>
@@ -359,7 +421,8 @@ export const LexiconPanel = memo(function LexiconPanel({
             key={`${entry.term}-${entry.partOfSpeech}-${index}`}
             entry={entry}
             targetLanguage={value.targetLanguage}
-            rtl={rtl}
+            targetRtl={targetRtl}
+            uiRtl={uiRtl}
           />
         ))}
       </ol>

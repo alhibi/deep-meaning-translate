@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setLocale } from "@/lib/i18n";
 import type { LexiconResult } from "@/lib/translation/lexicon";
 
 const lookup = vi.fn();
@@ -140,5 +141,37 @@ describe("LexiconSheet", () => {
     await flush(400);
     expect(screen.queryByText("sorcerer")).toBeNull();
     expect(screen.getByText("No dictionary reading for this term.")).toBeTruthy();
+  });
+});
+
+afterEach(() => {
+  // The locale is module state; a test that switches it must not leak into the next one.
+  setLocale("en", false);
+});
+
+describe("LexiconSheet states and direction", () => {
+  it("says the dictionary is unavailable, not that the term has no reading", () => {
+    render(<LexiconSheet open value={null} loading={false} failed onClose={close} />);
+    expect(screen.getByRole("dialog", { name: "Dictionary" })).toBeTruthy();
+    expect(screen.getByTestId("lexicon-failure").textContent).toContain("didn't answer");
+    expect(screen.queryByText("No dictionary reading for this term.")).toBeNull();
+  });
+
+  it("keeps the dialog in the interface direction and the pair left-to-right", () => {
+    setLocale("ar", false);
+    render(<LexiconSheet open value={value("bank")} loading={false} onClose={close} />);
+    const dialog = screen.getByRole("dialog", { name: "المعجم" });
+    expect(dialog.getAttribute("dir")).toBe("rtl");
+    // A language pair is directional, not prose: English → Arabic stays left-to-right.
+    expect(screen.getByTestId("lexicon-direction").getAttribute("dir")).toBe("ltr");
+    const term = screen.getByText("bank");
+    expect(term.getAttribute("lang")).toBe("en");
+    expect(term.getAttribute("dir")).toBe("ltr");
+  });
+
+  it("keeps the loading status inside the open dialog, as a status not a blank surface", () => {
+    render(<LexiconSheet open value={null} loading onClose={close} />);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Finding precise meanings…");
   });
 });

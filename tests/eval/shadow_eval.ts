@@ -7,13 +7,22 @@
  * restores are internally valid, and a "nothing lost" answer (including a pure style
  * difference, or a fabricated quote) never becomes a visible finding.
  *
+ * The set covers the validation list from TD41: repeated expressions, diacritics/NFC,
+ * German compounds, humour/sarcasm, religious and cultural expressions, implicit
+ * refusal/reproach, ambiguity, politeness/respect, multiple paragraphs, a long
+ * mixed-language text analysed as windows, no-loss cases, and adversarial restores that
+ * must be rejected (dropped negation, invented number/date, dropped name or link).
+ *
  * Run directly:   node tests/eval/shadow_eval.ts
  * Run inside CI:  npx vitest run src/lib/translation/shadow.eval.test.ts
  */
 import { pathToFileURL } from "node:url";
 import {
   parseShadow,
+  planShadowWindows,
+  readWindowShadowReply,
   wordDiff,
+  type Loss,
   type ShadowCategory,
   type ShadowKind,
 } from "../../src/lib/translation/shadow.ts";
@@ -22,7 +31,23 @@ export interface ShadowEvalCase {
   id: string;
   pair: "ar→de" | "de→ar";
   register: "daily" | "formal";
-  feature: "idiom" | "sarcasm" | "respect" | "implied" | "joke" | "ambiguity" | "plain";
+  feature:
+    | "idiom"
+    | "sarcasm"
+    | "respect"
+    | "implied"
+    | "joke"
+    | "ambiguity"
+    | "plain"
+    | "repetition"
+    | "diacritics"
+    | "compound"
+    | "religion"
+    | "refusal"
+    | "politeness"
+    | "paragraphs"
+    | "multilingual"
+    | "no-loss";
   source: string;
   translation: string;
   /** What the critic's JSON answer would be for this already-correct translation. */
@@ -32,6 +57,21 @@ export interface ShadowEvalCase {
   variety?: "msa" | "levantine";
   expectCategory?: ShadowCategory;
   expectKind?: ShadowKind;
+  /**
+   * Absolute source offset the finding must anchor at. Needed when the quoted words repeat
+   * and only the correct occurrence proves the pairing (or, for `windowed` cases, that the
+   * window offset was added back onto the whole text).
+   */
+  expectSourceStart?: number;
+  /** Absolute target offset in the translation. */
+  expectTargetStart?: number;
+  /**
+   * Evaluate the reply as one window of the whole source (the long-text path): the quote is
+   * found in the window that owns it, and the finding must carry absolute offsets.
+   */
+  windowed?: boolean;
+  /** Restore texts the validator must keep, in order; every other restore was dropped. */
+  expectRestores?: string[];
 }
 
 const lossReply = (o: Record<string, unknown>) => ({
@@ -48,6 +88,41 @@ const lossReply = (o: Record<string, unknown>) => ({
 });
 
 const NONE = { losses: [] };
+
+/**
+ * A long mixed-language source for the windowed case: German body sentences with dates and
+ * numbers, an Arabic report line, one unique marker sentence (a date, a time, a brand, a
+ * city) and more German tail sentences. About 1,900 characters, so the planner splits it
+ * into several sentence windows and the marker must keep absolute offsets after the merge.
+ */
+const longMixedMarker = "Wir treffen uns am 17.11.2026 um 9.30 Uhr bei Starbucks in Berlin.";
+const longMixedSource = [
+  ...Array.from(
+    { length: 12 },
+    (_value, index) =>
+      `Am ${(index % 28) + 1}.11.2026 haben wir im Raum ${index + 1} über die Ergebnisse der Besprechung gesprochen, und alle waren einverstanden.`,
+  ),
+  "ثم قال المدير إن الخطة ستُراجع مرة أخرى قبل نهاية الشهر.",
+  longMixedMarker,
+  ...Array.from(
+    { length: 6 },
+    (_value, index) =>
+      `Danach gingen alle nach Hause und schrieben Bericht Nummer ${index + 1} für die Akten.`,
+  ),
+].join(" ");
+const longMixedTranslation = [
+  ...Array.from(
+    { length: 12 },
+    (_value, index) =>
+      `في ${(index % 28) + 1}.11.2026 تحدثنا في القاعة ${index + 1} عن نتائج الاجتماع ووافق الجميع.`,
+  ),
+  "ثم قال المدير إن الخطة ستُراجع مرة أخرى قبل نهاية الشهر.",
+  "نلتقي في 17.11.2026 الساعة 9.30 عند Starbucks في برلين.",
+  ...Array.from(
+    { length: 6 },
+    (_value, index) => `بعد ذلك ذهب الجميع إلى البيت وكتبوا تقريراً رقم ${index + 1} للأرشيف.`,
+  ),
+].join(" ");
 
 export const SHADOW_EVAL_CASES: ShadowEvalCase[] = [
   {
@@ -324,6 +399,189 @@ export const SHADOW_EVAL_CASES: ShadowEvalCase[] = [
     reply: NONE,
     expectation: "none",
   },
+  {
+    id: "de-ar-sarcasm-loss-explicit",
+    pair: "de→ar",
+    register: "daily",
+    feature: "sarcasm",
+    source: "Na toll, der Zug fällt schon wieder aus.",
+    translation: "عظيم، القطار معطل مرة أخرى.",
+    reply: lossReply({
+      category: "humor",
+      source_quote: "Na toll",
+      target_quote: "عظيم",
+      explanation: "قد تُقرأ السخرية إعجاباً حقيقياً.",
+    }),
+    expectation: "loss",
+    expectCategory: "humor",
+  },
+  {
+    id: "ar-de-repeated-thanks",
+    pair: "ar→de",
+    register: "daily",
+    feature: "repetition",
+    source: "Danke für das Essen. Danke für alles, was du getan hast.",
+    translation: "شكراً على الطعام. شكراً على كل ما فعلته.",
+    // The same word twice: only the occurrence hint points the second finding at the
+    // second sentence, on both sides.
+    reply: lossReply({
+      category: "warmth",
+      source_quote: "Danke",
+      target_quote: "شكراً",
+      source_occurrence: 2,
+      target_occurrence: 2,
+      explanation: "قد يضيع دفء الشكر الثاني.",
+    }),
+    expectation: "loss",
+    expectCategory: "warmth",
+    expectSourceStart: "Danke für das Essen. ".length,
+    expectTargetStart: "شكراً على الطعام. ".length,
+  },
+  {
+    id: "ar-de-diacritics-vocalised-quote",
+    pair: "ar→de",
+    register: "daily",
+    feature: "diacritics",
+    source: "يَا حَسْرَتَاهُ عَلَى الَّذِي فَاتَ",
+    // The critic quotes the bare letters while the source carries harakat.
+    translation: "Schade um das, was vergangen ist",
+    reply: lossReply({
+      category: "intensity",
+      source_quote: "يا حسرتاه",
+      target_quote: "Schade",
+      explanation: "قد يخفّ الحزن العميق إلى أسف عادي.",
+    }),
+    expectation: "loss",
+    expectCategory: "intensity",
+    expectSourceStart: 0,
+  },
+  {
+    id: "de-ar-german-compound",
+    pair: "de→ar",
+    register: "formal",
+    feature: "compound",
+    source: "Die Krankenversicherungsbeiträge steigen nächstes Jahr stark.",
+    translation: "ترتفع اشتراكات التأمين الصحي كثيراً العام المقبل.",
+    reply: lossReply({
+      category: "intensity",
+      source_quote: "Krankenversicherungsbeiträge",
+      target_quote: "اشتراكات",
+      explanation: "قد تختفي دقة المركّب الألماني.",
+    }),
+    expectation: "loss",
+    expectCategory: "intensity",
+    expectSourceStart: 4,
+  },
+  {
+    id: "ar-de-religion-nothing-lost",
+    pair: "ar→de",
+    register: "daily",
+    feature: "religion",
+    source: "الحمد لله وصلنا بسلام",
+    translation: "Gott sei Dank sind wir sicher angekommen",
+    // The religious reference and its gratitude were rendered, not flattened.
+    reply: NONE,
+    expectation: "none",
+  },
+  {
+    id: "ar-de-implicit-refusal",
+    pair: "ar→de",
+    register: "daily",
+    feature: "refusal",
+    source: "خلينا نشوف، يمكن أقدر أجي بكرا",
+    translation: "Wir schauen mal, vielleicht schaffe ich es morgen",
+    reply: lossReply({
+      category: "implied",
+      source_quote: "خلينا نشوف",
+      target_quote: "schauen mal",
+      explanation: "قد يضيع التردد الذي يعني رفضاً لطيفاً.",
+    }),
+    expectation: "loss",
+    expectCategory: "implied",
+  },
+  {
+    id: "de-ar-politeness-nothing-lost",
+    pair: "de→ar",
+    register: "formal",
+    feature: "politeness",
+    source: "Bitte seien Sie so freundlich und senden Sie mir die Unterlagen",
+    translation: "تكرموا بإرسال المستندات إليّ",
+    reply: NONE,
+    expectation: "none",
+  },
+  {
+    id: "de-ar-two-paragraphs",
+    pair: "de→ar",
+    register: "daily",
+    feature: "paragraphs",
+    source:
+      "Erster Absatz über die Arbeit und die Besprechung von gestern.\n\nZweiter Absatz über den Urlaub in Hamburg und die Rückkehr am Montag.",
+    translation:
+      "الفقرة الأولى عن العمل واجتماع أمس.\n\nالفقرة الثانية عن العطلة في هامبورغ والعودة يوم الاثنين.",
+    reply: lossReply({
+      category: "culture",
+      source_quote: "Hamburg",
+      target_quote: "هامبورغ",
+      explanation: "قد يضيع اسم المكان.",
+    }),
+    expectation: "loss",
+    expectCategory: "culture",
+    expectSourceStart:
+      "Erster Absatz über die Arbeit und die Besprechung von gestern.\n\nZweiter Absatz über den Urlaub in "
+        .length,
+  },
+  {
+    id: "de-ar-long-mixed-language-window",
+    pair: "de→ar",
+    register: "formal",
+    feature: "multilingual",
+    source: longMixedSource,
+    translation: longMixedTranslation,
+    windowed: true,
+    reply: lossReply({
+      category: "culture",
+      source_quote: longMixedMarker,
+      target_quote: "Starbucks",
+      explanation: "قد يضيع اسم المكان في نص طويل.",
+    }),
+    expectation: "loss",
+    expectCategory: "culture",
+    expectSourceStart: longMixedSource.indexOf(longMixedMarker),
+    expectTargetStart: longMixedTranslation.indexOf("Starbucks"),
+  },
+  {
+    id: "de-ar-long-mixed-nothing-lost",
+    pair: "de→ar",
+    register: "formal",
+    feature: "no-loss",
+    source: "Wir treffen uns am 17.11.2026 um 9.30 Uhr bei Starbucks in Berlin",
+    translation: "نلتقي في 17.11.2026 الساعة 9.30 عند Starbucks في برلين",
+    // Dates, times, the brand and the city all survived: no finding may be invented.
+    reply: NONE,
+    expectation: "none",
+  },
+  {
+    id: "ar-de-adversarial-restores",
+    pair: "ar→de",
+    register: "daily",
+    feature: "implied",
+    source: "أنا لا أستطيع الحضور اليوم",
+    translation: "Ich kann heute nicht kommen",
+    // One alternative drops the negation (rejected); one keeps it (kept).
+    reply: lossReply({
+      category: "implied",
+      source_quote: "لا أستطيع",
+      target_quote: "nicht",
+      restores: [
+        { text: "Ich kann heute kommen", note: "دون نفي" },
+        { text: "Ich kann heute leider nicht kommen", note: "يحفظ النفي" },
+      ],
+      explanation: "قد يضيع اللطف في الاعتذار.",
+    }),
+    expectation: "loss",
+    expectCategory: "implied",
+    expectRestores: ["Ich kann heute leider nicht kommen"],
+  },
 ];
 
 export interface ShadowEvalFailure {
@@ -337,12 +595,43 @@ export interface ShadowEvalSummary {
   failed: ShadowEvalFailure[];
 }
 
+/** The window that owns an absolute source offset, or the first window. */
+function windowOwning(testCase: ShadowEvalCase) {
+  const windows = planShadowWindows(testCase.source);
+  if (!windows.length) return null;
+  const start = testCase.expectSourceStart;
+  if (start === undefined) return windows[0]!;
+  return windows.find((window) => window.start <= start && start < window.end) ?? null;
+}
+
 /** Deterministic checks; no network and no model call. */
 export function runShadowEval(): ShadowEvalSummary {
   const failed: ShadowEvalFailure[] = [];
   for (const testCase of SHADOW_EVAL_CASES) {
-    const parsed = parseShadow(testCase.reply, testCase.source, testCase.translation);
     const fail = (detail: string) => failed.push({ id: testCase.id, detail });
+    let parsed: { losses: Loss[] } | null;
+    if (testCase.windowed) {
+      // Long-text path: the reply is one window's answer; the window offset must be added
+      // back so the finding still points at the same characters in the whole source.
+      const windows = planShadowWindows(testCase.source);
+      if (windows.length < 2) {
+        fail("windowed case did not plan more than one window");
+        continue;
+      }
+      const window = windowOwning(testCase);
+      if (!window) {
+        fail("no window owns the expected absolute source offset");
+        continue;
+      }
+      const losses = readWindowShadowReply(
+        JSON.stringify(testCase.reply),
+        window,
+        testCase.translation,
+      );
+      parsed = losses ? { losses } : null;
+    } else {
+      parsed = parseShadow(testCase.reply, testCase.source, testCase.translation);
+    }
     if (!parsed) {
       fail("reply was rejected as unusable");
       continue;
@@ -371,8 +660,26 @@ export function runShadowEval(): ShadowEvalSummary {
       fail(`expected category ${testCase.expectCategory}, got ${loss.category}`);
     if (testCase.expectKind && loss.kind !== testCase.expectKind)
       fail(`expected kind ${testCase.expectKind}, got ${loss.kind}`);
+    if (
+      testCase.expectSourceStart !== undefined &&
+      loss.source.start !== testCase.expectSourceStart
+    )
+      fail(`expected source start ${testCase.expectSourceStart}, got ${loss.source.start}`);
+    if (
+      testCase.expectTargetStart !== undefined &&
+      loss.target.start !== testCase.expectTargetStart
+    )
+      fail(`expected target start ${testCase.expectTargetStart}, got ${loss.target.start}`);
     if (loss.severity < 1 || loss.severity > 3) fail("severity outside 1–3");
     if (!(loss.confidence >= 0 && loss.confidence <= 1)) fail("confidence outside 0–1");
+    const keptRestores = loss.restores.map((restore) => restore.text);
+    if (
+      testCase.expectRestores &&
+      JSON.stringify(keptRestores) !== JSON.stringify(testCase.expectRestores)
+    )
+      fail(
+        `expected restores ${JSON.stringify(testCase.expectRestores)}, got ${JSON.stringify(keptRestores)}`,
+      );
     for (const restore of loss.restores) {
       const diff = wordDiff(testCase.translation, restore.text);
       if (!diff.removed && !diff.added) fail("restore does not change the translation");

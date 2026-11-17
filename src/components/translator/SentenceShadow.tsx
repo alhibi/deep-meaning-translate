@@ -12,7 +12,12 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { segments, type Loss, type ShadowCategory } from "@/lib/translation/shadow";
+import {
+  segments,
+  type Loss,
+  type ShadowCategory,
+  type ShadowIncomplete,
+} from "@/lib/translation/shadow";
 
 export const CATEGORY_ICON: Record<ShadowCategory, LucideIcon> = {
   warmth: Heart,
@@ -123,12 +128,15 @@ export function ShadowSummary({
   onPick,
   onMap,
   undo,
+  incomplete,
 }: {
   status: "loading" | "ready";
   losses: Loss[];
   onPick: (id: string) => void;
   onMap: () => void;
   undo: { onUndo: () => void } | null;
+  /** Present only when part of a long text could not be analysed; never for a full answer. */
+  incomplete?: ShadowIncomplete | undefined;
 }) {
   const { t } = useI18n();
   const [noneVisible, setNoneVisible] = useState(true);
@@ -176,6 +184,7 @@ export function ShadowSummary({
   return (
     <div
       className="shadow-summary animate-fade"
+      data-incomplete={incomplete ? "true" : undefined}
       onPointerDown={() => {
         press.current = window.setTimeout(onMap, 550);
       }}
@@ -183,6 +192,11 @@ export function ShadowSummary({
       onPointerLeave={() => press.current !== null && clearTimeout(press.current)}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {incomplete ? (
+        <span className="text-faint" title={t("shIncomplete")}>
+          {t("shIncomplete")}
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={onMap}

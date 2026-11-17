@@ -25,7 +25,10 @@ const CSP = [
   "form-action 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // Remote culture images are restricted to the exact hosts in
+  // src/lib/culture/media-hosts.json (tests/security/csp-image-hosts.mjs enforces the
+  // equality). No scheme-wide allowance: an untrusted page could otherwise beacon out.
+  "img-src 'self' data: blob: https://images.metmuseum.org",
   "media-src 'self' blob: data:",
   "font-src 'self' data:",
   "connect-src 'self'",
@@ -41,7 +44,10 @@ const SECURITY = [
   "  X-Frame-Options: DENY",
   "  Referrer-Policy: strict-origin-when-cross-origin",
   "  Cross-Origin-Opener-Policy: same-origin",
-  "  Permissions-Policy: camera=(), geolocation=(), payment=(), usb=(), microphone=(self), display-capture=()",
+  // Geolocation is allowed for this origin only: the weather strip asks for a coarse fix
+  // after the person opts in (a deny-by-default policy silently broke it in production,
+  // while the dev server has no header layer at all).
+  "  Permissions-Policy: camera=(), geolocation=(self), payment=(), usb=(), microphone=(self), display-capture=()",
 ].join("\n");
 
 const emitted = ["/*", "/assets/*", "/sw.js", "/manifest.webmanifest", "/stats"];

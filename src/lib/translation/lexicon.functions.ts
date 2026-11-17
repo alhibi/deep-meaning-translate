@@ -45,13 +45,56 @@ export type LexiconRequest = z.infer<typeof LexiconInput>;
 /** The analysis model profile can think for a while; a hung provider must not hold the queue. */
 const ANALYSIS_TIMEOUT_MS = 45_000;
 
+/** Per-analysis overrides: only cancellation is configurable, the timeout stays documented. */
+export interface LexiconAnalysisOptions {
+  /** Caller cancellation (request disconnect). Aborts the provider call itself. */
+  signal?: AbortSignal | undefined;
+}
+
+/**
+ * One signal out of several, without relying on `AbortSignal.any` (not available on every
+ * runtime the worker can land on). The returned disposer removes the listeners again, so a
+ * long-lived request signal does not accumulate one listener per lookup.
+ */
+function composeSignals(signals: AbortSignal[]): { signal: AbortSignal; dispose: () => void } {
+  const any = (AbortSignal as unknown as { any?: (list: AbortSignal[]) => AbortSignal }).any;
+  if (typeof any === "function") {
+    return { signal: any.call(AbortSignal, signals), dispose: () => {} };
+  }
+  const controller = new AbortController();
+  const listeners: { signal: AbortSignal; listener: () => void }[] = [];
+  const abort = () => controller.abort();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort();
+      continue;
+    }
+    signal.addEventListener("abort", abort, { once: true });
+    listeners.push({ signal, listener: abort });
+  }
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      for (const { signal, listener } of listeners) signal.removeEventListener("abort", listener);
+      listeners.length = 0;
+    },
+  };
+}
+
 /**
  * One dictionary analysis for an already-admissible request.
  *
  * Any failure is a quiet `null`: a dictionary reading is optional enrichment and must
- * never touch the translation on screen.
+ * never touch the translation on screen. Cancellation is not a failure but the same quiet
+ * `null`: when the caller threw the lookup away, the provider request stops on the wire
+ * (the timeout and the caller's abort are composed into the signal the engine receives).
  */
-export async function runLexiconAnalysis(data: LexiconRequest): Promise<LexiconResult | null> {
+export async function runLexiconAnalysis(
+  data: LexiconRequest,
+  options: LexiconAnalysisOptions = {},
+): Promise<LexiconResult | null> {
+  const caller = options.signal;
+  if (caller?.aborted) return null;
   const { runAnalysis } = await import("./engine.server");
   const { LEXICON_SYSTEM, lexiconUserPrompt, readLexiconReply } = await import("./lexicon");
   const query: LexiconQuery = {
@@ -64,16 +107,20 @@ export async function runLexiconAnalysis(data: LexiconRequest): Promise<LexiconR
     style: data.style ?? "natural",
     ...(data.dialect ? { dialect: data.dialect } : {}),
   };
+  const timeout = AbortSignal.timeout(ANALYSIS_TIMEOUT_MS);
+  const composed = caller ? composeSignals([caller, timeout]) : null;
   try {
     // The analysis profile (thinking, effort max, JSON mode) is the verified capability
     // contract for a semantic task; chars bounds the runaway output ceiling.
     const raw = await runAnalysis(LEXICON_SYSTEM, lexiconUserPrompt(query), {
-      signal: AbortSignal.timeout(ANALYSIS_TIMEOUT_MS),
+      signal: composed?.signal ?? timeout,
       chars: data.text.length + (data.context?.length ?? 0),
     });
     return readLexiconReply(raw);
   } catch {
     return null;
+  } finally {
+    composed?.dispose();
   }
 }
 
@@ -91,16 +138,23 @@ export interface LexiconAdmission {
  * The one dictionary path, shared by the browser server function and the native handler:
  * cheap gate → admission → provider-agnostic analysis → request-context echo. Keeping it
  * here means a change to admission or to the echo can never land on one transport only.
+ *
+ * Cancellation defaults to the incoming request's own signal, so a disconnected client
+ * aborts the provider call even when the caller does not pass one explicitly (mirrors the
+ * shadow path); an explicit `options.signal` wins for a caller that has a finer one.
  */
 export async function analyzeLexiconFor(
   data: LexiconRequest,
   admission: LexiconAdmission,
+  options: LexiconAnalysisOptions = {},
 ): Promise<LexiconResult | null> {
   const { isLexiconCandidate } = await import("./lexicon");
   if (!isLexiconCandidate(data.text)) return null;
   if (!admission.crossOrigin && !sameOrigin(admission.request)) return null;
   if (!takeEnrichmentToken(clientAddress(admission.request))) return null;
-  const lexicon = await runLexiconAnalysis(data);
+  const caller = options.signal ?? admission.request.signal;
+  if (caller?.aborted) return null;
+  const lexicon = await runLexiconAnalysis(data, { signal: caller });
   if (!lexicon) return null;
   // Echo the request's register/variety/sentence for the panel; the model never sets them.
   return applyLexiconRequestContext(lexicon, data);

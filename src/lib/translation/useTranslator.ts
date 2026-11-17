@@ -502,10 +502,15 @@ export function useTranslator(opts: {
             const review = new AbortController();
             repairAbort.current = review;
             void enqueueEnrichment(
-              () => callRepair({ data: { request: data, previous: res.result } }),
+              (signal) =>
+                callRepair({
+                  data: { request: data, previous: res.result },
+                  signal,
+                }),
               {
                 purpose: "review",
                 signal: review.signal,
+                key,
                 isValid: () =>
                   committedKey.current === key &&
                   current.current.key === key &&

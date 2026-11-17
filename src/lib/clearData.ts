@@ -1,6 +1,8 @@
 import { history } from "./history";
 import { persist } from "./persist";
 import { saved } from "./saved";
+import { clearCultureSaved, resetCultureSavedCache } from "./culture/saved";
+import { clearSeenHistory, resetCultureSeenCache } from "./culture/seen";
 import { memoryClear } from "./translation/memory";
 import { forgetSettingsCache } from "./persistence/settings";
 import { resetFeelPrefs } from "./feel/prefs";
@@ -19,6 +21,14 @@ export async function clearDeviceData(): Promise<void> {
   await saved.clear();
   await history.clear();
   await memoryClear();
+  // Phase II stores: their module caches must die with the storage keys, or a forgotten
+  // discovery would still open from RAM in the same session.
+  await clearCultureSaved();
+  await clearSeenHistory();
+  // Drop the in-memory copies after the writes too: a stale RAM list could otherwise make
+  // a forgotten discovery appear saved again in this session.
+  resetCultureSavedCache();
+  resetCultureSeenCache();
   await persist.clearAll();
   // In-memory settings caches must be dropped too, or the next toggle in this session
   // can write an old value back after everything was "forgotten" (A2-06).

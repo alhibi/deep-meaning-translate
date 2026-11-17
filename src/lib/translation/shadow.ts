@@ -62,8 +62,33 @@ export interface Loss {
   explanation: string;
   restores: Restore[];
 }
+/**
+ * Why a window produced no finding, and whether that is the whole truth.
+ *
+ * `invalid_reply` is the model answering with something the parser cannot trust;
+ * `provider` is a failed call; `timeout` is the analysis deadline; `cancelled` is the
+ * caller (request disconnect or the quiet-work queue) giving up on the result.
+ */
+export type ShadowIncompleteReason = "provider" | "invalid_reply" | "timeout" | "cancelled";
+
+/**
+ * Present only when part of the analysis did not answer. The findings in the same result
+ * are real (each was anchored and validated); what the result cannot claim is "nothing
+ * else was lost", because one or more planned windows never contributed.
+ */
+export interface ShadowIncomplete {
+  /** Requests the plan made. */
+  requests: number;
+  /** Requests that returned a usable answer; an honest empty list counts as usable. */
+  completed: number;
+  /** Unique reasons, sorted, for the windows that produced nothing. */
+  reasons: ShadowIncompleteReason[];
+}
+
 export interface ShadowResult {
   losses: Loss[];
+  /** Absent on a complete analysis: an empty list there really means nothing was lost. */
+  incomplete?: ShadowIncomplete;
 }
 
 /** Output cap: a long text must not produce a longer list, only better-anchored ones. */
@@ -82,12 +107,38 @@ export const MAX_QUOTE = 400;
 export const MAX_SOURCE = 5000;
 /** Source characters one analysis call aims at. */
 export const SHADOW_WINDOW_TARGET = 600;
-/** Bounded call count for one shadow: a longer text gets larger windows, not more calls. */
-export const SHADOW_MAX_WINDOWS = 4;
+/**
+ * Total request budget for one shadow analysis: a longer text gets larger windows, never
+ * more calls. One settled translation therefore costs at most this many analysis calls,
+ * whatever was pasted (TD41).
+ */
+export const SHADOW_MAX_REQUESTS = 4;
+/** Historical name for the same request ceiling; the window planner speaks in windows. */
+export const SHADOW_MAX_WINDOWS = SHADOW_MAX_REQUESTS;
 /** Neighbouring source text handed to the model only so it can judge tone in context. */
 export const SHADOW_CONTEXT_CHARS = 240;
-/** Per-call provider budget: analysis runs thinking at max effort, so it is not fast. */
-export const SHADOW_TIMEOUT_MS = 45_000;
+/**
+ * Whole-analysis completion bound. One deadline covers the parallel wave, so a slow or
+ * hung provider cannot hold a shadow beyond it. The enrichment door above gives up after
+ * 8 s and the person is not waiting on this hint, so a longer stall only spends tokens.
+ */
+export const SHADOW_DEADLINE_MS = 45_000;
+/**
+ * Output-token ceiling one request may reserve. The analysis task class reasons at max
+ * effort and its capability floor is 65,536 tokens; the capability table lives in
+ * `capabilities.ts` and `shadow.analysis.test.ts` fails if the two drift apart.
+ */
+export const SHADOW_ANALYSIS_MAX_OUTPUT_TOKENS = 65_536;
+/** Worst-case output-token ceiling for one shadow analysis (requests × per-call ceiling). */
+export const SHADOW_MAX_OUTPUT_TOKENS = SHADOW_MAX_REQUESTS * SHADOW_ANALYSIS_MAX_OUTPUT_TOKENS;
+/**
+ * Total prompt characters one analysis may send. Every window repeats the whole
+ * translation — it is what the findings have to point into — so four windows over a
+ * 15,000-character translation cost about 81,000 prompt characters. When a plan would
+ * exceed this, it trades depth for a bounded bill (fewer, larger windows); it never
+ * silently drops part of the text.
+ */
+export const SHADOW_MAX_PROMPT_CHARS = 64_000;
 /** Translation side is bounded too: an Arabic answer to a 5,000-char German source fits. */
 export const MAX_TRANSLATION = 15_000;
 
@@ -337,10 +388,85 @@ export function wordDiff(prev: string, next: string): WordDiff {
 
 /* ------------------------------------------------------------------- sentences */
 
+const SENTENCE_CLOSERS = new Set(['"', "'", "”", "’", "»", ")", "]", "}", "\u00BB"]);
+
+/**
+ * Abbreviations whose period does not end a sentence. German is the source language of
+ * half the product, so its common forms are listed (plus the English ones that appear in
+ * mixed text); a one-letter word is always treated as an initialism ("z. B.", "u. a.").
+ */
+const ABBREVIATIONS = new Set([
+  "z",
+  "u",
+  "d",
+  "h",
+  "vgl",
+  "ca",
+  "nr",
+  "dr",
+  "prof",
+  "str",
+  "bzw",
+  "usw",
+  "etc",
+  "abs",
+  "art",
+  "sog",
+  "evtl",
+  "ggf",
+  "inkl",
+  "exkl",
+  "max",
+  "min",
+  "mind",
+  "rd",
+  "jh",
+  "jhd",
+  "mio",
+  "mrd",
+  "bspw",
+  "engl",
+  "dt",
+  "e.g",
+  "i.e",
+  "vs",
+  "mr",
+  "mrs",
+  "ms",
+  "st",
+]);
+
+/**
+ * True when the period at `index` ends a sentence rather than a number, a date, a URL,
+ * a domain or an abbreviation.
+ *
+ * The old rule treated every period as a break, so "17.11.2026", "9.30 Uhr", "z. B." and
+ * "Dr. Müller" were cut into pieces. A window boundary inside those would hand the critic
+ * half a fact and move the other half into a different call.
+ */
+function dotEndsSentence(text: string, index: number): boolean {
+  let next = index + 1;
+  while (next < text.length && SENTENCE_CLOSERS.has(text[next]!)) next += 1;
+  if (next >= text.length) return true;
+  // A period glued to what follows is a decimal, a date part, an initialism ("z.B.") or
+  // a domain — never a sentence break.
+  if (!/\s/u.test(text[next]!)) return false;
+  let dots = 0;
+  for (let before = index - 1; before >= 0 && text[before] === "."; before -= 1) dots += 1;
+  // The final period of an ASCII ellipsis ("..." or "....") still ends the sentence.
+  if (dots >= 2) return true;
+  let start = index;
+  while (start > 0 && /\p{L}/u.test(text[start - 1]!)) start -= 1;
+  const word = text.slice(start, index).toLocaleLowerCase();
+  if (!word) return true;
+  if (word.length === 1) return false;
+  return !ABBREVIATIONS.has(word);
+}
+
 /**
  * Sentence spans of `text`, with absolute offsets. Used only to cut long sources into
- * whole-sentence windows: a window must never split an idiom or leave a dangling clause
- * that the model would then judge without its context.
+ * whole-sentence windows: a window must never split an idiom, a number, a date or an
+ * abbreviation, or leave a dangling clause the model would then judge without context.
  */
 export function sentenceSpans(text: string): Span[] {
   const spans: Span[] = [];
@@ -352,22 +478,22 @@ export function sentenceSpans(text: string): Span[] {
     if (end > start) spans.push({ start, end });
   };
   const terminators = new Set([".", "!", "?", "؟", "…"]);
-  const closers = new Set(['"', "'", "”", "’", "»", ")", "]", "}", "\u00BB"]);
+  const closers = SENTENCE_CLOSERS;
   let start = 0;
   let i = 0;
   while (i < text.length) {
     const ch = text[i]!;
-    if (terminators.has(ch)) {
-      i += 1;
-      while (i < text.length && (terminators.has(text[i]!) || closers.has(text[i]!))) i += 1;
-      push(start, i);
-      start = i;
-      continue;
-    }
     if (ch === "\n") {
       push(start, i);
       i += 1;
       while (i < text.length && /\s/u.test(text[i]!)) i += 1;
+      start = i;
+      continue;
+    }
+    if (terminators.has(ch) && (ch !== "." || dotEndsSentence(text, i))) {
+      i += 1;
+      while (i < text.length && (terminators.has(text[i]!) || closers.has(text[i]!))) i += 1;
+      push(start, i);
       start = i;
       continue;
     }
@@ -412,18 +538,13 @@ function contextSlice(source: string, from: number, to: number): string {
 }
 
 /**
- * Sentence-aligned source windows with overlap and absolute offsets.
- *
- * The number of calls is bounded (at most `SHADOW_MAX_WINDOWS`): a longer text gets
- * larger windows instead of more model calls, so a paste cannot multiply cost without
- * limit. Adjacent windows overlap by the previous window's last sentence, so a nuance on
- * a boundary is still judged with its neighbour present; the merge step removes the
- * duplicate. Ordered windows let the model read each part as part of a longer text rather
- * than as an isolated fragment.
+ * Builds exactly `wanted` ordered, overlapping sentence windows over a valid source.
+ * The shared core of the public planner: the sentence alignment is the same whether the
+ * budget allows the ideal window count or fewer, larger windows.
  */
-export function planShadowWindows(source: string): ShadowWindow[] {
+function shadowWindows(source: string, wanted: number): ShadowWindow[] {
   const bounds = trimBounds(source);
-  if (bounds.end <= bounds.start || bounds.end - bounds.start > MAX_SOURCE) return [];
+  if (bounds.end <= bounds.start) return [];
   const length = bounds.end - bounds.start;
   const sentences = sentenceSpans(source.slice(bounds.start, bounds.end)).map((span) => ({
     start: span.start + bounds.start,
@@ -443,20 +564,16 @@ export function planShadowWindows(source: string): ShadowWindow[] {
       },
     ];
   }
-  const wanted = Math.min(
-    SHADOW_MAX_WINDOWS,
-    Math.max(1, Math.ceil(length / SHADOW_WINDOW_TARGET)),
-    sentences.length,
-  );
+  const count = Math.min(Math.max(1, wanted), sentences.length);
   const groups: { from: number; to: number }[] = [];
-  if (wanted >= sentences.length) {
+  if (count >= sentences.length) {
     sentences.forEach((_sentence, index) => groups.push({ from: index, to: index + 1 }));
   } else {
     const splits: number[] = [];
-    for (let group = 1; group < wanted; group++) {
-      const target = bounds.start + (length * group) / wanted;
+    for (let group = 1; group < count; group++) {
+      const target = bounds.start + (length * group) / count;
       const min = (splits[splits.length - 1] ?? 0) + 1;
-      const max = sentences.length - (wanted - group);
+      const max = sentences.length - (count - group);
       let best = min;
       let bestDistance = Number.POSITIVE_INFINITY;
       for (let index = min; index <= max; index++) {
@@ -496,6 +613,109 @@ export function planShadowWindows(source: string): ShadowWindow[] {
       contextAfter: contextSlice(source, end, Math.min(bounds.end, end + SHADOW_CONTEXT_CHARS)),
     };
   });
+}
+
+/** The window count sentence alignment would like, before any cost budget. */
+function idealWindowCount(source: string): number {
+  const bounds = trimBounds(source);
+  if (bounds.end <= bounds.start) return 0;
+  const length = bounds.end - bounds.start;
+  const sentences = sentenceSpans(source.slice(bounds.start, bounds.end));
+  return Math.min(
+    SHADOW_MAX_REQUESTS,
+    Math.max(1, Math.ceil(length / SHADOW_WINDOW_TARGET)),
+    Math.max(1, sentences.length),
+  );
+}
+
+/**
+ * Sentence-aligned source windows with overlap and absolute offsets.
+ *
+ * The number of calls is bounded (at most `SHADOW_MAX_REQUESTS`): a longer text gets
+ * larger windows instead of more model calls, so a paste cannot multiply cost without
+ * limit. Adjacent windows overlap by the previous window's last sentence, so a nuance on
+ * a boundary is still judged with its neighbour present; the merge step removes the
+ * duplicate. Ordered windows let the model read each part as part of a longer text rather
+ * than as an isolated fragment.
+ */
+export function planShadowWindows(source: string): ShadowWindow[] {
+  const bounds = trimBounds(source);
+  if (bounds.end <= bounds.start || bounds.end - bounds.start > MAX_SOURCE) return [];
+  return shadowWindows(source, idealWindowCount(source));
+}
+
+/** One analysis plan: which windows to send, at what documented cost. */
+export interface ShadowAnalysisPlan {
+  windows: ShadowWindow[];
+  /** Provider requests this analysis will make (= windows.length). */
+  requests: number;
+  /** Exact prompt characters sent across all requests (system + user, every request). */
+  promptChars: number;
+  /** True when the cost budget reduced the window count below ideal sentence alignment. */
+  depthLimited: boolean;
+}
+
+export interface ShadowPlanInput {
+  text: string;
+  translation: string;
+  source: string;
+  target: string;
+  style: string;
+  uiLocale: string;
+  dialect?: string | undefined;
+  /** Override the documented prompt-character budget (diagnostics and tests). */
+  maxPromptChars?: number | undefined;
+}
+
+/** Exact characters one planned analysis puts on the wire, measured on real prompts. */
+function planPromptChars(input: ShadowPlanInput, windows: ShadowWindow[]): number {
+  return windows.reduce((sum, window) => {
+    const prompt = shadowUserPrompt({
+      text: window.text,
+      translation: input.translation,
+      source: input.source,
+      target: input.target,
+      style: input.style,
+      uiLocale: input.uiLocale,
+      dialect: input.dialect,
+      part: windows.length > 1 ? { index: window.index + 1, total: windows.length } : undefined,
+      contextBefore: window.contextBefore || undefined,
+      contextAfter: window.contextAfter || undefined,
+    });
+    return sum + SHADOW_SYSTEM.length + prompt.length;
+  }, 0);
+}
+
+/**
+ * Plans a shadow under an explicit total budget.
+ *
+ * The source length sets an *ideal* window count; the budget can only lower it, by making
+ * windows larger. Each candidate plan is measured by building its real prompts, so the
+ * reported `promptChars` is what the provider would actually receive — never an estimate
+ * that could drift from the prompt code. A plan that cannot fit even one request inside
+ * the budget returns no windows and spends nothing.
+ */
+export function planShadowAnalysis(input: ShadowPlanInput): ShadowAnalysisPlan {
+  const budget = Math.max(1, input.maxPromptChars ?? SHADOW_MAX_PROMPT_CHARS);
+  const bounds = trimBounds(input.text);
+  if (bounds.end <= bounds.start || bounds.end - bounds.start > MAX_SOURCE) {
+    return { windows: [], requests: 0, promptChars: 0, depthLimited: false };
+  }
+  const ideal = idealWindowCount(input.text);
+  for (let wanted = ideal; wanted >= 1; wanted -= 1) {
+    const windows = shadowWindows(input.text, wanted);
+    if (!windows.length) continue;
+    const promptChars = planPromptChars(input, windows);
+    if (promptChars <= budget) {
+      return {
+        windows,
+        requests: windows.length,
+        promptChars,
+        depthLimited: windows.length < ideal,
+      };
+    }
+  }
+  return { windows: [], requests: 0, promptChars: 0, depthLimited: true };
 }
 
 /* --------------------------------------------------------------------- parsing */
@@ -694,9 +914,16 @@ const DIGIT_FOLD: Record<string, string> = {
 };
 const FACT_NUMBER = /[0-9٠-٩۰-۹]+(?:[.,][0-9٠-٩۰-۹]+)*/gu;
 const FACT_URL = /https?:\/\/[^\s)»]+/gu;
+const FACT_EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/gu;
+const FACT_HANDLE = /[@#][\p{L}\p{N}_]{2,}/gu;
 const FACT_EMOJI = /\p{Extended_Pictographic}/gu;
-const ARABIC_LETTER = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/u;
-const LATIN_LETTER = /\p{Script=Latin}/u;
+/** Quoted words ("Anna", „Anna", «آنا») are a name the translation made explicit. */
+const FACT_QUOTED = /[«"“„]([^«»"“”\n]{1,80})[»"“”]/gu;
+const ARABIC_LETTER_ALL = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/gu;
+const LATIN_LETTER_ALL = /\p{Script=Latin}/gu;
+/** A run of two or more letters in one script: names, brands and code stay visible. */
+const LATIN_RUN = /\p{Script=Latin}{2,}/gu;
+const ARABIC_RUN = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]{2,}/gu;
 
 function foldDigits(value: string): string {
   return value.replace(/[٠-٩۰-۹]/g, (digit) => DIGIT_FOLD[digit] ?? digit);
@@ -708,50 +935,154 @@ function multiset(values: string[]): Map<string, number> {
   return map;
 }
 
-function missingFacts(from: string[], into: string[]): number {
-  const available = multiset(into);
-  let missing = 0;
-  for (const [value, count] of multiset(from)) {
-    if ((available.get(value) ?? 0) < count) missing += 1;
+/** Same members with the same counts, in any order. */
+function sameMultiset(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const counts = multiset(left);
+  for (const [value, count] of multiset(right)) {
+    if (counts.get(value) !== count) return false;
   }
-  return missing;
+  return true;
 }
 
-/** A restore may rephrase, but it may never drop a fact the current translation keeps. */
+/**
+ * Every fact a translation states, in a comparable form: links, e-mails, handles, quoted
+ * names, numbers/dates (Arabic-Indic digits folded) and emoji. Month names are not
+ * extracted; a date written as words would only be caught if it also carries a number.
+ */
+function facts(text: string): string[] {
+  const quoted = (text.match(FACT_QUOTED) ?? [])
+    .map((value) => fold(value).text)
+    .filter((value) => value.length > 0)
+    .map((value) => `q:${value}`);
+  return [
+    ...(text.match(FACT_URL) ?? []).map((value) => `u:${value}`),
+    ...(text.match(FACT_EMAIL) ?? []).map((value) => `m:${value.toLocaleLowerCase()}`),
+    ...(text.match(FACT_HANDLE) ?? []).map((value) => `h:${value.toLocaleLowerCase()}`),
+    ...(text.match(FACT_NUMBER) ?? []).map((value) => `n:${foldDigits(value)}`),
+    ...(text.match(FACT_EMOJI) ?? []).map((value) => `e:${value}`),
+    ...quoted,
+  ];
+}
+
+/**
+ * A restore may rephrase, but its facts must match the current translation exactly.
+ *
+ * "Facts survive" cuts both ways: dropping a number, date, link or quoted name changes
+ * what the sentence says, and adding one invents something the person never wrote. The
+ * old check only looked one way, so "Wir treffen uns" → "Wir treffen uns um 8 Uhr" was
+ * offered as a "restore" with an invented time.
+ */
 function keepsFacts(translation: string, restore: string): boolean {
-  const numbers = (value: string) => (value.match(FACT_NUMBER) ?? []).map(foldDigits);
-  return (
-    missingFacts(translation.match(FACT_URL) ?? [], restore.match(FACT_URL) ?? []) === 0 &&
-    missingFacts(numbers(translation), numbers(restore)) === 0 &&
-    missingFacts(translation.match(FACT_EMOJI) ?? [], restore.match(FACT_EMOJI) ?? []) === 0
+  return sameMultiset(facts(translation), facts(restore));
+}
+
+/**
+ * Negation cues, in the two product languages. Kept small and high-precision: "ما" and
+ * "غير" are excluded because in normal Arabic prose they are usually not negations, and a
+ * validator that guesses would reject good alternatives.
+ */
+const NEGATION_CUES = new Set([
+  "nicht",
+  "nichts",
+  "kein",
+  "keine",
+  "keinen",
+  "keinem",
+  "keiner",
+  "keines",
+  "nie",
+  "niemals",
+  "nirgends",
+  "nirgendwo",
+  "niemand",
+  "ohne",
+  "weder",
+  "لا",
+  "لم",
+  "لن",
+  "ليس",
+  "ليست",
+  "لسنا",
+  "لستم",
+  "لست",
+  "لستما",
+  "مش",
+  "بلاش",
+  "بدون",
+  "مافي",
+  "مانيش",
+  "ماكو",
+]);
+
+function negationCues(text: string): string[] {
+  return (fold(text).text.match(/[\p{L}\p{N}]+/gu) ?? []).filter((token) =>
+    NEGATION_CUES.has(token),
   );
+}
+
+/**
+ * A restore is a rephrasing of the same sentence, so it must keep the sentence's
+ * polarity. A cue may move ("Ich komme nicht" → "Heute komme ich nicht") but may not
+ * disappear or be added: that flips what the sentence asserts. Two cues are treated as
+ * one polarity (German double negation), so removing one of them flips the parity and is
+ * rejected.
+ */
+function keepsNegation(translation: string, restore: string): boolean {
+  const before = negationCues(translation).length;
+  const after = negationCues(restore).length;
+  if (before === 0) return after === 0;
+  return after > 0 && after % 2 === before % 2;
 }
 
 /**
  * The dominant writing system of a translation. An alternative in another script is not
  * an alternative in the requested language, whatever the model called it.
+ *
+ * The count must be global: a non-global Arabic pattern counted only the first letter, so
+ * any Arabic translation containing a Latin name/brand looked Latin-dominant and every
+ * correct Arabic alternative for it was silently thrown away.
  */
 function dominantScript(text: string): "arabic" | "latin" | null {
-  const arabic = (text.match(ARABIC_LETTER) ?? []).length;
-  const latin = (text.match(/\p{Script=Latin}/gu) ?? []).length;
+  const arabic = (text.match(ARABIC_LETTER_ALL) ?? []).length;
+  const latin = (text.match(LATIN_LETTER_ALL) ?? []).length;
   if (!arabic && !latin) return null;
   return arabic >= latin ? "arabic" : "latin";
 }
 
-function sameScript(translation: string, restore: string): boolean {
+function scriptRuns(text: string, script: "arabic" | "latin"): string[] {
+  const pattern = script === "arabic" ? ARABIC_RUN : LATIN_RUN;
+  return (text.match(pattern) ?? []).map((run) => run.toLocaleLowerCase());
+}
+
+/**
+ * Script safety: the alternative must stay in the translation's script, must keep every
+ * foreign-script word the translation kept (a brand, a name, a piece of code), and must
+ * not introduce one. "كانت days جميلة" both switches script and invents a word.
+ *
+ * Limitation, recorded rather than hidden: a name the translator *transliterated* (Arabic
+ * "مولر" for "Müller") cannot be recognised as an entity without a name lexer, so a
+ * restore dropping such a transliteration is not rejected by this check.
+ */
+function keepsScript(translation: string, restore: string): boolean {
   const dominant = dominantScript(translation);
   if (!dominant) return true;
-  return dominant === "arabic" ? ARABIC_LETTER.test(restore) : LATIN_LETTER.test(restore);
+  if (dominantScript(restore) !== dominant) return false;
+  const foreign = dominant === "arabic" ? "latin" : "arabic";
+  return sameMultiset(scriptRuns(translation, foreign), scriptRuns(restore, foreign));
 }
 
 /**
  * Validates alternative translations for one finding.
  *
- * "Ways to restore" is a promise: each alternative must (a) still say what the current
- * translation says factually, (b) be in the target language's script, (c) not be a full
- * rewrite of the sentence, and (d) actually change the words named by the finding. An
+ * "Ways to restore" is a promise: each alternative must (a) still say exactly what the
+ * current translation says factually (numbers, dates, links, handles, quoted names,
+ * emoji — none dropped and none invented), (b) keep the sentence's negation, (c) stay in
+ * the target language's script without dropping or inventing foreign-script names, (d) not
+ * be a full rewrite, and (e) actually change the words named by the finding. An
  * alternative that fails any of these is not a suggestion with a defensible gain, so it is
- * not shown at all.
+ * not shown at all. The current translation stays untouched either way; an applied restore
+ * is a display overlay with Undo (the route keeps the base translation).
  */
 function validateRestores(
   translation: string,
@@ -767,7 +1098,8 @@ function validateRestores(
     if (seen.has(key)) continue;
     if (text.length > translation.length * 2 + 120) continue;
     if (!keepsFacts(translation, text)) continue;
-    if (!sameScript(translation, text)) continue;
+    if (!keepsNegation(translation, text)) continue;
+    if (!keepsScript(translation, text)) continue;
     const changed = clampSpan(changedSpan(translation, text), text.length);
     const changedLength = changed.end - changed.start;
     if (changedLength <= 0) continue;
@@ -897,27 +1229,58 @@ export function readWindowShadowReply(
 }
 
 /**
- * Merges per-window findings: overlapping findings (the same loss seen by two overlapping
- * windows, or two categories on the same words) keep only the strongest, then the global
- * cap applies. Dedupe is by target span first because that is what the person can see; a
- * second window pointing somewhere else is not the same finding even if the source
- * overlapped.
+ * Merges per-window findings into one consistent result.
+ *
+ * Overlapping windows judge the same boundary sentence twice, so the merge must remove a
+ * duplicate however the second window anchored it:
+ * - the same target words (two windows, or two categories claiming one lost place);
+ * - the same source words (the same loss quoted from two overlapping windows but anchored
+ *   to different occurrences of a repeated target phrase — the old merge kept both and
+ *   showed the person two findings for one lost meaning).
+ *
+ * After dedupe, order is enforced globally: each window is monotonic on its own (source
+ * and translation preserve order), so two windows disagreeing means at least one anchor is
+ * wrong. The weaker of a crossing pair is dropped, exactly like the per-window rule.
+ * Finally the cap applies and the result is ordered by what the person sees.
  */
 export function mergeWindowLosses(groups: Loss[][]): ShadowResult {
-  const all = groups.flat();
-  const ranked = [...all].sort(
-    (a, b) =>
-      scoreOf(b) - scoreOf(a) || a.target.start - b.target.start || a.source.start - b.source.start,
-  );
-  const kept: Loss[] = [];
+  const ranked = groups
+    .flat()
+    .sort(
+      (a, b) =>
+        scoreOf(b) - scoreOf(a) ||
+        a.target.start - b.target.start ||
+        a.source.start - b.source.start,
+    );
+  const deduped: Loss[] = [];
   for (const loss of ranked) {
-    if (kept.some((existing) => overlaps(existing.target, loss.target))) continue;
-    kept.push(loss);
-    if (kept.length === MAX_LOSSES) break;
+    if (deduped.some((existing) => overlaps(existing.target, loss.target))) continue;
+    if (deduped.some((existing) => overlaps(existing.source, loss.source))) continue;
+    deduped.push(loss);
+    if (deduped.length === MAX_LOSSES) break;
   }
-  kept.sort((a, b) => a.target.start - b.target.start);
+  // Global monotonicity: a finding whose target starts before its source-earlier
+  // neighbour's target cannot be pointed at the right words.
+  const ordered = [...deduped].sort(
+    (a, b) => a.source.start - b.source.start || a.source.end - b.source.end,
+  );
+  const monotonic: Loss[] = [];
+  for (const loss of ordered) {
+    let discarded = false;
+    while (monotonic.length) {
+      const last = monotonic[monotonic.length - 1]!;
+      if (loss.target.start >= last.target.start) break;
+      if (scoreOf(loss) > scoreOf(last)) monotonic.pop();
+      else {
+        discarded = true;
+        break;
+      }
+    }
+    if (!discarded) monotonic.push(loss);
+  }
+  monotonic.sort((a, b) => a.target.start - b.target.start);
   const seen = new Set<string>();
-  const unique = kept.map((loss) => {
+  const unique = monotonic.map((loss) => {
     const id = `${loss.category}-${loss.source.start}-${loss.target.start}`;
     const finalId = seen.has(id) ? `${id}-${seen.size}` : id;
     seen.add(finalId);

@@ -14,6 +14,7 @@ import { verifyTranslation } from "./verify";
 export async function repairDirect(
   request: TranslationRequest,
   previous: TranslationResult,
+  signal?: AbortSignal,
 ): Promise<TranslationResult | null> {
   const issues = verifyTranslation(request, previous);
   if (!issues.length) return null;
@@ -23,6 +24,7 @@ export async function repairDirect(
       buildRepairPrompt(request, previous, issues),
       true,
       request.text.length,
+      signal,
     );
     const repaired = parseResult(raw, request);
     return verifyTranslation(request, repaired).length < issues.length ? repaired : null;

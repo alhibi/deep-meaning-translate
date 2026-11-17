@@ -28,6 +28,14 @@ import { TranslationError } from "../types";
  * request without thinking completed normally. Reasoning therefore shares the generation
  * budget, which is why the thinking profiles below keep a ceiling well above what the plain
  * answer needs: an answer must never be cut merely because the model reasoned first.
+ *
+ * Re-verified live before this evaluation (same deployed model, key not printed):
+ * GET /models returned exactly `deepseek-flash` and `deepseek-v4-pro`; `max_tokens: 393216`
+ * was accepted and `393217` returned the documented 400 with range `[1, 393216]`; an
+ * omitted `thinking` toggle returned `reasoning_tokens` while `{"type":"disabled"}`
+ * returned none; JSON mode returned valid JSON; the SSE stream ended with `[DONE]` and
+ * carried usage on its final chunk; a client abort stopped the stream after ~0.3 s.
+ * Capability/evaluation commands and real results: `tests/eval/README.md`.
  */
 
 /** Task classes the app makes provider calls for. */

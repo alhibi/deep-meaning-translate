@@ -53,6 +53,15 @@ installable APKs are published with the repository:
   "whirlwind" while a caret marks live generation; provider deltas are coalesced to one paint per
   animation frame; a dismissible update pill appears when a new service worker takes over; storage
   health (quota, durability, archive rows, failed/trimmed writes) is visible on the About page.
+- **Contextual local weather** under the translator: an optional, approximate location (explicit
+  consent, no tracking, no raw fix stored) renders a compact strip with a real forecast from
+  Open-Meteo, a manual city alternative, units, freshness/offline labels and visible attribution;
+  provider failures keep the last valid forecast and never affect translation.
+- **World cultural discovery** in the same page, below the weather: a deterministic daily feature and
+  a mixed, editorially composed feed of 595 sourced, licence-cleared museum records (English, Arabic
+  and German metadata, provenance and attribution on every card), with search, filters, saved
+  discoveries, related items and a detail reading surface; bundled and offline-capable, images only
+  from the allow-listed museum host, no model calls at browsing time.
 - **One public page** (`/about`): product explanation, the meaning-first philosophy, the data
   disclosure and the controls; `/privacy` and `/arabic-german-translation` are permanent redirects
   into its sections, the sitemap lists only `/` and `/about`, and a first-run introduction is
@@ -88,8 +97,9 @@ npm run lint             # eslint, zero warnings
 npm run test             # vitest + coverage floors
 npm run check:contrast   # every theme pair clears WCAG AA
 npm run check:docs       # links and documentation inventory
+npm run check:security   # culture image hosts ≡ CSP (web + native), Permissions-Policy guard
 npm run build            # build + security headers + PWA precache check
-npm run verify           # typecheck + lint + tests + contrast
+npm run verify           # typecheck + lint + tests + contrast + docs + security
 ```
 
 At the close of the 2026-11-16 web upgrade: **461 tests passed, 4 skipped, 75 files**; **51

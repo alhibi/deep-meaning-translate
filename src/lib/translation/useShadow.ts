@@ -2,7 +2,13 @@ import { callShadow } from "../native/rpc";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 import type { Dialect, StyleOverride } from "./types";
-import { carryLosses, isShadowCandidate, type Loss, type ShadowResult } from "./shadow";
+import {
+  carryLosses,
+  isShadowCandidate,
+  type Loss,
+  type ShadowIncomplete,
+  type ShadowResult,
+} from "./shadow";
 import { enqueueEnrichment } from "./enrichment";
 
 const CACHE_LIMIT = 30;
@@ -17,7 +23,14 @@ const DISMISSED_LIMIT = 24;
 export const SHADOW_DELAY = 600;
 
 export type ShadowState =
-  { status: "off" | "idle" | "loading" } | { status: "ready"; losses: Loss[]; carried?: boolean };
+  | { status: "off" | "idle" | "loading" }
+  | {
+      status: "ready";
+      losses: Loss[];
+      carried?: boolean;
+      /** Set only when part of the analysis could not be completed; never for a full answer. */
+      incomplete?: ShadowIncomplete;
+    };
 
 /** Shared settled states: returning a fresh object on every keystroke re-rendered the route. */
 const IDLE: ShadowState = { status: "idle" };
@@ -72,7 +85,9 @@ export function useShadow(opts: {
   const visible = useCallback((k: string, r: ShadowResult | null): ShadowState => {
     if (!r) return { status: "idle" };
     const gone = dismissed.current.get(k);
-    return { status: "ready", losses: gone ? r.losses.filter((l) => !gone.has(l.id)) : r.losses };
+    const losses = gone ? r.losses.filter((l) => !gone.has(l.id)) : r.losses;
+    // A partial analysis is reported next to its surviving findings, never as a full one.
+    return { status: "ready", losses, ...(r.incomplete ? { incomplete: r.incomplete } : {}) };
   }, []);
 
   useEffect(() => {
@@ -109,8 +124,10 @@ export function useShadow(opts: {
       if (token !== generation.current || disposed.current || controller.signal.aborted) return;
       if (!c) setState({ status: "loading" });
       // Shares the paced background door with the dictionary: one quiet request at a time.
+      // Its signal is the transport's signal: a superseded shadow aborts the wire, and a
+      // second identical analysis joins the one already running instead of paying twice.
       void enqueueEnrichment(
-        () =>
+        (signal) =>
           analyze({
             data: {
               text: normalized,
@@ -121,10 +138,12 @@ export function useShadow(opts: {
               uiLocale,
               dialect,
             },
+            signal,
           }),
         {
           purpose: "shadow",
           signal: controller.signal,
+          key,
           isValid: () => token === generation.current && !disposed.current,
         },
       )
