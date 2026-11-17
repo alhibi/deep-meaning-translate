@@ -409,6 +409,9 @@ async def suite_requests(args):
 
         async def memory_after_reload():
             await h.page.reload(wait_until="load")
+            # This reload is intentional: re-anchor the contamination baseline so only an
+            # unexpected second reload (HMR/another edit) is reported.
+            h.environment["time_origin"] = await h.page.evaluate("() => performance.timeOrigin")
             await h.page.locator("textarea").first.wait_for(state="visible", timeout=30_000)
             await h.page.wait_for_function(
                 "() => window.__perf && window.__perf.startedAt > 0", timeout=10_000

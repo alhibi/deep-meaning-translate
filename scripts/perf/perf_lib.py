@@ -70,6 +70,7 @@ INIT_JS = r"""
     streamsCompleted: 0,
     streamsAborted: 0,
     duplicateTexts: {},
+    fullTexts: {},
     dom: {
       startedAt: now(),
       firstWordAt: null,
@@ -183,9 +184,12 @@ INIT_JS = r"""
         body.dialect || "",
         body.brain || "",
       ].join("\u0001");
-      const seen = perf.duplicateTexts[identity] || 0;
-      rec.duplicate = rec.mode === "full" && seen > 0;
-      perf.duplicateTexts[identity] = seen + 1;
+      const seenFull = perf.fullTexts[identity] || 0;
+      if (rec.mode === "full") {
+        rec.duplicate = seenFull > 0;
+        perf.fullTexts[identity] = seenFull + 1;
+      }
+      perf.duplicateTexts[identity] = (perf.duplicateTexts[identity] || 0) + 1;
     }
     perf.fetches.push(rec);
     perf.activeFetches++;

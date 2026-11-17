@@ -11,7 +11,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 export function DeferredMount({
   children,
   placeholder = null,
-  rootMargin = "600px 0px",
+  // A phone viewport is 844 px tall, so a large margin started the discovery mount during
+  // the first-load window (A14 measured 8 image requests before any scroll). This keeps the
+  // section strictly below the fold until the person approaches it.
+  rootMargin = "160px 0px",
 }: {
   children: ReactNode;
   placeholder?: ReactNode;
