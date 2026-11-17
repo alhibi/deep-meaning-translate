@@ -6,12 +6,23 @@ import { InputSchema } from "./translate.functions";
 import { takeLiveToken, takeToken, takeWarmToken } from "./throttle";
 import { z } from "zod";
 import { clientAddress, parseAdmittedJson } from "../requestSafety";
+import {
+  noteProviderFailure,
+  noteProviderSuccess,
+  providerCooldownRemaining,
+  type BrainId,
+} from "./providers/health.server";
 
 export const StreamInput = InputSchema.extend({
   mode: z.enum(["live", "full"]).optional().default("live"),
 });
 
-/** Warm-up: resolve and open the connection to the provider before the first keystroke. */
+/**
+ * Warm-up: resolve every module the first request needs and open the provider connection
+ * before the first keystroke. The imports run together: they used to load one after the
+ * other inside the request handler, so the first sentence paid for four serial module
+ * resolutions on a cold instance.
+ */
 export async function warmTranslateStream(request: Request): Promise<Response> {
   const noContent = new Response(null, {
     status: 204,
@@ -29,6 +40,8 @@ export async function warmTranslateStream(request: Request): Promise<Response> {
     ),
     import("./providers/deepseek.server"),
     import("./providers/opencode.server"),
+    import("./engine.server"),
+    import("./types"),
   ]);
   return noContent;
 }
@@ -57,42 +70,78 @@ export async function handleTranslateStream(request: Request): Promise<Response>
   request.signal.addEventListener("abort", abort, { once: true });
   if (request.signal.aborted) abort();
   const cleanup = () => request.signal.removeEventListener("abort", abort);
-  const apiKey = process.env["OPENCODE_API_KEY"];
 
-  const { streamLiveTranslation, streamFullTranslation } =
-    await import("./providers/opencode.server");
-  const { TranslationError, LUNA_ENABLED, effectiveBrain } = await import("./types");
   const started = Date.now();
-  let deltas: AsyncGenerator<string>;
+  // Resolve the hot path once, in parallel. These modules used to be loaded one after
+  // the other before a single provider byte could leave the server.
+  const [opencode, types, ds, engine] = await Promise.all([
+    import("./providers/opencode.server"),
+    import("./types"),
+    import("./providers/deepseek.server"),
+    import("./engine.server"),
+  ]);
+  const { streamLiveTranslation, streamFullTranslation } = opencode;
+  const { TranslationError, LUNA_ENABLED, effectiveBrain } = types;
+  const { shouldFallBack } = engine;
+  const lunaKey = process.env["OPENCODE_API_KEY"];
+  const deepseekKey = ds.deepseekKey();
+  const configured: Record<BrainId, boolean> = {
+    luna: Boolean(lunaKey && LUNA_ENABLED),
+    deepseek: Boolean(deepseekKey),
+  };
+  const other = (brain: BrainId): BrainId => (brain === "luna" ? "deepseek" : "luna");
+  /**
+   * Both writers available: never spend the pre-stream retry delay on the failing one.
+   * DeepSeek's 429 path cost the deployed Sona route 2.5 s of dead wait before the
+   * fallback even started; failing over immediately is the same correction, sooner.
+   */
+  const retry = configured.luna && configured.deepseek ? { maxAttempts: 1 } : undefined;
+
   const { mode, ...rest } = data;
   const req = { ...rest, partial: mode !== "full" };
-  const ds = await import("./providers/deepseek.server");
-  const { shouldFallBack } = await import("./engine.server");
-  const brains = {
-    luna: () => {
-      if (!apiKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
+  const streamFrom = (brain: BrainId): Promise<AsyncGenerator<string>> => {
+    if (brain === "luna") {
+      if (!lunaKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
       return mode === "full"
-        ? streamFullTranslation(apiKey, req, upstream.signal)
-        : streamLiveTranslation(apiKey, req, upstream.signal);
-    },
-    deepseek: () => {
-      const key = ds.deepseekKey();
-      if (!key) throw new TranslationError("auth", "DeepSeek is not configured.");
-      return mode === "full"
-        ? ds.streamDeepSeekFull(key, req, upstream.signal)
-        : ds.streamDeepSeekLive(key, req, upstream.signal);
-    },
-  } as const;
-  let brain: keyof typeof brains = effectiveBrain(data.brain);
+        ? streamFullTranslation(lunaKey, req, upstream.signal, retry)
+        : streamLiveTranslation(lunaKey, req, upstream.signal, retry);
+    }
+    if (!deepseekKey) throw new TranslationError("auth", "DeepSeek is not configured.");
+    return mode === "full"
+      ? ds.streamDeepSeekFull(deepseekKey, req, upstream.signal, retry)
+      : ds.streamDeepSeekLive(deepseekKey, req, upstream.signal, retry);
+  };
+
+  const requested = effectiveBrain(data.brain);
+  let brain: BrainId = requested;
+  /** Why the writer is not the requested one; null when the requested brain answered. */
+  let fallbackReason: string | null = null;
+  // A writer that just refused a request is skipped while the other one can answer.
+  // Replaying it first would repeat the same delay for every sentence.
+  if (providerCooldownRemaining(brain) > 0 && configured[other(brain)]) {
+    brain = other(brain);
+    fallbackReason = "cooldown";
+  }
+
+  let deltas: AsyncGenerator<string>;
+  let upstreamMs = 0;
   try {
     try {
-      deltas = await brains[brain]();
+      deltas = await streamFrom(brain);
     } catch (err) {
-      // The other brain takes over when the chosen one is down, out of credit or rate limited.
-      if (request.signal.aborted || !LUNA_ENABLED || !shouldFallBack(err)) throw err;
-      brain = brain === "luna" ? "deepseek" : "luna";
-      deltas = await brains[brain]();
+      // The other brain takes over when the chosen one is down, out of credit or rate
+      // limited. A cancellation is never replayed.
+      if (request.signal.aborted || !shouldFallBack(err)) throw err;
+      const kind = err instanceof TranslationError ? err.kind : "provider";
+      noteProviderFailure(brain, kind);
+      const backup = other(brain);
+      if (!configured[backup]) throw err;
+      fallbackReason = kind;
+      brain = backup;
+      deltas = await streamFrom(brain);
     }
+    upstreamMs = Date.now() - started;
+    noteProviderSuccess(brain);
   } catch (err) {
     cleanup();
     // Cancelled by the app (newer text typed): end quietly, not an error.
@@ -126,12 +175,16 @@ export async function handleTranslateStream(request: Request): Promise<Response>
         } else controller.error(err);
       } finally {
         cleanup();
-        // Privacy: metrics only — never the text.
+        // Privacy: metrics only — never the text. `upstreamMs` separates provider time
+        // from the total, and `fallback` names the failure class that caused a rescue.
         console.info(
           JSON.stringify({
             event: "translate_stream",
             mode: data.mode,
             brain,
+            requested,
+            fallback: fallbackReason,
+            upstreamMs,
             outcome,
             ms: Date.now() - started,
             chars: data.text.length,
@@ -153,6 +206,9 @@ export async function handleTranslateStream(request: Request): Promise<Response>
       // The brain that actually wrote it (after any fallback), so the quiet review is
       // never sent as if the requested model had written a rescued answer.
       "X-Translation-Writer": brain,
+      // Diagnostic only, content-free: the requested writer answered unless a failure
+      // class (or a short cooldown) made the other brain take over.
+      ...(fallbackReason ? { "X-Translation-Fallback": fallbackReason } : {}),
     },
   });
 }

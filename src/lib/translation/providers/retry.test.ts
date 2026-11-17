@@ -86,6 +86,23 @@ describe("bounded provider retry", () => {
     void response.body?.cancel().catch(() => {});
   });
 
+  it("can fail over immediately instead of waiting out a provider retry", async () => {
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        calls += 1;
+        return Promise.resolve(
+          new Response("busy", { status: 429, headers: { "Retry-After": "120" } }),
+        );
+      }),
+    );
+    const response = await fetchWithRetry(URL, {}, undefined, { maxAttempts: 1 });
+    expect(calls).toBe(1);
+    expect(response.status).toBe(429);
+    void response.body?.cancel().catch(() => {});
+  });
+
   it("retries once when the network fails before headers", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0); // 200 ms, keeps the test fast
     let calls = 0;

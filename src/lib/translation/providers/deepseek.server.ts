@@ -10,7 +10,7 @@ import type { TranslationProvider, TranslationRequest, TranslationResult } from 
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { textDeltas } from "./opencode.server";
-import { fetchWithRetry } from "./retry.server";
+import { fetchWithRetry, type RetryOptions } from "./retry.server";
 import { assertContextFits, capabilityRequest, type TaskProfile } from "./capabilities";
 import { requireCompletion } from "./completion";
 
@@ -43,6 +43,7 @@ async function send(
   stream: boolean,
   profile: TaskProfile,
   chars: number,
+  options: RetryOptions = {},
 ): Promise<Response> {
   const cancelled = () => Object.assign(new Error("cancelled"), { name: "AbortError" });
   if (signal?.aborted) throw cancelled();
@@ -67,6 +68,7 @@ async function send(
         }),
       },
       signal,
+      options,
     );
   } catch (err) {
     if (signal?.aborted || (err as Error)?.name === "AbortError") throw cancelled();
@@ -142,6 +144,7 @@ export async function streamDeepSeekLive(
   apiKey: string,
   req: TranslationRequest,
   signal?: AbortSignal,
+  options?: RetryOptions,
 ): Promise<AsyncGenerator<string>> {
   const res = await send(
     apiKey,
@@ -151,6 +154,7 @@ export async function streamDeepSeekLive(
     true,
     "live",
     req.text.length,
+    options,
   );
   if (!res.body) throw new TranslationError("provider", "Empty DeepSeek stream.");
   return textDeltas(res.body);
@@ -160,6 +164,7 @@ export async function streamDeepSeekFull(
   apiKey: string,
   req: TranslationRequest,
   signal?: AbortSignal,
+  options?: RetryOptions,
 ): Promise<AsyncGenerator<string>> {
   const res = await send(
     apiKey,
@@ -169,6 +174,7 @@ export async function streamDeepSeekFull(
     true,
     "full",
     req.text.length,
+    options,
   );
   if (!res.body) throw new TranslationError("provider", "Empty DeepSeek stream.");
   return textDeltas(res.body);

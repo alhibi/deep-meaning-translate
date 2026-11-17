@@ -89,7 +89,16 @@ chosen. Both brains are active:
   verified only there, and enrichment must not gain a second, unverified provider path;
 - the stream response reports the brain that actually wrote the answer (`X-Translation-Writer`) and
   the client sends it back as `writer` on the quiet review, so a DeepSeek fallback that rescued a
-  failed Luna request is never reviewed as Luna's writing.
+  failed Luna request is never reviewed as Luna's writing;
+- with both writers configured, a failing writer is replaced **immediately**: the foreground route
+  sends one attempt per provider (`maxAttempts: 1`) instead of sleeping through the provider's
+  clamped `Retry-After` before falling back. A writer that just failed is skipped for a bounded
+  cooldown (rate 30 s, network 10 s, provider 15 s, auth/quota 5 min; success clears it) while the
+  other can answer. The diagnostic `X-Translation-Fallback` header names the failure class, and
+  the server log records `requested`, `fallback` and `upstreamMs` with no text. State is two
+  process-local entries (`providers/health.server.ts`), not a deployment-wide breaker — TD5/TD54.
+  Why: on the deployed route every Sona request paid 2.5 s of retry for a refusing provider before
+  the healthy one answered (measured 3.36–4.36 s; see the 2026-11-17 latency audit).
 
 Provider keys are read only in server modules (`process.env`), never in client code. A single
 configured key still yields a working translator: the other brain's paths simply report the

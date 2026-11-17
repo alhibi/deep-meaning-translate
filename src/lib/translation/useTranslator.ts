@@ -49,6 +49,13 @@ function phaseFor(kind: ErrorKind): Phase {
 const PENDING_DELAY_MS = 260;
 /** Generous safety net for a hung connection — not a cap on normal model thinking. */
 const REQUEST_TIMEOUT_MS = 60_000;
+/**
+ * How long an unchanged, still-provisional draft waits before its full reading starts.
+ * Measured from the last text change, never from the live answer's arrival: anchoring the
+ * clock to the live commit added the entire live round trip (0.7–2.0 s measured) to every
+ * settled sentence.
+ */
+const FULL_READING_PAUSE_MS = 1_200;
 const CACHE_LIMIT = 60;
 /** Longest the screen goes without a fresh request while someone types non-stop. */
 const MAX_WAIT_MS = 650;
@@ -198,6 +205,10 @@ export function useTranslator(opts: {
   const hasResult = useRef(false);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   hasResult.current = !!result;
+  /** Whether the reading on screen is still a provisional live guess. Read by the pause timer. */
+  const provisionalRef = useRef(false);
+  // eslint-disable-next-line react-hooks/refs -- latest-value ref, read only from the pause timer — not rendered
+  provisionalRef.current = provisional;
   const successRef = useRef(onSuccess);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   successRef.current = onSuccess;
@@ -723,16 +734,32 @@ export function useTranslator(opts: {
 
   // A pause finishes the thought, not the verification. Request one full reading even
   // without punctuation; never relabel unchecked live text as a settled/archiveable one.
+  //
+  // The clock starts at the last text change. Waiting for the provisional live answer to
+  // arrive before starting it serialised two provider round trips: measured on the
+  // deployed route the full request only left 1.2 s AFTER the live stream completed
+  // (≈2.7–3.2 s after the last keystroke), although the full reading itself takes under
+  // a second. The pause is unchanged; only the moment it starts counting is.
   useEffect(() => {
-    if (composing || !provisional || phase !== "COMPLETE" || !result) return;
+    if (composing) return;
+    const norm = normalize(text);
+    if (!worthTranslating(norm)) return;
+    // Text that already ends a thought or a line goes straight to the full request from
+    // the scheduler; this pause upgrade exists for text still open mid-thought.
+    if (!isProvisional(norm, text, false)) return;
+    const key = keyOf(norm, source, target, styleKey);
     const id = setTimeout(() => {
+      if (disposed.current) return;
       const draft = current.current;
-      if (committedKey.current !== draft.key || displayedKeyRef.current !== draft.key) return;
+      if (draft.composing || draft.key !== key) return;
+      // Nothing left to upgrade: a settled reading or a full request already in flight.
+      if (committedKey.current === key && !provisionalRef.current) return;
+      if (inflight.current?.key === key && !inflight.current.prov) return;
       draft.provisional = false;
       void run(draft.norm, draft.key, false);
-    }, 1200);
+    }, FULL_READING_PAUSE_MS);
     return () => clearTimeout(id);
-  }, [provisional, phase, result, text, composing, run]);
+  }, [text, source, target, styleKey, composing, run]);
 
   const busy = phase === "TRANSLATING" || phase === "UPDATING" || phase === "RETRYING";
   useEffect(() => {

@@ -539,6 +539,36 @@ describe("composition and settled identity", () => {
     expect(success.mock.calls.filter((c) => c[2] === false)).toHaveLength(1);
   });
 
+  it("starts the settled reading from the typing pause, not from the live answer's arrival", async () => {
+    let finishLive: (value: unknown) => void = () => {};
+    call.mockImplementationOnce(() => new Promise((resolve) => (finishLive = resolve)));
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Hallo Welt"),
+    });
+    await flush(1_100);
+    // The live stream is still open; the pause is measured from the text, not from it.
+    expect(call).toHaveBeenCalledTimes(1);
+    await flush(200);
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(call.mock.calls[1]![0].data.partial).toBe(false);
+    // A late live answer for the same draft can never turn into the settled one.
+    finishLive({ ok: true, result: result("مبدئية") });
+    await flush(20);
+    expect(h.current.settled).toBe(false);
+  });
+
+  it("restarts the pause when typing resumes before the settled reading starts", async () => {
+    call.mockResolvedValue({ ok: true, result: result("حيّة") });
+    const { rerender } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo") });
+    await flush(700);
+    rerender(opts("Hallo Welt"));
+    await flush(700);
+    // 1.4 s after the first draft but only 0.7 s after the edit: no settled request yet.
+    expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(0);
+    await flush(600);
+    expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(1);
+  });
+
   it("treats a transport that resolves after abort as a timeout, not a retryable network error", async () => {
     call.mockImplementation(
       ({ signal }: { signal: AbortSignal }) =>

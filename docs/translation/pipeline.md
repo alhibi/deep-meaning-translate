@@ -58,11 +58,15 @@ identity; cache, device memory and session priming all use it.
 | Live (`partial`) | while typing      | plain text stream | display only; never verified, stored or archived  |
 | Full             | finished sentence | structured JSON   | parsed, verified; eligible for memory and archive |
 
-After a 1,200 ms pause, an unchanged live result requests **one full reading**. It is not made final
-by flipping a flag: only that full response can settle it and expose actions. The in-memory cache
-records whether a result came from full mode, so an explicit submission cannot be answered by an
-unchecked live reading. A throttled live request stays quiet and tries the separate full-mode path
-after the pause; further editing cancels it.
+After 1,200 ms with no text change, a still-provisional draft requests **one full reading**. The
+clock starts at the last text change, not when the live answer arrives: the live request is a
+transport detail, and anchoring the pause to it serialised a whole provider round trip into every
+settled sentence (measured on the deployed route: the full request left ≈3.2 s after the last
+keystroke instead of 1.2 s; see [the latency audit](../audits/2026-11-17-latency.md)). A full
+reading is not made final by flipping a flag: only that full response can settle it and expose
+actions. The in-memory cache records whether a result came from full mode, so an explicit
+submission cannot be answered by an unchecked live reading. A throttled live request stays quiet
+and tries the separate full-mode path after the pause; further editing cancels it.
 
 The displayed result has its own request key. `stale` means it belongs to another draft (or an IME is
 composing); `settled` requires the current key, a non-provisional result and a complete phase.
@@ -218,7 +222,16 @@ Two retry layers, both bounded:
 - **Provider boundary (server):** one retry for a transient HTTP status (429/500/502/503/504) or a
   network failure **before the response body is handed off**, with `Retry-After` clamped to 2.5 s
   and 200–600 ms full-jitter otherwise. A caller abort, a 401/402, or a stream that has already
-  started is never retried (a started stream cannot be replayed).
+  started is never retried (a started stream cannot be replayed). **When both writers are
+  configured, the foreground stream route makes one attempt per provider and fails over
+  immediately** instead of sleeping through `Retry-After` for a provider that is already refusing
+  the request (`maxAttempts: 1`); a single-writer deployment keeps the retry.
+- **Provider cooldown:** a writer that just failed is skipped for a bounded window — rate 30 s,
+  network 10 s, provider 15 s, auth/quota 5 min — while the other writer can answer; a success
+  clears the record. The response reports the actual writer and, when a rescue happened, the
+  failure class in `X-Translation-Fallback`; the server log records `requested`, `fallback` and
+  `upstreamMs` without any text. State is two bounded process-local entries, like the admission
+  buckets.
 - **Client (session):** one retry after a transient `rate`/`network`/`provider` failure, as
   before; a live rate limit stays silent while typing.
 
@@ -235,8 +248,10 @@ a truncated sentence or an invented repetition loop must never become a settled 
   remains a third budget. The buckets are sized so a fast human typist is never admitted-then-refused
   mid-sentence (live 120 / 4 per second sustained; settled 90 / 2 per second); a scripted client is
   still bounded. These are admission limits, not model throttles.
-- The warm-up request preloads both provider modules and opens the TLS connection **without text or
-  credentials**. The first keystroke therefore does not also pay for module resolution.
+- The warm-up request preloads both provider modules, the shared engine and the request types, in
+  parallel, and opens the TLS connection **without text or credentials**. The first keystroke
+  therefore does not also pay for serial module resolution. The same four imports inside the
+  request handler load together rather than one after the other.
 - `max_tokens` is a **runaway ceiling, not a target**, and it is set **per task class** in
   `providers/capabilities.ts`: live streams 8,192 / settled full 16,384 / repair and review 32,768 /
   analysis 65,536, all under the documented 384K provider output bound. `budget.ts` still supplies
@@ -294,6 +309,10 @@ a truncated sentence or an invented repetition loop must never become a settled 
   the ceiling leaves room for a legitimate long answer, and a degenerate loop that still occurs is
   rejected by the verifier before it can be shown.
 - Luna is enabled (`LUNA_ENABLED = true`); its live/settled streaming, DeepSeek fallback, DeepSeek
-  review and the Android direct-key guard are unit-tested. No provider key is configured in this
-  environment, so a live Luna call, its latency and linguistic quality are **NOT_VERIFIED**. Cloud
-  voice and dictation likewise remain NOT_VERIFIED.
+  review and the Android direct-key guard are unit-tested. **Deployed observation 2026-11-17:** the
+  OpenCode/Luna writer refused requests throughout the audit window — four of four production
+  probes were rescued by DeepSeek after 3.36–4.36 s, and the route named `deepseek` as the actual
+  writer — so a live Luna-written answer, its latency and its linguistic quality remain
+  **NOT_VERIFIED** (TD54; an unavailable provider is not app code). The route now fails over in one
+  attempt and cools the writer down, so a Sona selection cannot queue the person behind a refusing
+  provider. Cloud voice and dictation likewise remain NOT_VERIFIED.

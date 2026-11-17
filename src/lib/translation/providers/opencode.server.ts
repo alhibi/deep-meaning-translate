@@ -15,7 +15,7 @@ import {
   type LexiconQuery,
   type LexiconResult,
 } from "../lexicon";
-import { fetchWithRetry } from "./retry.server";
+import { fetchWithRetry, type RetryOptions } from "./retry.server";
 
 const BASE = "https://opencode.ai/zen/go/v1";
 const DEFAULT_MODEL = "gpt-6-luna";
@@ -49,6 +49,7 @@ async function send(
   user: string,
   signal: AbortSignal | undefined,
   stream: boolean,
+  options: RetryOptions = {},
 ): Promise<Response> {
   // Luna runs on the Responses endpoint: no hidden thinking, terse output, cached system prompt.
   const body = {
@@ -81,6 +82,7 @@ async function send(
         body: JSON.stringify(body),
       },
       signal,
+      options,
     );
   } catch (err) {
     if (signal?.aborted || (err as Error)?.name === "AbortError") throw cancelled();
@@ -196,8 +198,16 @@ export async function streamLiveTranslation(
   apiKey: string,
   req: TranslationRequest,
   signal?: AbortSignal,
+  options?: RetryOptions,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildLiveSystemPrompt(), buildLiveUserPrompt(req), signal, true);
+  const res = await send(
+    apiKey,
+    buildLiveSystemPrompt(),
+    buildLiveUserPrompt(req),
+    signal,
+    true,
+    options,
+  );
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }
@@ -226,8 +236,9 @@ export async function streamFullTranslation(
   apiKey: string,
   req: TranslationRequest,
   signal?: AbortSignal,
+  options?: RetryOptions,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true);
+  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true, options);
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }

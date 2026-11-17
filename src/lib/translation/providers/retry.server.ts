@@ -17,6 +17,19 @@ export const MAX_PROVIDER_ATTEMPTS = 2;
 const MAX_RETRY_DELAY_MS = 2_500;
 const BASE_RETRY_DELAY_MS = 200;
 
+/**
+ * How many attempts a provider request may spend, including the first one.
+ *
+ * The foreground translation path disables the retry when another brain is configured:
+ * failing over immediately is faster than waiting out a Retry-After of up to 2.5 s for a
+ * provider that is already refusing the request. Background work (repair, review,
+ * analysis) keeps the default so a transient blip still heals itself.
+ */
+export interface RetryOptions {
+  /** 1 disables the pre-stream retry; defaults to MAX_PROVIDER_ATTEMPTS. */
+  maxAttempts?: number | undefined;
+}
+
 /** "The provider had a bad moment", as opposed to "this request is wrong". */
 export function isTransientStatus(status: number): boolean {
   return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
@@ -78,7 +91,9 @@ export async function fetchWithRetry(
   url: string,
   init: RequestInit,
   signal?: AbortSignal,
+  options: RetryOptions = {},
 ): Promise<Response> {
+  const maxAttempts = Math.max(1, Math.floor(options.maxAttempts ?? MAX_PROVIDER_ATTEMPTS));
   for (let attempt = 1; ; attempt++) {
     if (signal?.aborted) throw abortError();
     let response: Response;
@@ -90,11 +105,11 @@ export async function fetchWithRetry(
       // second would double a wait that already timed out.
       if (signal?.aborted) throw abortError();
       if ((error as Error | null)?.name === "AbortError") throw error;
-      if (attempt >= MAX_PROVIDER_ATTEMPTS) throw error;
+      if (attempt >= maxAttempts) throw error;
       await wait(retryDelayMs(null, attempt), signal);
       continue;
     }
-    if (response.ok || !isTransientStatus(response.status) || attempt >= MAX_PROVIDER_ATTEMPTS) {
+    if (response.ok || !isTransientStatus(response.status) || attempt >= maxAttempts) {
       return response;
     }
     // Release the rejected attempt's connection without reading its body. No caller has
