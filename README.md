@@ -68,6 +68,10 @@ Two brains are active: **DeepSeek** is the default writer and independent review
 fallback, DeepSeek reviews Luna-written sentences, and the app still works with only one provider
 key. Provider routing lives only in `engine.server.ts` / the translate-stream route.
 
+The interface presents those brains under their product names: `deepseek` is **Velo** and
+`luna` is **Sona**. Internal ids, provider endpoints, environment keys and routing keep their
+technical names, so a rename is presentation only.
+
 The contextual weather strip and the cultural library are built, tested and still routed, but they
 are **switched off in the translator in this release** (`src/lib/features.ts`); their components,
 hooks, data, routes and tests remain in the tree.

@@ -130,7 +130,7 @@ stay restrained; depth comes from surface contrast and spacing rather than heavy
 | `AppHeader` / `Wordmark`                                     | name, interface language, install offer, theme, saved, statistics |
 | `LanguageBar`                                                | source/target selection and swap; source `auto`                   |
 | `StyleToggle`                                                | Natural / Formal / Casual                                         |
-| `BrainPicker`                                                | model selection; DeepSeek default, Luna selectable                |
+| `BrainPicker`                                                | model selection; Velo (deepseek) default, Sona (luna) selectable  |
 | `ComposerField` / `DictationText`                            | native editing, IME/Enter/limit handling, exact dictation echo    |
 | `ResultPanel`                                                | translation, copy, listen, save, shadow, current/stale states     |
 | `LexiconPanel`, `SentenceShadow`                             | model-sourced readings; shadow ink, summary and two-text map      |

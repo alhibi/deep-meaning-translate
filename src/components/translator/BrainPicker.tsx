@@ -4,7 +4,7 @@ import { LUNA_ENABLED, type Brain } from "@/lib/translation/types";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSheet } from "./LanguageSheet";
 
-const NAMES: Record<Brain, string> = { deepseek: "DeepSeek", luna: "Luna" };
+const NAMES: Record<Brain, string> = { deepseek: "Velo", luna: "Sona" };
 const ORDER: Brain[] = ["deepseek", "luna"];
 
 /** Quiet model chip: the name of the brain writing translations, opening a small sheet. */

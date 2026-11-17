@@ -26,7 +26,7 @@ interface Props {
   /** Codes worth offering before the full list (the natural partners of the source). */
   suggested?: string[] | undefined;
   searchable?: boolean;
-  /** Items aren't languages (e.g. dialects): show names as given, no locale lookups. */
+  /** Items aren't languages (models, dialects): show names as given, no locale lookups. */
   plain?: boolean;
   onSelect: (code: string) => void;
   onClose: () => void;
@@ -61,6 +61,20 @@ function LanguageRow({
       : it.name !== it.native
         ? it.name
         : "";
+  // Non-language rows keep the list's geometry but get a calmer two-line hierarchy: both
+  // lines align to the inline start (right in Arabic, left in English) whatever their script.
+  const titleClass = `truncate ${active ? "text-foreground" : "text-foreground/90"} ${
+    plain
+      ? `text-[17px] leading-[1.35] tracking-[-0.01em] ${active ? "font-semibold" : "font-medium"}`
+      : `${
+          it.rtl
+            ? "font-arabic text-[19px] leading-[1.35]"
+            : "text-[17px] leading-[1.35] tracking-[-0.01em]"
+        } ${active ? "font-semibold" : "font-medium"}`
+  }`;
+  const captionClass = plain
+    ? "text-pretty text-[13px] leading-[1.55] text-muted-foreground"
+    : "truncate text-[12px] text-faint";
   return (
     <li className="flex items-center gap-0.5">
       <button
@@ -70,19 +84,12 @@ function LanguageRow({
         aria-pressed={active}
         className="press-soft flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-4 py-3 text-start transition-colors hover:bg-card"
       >
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span
-            dir="auto"
-            className={`truncate ${active ? "text-foreground" : "text-foreground/90"} ${
-              it.rtl
-                ? "font-arabic text-[19px] leading-[1.35]"
-                : "text-[17px] leading-[1.35] tracking-[-0.01em]"
-            } ${active ? "font-semibold" : "font-medium"}`}
-          >
+        <span className={`flex min-w-0 flex-1 flex-col ${plain ? "gap-1" : ""}`}>
+          <span dir={plain ? undefined : "auto"} className={titleClass}>
             {it.code === "auto" && !plain ? t("detect") : it.native}
           </span>
           {secondary && it.code !== "auto" ? (
-            <span dir="auto" className="truncate text-[12px] text-faint">
+            <span dir={plain ? undefined : "auto"} className={captionClass}>
               {secondary}
             </span>
           ) : null}
@@ -237,6 +244,8 @@ export function LanguageSheet({
    * uses, what this pair needs, what most people need, then everyone else. A code appears
    * once — the first section that claims it. */
   const sections = useMemo(() => {
+    // A non-language list has one group and no "All languages" heading.
+    if (plain) return [{ key: "models", label: null as string | null, items: filtered }];
     if (q) return [{ key: "search", label: null as string | null, items: filtered }];
     const byCode = new Map(items.map((i) => [i.code, i]));
     const seen = new Set<string>();
@@ -263,7 +272,7 @@ export function LanguageSheet({
     const all = take(items.filter((i) => i.code !== "auto").map((i) => i.code));
     if (all.length) out.push({ key: "all", label: t("langAll"), items: all });
     return out;
-  }, [q, filtered, items, favorites, recent, suggested, t]);
+  }, [q, filtered, items, favorites, recent, suggested, t, plain]);
 
   const auto = useMemo(
     () => (q ? null : (items.find((i) => i.code === "auto") ?? null)),
@@ -380,7 +389,9 @@ export function LanguageSheet({
         ) : null}
         <div
           onKeyDown={onListKeyDown}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))] ${
+            plain ? "pt-1" : ""
+          }`}
         >
           {auto ? (
             <ul>
