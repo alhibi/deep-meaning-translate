@@ -25,10 +25,7 @@ const CSP = [
   "form-action 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  // Remote culture images are restricted to the exact hosts in
-  // src/lib/culture/media-hosts.json (tests/security/csp-image-hosts.mjs enforces the
-  // equality). No scheme-wide allowance: an untrusted page could otherwise beacon out.
-  "img-src 'self' data: blob: https://images.metmuseum.org",
+  "img-src 'self' data: blob:",
   "media-src 'self' blob: data:",
   "font-src 'self' data:",
   "connect-src 'self'",

@@ -40,7 +40,7 @@ jobs:
       - name: Documentation links and inventory
         run: npm run check:docs
 
-      - name: Security policy (culture image hosts ≡ CSP, Permissions-Policy)
+      - name: Cultural content gate (text-first, image-free, no museum corpus)
         run: npm run check:security
 
       - name: Unit tests (coverage floors enforced)

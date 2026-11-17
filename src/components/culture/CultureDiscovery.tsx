@@ -1,333 +1,257 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { CultureLocale } from "@/lib/culture/types";
-import type { CultureDiscoveryProps, CultureListEntry } from "./contract";
-import { cultureCopy } from "./copy";
-import {
-  DEFAULT_PAGE_SIZE,
-  useCultureFeed,
-  useFacets,
-  useFeatured,
-  useIsOnline,
-  useSavedCulture,
-} from "./useDiscovery";
-import { compositionFor, isWideComposition } from "./compositions";
-import { CultureCard } from "./CultureCard";
-import { CultureFeatured } from "./CultureFeatured";
-import { CultureControls } from "./CultureControls";
-import { CalmNotice, FeedSkeleton, FeaturedSkeleton, MoreErrorNotice } from "./CultureStates";
-import { CultureDetail } from "./CultureDetail";
-import { localized } from "./format";
-
-const SAVED_STEP = 24;
-
-function matchesLocal(entry: CultureListEntry, query: string): boolean {
-  if (!query) return true;
-  const haystack = [
-    entry.title.en,
-    entry.title.ar,
-    entry.title.de,
-    entry.titleOriginal ?? "",
-    entry.category,
-    entry.continent,
-    ...entry.countries,
-    ...entry.tags,
-  ]
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes(query);
-}
+import { useCallback, useId, useMemo, useRef, useState } from "react";
+import type { CultureDiscoveryAdapter } from "@/lib/culture/adapter";
+import type { CultureIndexEntry, CultureLocale } from "@/lib/culture/types";
+import { CultureCard, FeatureComposition } from "./CultureCompositions";
+import { CultureFilters } from "./CultureFilters";
+import { CultureReading } from "./CultureReading";
+import { CultureEmpty, CultureEndNote, CultureFailure, CultureLoading } from "./CultureStates";
+import { COPY } from "./copy";
+import { directionOf } from "./format";
+import { useCultureFeed } from "./useDiscovery";
 
 /**
- * The discovery section that lives below the translator.
+ * The written culture library, composed below the translator.
  *
- * Reading order: a quiet introduction, one editorial feature, a search/filter surface, then
- * a mixed feed of genuinely different card compositions. The initial paint is small; more
- * arrives through an explicit control, with an IntersectionObserver that only nudges it —
- * guarded by an in-flight flag, a cooldown and a cap on automatic pages, so no scroll
- * position can start an endless request chain. Opening a record puts it in a dialog; closing
- * restores both focus (through useFocusTrap) and the exact scroll position.
+ * A small label, an editorial introduction, today's reading, then a mixed feed with six
+ * written compositions, one quiet index of controls, a saved shelf and an explicit "more to
+ * read" step. Nothing auto-loads: there is no scroll sentinel, no request per keystroke and
+ * no duplicate piece. Opening a piece is a real dialog with a restored place on close.
  */
-export function CultureDiscovery({
-  adapter,
-  locale,
-  pageSize = DEFAULT_PAGE_SIZE,
-  className,
-}: CultureDiscoveryProps) {
-  const copy = cultureCopy(locale);
+
+export interface CultureDiscoveryProps {
+  adapter: CultureDiscoveryAdapter;
+  locale: CultureLocale;
+}
+
+export function CultureDiscovery({ adapter, locale }: CultureDiscoveryProps) {
+  const copy = COPY[locale];
+  const dir = directionOf(locale);
   const headingId = useId();
-  const feed = useCultureFeed(adapter, pageSize);
-  const facets = useFacets(adapter);
-  const featured = useFeatured(adapter);
-  const saved = useSavedCulture(adapter.saved);
-  const online = useIsOnline(adapter);
+  const feed = useCultureFeed(adapter);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const scrollPosition = useRef<number | null>(null);
+  const surpriseIndex = useRef(0);
 
-  const [view, setView] = useState<"discover" | "saved">("discover");
-  const [savedLimit, setSavedLimit] = useState(SAVED_STEP);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const scrollRef = useRef(0);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const pushedEntry = useRef(false);
-  const popping = useRef(false);
-  const toggleSaved = saved.toggle;
+  const openEntry = useCallback((entry: CultureIndexEntry) => {
+    scrollPosition.current = typeof window === "undefined" ? 0 : window.scrollY;
+    setActiveId(entry.id);
+  }, []);
 
-  const query = feed.search.trim().toLowerCase();
-  const savedEntries = saved.entries;
-  const visibleSaved = useMemo(
-    () => savedEntries.filter((entry) => matchesLocal(entry, query)),
-    [savedEntries, query],
+  const openById = useCallback((id: string) => {
+    setActiveId(id);
+  }, []);
+
+  const closeReading = useCallback(() => {
+    setActiveId(null);
+    const previous = scrollPosition.current;
+    scrollPosition.current = null;
+    // The reading dialog is unmounted by the same commit; restoring in the handler keeps
+    // the page exactly where the person left it, with no visible jump.
+    if (previous !== null && typeof window !== "undefined") window.scrollTo(0, previous);
+  }, []);
+
+  const toggleSaved = useCallback(
+    (id: string) => {
+      feed.toggleSaved(id);
+    },
+    [feed],
   );
-  const shownSaved = useMemo(() => visibleSaved.slice(0, savedLimit), [visibleSaved, savedLimit]);
 
-  const changeView = useCallback((next: "discover" | "saved") => {
-    setView(next);
-    setSavedLimit(SAVED_STEP);
-  }, []);
+  const featuredVisible = !feed.savedOnly && !feed.filtersActive && feed.featured !== null;
+  const featuredId = featuredVisible ? feed.featured?.id : undefined;
+  const feedEntries = useMemo(
+    () => feed.entries.filter((entry) => entry.id !== featuredId),
+    [feed.entries, featuredId],
+  );
 
-  const openRecord = useCallback((entry: CultureListEntry) => {
-    if (typeof window !== "undefined") scrollRef.current = window.scrollY;
-    setOpenId(entry.id);
-  }, []);
-
-  /**
-   * Closing also removes the reading's own history entry, so the browser's back gesture after
-   * a reading does not reopen it. Related records replace the content without a new entry.
-   */
-  const closeRecord = useCallback(() => {
-    if (pushedEntry.current) {
-      pushedEntry.current = false;
-      popping.current = true;
-      window.history.back();
+  const anotherDiscovery = useCallback(() => {
+    const pool = feed.entries.filter((entry) => entry.id !== featuredId);
+    if (pool.length === 0) {
+      if (feed.featured) openEntry(feed.featured);
+      return;
     }
-    setOpenId(null);
-  }, []);
+    const entry = pool[surpriseIndex.current % pool.length];
+    surpriseIndex.current += 1;
+    if (entry) openEntry(entry);
+  }, [feed.entries, feed.featured, featuredId, openEntry]);
 
-  const openRelated = useCallback((entry: CultureListEntry) => {
-    setOpenId(entry.id);
-  }, []);
-
-  // Closing the reading puts the person back exactly where they were, not at the top.
-  useEffect(() => {
-    if (openId !== null) return;
-    const y = scrollRef.current;
-    if (!y) return;
-    scrollRef.current = 0;
-    window.scrollTo(0, y);
-  }, [openId]);
-
-  // One history entry for the whole reading (including related records). Browser/Android
-  // back closes it instead of leaving the translator; the entry is popped when it closes.
-  useEffect(() => {
-    if (openId === null || typeof window === "undefined") return undefined;
-    if (!pushedEntry.current) {
-      const current =
-        window.history.state && typeof window.history.state === "object"
-          ? (window.history.state as Record<string, unknown>)
-          : {};
-      window.history.pushState({ ...current, cultureDetail: true }, "");
-      pushedEntry.current = true;
-    }
-    const onPopState = () => {
-      if (popping.current) {
-        popping.current = false;
-        return;
-      }
-      if (!pushedEntry.current) return;
-      pushedEntry.current = false;
-      setOpenId(null);
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [openId]);
-
-  // The observer only nudges the feed; every guard lives in the hook.
-  const { canLoadMore, loadMore: loadMorePage } = feed;
-  useEffect(() => {
-    if (view !== "discover" || !canLoadMore) return undefined;
-    const node = sentinelRef.current;
-    if (!node || typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver(
-      (observed) => {
-        if (observed.some((item) => item.isIntersecting)) loadMorePage(true);
-      },
-      { rootMargin: "320px 0px" },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [canLoadMore, loadMorePage, view]);
-
-  const savedCount = saved.ids.size;
+  const activeSaved = activeId ? feed.isSaved(activeId) : false;
 
   return (
-    <>
-      <section
-        dir={locale === "ar" ? "rtl" : "ltr"}
-        lang={locale}
-        aria-labelledby={headingId}
-        className={"w-full border-t border-border px-4 pb-16 pt-9 sm:px-6 " + (className ?? "")}
-      >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <header className="flex flex-col gap-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-faint">
-              {copy.sectionLabel}
-            </p>
-            <h2 id={headingId} className="sr-only">
-              {copy.feedLabel}
-            </h2>
-            <p className="max-w-[54ch] text-[clamp(17px,2.4vw,21px)] font-medium leading-relaxed text-foreground">
-              {copy.introLine}
-            </p>
-          </header>
-
-          {featured.status === "loading" ? <FeaturedSkeleton /> : null}
-          {featured.status === "ready" && featured.item ? (
-            <CultureFeatured
-              entry={featured.item}
-              locale={locale}
-              copy={copy}
-              saved={saved.ids.has(featured.item.id)}
-              onOpen={openRecord}
-              onToggleSaved={toggleSaved}
-            />
-          ) : null}
-
-          <CultureControls
-            feed={feed}
-            facets={facets}
-            copy={copy}
-            locale={locale}
-            view={view}
-            savedCount={savedCount}
-            onViewChange={changeView}
-          />
-
-          {view === "saved" ? (
-            <div aria-busy={false}>
-              {shownSaved.length === 0 ? (
-                <CalmNotice
-                  locale={locale}
-                  title={query ? copy.empty : savedCount > 0 ? copy.savedUncached : copy.savedEmpty}
-                />
-              ) : (
-                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {shownSaved.map((entry) => (
-                    <li
-                      key={entry.id}
-                      className={
-                        isWideComposition(compositionFor(entry.category)) ? "sm:col-span-2" : ""
-                      }
-                    >
-                      <CultureCard
-                        entry={entry}
-                        locale={locale}
-                        copy={copy}
-                        saved={saved.ids.has(entry.id)}
-                        onOpen={openRecord}
-                        onToggleSaved={toggleSaved}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {visibleSaved.length > shownSaved.length ? (
-                <div className="mt-4 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setSavedLimit((limit) => limit + SAVED_STEP)}
-                    className="press min-h-11 rounded-full border border-border px-5 text-[13.5px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {copy.more}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          ) : feed.status === "loading" ? (
-            <FeedSkeleton locale={locale} copy={copy} />
-          ) : feed.status === "error" ? (
-            <CalmNotice
-              locale={locale}
-              tone={feed.error === "offline" ? "offline" : "quiet"}
-              title={feed.error === "offline" ? copy.offlineTitle : copy.errorTitle}
-              body={feed.error === "offline" ? copy.offlineBody : copy.errorBody}
-              actionLabel={copy.retry}
-              onAction={feed.retry}
-            />
-          ) : feed.entries.length === 0 ? (
-            <CalmNotice
-              locale={locale}
-              title={copy.empty}
-              actionLabel={feed.activeFilters ? copy.clearFilters : undefined}
-              onAction={feed.activeFilters ? feed.clearFilters : undefined}
-            />
-          ) : (
-            <div>
-              {!online ? (
-                <p
-                  role="status"
-                  className="mb-3 text-[12.5px] leading-relaxed text-muted-foreground"
-                >
-                  {copy.offlineBody}
-                </p>
-              ) : null}
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {feed.entries.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className={
-                      isWideComposition(compositionFor(entry.category)) ? "sm:col-span-2" : ""
-                    }
-                  >
-                    <CultureCard
-                      entry={entry}
-                      locale={locale}
-                      copy={copy}
-                      saved={saved.ids.has(entry.id)}
-                      onOpen={openRecord}
-                      onToggleSaved={toggleSaved}
-                    />
-                  </li>
-                ))}
-              </ul>
-
-              {feed.canLoadMore ? (
-                <div className="mt-4 flex flex-col items-center gap-2">
-                  <div ref={sentinelRef} aria-hidden className="h-px w-full" />
-                  <button
-                    type="button"
-                    onClick={() => feed.loadMore(false)}
-                    disabled={feed.loadingMore}
-                    aria-busy={feed.loadingMore}
-                    className="press min-h-11 rounded-full border border-border px-5 text-[13.5px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-                  >
-                    {feed.loadingMore ? copy.loadingMore : copy.more}
-                  </button>
-                  {feed.moreError ? (
-                    <MoreErrorNotice
-                      message={feed.moreError === "offline" ? copy.offlineTitle : copy.errorTitle}
-                      retryLabel={copy.retry}
-                      onRetry={feed.retry}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          )}
+    <section
+      dir={dir}
+      aria-labelledby={headingId}
+      data-culture-section
+      data-state={feed.status}
+      data-saved-view={feed.savedOnly ? "true" : "false"}
+      className="mx-auto w-full max-w-[764px] px-4 pb-10 pt-8 sm:px-6"
+    >
+      <header className="border-t border-foreground/25 pt-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-[10.5px] uppercase tracking-[0.18em] text-signal-text">
+            {copy.sectionLabel}
+          </p>
+          <p className="text-[10.5px] uppercase tracking-[0.12em] text-faint">
+            {copy.featuredLabel}
+          </p>
         </div>
-      </section>
+        <h2
+          id={headingId}
+          className="mt-4 max-w-[22ch] text-balance font-display text-[clamp(1.7rem,4.6vw,2.6rem)] font-medium leading-[1.12] tracking-[-0.025em] text-foreground"
+        >
+          {copy.feedLabel}
+        </h2>
+        <p className="mt-4 max-w-[58ch] text-[16px] leading-[1.7] text-muted-foreground">
+          {copy.intro}
+        </p>
+        <p className="mt-3 max-w-[56ch] text-[12.5px] italic leading-[1.6] text-faint">
+          {copy.standfirst}
+        </p>
+      </header>
 
-      {openId ? (
-        <CultureDetail
-          key={openId}
+      <div className="mt-8 flex flex-wrap items-baseline justify-between gap-3">
+        <button
+          type="button"
+          data-culture-another
+          onClick={anotherDiscovery}
+          className="press-soft group/another inline-flex min-h-9 items-center gap-2 text-[12px] font-medium uppercase tracking-[0.12em] text-signal-text"
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block transition-transform duration-200 group-hover/another:rotate-45"
+          >
+            ✦
+          </span>
+          {copy.anotherDiscovery}
+        </button>
+        {feed.status === "ready" && feed.total > 0 ? (
+          <p className="text-[10.5px] uppercase tracking-[0.12em] text-faint tabular-nums">
+            {feed.total}
+          </p>
+        ) : null}
+      </div>
+
+      {featuredVisible && feed.featured ? (
+        <div data-culture-featured className="mt-6">
+          <FeatureComposition
+            entry={feed.featured}
+            locale={locale}
+            saved={feed.isSaved(feed.featured.id)}
+            onOpen={openEntry}
+            onToggleSaved={toggleSaved}
+          />
+        </div>
+      ) : null}
+
+      <CultureFilters
+        locale={locale}
+        facets={feed.facets}
+        savedOnly={feed.savedOnly}
+        savedCount={feed.savedIds.size}
+        search={feed.search}
+        searchPending={feed.searchPending}
+        category={feed.category}
+        continent={feed.continent}
+        country={feed.country}
+        contentType={feed.contentType}
+        language={feed.language}
+        filtersActive={feed.filtersActive}
+        onSearch={feed.setSearch}
+        onCategory={feed.setCategory}
+        onContinent={feed.setContinent}
+        onCountry={feed.setCountry}
+        onContentType={feed.setContentType}
+        onLanguage={feed.setLanguage}
+        onSavedOnly={feed.setSavedOnly}
+        onClear={feed.clearFilters}
+      />
+
+      <div className="mt-10 flex items-baseline justify-between gap-4 border-b border-foreground/25 pb-2">
+        <h3 className="text-[10.5px] uppercase tracking-[0.18em] text-foreground">
+          {feed.savedOnly ? copy.savedView : copy.feedLabel}
+        </h3>
+        {feed.savedOnly ? (
+          <p className="text-[10.5px] uppercase tracking-[0.1em] text-faint">
+            {copy.savedOnDevice}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-6" aria-live="polite">
+        {feed.status === "loading" ? <CultureLoading locale={locale} /> : null}
+        {feed.status === "error" ||
+        feed.status === "offline" ||
+        feed.status === "catalog-unavailable" ? (
+          <CultureFailure locale={locale} kind={feed.status} onRetry={feed.retry} />
+        ) : null}
+        {feed.status === "empty" ? (
+          <CultureEmpty
+            locale={locale}
+            filtered={feed.filtersActive}
+            savedOnly={feed.savedOnly}
+            onClear={feed.clearFilters}
+          />
+        ) : null}
+        {feed.status === "ready" ? (
+          <div data-culture-feed className="space-y-8">
+            {feedEntries.map((entry) => (
+              <CultureCard
+                key={entry.id}
+                entry={entry}
+                locale={locale}
+                saved={feed.isSaved(entry.id)}
+                onOpen={openEntry}
+                onToggleSaved={toggleSaved}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {feed.status === "ready" && !feed.savedOnly ? (
+        <div className="mt-8">
+          {feed.moreError ? (
+            <div data-culture-more-error className="flex flex-wrap items-baseline gap-3">
+              <p className="text-[12px] leading-relaxed text-muted-foreground">{copy.errorBody}</p>
+              <button
+                type="button"
+                onClick={feed.loadMore}
+                className="press-soft min-h-9 text-[11px] font-medium uppercase tracking-[0.12em] text-signal-text"
+              >
+                {copy.retry}
+              </button>
+            </div>
+          ) : feed.canLoadMore || feed.cooldown ? (
+            <button
+              type="button"
+              data-culture-more
+              onClick={feed.loadMore}
+              disabled={!feed.canLoadMore}
+              aria-busy={feed.loadingMore || undefined}
+              className="press-soft inline-flex min-h-11 items-center gap-2 border-b border-current pb-1 text-[12px] font-medium uppercase tracking-[0.12em] text-foreground disabled:cursor-default disabled:border-transparent disabled:text-faint"
+            >
+              {feed.loadingMore ? copy.loadingMore : copy.more}
+              <span aria-hidden="true" className="text-[13px]">
+                ↓
+              </span>
+            </button>
+          ) : feed.pageCount > 0 ? (
+            <CultureEndNote locale={locale} />
+          ) : null}
+        </div>
+      ) : null}
+
+      {activeId ? (
+        <CultureReading
           adapter={adapter}
-          itemId={openId}
+          id={activeId}
           locale={locale}
-          copy={copy}
-          online={online}
-          saved={saved.ids.has(openId)}
-          onToggleSaved={() => toggleSaved(openId)}
-          onClose={closeRecord}
-          onOpenRelated={openRelated}
+          saved={activeSaved}
+          onClose={closeReading}
+          onOpenRelated={openById}
+          onToggleSaved={toggleSaved}
         />
       ) : null}
-    </>
+    </section>
   );
 }

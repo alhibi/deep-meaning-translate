@@ -139,19 +139,18 @@ npm run preview          # serve the built Worker on Node
   bounded and validated, never logged. The normalized snapshot carries attribution + licence; the UI
   renders it from the snapshot so a provider switch changes the credit automatically. The cache is
   versioned, bounded, device-only, not in backups, and cleared by "forget everything".
-- **Culture content is sourced, licensed and traceable.** Every record carries source URL, licence,
-  attribution, image credit and ingestion date; machine-translated copy is labelled; nothing is
-  invented. The corpus is bundled (no runtime museum API), loaded lazily and precached for offline;
-  remote images may only come from hosts in `src/lib/culture/media-hosts.json`, which must equal both
-  CSPs (gate: `npm run check:security`). Discovery makes **no model calls** at browsing time.
-- **Browse deliberately.** Daily feature is a deterministic function of the local day; the feed is
-  cursor-paged with in-flight guards, a page cap and no duplicate cards; opening a record restores
-  scroll and focus. Saved/seen lists are device-only, validated, bounded and reset by
-  `clearDeviceData()`.
-- **Separation of ownership:** the route owns only composition; `src/lib/weather/*` and
-  `src/lib/culture/*` own their domains. The culture section consumes one stable adapter
-  (`createCultureDiscoveryAdapter`); a new data source changes the adapter/corpus, never the
-  translator.
+- **The cultural library is written, not collected.** Every article is a three-language text about
+  people, societies, language or everyday life; it carries its category, context, sources and a
+  truthful machine/editorial status. No images, no media field, no museum objects, no runtime model
+  calls, no external content fetch. The corpus is validated at build time (scripts/culture) and the
+  content gate (npm run check:security) fails if an image, media field or museum vocabulary returns.
+- **The text is the interface.** Compositions come from typography, spacing and composition variety,
+  never from photos or card chrome. Browsing is cursor-paged and progressive with guards; opening an
+  article restores focus and scroll; saved and seen lists stay device-only, validated, bounded and
+  are cleared by "forget everything".
+- **Sourcing is explicit.** Each record keeps two public references with access date and what they
+  support; Reference links open only on request. Status fields must not claim human review until a
+  real review happened.
 
 ### Android shell (added 2026-11-16)
 

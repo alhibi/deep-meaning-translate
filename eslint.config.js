@@ -20,6 +20,8 @@ export default defineConfig(
       "android-web",
       ".android-toolchain",
       "artifacts",
+      // Generated corpus: large validated JSON-shaped modules with their own gates.
+      "src/lib/culture/data",
     ],
   },
   {

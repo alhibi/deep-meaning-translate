@@ -1,0 +1,1350 @@
+[
+  {
+    "id": "oce-001",
+    "category": "family-and-friendship",
+    "contentType": "feature",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Whakapapa: reciting a genealogy that is also a map",
+    "facts": [
+      "Whakapapa is not a simple family tree: it is a layered recitation that can run down the generations and sideways between cousins, joining a person to ancestors, land and tribal groupings.",
+      "A whakapapa links its holder to particular mountains, rivers, marae and hapū, so reciting it is also a statement about where someone belongs and who they can call on.",
+      "It is heard at pōwhiri, tangihanga and hui, and it is how hosts and visitors discover a shared ancestor within minutes of meeting.",
+      "Descent lines are used as evidence in Treaty of Waitangi claims, where a group must show its connection to the original owners of land.",
+      "Knowledge is held by particular whānau and hapū, not in one national record, and different iwi trace from different voyaging canoes."
+    ],
+    "exampleEn": "At a tangihanga a speaker opens by naming her maunga and awa; an elder on the other side recognises a shared ancestor, and the two families relax into the same whakapapa.",
+    "qualificationEn": "Whakapapa is held by whānau and hapū, not a single public record; recitation conventions differ between iwi and some knowledge is restricted.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Whakapapa",
+        "url": "https://en.wikipedia.org/wiki/Whakapapa"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Māori culture",
+        "url": "https://en.wikipedia.org/wiki/M%C4%81ori_culture"
+      }
+    ]
+  },
+  {
+    "id": "oce-002",
+    "category": "social-behaviour",
+    "contentType": "feature",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Pōwhiri: the welcome that decides whether two groups can meet",
+    "facts": [
+      "A pōwhiri is a formal welcome onto a marae, and it begins with the karanga, a call exchanged between women of the host and visitor groups.",
+      "Speeches (whaikōrero) follow, each usually closed with a waiata or haka by the speaker's own group, before visitors and hosts press noses in the hongi.",
+      "The ritual once let tangata whenua read the intentions of manuhiri and avoid conflict; it now marks visits, graduations, openings and treaty signings.",
+      "A koha, often money in an envelope, is placed on the ground by the final visiting speaker and picked up by the final host speaker.",
+      "For an especially important guest a warrior may first lay down a wero, a challenge that the visitor must pick up before the welcome can proceed."
+    ],
+    "exampleEn": "Visitors wait at the gate until the karanga begins, walk in as a block, sit behind their speaker, and after the last speech the koha is laid on the ground.",
+    "qualificationEn": "The order of speeches and who speaks last is negotiated locally, and shorter forms such as the mihi whakatau are used for less formal occasions.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Pōwhiri",
+        "url": "https://en.wikipedia.org/wiki/P%C5%8Dwhiri"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Marae",
+        "url": "https://en.wikipedia.org/wiki/Marae"
+      }
+    ]
+  },
+  {
+    "id": "oce-003",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Kia ora: how one Māori phrase became everyday New Zealand English",
+    "facts": [
+      "Kia ora literally wishes life and health: kia is a wish and ora is life, health and vitality, so the phrase means 'be well'.",
+      "It works as hello, goodbye, thanks and agreement with a speaker at a meeting, with the situation deciding which.",
+      "Number can be marked: kia ora koe for one person, kia ora kōrua for two, kia ora koutou for three or more.",
+      "In 1984 Auckland telephone operator Naida Glavish was demoted for greeting callers with 'kia ora'; she refused to stop and was later reinstated after public outcry.",
+      "The phrase is embedded in national life: Air New Zealand's inflight magazine is called Kia Ora, and te reo Māori became an official language in 1987."
+    ],
+    "exampleEn": "A bus driver greets each passenger with 'kia ora', and a colleague opens an email with 'Kia ora koutou' before getting to the point.",
+    "qualificationEn": "Usage, spelling and pronunciation vary by region and generation; not every New Zealander speaks te reo, and macrons were long omitted in print.",
+    "expression": {
+      "original": "Kia ora",
+      "transliteration": "KEE-ah O-rah",
+      "language": "te reo Māori",
+      "glossEn": "Be well — used as hello, goodbye, thank you and agreement."
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kia ora",
+        "url": "https://en.wikipedia.org/wiki/Kia_ora"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Māori language",
+        "url": "https://en.wikipedia.org/wiki/M%C4%81ori_language"
+      }
+    ]
+  },
+  {
+    "id": "oce-004",
+    "category": "communication",
+    "contentType": "language",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Pepeha: introducing yourself by mountain, river and ancestor",
+    "facts": [
+      "A pepeha is a formulaic self-introduction that lists connections to land: mountain, river, canoe, iwi, hapū, marae, family and name.",
+      "The standard shape starts with the land, as in 'Ko Kirimoko te maunga' ('Kirimoko is the mountain') and then 'ko Waitati te awa' ('the Waitati is the river').",
+      "One person can have more than one pepeha, for example when linked to several iwi or to the place they grew up.",
+      "It is given at hui and mihi, and it is taught in schools so that children can place themselves in relation to the land.",
+      "Because it ties identity to territory, a pepeha is a claim about belonging as much as a short biography."
+    ],
+    "exampleEn": "At assembly a student gives her pepeha — mountain, river, canoe, iwi — and the teacher now knows which marae to approach for permission.",
+    "qualificationEn": "There is no single standard pepeha: iwi differ in order and content, and pepeha by non-Māori are a recent adaptation rather than an old tradition.",
+    "expression": {
+      "original": "Ko Kirimoko te maunga, ko Waitati te awa",
+      "transliteration": "ko KEE-ree-mo-ko teh MAH-oo-nga, ko WY-tah-tee teh AH-wah",
+      "language": "te reo Māori",
+      "glossEn": "Kirimoko is the mountain, Waitati is the river — the opening lines of a recorded Kāi Tahu pepeha."
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Pepeha",
+        "url": "https://en.wikipedia.org/wiki/Pepeha"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Whakapapa",
+        "url": "https://en.wikipedia.org/wiki/Whakapapa"
+      }
+    ]
+  },
+  {
+    "id": "oce-005",
+    "category": "nature-and-seasons",
+    "contentType": "feature",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Kaitiakitanga and rāhui: guardianship as a working restriction",
+    "facts": [
+      "Kaitiakitanga is guardianship of the environment; a kaitiaki is a guardian, and the duty grows out of whakapapa ties between people and land, water and species.",
+      "It entered New Zealand law through the Resource Management Act 1991, which lists kaitiakitanga as a matter of national importance for councils.",
+      "A rāhui is a temporary restriction placed by kaitiaki: people may be asked not to swim, fish or take shellfish from a defined area.",
+      "Rāhui are used after drownings, for food safety, for conservation and to let a shellfish bed recover, and they can last days or years.",
+      "The Fisheries Act 1996 allows the Ministry for Primary Industries to impose rāhui, but hapū argue that the authority belongs to them rather than the state."
+    ],
+    "exampleEn": "After a drowning, a hapū places a rāhui on the bay; the council puts up signs, the surf club tells visitors not to swim, and the restriction is lifted after a ceremony.",
+    "qualificationEn": "Authority rests with particular hapū rather than 'Māori' in general, and legal recognition of rāhui is partial and contested.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kaitiakitanga",
+        "url": "https://en.wikipedia.org/wiki/Kaitiakitanga"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Rāhui",
+        "url": "https://en.wikipedia.org/wiki/R%C4%81hui"
+      }
+    ]
+  },
+  {
+    "id": "oce-006",
+    "category": "music-and-dance",
+    "contentType": "feature",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Kapa haka: why the songs are judged like speeches",
+    "facts": [
+      "Kapa haka means 'group' (kapa) and 'dance' (haka), but the art covers waiata-ā-ringa action songs, poi, haka and mōteatea chants.",
+      "Haka are not only war dances: they are performed for welcome, grief, celebration and protest, and the words matter as much as the movement.",
+      "The national competition has run since 1972 and is now Te Matatini, a biennial festival hosted by a different iwi each time.",
+      "Teams are judged on composition, diction, movement and the building of a whole set, so innovation has to be justified inside a tradition.",
+      "Kapa haka is also a school and community activity, and for many learners it is the main route back into te reo Māori."
+    ],
+    "exampleEn": "At Te Matatini a team of forty moves from a slow chant into a haka; the crowd rises and the judges write through the entire twenty-five-minute set.",
+    "qualificationEn": "Styles, dialects and competition rules vary between iwi and change over time; not all Māori perform kapa haka, and commercialisation is debated.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kapa haka",
+        "url": "https://en.wikipedia.org/wiki/Kapa_haka"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Te Matatini",
+        "url": "https://en.wikipedia.org/wiki/Te_Matatini"
+      }
+    ]
+  },
+  {
+    "id": "oce-007",
+    "category": "clothing-and-design",
+    "contentType": "note",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Tā moko: reading rank and kinship on the skin",
+    "facts": [
+      "Tā moko is permanent marking made with chisels (uhiu) rather than needles, leaving the skin slightly grooved rather than smooth.",
+      "Designs were personal: full-face moko for men and moko kauae on the chin and lips for women marked rank, genealogy and role.",
+      "It is one of five main Polynesian tattoo traditions, alongside Marquesan, Samoan, Tahitian and Hawaiian practice.",
+      "Missionary pressure and colonial law made moko rare for much of the twentieth century; the revival since the 1990s has been led by Māori artists and by women reclaiming moko kauae.",
+      "Wearing or copying someone else's design is considered a violation of whakapapa, so patterns are composed with the wearer and their family rather than taken from a book."
+    ],
+    "exampleEn": "A young woman receives moko kauae after months of discussion with her whānau; the artist builds the design around her hapū's history rather than a catalogue of symbols.",
+    "qualificationEn": "Moko meanings are personal and whakapapa-specific; there is no dictionary of symbols, and copying a design is considered harmful.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Tā moko",
+        "url": "https://en.wikipedia.org/wiki/T%C4%81_moko"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Māori culture",
+        "url": "https://en.wikipedia.org/wiki/M%C4%81ori_culture"
+      }
+    ]
+  },
+  {
+    "id": "oce-008",
+    "category": "beliefs-and-folklore",
+    "contentType": "feature",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Mana and tapu: two words that organise respect",
+    "facts": [
+      "Mana is a force that can be inherited, earned or lost, and in Polynesian and Melanesian thought anyone or anything can carry it.",
+      "In Māori usage mana is prestige and authority that has to be demonstrated through generosity and care rather than simply claimed.",
+      "Tapu names a state of sacred restriction: a head, a burial site, a chief or a newborn can be tapu, and ordinary rules do not apply there.",
+      "The two work together: a tapu place protects mana, and breaching tapu damages both the person and the group.",
+      "The English word 'taboo' came from James Cook's 1777 visit to Tonga, where he recorded tapu, a Polynesian word already used from Hawaii to Rapa Nui."
+    ],
+    "exampleEn": "A carver's tools and a chief's head are tapu; people avoid touching them, and a ritual with water lifts the restriction when the work is finished.",
+    "qualificationEn": "Translations such as 'power' and 'taboo' flatten the concepts; usage differs between Polynesian societies and between generations.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mana (Oceanic cultures)",
+        "url": "https://en.wikipedia.org/wiki/Mana_(Oceanic_cultures)"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Tapu (Polynesian culture)",
+        "url": "https://en.wikipedia.org/wiki/Tapu_(Polynesian_culture)"
+      }
+    ]
+  },
+  {
+    "id": "oce-009",
+    "category": "food-and-hospitality",
+    "contentType": "scene",
+    "countries": [
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Aotearoa New Zealand",
+    "community": "Māori",
+    "languages": [
+      "mi",
+      "en"
+    ],
+    "titleEn": "Hāngī: the earth oven that feeds a hundred people at once",
+    "facts": [
+      "A hāngī is a pit oven: stones are heated by a large fire for three to four hours, then baskets of food are lowered onto them.",
+      "Meat goes in the bottom basket, vegetables above and seafood on top; wet sacks and cloth go over the food and the pit is covered with earth.",
+      "Cooking takes two to four hours, and the method is practical precisely because it feeds a crowd without a commercial kitchen.",
+      "Typical ingredients are lamb, pork, chicken, kūmara, potato, pumpkin and taro; the same method appears as the umu in Samoa, lovo in Fiji, imu in Hawaii and mumu in Papua New Guinea.",
+      "Before metal and wire baskets, food was laid between bark and large leaves; wire baskets spread in the early nineteenth century."
+    ],
+    "exampleEn": "A marae committee advertises 300 hāngī plates for a fundraiser; volunteers light the fire before dawn and lift the baskets out in the afternoon.",
+    "qualificationEn": "Hāngī is a feast method rather than daily cooking for most families, and ingredients and protocols vary by region.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Hāngī",
+        "url": "https://en.wikipedia.org/wiki/H%C4%81ng%C4%AB"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Earth oven",
+        "url": "https://en.wikipedia.org/wiki/Earth_oven"
+      }
+    ]
+  },
+  {
+    "id": "oce-010",
+    "category": "beliefs-and-folklore",
+    "contentType": "feature",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal Australians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "The Dreaming is not the past: law, land and story in Aboriginal Australia",
+    "facts": [
+      "The Dreaming is the English label anthropologists gave to Aboriginal cosmologies in which ancestral beings shaped land, people, animals and law.",
+      "It is not a remembered past: the Dreaming is understood as continuing, and ceremony keeps it present in country.",
+      "Each language group has its own stories and law, so there are hundreds of distinct traditions rather than one 'Aboriginal mythology'.",
+      "Sacred sites, songs and designs are treated as the ancestors' work, which is why some knowledge is restricted to particular people.",
+      "The English word is an approximation, and many communities use their own terms, such as Tjukurpa, or object to 'Dreamtime' being read as folklore."
+    ],
+    "exampleEn": "An elder points to a waterhole and says it is where the ancestor stopped; the same story also says which sites to avoid and which song to sing on the way.",
+    "qualificationEn": "The Dreaming is not one belief system; hundreds of language groups have distinct law and stories, and some knowledge is restricted.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "The Dreaming",
+        "url": "https://en.wikipedia.org/wiki/The_Dreaming"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal religion and mythology",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_religion_and_mythology"
+      }
+    ]
+  },
+  {
+    "id": "oce-011",
+    "category": "storytelling",
+    "contentType": "feature",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal Australians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Songlines: singing a route across country",
+    "facts": [
+      "A songline is a route across country recorded in a song cycle: the verses follow the path of a creator being, in order.",
+      "Navigation and memory collapse into one, because to know the song is to know the next water, ridge and camp — and where not to go.",
+      "The same paths appear in dance, body painting and sand drawing, so the knowledge is repeated in several forms rather than kept only in song.",
+      "Some songlines run for hundreds of kilometres and cross the territories of several language groups, whose ceremonies meet at shared sites.",
+      "Bruce Chatwin's 1987 book The Songlines popularised the English word, but it was criticised for flattening very different regional traditions."
+    ],
+    "exampleEn": "A traveller hears the verse for the next ridge and knows the soak is close; the song is the map, and skipping a verse would put the group off-country.",
+    "qualificationEn": "Songlines are not public maps; access to full songs is restricted, and the English term covers very different regional traditions.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Songline",
+        "url": "https://en.wikipedia.org/wiki/Songline"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "The Dreaming",
+        "url": "https://en.wikipedia.org/wiki/The_Dreaming"
+      }
+    ]
+  },
+  {
+    "id": "oce-012",
+    "category": "family-and-friendship",
+    "contentType": "feature",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal Australians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Skin names and marriage rules: how Aboriginal kinship classifies everyone",
+    "facts": [
+      "Aboriginal kinship classifies every person into a relationship category, not only blood relatives: strangers can be brothers, mothers or in-laws.",
+      "In Central Australia, subsection or 'skin' systems divide society into named groups, and a child's skin is derived from the parents' skins.",
+      "Moiety systems split the world into two halves that are often linked to land, animals and ceremony.",
+      "Kinship sets marriage rules, who may joke with whom, who must be avoided, and who must be fed and supported.",
+      "The systems are regional, so Warlpiri skin names and Yolŋu clan structures cannot be used interchangeably."
+    ],
+    "exampleEn": "Two strangers meet at a football carnival, ask each other's skin names, and immediately know whether to joke, keep their distance or offer food.",
+    "qualificationEn": "Kinship systems are regional and not interchangeable; skin names must be learned locally, and urban families often adapt the rules.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal kinship systems",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_kinship_systems"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal avoidance practices",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_avoidance_practices"
+      }
+    ]
+  },
+  {
+    "id": "oce-013",
+    "category": "social-behaviour",
+    "contentType": "contrast",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal Australians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Avoidance relationships: when respect means not speaking",
+    "facts": [
+      "The strongest common avoidance is between a person and their mother-in-law: in many groups they may not speak directly, or even meet.",
+      "Avoidance is respect rather than hostility, and it is marked by separate seating, eating apart and passing messages through a third person.",
+      "Some groups keep a special avoidance vocabulary for talking to restricted relatives, so the everyday language is not used at all.",
+      "Other protocols include lowering the gaze with certain kin and not speaking the name of a person who has died.",
+      "The practices remain active to varying degrees, and families in towns and cities negotiate which rules they keep."
+    ],
+    "exampleEn": "A man and his mother-in-law sit on opposite sides of a family gathering and pass messages through a child; the distance is a courtesy, not a quarrel.",
+    "qualificationEn": "Avoidance rules vary widely and are partly negotiated in contemporary life; outsiders should not assume which relationships apply to whom.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal avoidance practices",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_avoidance_practices"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal kinship systems",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_kinship_systems"
+      }
+    ]
+  },
+  {
+    "id": "oce-014",
+    "category": "nature-and-seasons",
+    "contentType": "feature",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal Australians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Reading country by fire and season",
+    "facts": [
+      "Aboriginal people have burned country deliberately for thousands of years: cool, patchy fires cut fuel, clear ground for hunting and promote useful plants.",
+      "The technique is now called cultural burning or fire-stick farming; the term 'fire-stick farming' was coined by archaeologist Rhys Jones in 1969.",
+      "Timing follows signs rather than dates: flowering wattle, curing grass, ant activity and wind tell a burner when to light.",
+      "Indigenous seasonal calendars divide the year by ecological events, and the Bureau of Meteorology now publishes several of them with the communities concerned.",
+      "Cultural burning was disrupted by colonisation and is being revived by Indigenous ranger groups and agencies, especially after the 2019-20 fire season."
+    ],
+    "exampleEn": "A ranger waits for the grass to cure, then lights a slow patchwork burn at dusk; the cool fire protects the pandanus and brings green pick for kangaroo.",
+    "qualificationEn": "Fire practice and seasonal calendars differ by country and group; cultural burning is Indigenous-led and not a universal technical fix.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Fire-stick farming",
+        "url": "https://en.wikipedia.org/wiki/Fire-stick_farming"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Indigenous Australian seasons",
+        "url": "https://en.wikipedia.org/wiki/Indigenous_Australian_seasons"
+      }
+    ]
+  },
+  {
+    "id": "oce-015",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal Australians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Deadly, gammon, mob: the grammar of Aboriginal English",
+    "facts": [
+      "Aboriginal English is a set of English dialects with their own grammar, pronunciation and vocabulary, not a broken form of standard English.",
+      "It forms a continuum, and speakers move between heavier and lighter varieties depending on who they are talking to.",
+      "'Deadly' means excellent, 'gammon' means joking or fake, 'mob' means a group of people, and 'country' means a person's home land.",
+      "Kinship words such as 'cousin brother' and 'sister girl' carry relationships that standard English has no short word for.",
+      "Non-verbal cues do a lot of work in conversation, and schools and courts have had to adjust to a dialect they once treated as error."
+    ],
+    "exampleEn": "A student calls a classmate's painting 'deadly'; a teacher who hears slang misses that it is praise, and a court interpreter has to explain what 'gammon' was doing in a witness's answer.",
+    "qualificationEn": "Aboriginal English varies by region and community, and not all Aboriginal people speak it; 'deadly' is not simply borrowed slang.",
+    "expression": {
+      "original": "Deadly!",
+      "transliteration": "DED-lee",
+      "language": "Aboriginal English",
+      "glossEn": "Excellent, very good — praise, not a warning."
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal English",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_English"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Australian Aboriginal languages",
+        "url": "https://en.wikipedia.org/wiki/Australian_Aboriginal_languages"
+      }
+    ]
+  },
+  {
+    "id": "oce-016",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal and Torres Strait Islander peoples",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Stolen Generations and Sorry Day: the long aftermath of removal",
+    "facts": [
+      "From about 1905 to 1967, and in places into the 1970s, Aboriginal and Torres Strait Islander children were removed from their families under welfare and protection laws.",
+      "The removals targeted so-called 'half-caste' children in particular, and siblings were often split between institutions and white families.",
+      "The 1997 Bringing Them Home report recorded survivors' testimony and estimated that between one in ten and one in three children were taken in some regions between 1910 and 1970.",
+      "National Sorry Day has been held on 26 May since 1998, the first anniversary of that report.",
+      "Prime Minister Kevin Rudd delivered the national apology in Parliament in 2008, while survivors continue to campaign for compensation and for an end to ongoing removals."
+    ],
+    "exampleEn": "On 26 May a school reads from Bringing Them Home; a grandparent in the audience was taken as a child and has never seen the file that records it.",
+    "qualificationEn": "Removal policies and their effects varied by state and period, and 'Stolen Generations' describes a pattern rather than a single event.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Stolen Generations",
+        "url": "https://en.wikipedia.org/wiki/Stolen_Generations"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "National Sorry Day",
+        "url": "https://en.wikipedia.org/wiki/National_Sorry_Day"
+      }
+    ]
+  },
+  {
+    "id": "oce-017",
+    "category": "cultural-change",
+    "contentType": "feature",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia",
+    "community": "Aboriginal and Torres Strait Islander peoples",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Uluru Statement from the Heart: Voice, Treaty, Truth",
+    "facts": [
+      "The statement came out of the First Nations National Constitutional Convention at Uluru in 2017, after thirteen regional dialogues and more than 1,200 delegates.",
+      "It asks for two things: a First Nations Voice enshrined in the Constitution, and a Makarrata Commission to oversee agreement-making and truth-telling.",
+      "The shorthand is Voice, Treaty, Truth, and the document itself is about a page long, closing with an invitation to other Australians to walk together.",
+      "The Voice was put to a referendum in October 2023 and rejected by a majority of voters and a majority of states.",
+      "Opponents argued it would divide Australians or lacked detail, and some Indigenous leaders wanted a treaty first, so the statement is not a consensus document."
+    ],
+    "exampleEn": "A community group reads the statement aloud at a meeting and then argues about it; some want treaty first, and the 2023 vote did not settle the argument.",
+    "qualificationEn": "Indigenous opinion on the Voice was not unanimous, and the 2023 result did not end the debate about treaty and truth-telling.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Uluru Statement from the Heart",
+        "url": "https://en.wikipedia.org/wiki/Uluru_Statement_from_the_Heart"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Indigenous Australians",
+        "url": "https://en.wikipedia.org/wiki/Indigenous_Australians"
+      }
+    ]
+  },
+  {
+    "id": "oce-018",
+    "category": "traditions",
+    "contentType": "note",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Torres Strait, Queensland",
+    "community": "Torres Strait Islander peoples",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Ailan Kastom: the Torres Strait as a separate people",
+    "facts": [
+      "Torres Strait Islanders are a Melanesian people, culturally distinct from Aboriginal Australians, and five broad island groups are recognised within the strait.",
+      "Their two main Indigenous languages are Kalaw Lagaw Ya in the west and Meriam Mir in the east, while Yumplatok, an English-based creole, is the common lingua franca.",
+      "The sea is central: islanders were seafarers and gardeners, and fishing and voyaging still shape identity and food.",
+      "The London Missionary Society arrived in 1871, and the 'Coming of the Light' on 1 July is still marked annually across the islands.",
+      "Eddie Koiki Mabo from Mer was one of the plaintiffs in the 1992 High Court decision that overturned terra nullius and recognised native title.",
+      "More Torres Strait Islanders now live on mainland Australia than on the islands, mostly in Queensland cities."
+    ],
+    "exampleEn": "On 1 July, families on Thursday Island and in Cairns hold church services and feasts for the Coming of the Light, and the creole spoken at the microphone is Yumplatok.",
+    "qualificationEn": "The Torres Strait is not part of Aboriginal Australia, and island communities differ among themselves; Yumplatok is not standard English.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Torres Strait Islanders",
+        "url": "https://en.wikipedia.org/wiki/Torres_Strait_Islanders"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Torres Strait Creole",
+        "url": "https://en.wikipedia.org/wiki/Torres_Strait_Creole"
+      }
+    ]
+  },
+  {
+    "id": "oce-019",
+    "category": "everyday-life",
+    "contentType": "detail",
+    "countries": [
+      "AU"
+    ],
+    "continent": "oceania",
+    "region": "Australia and New Zealand",
+    "community": null,
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Slip, Slop, Slap: how sun safety became Australian routine",
+    "facts": [
+      "The campaign began in 1981, funded by public donations and run by Cancer Council Victoria to slow Australia's high skin-cancer rates.",
+      "Sid the Seagull sang 'Slip! Slop! Slap!' on television: slip on a shirt, slop on sunscreen, slap on a hat.",
+      "It ran in Australia and New Zealand and reached near-total public awareness within a few years.",
+      "A 2010 revival added 'Seek and Slide' — seek shade and slide on sunglasses — and became the SunSmart message.",
+      "Australian schools turned the message into rules such as 'no hat, no play', so sun protection became part of the school day rather than a personal choice."
+    ],
+    "exampleEn": "A primary school enforces 'no hat, no play'; children keep sunscreen by the classroom door, and the jingle is still recognised forty years after it first aired.",
+    "qualificationEn": "Sun-safe habits are unevenly followed and melanoma rates remain high; the jingle is a campaign, not a description of everyone's behaviour.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Slip-Slop-Slap",
+        "url": "https://en.wikipedia.org/wiki/Slip-Slop-Slap"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "SunSmart",
+        "url": "https://en.wikipedia.org/wiki/SunSmart"
+      }
+    ]
+  },
+  {
+    "id": "oce-020",
+    "category": "regional-humour",
+    "contentType": "note",
+    "countries": [
+      "AU",
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Australia and New Zealand",
+    "community": null,
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Bogan: a class joke Australians and New Zealanders keep telling",
+    "facts": [
+      "'Bogan' is Australian and New Zealand slang for a person whose speech, clothes or tastes are seen as unrefined, often with a working-class edge.",
+      "It can be an insult or a badge of identity: people call themselves bogans affectionately while mocking the label.",
+      "It emerged as a recognisable subculture in the 1980s, with mullets, flannel, Ugg boots and loud cars as shorthand.",
+      "It has older cousins: the ocker and the larrikin in Australia, and local names such as westie in New Zealand.",
+      "Even the Macquarie Dictionary gives the origin as unknown, which suits a label that shifts with fashion."
+    ],
+    "exampleEn": "At a barbecue someone is called a bogan for his mullet and his car; he laughs and calls it a lifestyle, and the joke depends entirely on who said it.",
+    "qualificationEn": "Bogan is a class-marked word that can wound, and its meaning shifts by state, age and who is speaking.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Bogan",
+        "url": "https://en.wikipedia.org/wiki/Bogan"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Ocker",
+        "url": "https://en.wikipedia.org/wiki/Ocker"
+      }
+    ]
+  },
+  {
+    "id": "oce-021",
+    "category": "social-behaviour",
+    "contentType": "feature",
+    "countries": [
+      "WS"
+    ],
+    "continent": "oceania",
+    "region": "Samoa",
+    "community": "Samoan",
+    "languages": [
+      "sm",
+      "en"
+    ],
+    "titleEn": "Faʻamatai: how Samoan families choose who speaks for them",
+    "facts": [
+      "Matai are holders of family chief titles, and the title belongs to the extended family (ʻāiga), which chooses who will hold it.",
+      "Titles are ranked and divided between high chiefs (aliʻi) and orators (tulafale), who speak for the family in councils.",
+      "Samoa has around 360 village councils, the fono o matai, which handle civil and criminal matters under customary law; the 1990 Village Fono Law strengthened their role.",
+      "The system reaches national politics: members of Samoa's parliament are matai, and American Samoa's Senate is chosen by district councils from among matai.",
+      "A title is conferred at a saofaʻi ceremony only after family consensus, and disputes go to the Land and Titles Court rather than the ordinary courts."
+    ],
+    "exampleEn": "A family meets for weeks before choosing a new matai; at the saofaʻi the title is conferred, and the new matai then speaks for the family at the village fono.",
+    "qualificationEn": "Titles, ranks and village rules are local; not every Samoan holds a matai title, and the system is contested as well as respected.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Faʻamatai",
+        "url": "https://en.wikipedia.org/wiki/Fa%CA%BBamatai"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Faʻa Sāmoa",
+        "url": "https://en.wikipedia.org/wiki/Fa%CA%BBa_S%C4%81moa"
+      }
+    ]
+  },
+  {
+    "id": "oce-022",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "WS"
+    ],
+    "continent": "oceania",
+    "region": "Samoa",
+    "community": "Samoan",
+    "languages": [
+      "sm",
+      "en"
+    ],
+    "titleEn": "Talofa: a greeting built on alofa",
+    "facts": [
+      "Talofa is the everyday Samoan greeting, 'talofa lava' is a warmer formal form, and the usual reply is 'talofa' or 'mālō'.",
+      "The American Samoa government glosses it as short for 'si o ta alofa atu' — 'I am happy and delighted to give you my love'.",
+      "It shares its root with alofa, love and compassion, which also runs through the faʻa Sāmoa idea of mutual obligation.",
+      "The word travelled: it is also the greeting on Lifou in New Caledonia, brought by Samoan London Missionary Society teachers from 1841.",
+      "Samoan is the most widely spoken Polynesian language, with about 510,000 speakers worldwide, including more than 100,000 in New Zealand."
+    ],
+    "exampleEn": "A visitor steps into a church hall and is greeted 'Talofa lava'; the expected reply is 'Talofa' before any other business begins.",
+    "qualificationEn": "Greeting forms depend on context and register, Samoan orthography varies, and diaspora Samoans mix English into everyday speech.",
+    "expression": {
+      "original": "Talofa lava",
+      "transliteration": "tah-LOH-fah LAH-vah",
+      "language": "Gagana Sāmoa",
+      "glossEn": "A warm hello; literally a giving of love, answered with 'Talofa'."
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Talofa",
+        "url": "https://en.wikipedia.org/wiki/Talofa"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Samoan language",
+        "url": "https://en.wikipedia.org/wiki/Samoan_language"
+      }
+    ]
+  },
+  {
+    "id": "oce-023",
+    "category": "games-and-leisure",
+    "contentType": "detail",
+    "countries": [
+      "WS",
+      "NZ"
+    ],
+    "continent": "oceania",
+    "region": "Samoa and the Pacific diaspora",
+    "community": "Samoan",
+    "languages": [
+      "sm",
+      "en"
+    ],
+    "titleEn": "Kilikiti: the village cricket that can last for days",
+    "facts": [
+      "Kilikiti is Samoa's national sport, a cricket variant introduced by English missionaries in the early nineteenth century and reshaped across Polynesia.",
+      "The ball is hard rubber bound in pandanus, and the bat is three-sided, carved from one piece and modelled on the old Samoan war club known as the lapalapa.",
+      "There is no limit on team size: teams are whoever turns up, of any age or gender, and most players both bat and bowl.",
+      "Village games can run for days, with food stalls, church groups and whole families on the sideline.",
+      "The New Zealand Kilikiti Association standardised a 70-minute format and began national and World Cup tournaments in 1999 and 2001."
+    ],
+    "exampleEn": "Two villages play on a Saturday: the bats are carved, the ball is hard rubber, and spectators sit on mats while food stalls raise money for the church.",
+    "qualificationEn": "Rules vary from village to village and are only partly standardised; kilikiti is not simply 'Samoan cricket'.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kilikiti",
+        "url": "https://en.wikipedia.org/wiki/Kilikiti"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Samoa",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Samoa"
+      }
+    ]
+  },
+  {
+    "id": "oce-024",
+    "category": "traditions",
+    "contentType": "feature",
+    "countries": [
+      "WS",
+      "TO",
+      "FJ",
+      "VU"
+    ],
+    "continent": "oceania",
+    "region": "Polynesia and Fiji",
+    "community": null,
+    "languages": [
+      "sm",
+      "to",
+      "fj",
+      "bi"
+    ],
+    "titleEn": "ʻAva and kava: the drink that ranks a room",
+    "facts": [
+      "Kava is made from the root of Piper methysticum, a pepper-family plant, and the name means 'bitter' in Tongan and Marquesan.",
+      "In Samoa the drink is ʻava, prepared by the ʻaumaga group and served by the tautuaʻava in rank order, with the highest visiting chief served first.",
+      "In Tonga the informal faikava is a seated circle where the touʻa mixes and serves; in Fiji, yaqona is drunk at any hour and a visitor presents it as sevusevu to the chief.",
+      "It is mildly sedative and non-alcoholic, used to welcome guests, settle disputes and mark funerals, weddings and title installations.",
+      "Preparation is part of the ceremony, and the order of serving is a map of rank that everyone in the room can read."
+    ],
+    "exampleEn": "At a Tongan faikava the touʻa mixes kava in the bowl and cups go round in order; a visitor who walks across the circle is quietly corrected.",
+    "qualificationEn": "Ceremony differs sharply between Tonga, Samoa, Fiji and Vanuatu, and casual kava drinking is not the same as a formal ceremony.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kava culture",
+        "url": "https://en.wikipedia.org/wiki/Kava_culture"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Kava",
+        "url": "https://en.wikipedia.org/wiki/Kava"
+      }
+    ]
+  },
+  {
+    "id": "oce-025",
+    "category": "family-and-friendship",
+    "contentType": "feature",
+    "countries": [
+      "TO"
+    ],
+    "continent": "oceania",
+    "region": "Tonga",
+    "community": "Tongan",
+    "languages": [
+      "to",
+      "en"
+    ],
+    "titleEn": "Fahu and the sacred sister: Tongan rank between brothers and sisters",
+    "facts": [
+      "In Tongan kinship a sister outranks her brother, and her children — his fahu — hold a privileged status that he must honour.",
+      "The highest historical example was the tamahā, the eldest daughter of the Tuʻi Tonga's sister; she was fahu, 'above the law', to the king himself.",
+      "The tamahā had the highest social status in the land but no political power, which shows how rank and authority were separated.",
+      "The mehekitanga, the eldest aunt, holds a senior position in the family group and is honoured at weddings, funerals and birthdays.",
+      "Missionary Christianity and migration have changed how fahu works, but the ranking of sister's children is still invoked in Tongan families and diaspora communities."
+    ],
+    "exampleEn": "At a funeral the fahu side brings fine mats and is seated first; the deceased's family hands over goods as respect rather than as payment.",
+    "qualificationEn": "Fahu varies by family and has changed with migration and Christianity; it is not a fixed rule that all Tongans follow today.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Tamahā",
+        "url": "https://en.wikipedia.org/wiki/Tamah%C4%81"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Women in Tonga",
+        "url": "https://en.wikipedia.org/wiki/Women_in_Tonga"
+      }
+    ]
+  },
+  {
+    "id": "oce-026",
+    "category": "cities-and-community",
+    "contentType": "feature",
+    "countries": [
+      "KI"
+    ],
+    "continent": "oceania",
+    "region": "Kiribati",
+    "community": "I-Kiribati",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "The maneaba: where a Kiribati village decides things",
+    "facts": [
+      "The maneaba is the meeting house at the centre of Kiribati community life: a high, pandanus-thatched roof of coconut wood resting on coral supports.",
+      "The whole community takes part in building it, and every part has a symbolic as well as a practical function.",
+      "Its layout is a seating map, with named sections (boti) belonging to clans and families, so where you sit states who you are.",
+      "The national parliament building is called the Maneaba ni Maungatabu, and the same building form appears in Tuvalu as the maneapa or ahiga.",
+      "Modern maneaba are often concrete, but the seating order and the protocols inside them still mark rank and belonging."
+    ],
+    "exampleEn": "A land dispute is heard in the maneaba; elders sit in their clan sections, speak in turn, and reach a decision without a vote.",
+    "qualificationEn": "Maneaba forms and protocols differ between islands, and not every village still governs through elders in the same way.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Maneaba",
+        "url": "https://en.wikipedia.org/wiki/Maneaba"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Kiribati",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Kiribati"
+      }
+    ]
+  },
+  {
+    "id": "oce-027",
+    "category": "social-behaviour",
+    "contentType": "feature",
+    "countries": [
+      "VU"
+    ],
+    "continent": "oceania",
+    "region": "Vanuatu",
+    "community": "ni-Vanuatu",
+    "languages": [
+      "bi",
+      "en",
+      "fr"
+    ],
+    "titleEn": "Kastom: custom as law in Vanuatu",
+    "facts": [
+      "Kastom is a Bislama word for custom, and in Vanuatu it means customary law, land tenure, ritual and social obligation at once.",
+      "It became a national idea at independence in 1980, when it helped hold together a country of more than 100 languages and over 80 islands.",
+      "Kastom is unwritten and passed on through teaching, story and ceremony; there is no single code, because each island has its own.",
+      "Chiefs apply kastom in village courts and land disputes, and the state recognises chiefly councils alongside the national courts.",
+      "Vanuatu's cultural centre trains ni-Vanuatu fieldworkers to record kastom in their own communities, because outsiders cannot define it."
+    ],
+    "exampleEn": "A visitor to a Vanuatu village brings a small customary gift before discussing land, and the chief hears the matter with the elders under kastom.",
+    "qualificationEn": "Kastom is diverse and changing, and island communities disagree about what it requires; it is not a single national code.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kastom",
+        "url": "https://en.wikipedia.org/wiki/Kastom"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Vanuatu",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Vanuatu"
+      }
+    ]
+  },
+  {
+    "id": "oce-028",
+    "category": "traditions",
+    "contentType": "scene",
+    "countries": [
+      "VU"
+    ],
+    "continent": "oceania",
+    "region": "Pentecost Island, Vanuatu",
+    "community": "Sa people, southern Pentecost",
+    "languages": [
+      "bi",
+      "en"
+    ],
+    "titleEn": "Land diving on Pentecost: a leap tied to the yam harvest",
+    "facts": [
+      "On southern Pentecost Island, men and boys jump from wooden towers about 20 to 30 metres high with two lianas tied around their ankles.",
+      "The ritual is tied to the annual yam harvest in April, May or June, and a good dive is believed to help bring a bountiful harvest.",
+      "The tower is built from timber and vines by the community, and the vine length is measured so the jumper's shoulders brush the ground.",
+      "Before the tower is used the men seclude themselves and women stay away, and the first jumps come from the lower platforms.",
+      "Jumpers give short speeches and sing before leaping, and the ritual now attracts tourists whose fees support the villages."
+    ],
+    "exampleEn": "In April the men build a tower of timber and vines; the youngest jump first, and the crowd sings as the best diver's shoulders brush the earth.",
+    "qualificationEn": "The ritual belongs to specific villages, tourism has changed its timing and staging, and not all ni-Vanuatu practise it.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Land diving",
+        "url": "https://en.wikipedia.org/wiki/Land_diving"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Vanuatu",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Vanuatu"
+      }
+    ]
+  },
+  {
+    "id": "oce-029",
+    "category": "communication",
+    "contentType": "note",
+    "countries": [
+      "PG",
+      "SB"
+    ],
+    "continent": "oceania",
+    "region": "Papua New Guinea and Solomon Islands",
+    "community": null,
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Wantok: the obligation that comes with a shared language",
+    "facts": [
+      "Wantok means 'one talk' in Tok Pisin: someone who speaks your language, and by extension your kin and your obligation.",
+      "In a country with more than 800 languages, wantok networks work as everyday welfare, finding housing, jobs and school fees for new arrivals in town.",
+      "The same obligation is a political problem: critics call 'wantokism' the habit of directing public money and jobs to relatives and language-mates.",
+      "Papua New Guinea's corruption debate often turns on the wantok system, because reciprocal loyalty is expected and refusing it can be socially costly.",
+      "The term is used in Solomon Islands Pijin too, where wantok networks shape urban life and politics."
+    ],
+    "exampleEn": "A new arrival in Port Moresby sleeps on his wantoks' floor until he finds work; later he is expected to pay school fees for a cousin.",
+    "qualificationEn": "Wantok obligations are contested, especially by younger urban Papua New Guineans, and 'wantokism' is a criticism rather than a neutral term.",
+    "expression": {
+      "original": "Wantok",
+      "transliteration": "WAN-tok",
+      "language": "Tok Pisin",
+      "glossEn": "'One talk' — someone who speaks my language, and therefore an ally owed help."
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Papua New Guinea",
+        "url": "https://en.wikipedia.org/wiki/Papua_New_Guinea"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Papua New Guinea",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Papua_New_Guinea"
+      }
+    ]
+  },
+  {
+    "id": "oce-030",
+    "category": "music-and-dance",
+    "contentType": "feature",
+    "countries": [
+      "US"
+    ],
+    "continent": "oceania",
+    "region": "Hawaiʻi",
+    "community": "Native Hawaiians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Hula: choreography that carries the words of a song",
+    "facts": [
+      "Hula is a Hawaiian dance form that dramatises the words of a mele, or song, with hands, hips and feet carrying the text.",
+      "Hula kahiko is the older, chant-accompanied form, while hula ʻauana developed under Western influence with song and instruments.",
+      "Training happens in a hālau under a kumu hula, and asking permission to enter the school is itself a chant performed at the entrance.",
+      "Missionary pressure drove hula underground in the nineteenth century; King Kalākaua's patronage helped restore it, and the Merrie Monarch Festival, begun in 1971, honours him.",
+      "Merrie Monarch is a week-long festival in Hilo held after Easter, with hālau from the mainland and abroad competing in kahiko and ʻauana."
+    ],
+    "exampleEn": "A hālau rehearses for Merrie Monarch for months; the kumu corrects a hand shape because it changes the meaning of the word in the mele.",
+    "qualificationEn": "Hula styles and protocols vary by hālau, not all Hawaiians dance, and tourism performances are not the same as ritual or competition hula.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Hula",
+        "url": "https://en.wikipedia.org/wiki/Hula"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Merrie Monarch Festival",
+        "url": "https://en.wikipedia.org/wiki/Merrie_Monarch_Festival"
+      }
+    ]
+  },
+  {
+    "id": "oce-031",
+    "category": "work-and-education",
+    "contentType": "feature",
+    "countries": [
+      "US"
+    ],
+    "continent": "oceania",
+    "region": "Hawaiʻi",
+    "community": "Native Hawaiians",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Pūnana Leo: the preschools opened illegally to save Hawaiian",
+    "facts": [
+      "Pūnana Leo means 'language nest': Hawaiian-medium preschools where children spend the day in Hawaiian rather than English.",
+      "The first opened in 1984 in Kekaha, Kauaʻi, initially illegally, because Hawaiian was still effectively banned as a school language.",
+      "The model drew on nineteenth-century Hawaiian-language schools and on the kōhanga reo movement in New Zealand.",
+      "Parents were expected to learn Hawaiian as well, so the language would continue at home; ʻAha Pūnana Leo had been founded in 1983.",
+      "Hawaiian was banned as a medium of instruction by an 1896 English-only law and not allowed back until 1987, a gap of 91 years.",
+      "As of 2022 there were eleven Pūnana Leo preschools on five islands, feeding Hawaiian-medium primary and secondary programmes."
+    ],
+    "exampleEn": "At a Pūnana Leo a three-year-old asks for water in Hawaiian; her father attends evening classes so the language continues at home.",
+    "qualificationEn": "Immersion schools are limited by places and fluent teachers, and not every Hawaiian family has access; revitalisation is still fragile.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Pūnana Leo",
+        "url": "https://en.wikipedia.org/wiki/P%C5%ABnana_Leo"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Hawaiian language",
+        "url": "https://en.wikipedia.org/wiki/Hawaiian_language"
+      }
+    ]
+  },
+  {
+    "id": "oce-032",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "MH"
+    ],
+    "continent": "oceania",
+    "region": "Marshall Islands",
+    "community": "Bikini islanders",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Bikini Atoll: exile, trust fund and the nuclear debt",
+    "facts": [
+      "Bikini Atoll was home to 167 people when the US Navy asked them in 1946 to relocate 'for the good of mankind and to end all world wars'.",
+      "Their leader, King Juda, answered 'MEN OTEMJEJ REJ ILO BEIN ANIJ' — everything is in God's hands — and the community moved to Rongerik, where food ran out and people starved.",
+      "They were moved again in 1948 to Kili, a 200-acre island without a lagoon and one-sixth the size of Bikini; in 1954 the 15-megaton Castle Bravo test contaminated the atoll.",
+      "Resettlement attempts failed, and today most Bikini people live on Kili, Majuro and Ejit, with about 1,400 in the United States and elsewhere.",
+      "Trust-fund and nuclear-claims payments made some islanders dependent on US money, while the atoll itself remains largely unusable."
+    ],
+    "exampleEn": "On 1 March, Bikini families in Majuro and Kili remember the relocation, and the flag's motto — 'everything is in God's hands' — is repeated.",
+    "qualificationEn": "Bikini people disagree about resettlement and compensation, and radiation science remains contested; the story is not only one of victimhood.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Bikini Atoll",
+        "url": "https://en.wikipedia.org/wiki/Bikini_Atoll"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Runit Island",
+        "url": "https://en.wikipedia.org/wiki/Runit_Island"
+      }
+    ]
+  },
+  {
+    "id": "oce-033",
+    "category": "nature-and-seasons",
+    "contentType": "feature",
+    "countries": [],
+    "continent": "oceania",
+    "region": "Pacific Ocean",
+    "community": null,
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Wayfinding: crossing the Pacific without instruments",
+    "facts": [
+      "Polynesians settled the Pacific using double-hulled and outrigger canoes, navigating by stars, swells, winds, birds and cloud.",
+      "A navigator can read the sea at night by lying on the deck and feeling the dominant swell, then checking the star rising on the horizon.",
+      "Land signs come before land: a particular bird, a change in cloud, floating vegetation or a swell that bends around an island.",
+      "The knowledge was carried in chant and genealogy rather than written charts, and apprentices learned by memorising star paths and sailing with masters.",
+      "The word 'wayfinding' was coined for urban design by Kevin Lynch in 1960 and later borrowed to describe Pacific navigation without instruments.",
+      "Revival began in the 1970s, when Hawaiian and other voyagers rebuilt canoes and sailed without instruments again."
+    ],
+    "exampleEn": "A navigator lies on the deck, feels the swell and names the star rising ahead; by morning he is reading birds and cloud for the island.",
+    "qualificationEn": "Navigation knowledge was nearly lost and is held by particular families; techniques differed across Polynesia and Micronesia, so avoid treating it as one method.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Polynesian navigation",
+        "url": "https://en.wikipedia.org/wiki/Polynesian_navigation"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Wayfinding",
+        "url": "https://en.wikipedia.org/wiki/Wayfinding"
+      }
+    ]
+  },
+  {
+    "id": "oce-034",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "TV"
+    ],
+    "continent": "oceania",
+    "region": "Tuvalu",
+    "community": "Tuvaluan",
+    "languages": [
+      "en"
+    ],
+    "titleEn": "Tuvalu and the Falepili Union: staying, moving, and sovereignty",
+    "facts": [
+      "Tuvalu is nine islands — three reef islands and six atolls — with a population of about 10,600 and a highest point only a few metres above the sea.",
+      "Sea-level rise, saltwater intrusion into the freshwater lens, drought and cyclones threaten the pulaka pits and taro gardens that anchor food life.",
+      "Tuvalu has campaigned for decades at climate talks, arguing that a nation can be lost without its land ever being fully submerged.",
+      "In November 2023 it signed the Falepili Union with Australia, which offers a climate mobility pathway for Tuvaluans while affirming Tuvalu's statehood and sovereignty.",
+      "Migration already runs through family networks to New Zealand, Australia and Fiji, and remittances shape daily life on the islands.",
+      "Decisions about who applies to migrate are discussed in the maneapa, where island councils still meet."
+    ],
+    "exampleEn": "On Funafuti families tend pulaka pits and rain tanks, and the island council meets in the maneapa to discuss the migration ballot and the next king tide.",
+    "qualificationEn": "Tuvaluans are not passive victims: many want to stay, migration is debated, and impacts differ between islands.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Climate change in Tuvalu",
+        "url": "https://en.wikipedia.org/wiki/Climate_change_in_Tuvalu"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Tuvalu",
+        "url": "https://en.wikipedia.org/wiki/Tuvalu"
+      }
+    ]
+  },
+  {
+    "id": "oce-035",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "NC"
+    ],
+    "continent": "oceania",
+    "region": "New Caledonia",
+    "community": "Kanak",
+    "languages": [
+      "fr"
+    ],
+    "titleEn": "Kanak and the Nouméa Accord: land, custom and a vote on independence",
+    "facts": [
+      "Kanak are the Indigenous Melanesian people of New Caledonia, 41% of the population in 2019, and speakers of the New Caledonian branch of Austronesian languages.",
+      "Land is the core of Kanak identity: clans hold customary land, and the case (traditional house) and the yam remain central to ceremony.",
+      "The independence movement FLNKS was founded in 1984, after the failed revolt of 1967 and the unrest of the 1980s.",
+      "The Nouméa Accord of 1998 created a New Caledonian citizenship and a twenty-year transfer of powers, with up to three independence referendums.",
+      "Referendums in 2018 and 2020 voted to stay French, while the December 2021 vote was boycotted by the independence movement and rejected independence.",
+      "In May 2024 a French plan to widen the electoral roll sparked the worst unrest in decades, with deaths, injuries and thousands of arrests."
+    ],
+    "exampleEn": "In a Kanak village a visitor presents a customary gift to the clan before being welcomed; in Nouméa the same person argues about the independence vote.",
+    "qualificationEn": "Kanak is not a single nation — clans and languages differ, and the independence question remains unresolved; 'Kanak' should not be used as a lifestyle label.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kanak people",
+        "url": "https://en.wikipedia.org/wiki/Kanak_people"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Nouméa Accord",
+        "url": "https://en.wikipedia.org/wiki/Noum%C3%A9a_Accord"
+      }
+    ]
+  }
+]

@@ -57,11 +57,7 @@ installable APKs are published with the repository:
   consent, no tracking, no raw fix stored) renders a compact strip with a real forecast from
   Open-Meteo, a manual city alternative, units, freshness/offline labels and visible attribution;
   provider failures keep the last valid forecast and never affect translation.
-- **World cultural discovery** in the same page, below the weather: a deterministic daily feature and
-  a mixed, editorially composed feed of 595 sourced, licence-cleared museum records (English, Arabic
-  and German metadata, provenance and attribution on every card), with search, filters, saved
-  discoveries, related items and a detail reading surface; bundled and offline-capable, images only
-  from the allow-listed museum host, no model calls at browsing time.
+- **Cultures, people and everyday life**: a written, text-first cultural knowledge library below the weather - hundreds of three-language articles on social behaviour, language and communication, traditions, family, food, work, cities and cultural change, with a deterministic daily discovery, mixed editorial compositions, search and filters, saved articles, related reading, references and offline browsing. No images, no museum catalogue, no runtime model calls.
 - **One public page** (`/about`): product explanation, the meaning-first philosophy, the data
   disclosure and the controls; `/privacy` and `/arabic-german-translation` are permanent redirects
   into its sections, the sitemap lists only `/` and `/about`, and a first-run introduction is
@@ -97,8 +93,9 @@ npm run lint             # eslint, zero warnings
 npm run test             # vitest + coverage floors
 npm run check:contrast   # every theme pair clears WCAG AA
 npm run check:docs       # links and documentation inventory
-npm run check:security   # culture image hosts ≡ CSP (web + native), Permissions-Policy guard
+npm run check:security   # cultural content gate; text-first, image-free ≡ CSP (web + native), Permissions-Policy guard
 npm run build            # build + security headers + PWA precache check
+npm run culture:validate # corpus gates: count, countries, continents, categories, extended, locales
 npm run verify           # typecheck + lint + tests + contrast + docs + security
 ```
 

@@ -1,44 +1,57 @@
 /**
- * Culture catalog loader (Phase II).
+ * Culture library loader (schema v2, text-first).
  *
- * The catalog is an order of magnitude larger than the app's own screens, so it is split:
- * a compact `data/index.ts` module carries one row per record for search/filter/feed, and
- * numbered `data/chunk-<n>.ts` modules carry the full detail bodies. Both are loaded with
- * dynamic imports only — nothing here runs at module-evaluation time, so the first paint of
- * the app never waits for culture data. A screen that wants the catalog calls
- * `loadCultureIndex()` from an effect and renders its own loading state.
+ * The written library is split so the app never pays for article bodies it is not reading:
+ * - data/index.ts default-exports { version: 2, chunkSize, entries: CultureIndexEntry[] }
+ *   -- one compact row per article, enough for search, filters, the feed and the daily feature;
+ * - data/chunk-<n>.ts default-exports { version: 2, items: CultureArticle[] } -- the prose
+ *   bodies. Chunk n covers the index positions n * chunkSize .. (n + 1) * chunkSize - 1 in
+ *   the same order, so the compact index is the only map an id needs.
  *
- * Contract assumptions for the generated modules (A09 owns them):
- * - `data/index.ts` default-exports `{ version, entries, chunkSize? }`.
- * - `data/chunk-<n>.ts` default-exports `CultureItem[]` (or `{ version?, items }`).
- * - A detail chunk covers `chunkSize` consecutive index positions: the entry at index
- *   position `p` lives in chunk `floor(p / chunkSize)`. The chunks therefore do not need
- *   to repeat ids: the compact index is the map. `chunkSize` defaults to
- *   `CULTURE_CHUNK_SIZE` and may be declared by the index payload.
- * If the generated layout differs, `setCultureDataSource()` replaces the module
- * resolution with an adapter without touching the rest of the discovery domain.
+ * Both module groups are resolved through import.meta.glob LAZILY: importing this module
+ * runs no data import, so the translator's first paint never waits for the library. A
+ * screen that wants culture calls loadCultureIndex() from an effect and renders its own
+ * calm loading state.
  *
- * Every read is validated: index rows and item bodies are checked against `types.ts` and
- * anything that does not fit is dropped (and counted) instead of reaching the UI. A data
- * version other than `CULTURE_SCHEMA_VERSION` is reported as `version-mismatch` with an
- * empty catalog; the caller can render a calm "unavailable" state, never a crash.
+ * Every read is validated here, never trusted from the generated files: an index row or an
+ * article that does not fit types.ts is dropped (index drops are counted), a declared
+ * schema version other than CULTURE_SCHEMA_VERSION is a version-mismatch with no usable
+ * data, and a missing/throwing module is unavailable. None of these ever throw -- the UI
+ * decides how to say that the library is not here right now.
  */
-import { isAllowedCultureImageUrl } from "./media";
 import {
   CULTURE_CATEGORIES,
   CULTURE_SCHEMA_VERSION,
+  type CultureArticle,
   type CultureCategory,
+  type CultureContentType,
   type CultureContinent,
+  type CultureContext,
+  type CultureExpression,
   type CultureIndexEntry,
-  type CultureItem,
   type CultureLocale,
-  type CultureMedia,
+  type CultureReview,
+  type CultureSection,
+  type CultureSource,
+  type CultureStatus,
+  type CultureVerification,
+  type LocalizedText,
 } from "./types";
 
 /** Detail-chunk size assumed when the generated index does not declare one. */
 export const CULTURE_CHUNK_SIZE = 100;
 /** At most this many detail chunks stay in memory (LRU by last use). */
 export const CULTURE_CHUNK_CACHE_LIMIT = 6;
+
+/** Canonical display order for content types (also used by the facet builder). */
+export const CULTURE_CONTENT_TYPES: readonly CultureContentType[] = [
+  "feature",
+  "note",
+  "language",
+  "scene",
+  "contrast",
+  "detail",
+];
 
 const CONTINENTS: readonly CultureContinent[] = [
   "africa",
@@ -49,48 +62,75 @@ const CONTINENTS: readonly CultureContinent[] = [
   "oceania",
 ];
 const LOCALES: readonly CultureLocale[] = ["ar", "de", "en"];
-const PROVENANCE: readonly string[] = ["institution", "machine-translated", "editorial-reviewed"];
+const VERIFICATIONS: readonly CultureVerification[] = [
+  "source-linked",
+  "double-checked",
+  "unverified",
+];
+const REVIEWS: readonly CultureReview[] = ["machine-drafted", "editor-reviewed", "not-reviewed"];
+const PERIODS = ["contemporary", "historical", "both"] as const;
+
 const CATEGORY_SET = new Set<string>(CULTURE_CATEGORIES);
 const CONTINENT_SET = new Set<string>(CONTINENTS);
+const CONTENT_TYPE_SET = new Set<string>(CULTURE_CONTENT_TYPES);
+const VERIFICATION_SET = new Set<string>(VERIFICATIONS);
+const REVIEW_SET = new Set<string>(REVIEWS);
+const PERIOD_SET = new Set<string>(PERIODS);
 
-/** Max accepted id length; ids are used as cursors and in local saved/seen stores. */
+/** Ids are cursors and storage keys: bounded, no whitespace and no control characters. */
 const MAX_ID_LENGTH = 128;
-const MAX_TAGS = 12;
-const MAX_TAG_LENGTH = 64;
+const MAX_SLUG_LENGTH = 200;
+const MAX_TITLE_LENGTH = 400;
+const MAX_TEASER_LENGTH = 4_000;
+const MAX_PARAGRAPH_LENGTH = 12_000;
+const MAX_TAGS = 16;
+const MAX_TAG_LENGTH = 80;
+const MAX_COUNTRIES = 12;
+const MAX_LANGUAGES = 12;
+const MAX_LANGUAGE_LENGTH = 80;
+const MAX_SECTIONS = 40;
+const MAX_PARAGRAPHS = 40;
+const MAX_SOURCES = 24;
+const MAX_SOURCE_TEXT = 400;
 const MAX_RELATED = 24;
-const MAX_CHUNK_SIZE = 1000;
+const MAX_READING_MINUTES = 600;
+const MAX_REVISION = 1_000_000;
+const MAX_DATE_LENGTH = 40;
+const MAX_CHUNK_SIZE_VALUE = 1_000;
+const MAX_ORIGINAL_LENGTH = 400;
 
 export type CultureLoadStatus = "ok" | "empty" | "unavailable" | "version-mismatch";
 
 export interface CultureIndexLoad {
   status: CultureLoadStatus;
-  /** Version declared by the loaded index; `null` when nothing usable was loaded. */
+  /** Version declared by the loaded index; null when there was no usable payload. */
   version: number | null;
+  /** Validated compact rows in corpus order (empty unless status is ok). */
   entries: readonly CultureIndexEntry[];
-  /** Rows the generated index carried that did not validate and were dropped. */
+  /** Rows the generated index carried that did not validate (or repeated an id). */
   dropped: number;
-  /** Detail-chunk size the index declared (or `CULTURE_CHUNK_SIZE`). */
+  /** Detail-chunk size the index declared, or CULTURE_CHUNK_SIZE when absent/invalid. */
   chunkSize: number;
 }
 
 export interface CultureDetailLoad {
   /**
-   * - `ok`: every requested id was loaded;
-   * - `partial`: some were loaded, the rest are listed in `missing`;
-   * - `not-found`: none of the requested ids exists in the compact index (nothing fetched);
-   * - `unavailable`: the catalog/chunk could not be loaded at all;
-   * - `version-mismatch`: the data does not match `CULTURE_SCHEMA_VERSION`.
+   * - ok: every requested id was loaded;
+   * - partial: some were loaded, the rest are listed in missing;
+   * - not-found: none of the requested ids exists in the compact index (nothing fetched);
+   * - unavailable: the library/chunk could not be loaded at all;
+   * - version-mismatch: the data does not match CULTURE_SCHEMA_VERSION.
    */
-  status: "ok" | "partial" | "unavailable" | "version-mismatch" | "not-found";
-  items: CultureItem[];
+  status: "ok" | "partial" | "not-found" | "unavailable" | "version-mismatch";
+  items: CultureArticle[];
   missing: string[];
 }
 
-/** A replaceable source of raw catalog modules. Results are validated here, not by the source. */
+/** A replaceable source of raw library modules; results are validated here, not by the source. */
 export interface CultureDataSource {
-  /** Resolve the compact index payload (version + entries). */
+  /** Resolve the compact index payload ({ version, chunkSize, entries }). */
   loadIndex(): Promise<unknown>;
-  /** Resolve the detail payload for one chunk window. May reject when absent. */
+  /** Resolve the detail payload for one chunk window ({ version, items }). May reject. */
   loadChunk(window: number): Promise<unknown>;
 }
 
@@ -99,13 +139,20 @@ export interface CultureDataSource {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** A validated record is still untrusted input: every field is read by name, never dotted. */
+const field = (record: Record<string, unknown>, key: string): unknown => record[key];
+
+function isBoundedString(value: unknown, maxLength: number): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= maxLength;
+}
+
 /**
- * A catalog id is an opaque key used in cursors and local stores: not blank, not longer
+ * A library id is an opaque key used in cursors and local stores: not blank, not longer
  * than the bound, and free of whitespace/control characters (so no rendering or cursor
- * ambiguity). Written as a scan rather than a regex because a control-character pattern
- * is easy to get subtly wrong.
+ * ambiguity). A scan rather than a regex because control-character classes are easy to
+ * get subtly wrong.
  */
-const isId = (value: unknown): value is string => {
+function isId(value: unknown): value is string {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_ID_LENGTH) {
     return false;
   }
@@ -114,40 +161,52 @@ const isId = (value: unknown): value is string => {
     if (code <= 0x20 || code === 0x7f) return false;
   }
   return true;
-};
-
-const isCountry = (value: unknown): value is string =>
-  typeof value === "string" && /^[A-Za-z]{2}$/.test(value);
-
-function isLocalizedText(value: unknown): value is Record<CultureLocale, string> {
-  if (!isRecord(value)) return false;
-  return LOCALES.every(
-    (locale) => typeof value[locale] === "string" && (value[locale] as string).trim().length > 0,
-  );
 }
 
-function toCountries(value: unknown): string[] | null {
+/** A localized field must carry all three display languages, none blank. */
+function parseLocalizedText(value: unknown, maxLength: number): LocalizedText | null {
+  if (!isRecord(value)) return null;
+  const out = {} as LocalizedText;
+  for (const locale of LOCALES) {
+    const text = field(value, locale);
+    if (!isBoundedString(text, maxLength)) return null;
+    out[locale] = text;
+  }
+  return out;
+}
+
+/** ISO 3166-1 alpha-2 codes, upper-cased and deduplicated. Absent/invalid: null. */
+function parseCountries(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null;
   const out: string[] = [];
-  for (const country of value) {
-    if (!isCountry(country)) continue;
-    const upper = country.toUpperCase();
-    if (!out.includes(upper)) out.push(upper);
+  for (const raw of value) {
+    if (typeof raw !== "string" || !/^[A-Za-z]{2}$/.test(raw)) continue;
+    const code = raw.toUpperCase();
+    if (!out.includes(code)) out.push(code);
+    if (out.length >= MAX_COUNTRIES) break;
   }
   return out;
 }
 
-function toTags(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
+function parseStringList(value: unknown, maxItems: number, maxLength: number): string[] | null {
+  if (!Array.isArray(value)) return null;
   const out: string[] = [];
-  for (const tag of value) {
-    if (typeof tag !== "string") continue;
-    const trimmed = tag.trim().slice(0, MAX_TAG_LENGTH);
-    if (!trimmed || out.includes(trimmed)) continue;
-    out.push(trimmed);
-    if (out.length >= MAX_TAGS) break;
+  for (const raw of value) {
+    if (typeof raw !== "string") continue;
+    const text = raw.trim().slice(0, maxLength);
+    if (!text || out.includes(text)) continue;
+    out.push(text);
+    if (out.length >= maxItems) break;
   }
   return out;
+}
+
+function parseTags(value: unknown): string[] | null {
+  return parseStringList(value, MAX_TAGS, MAX_TAG_LENGTH);
+}
+
+function parseLanguages(value: unknown): string[] | null {
+  return parseStringList(value, MAX_LANGUAGES, MAX_LANGUAGE_LENGTH);
 }
 
 function clampWeight(value: unknown): number | null {
@@ -155,174 +214,318 @@ function clampWeight(value: unknown): number | null {
   return Math.min(1, Math.max(0, value));
 }
 
-/**
- * The small feed media block is optional: an entry whose media does not carry an https
- * url, a licence and a credit is kept without media (the card falls back to a typographic
- * composition) rather than dropped. Rights metadata is never assumed or invented.
- */
-export function parseCultureMedia(value: unknown): CultureMedia | undefined {
-  if (!isRecord(value)) return undefined;
-  const url = field(value, "url");
-  const license = field(value, "license");
-  const credit = field(value, "credit");
-  // Defence in depth: the corpus is validated at ingestion, but the rendered media URL is
-  // still untrusted. Only an exact allow-listed https host may be painted (the registry is
-  // the same one the CSPs and the security test read).
-  if (!isAllowedCultureImageUrl(url)) return undefined;
-  if (typeof license !== "string" || !license.trim()) return undefined;
-  if (typeof credit !== "string" || !credit.trim()) return undefined;
-  const thumbnailUrl = field(value, "thumbnailUrl");
-  const width = field(value, "width");
-  const height = field(value, "height");
-  return {
-    url,
-    license,
-    credit,
-    ...(isAllowedCultureImageUrl(thumbnailUrl) ? { thumbnailUrl } : {}),
-    ...(typeof width === "number" && Number.isFinite(width) && width > 0 ? { width } : {}),
-    ...(typeof height === "number" && Number.isFinite(height) && height > 0 ? { height } : {}),
-  };
+function parseIntegerInRange(value: unknown, min: number, max: number): number | null {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
+    return null;
+  }
+  return value;
 }
 
-/** A validated record is still untrusted input: every field is read by name, never dotted. */
-const field = (record: Record<string, unknown>, key: string): unknown => record[key];
+function parseDateString(value: unknown): string | null {
+  if (!isBoundedString(value, MAX_DATE_LENGTH)) return null;
+  return Number.isFinite(Date.parse(value)) ? value : null;
+}
 
-/** Validate and normalise one compact index row. Returns `null` for unusable rows. */
+function parseEnum<T extends string>(value: unknown, allowed: ReadonlySet<string>): T | null {
+  return typeof value === "string" && allowed.has(value) ? (value as T) : null;
+}
+
+/** Sentinel for "the field was supplied but is not valid" (distinct from "absent"). */
+const INVALID = Symbol("invalid");
+type Parsed<T> = T | undefined | typeof INVALID;
+
+function parseOptionalLocalized(value: unknown, maxLength: number): Parsed<LocalizedText> {
+  if (value === undefined) return undefined;
+  return parseLocalizedText(value, maxLength) ?? INVALID;
+}
+
+function parseOptionalString(value: unknown, maxLength: number): Parsed<string> {
+  if (value === undefined) return undefined;
+  return isBoundedString(value, maxLength) ? value : INVALID;
+}
+
+function parseOptionalDate(value: unknown): Parsed<string> {
+  if (value === undefined) return undefined;
+  return parseDateString(value) ?? INVALID;
+}
+
+/** Validate and normalise one compact index row. Returns null for unusable rows. */
 export function parseCultureIndexEntry(value: unknown): CultureIndexEntry | null {
   if (!isRecord(value)) return null;
   const id = field(value, "id");
   if (!isId(id)) return null;
-  const title = field(value, "title");
-  if (!isLocalizedText(title)) return null;
-  const category = field(value, "category");
-  if (typeof category !== "string" || !CATEGORY_SET.has(category)) return null;
-  const continent = field(value, "continent");
-  if (typeof continent !== "string" || !CONTINENT_SET.has(continent)) return null;
-  const countries = toCountries(field(value, "countries"));
+  const title = parseLocalizedText(field(value, "title"), MAX_TITLE_LENGTH);
+  if (!title) return null;
+  const teaser = parseLocalizedText(field(value, "teaser"), MAX_TEASER_LENGTH);
+  if (!teaser) return null;
+  const category = parseEnum<CultureCategory>(field(value, "category"), CATEGORY_SET);
+  if (!category) return null;
+  const contentType = parseEnum<CultureContentType>(field(value, "contentType"), CONTENT_TYPE_SET);
+  if (!contentType) return null;
+  const continent = parseEnum<CultureContinent>(field(value, "continent"), CONTINENT_SET);
+  if (!continent) return null;
+  const countries = parseCountries(field(value, "countries"));
   if (!countries) return null;
+  const tags = parseTags(field(value, "tags"));
+  if (!tags) return null;
+  const readingMinutes = parseIntegerInRange(
+    field(value, "readingMinutes"),
+    1,
+    MAX_READING_MINUTES,
+  );
+  if (readingMinutes === null) return null;
   const weight = clampWeight(field(value, "weight"));
   if (weight === null) return null;
-  const media = parseCultureMedia(field(value, "media"));
+  const hasExpression = field(value, "hasExpression");
+  if (typeof hasExpression !== "boolean") return null;
   return {
     id,
-    title: { ar: title.ar, de: title.de, en: title.en },
-    category: category as CultureCategory,
-    continent: continent as CultureContinent,
+    title,
+    teaser,
+    category,
+    contentType,
+    continent,
     countries,
-    tags: toTags(field(value, "tags")),
+    tags,
+    readingMinutes,
     weight,
-    hasMedia: field(value, "hasMedia") === true,
-    ...(media ? { media } : {}),
+    hasExpression,
   };
 }
 
-/** Validate one full item body. Returns `null` for unusable items. */
-export function parseCultureItem(value: unknown): CultureItem | null {
+function parseSectionList(value: unknown): CultureSection[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_SECTIONS) return null;
+  const sections: CultureSection[] = [];
+  for (const raw of value) {
+    if (!isRecord(raw)) return null;
+    const heading = field(raw, "heading");
+    if (typeof heading !== "string" || !heading.trim() || heading.length > MAX_TITLE_LENGTH)
+      return null;
+    const rawParagraphs = field(raw, "paragraphs");
+    if (
+      !Array.isArray(rawParagraphs) ||
+      rawParagraphs.length === 0 ||
+      rawParagraphs.length > MAX_PARAGRAPHS
+    ) {
+      return null;
+    }
+    const paragraphs: string[] = [];
+    for (const rawParagraph of rawParagraphs) {
+      if (
+        typeof rawParagraph !== "string" ||
+        !rawParagraph.trim() ||
+        rawParagraph.length > MAX_PARAGRAPH_LENGTH
+      )
+        return null;
+      paragraphs.push(rawParagraph);
+    }
+    sections.push({ heading: heading.trim(), paragraphs });
+  }
+  return sections;
+}
+
+/** The article body is per interface language; every locale must be present. */
+function parseSections(value: unknown): Record<CultureLocale, CultureSection[]> | null {
   if (!isRecord(value)) return null;
+  const out: Partial<Record<CultureLocale, CultureSection[]>> = {};
+  for (const locale of ["ar", "de", "en"] as const) {
+    const sections = parseSectionList(field(value, locale));
+    if (!sections) return null;
+    out[locale] = sections;
+  }
+  return out as Record<CultureLocale, CultureSection[]>;
+}
+
+function parseContext(value: unknown): CultureContext | null {
+  if (!isRecord(value)) return null;
+  const continent = parseEnum<CultureContinent>(field(value, "continent"), CONTINENT_SET);
+  if (!continent) return null;
+  const countries = parseCountries(field(value, "countries"));
+  if (!countries) return null;
+  const languages = parseLanguages(field(value, "languages"));
+  if (!languages) return null;
+  const region = parseOptionalString(field(value, "region"), MAX_TITLE_LENGTH);
+  if (region === INVALID) return null;
+  const community = parseOptionalString(field(value, "community"), MAX_TITLE_LENGTH);
+  if (community === INVALID) return null;
+  const rawPeriod = field(value, "period");
+  let period: (typeof PERIODS)[number] | undefined;
+  if (rawPeriod !== undefined) {
+    const parsedPeriod = parseEnum<(typeof PERIODS)[number]>(rawPeriod, PERIOD_SET);
+    if (!parsedPeriod) return null;
+    period = parsedPeriod;
+  }
+  return {
+    countries,
+    continent,
+    languages,
+    ...(region === undefined ? {} : { region }),
+    ...(community === undefined ? {} : { community }),
+    ...(period === undefined ? {} : { period }),
+  };
+}
+
+function parseExpression(value: unknown): Parsed<CultureExpression> {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) return INVALID;
+  const original = field(value, "original");
+  if (!isBoundedString(original, MAX_ORIGINAL_LENGTH)) return INVALID;
+  const language = field(value, "language");
+  if (!isBoundedString(language, MAX_LANGUAGE_LENGTH)) return INVALID;
+  const transliteration = parseOptionalString(field(value, "transliteration"), MAX_ORIGINAL_LENGTH);
+  if (transliteration === INVALID) return INVALID;
+  const gloss = parseLocalizedText(field(value, "gloss"), MAX_TEASER_LENGTH);
+  if (!gloss) return INVALID;
+  const usage = parseLocalizedText(field(value, "usage"), MAX_TEASER_LENGTH);
+  if (!usage) return INVALID;
+  return {
+    original,
+    language,
+    gloss,
+    usage,
+    ...(transliteration === undefined ? {} : { transliteration }),
+  };
+}
+
+function parseSources(value: unknown): CultureSource[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_SOURCES) return null;
+  const sources: CultureSource[] = [];
+  for (const raw of value) {
+    if (!isRecord(raw)) return null;
+    const organization = field(raw, "organization");
+    if (!isBoundedString(organization, MAX_SOURCE_TEXT)) return null;
+    const title = parseLocalizedText(field(raw, "title"), MAX_TITLE_LENGTH);
+    if (!title) return null;
+    const url = field(raw, "url");
+    if (!isBoundedString(url, 2_000) || !/^https:\/\//.test(url)) return null;
+    const published = parseOptionalDate(field(raw, "published"));
+    if (published === INVALID) return null;
+    const accessed = parseDateString(field(raw, "accessed"));
+    if (!accessed) return null;
+    const supports = parseLocalizedText(field(raw, "supports"), MAX_TEASER_LENGTH);
+    if (!supports) return null;
+    sources.push({
+      organization,
+      title,
+      url,
+      accessed,
+      supports,
+      ...(published === undefined ? {} : { published }),
+    });
+  }
+  return sources;
+}
+
+function parseStatus(value: unknown): CultureStatus | null {
+  if (!isRecord(value)) return null;
+  const verification = parseEnum<CultureVerification>(
+    field(value, "verification"),
+    VERIFICATION_SET,
+  );
+  if (!verification) return null;
+  const editorial = parseEnum<CultureReview>(field(value, "editorial"), REVIEW_SET);
+  if (!editorial) return null;
+  const translation = parseEnum<CultureReview>(field(value, "translation"), REVIEW_SET);
+  if (!translation) return null;
+  const revision = parseIntegerInRange(field(value, "revision"), 0, MAX_REVISION);
+  if (revision === null) return null;
+  const published = field(value, "published");
+  if (typeof published !== "boolean") return null;
+  return { verification, editorial, translation, revision, published };
+}
+
+function parseRelated(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const out: string[] = [];
+  for (const raw of value) {
+    if (!isId(raw) || out.includes(raw)) continue;
+    out.push(raw);
+    if (out.length >= MAX_RELATED) break;
+  }
+  return out;
+}
+
+/** Validate one full article body. Returns null for unusable articles. */
+export function parseCultureArticle(value: unknown): CultureArticle | null {
+  if (!isRecord(value)) return null;
+  if (field(value, "version") !== CULTURE_SCHEMA_VERSION) return null;
   const id = field(value, "id");
   if (!isId(id)) return null;
-  if (field(value, "version") !== CULTURE_SCHEMA_VERSION) return null;
-  const title = field(value, "title");
-  const summary = field(value, "summary");
-  if (!isLocalizedText(title) || !isLocalizedText(summary)) return null;
-  const taxonomy = field(value, "taxonomy");
-  if (!isRecord(taxonomy)) return null;
-  const category = field(taxonomy, "category");
-  if (typeof category !== "string" || !CATEGORY_SET.has(category)) return null;
-  const place = field(value, "place");
-  if (!isRecord(place)) return null;
-  const continent = field(place, "continent");
-  if (typeof continent !== "string" || !CONTINENT_SET.has(continent)) return null;
-  const countries = toCountries(field(place, "countries"));
-  if (!countries) return null;
-  const source = field(value, "source");
-  if (!isRecord(source)) return null;
-  for (const key of ["organization", "url", "license", "attribution"] as const) {
-    const required = field(source, key);
-    if (typeof required !== "string" || !required.trim()) return null;
-  }
-  const provenance = field(value, "provenance");
-  if (typeof provenance !== "string" || !PROVENANCE.includes(provenance)) return null;
-  const ingestedAt = field(value, "ingestedAt");
-  if (typeof ingestedAt !== "string" || !ingestedAt.trim()) return null;
-  const rawTags = field(value, "tags");
-  if (!Array.isArray(rawTags)) return null;
-  const rawRelated = field(value, "related");
-  const related = Array.isArray(rawRelated)
-    ? rawRelated.filter((relatedId): relatedId is string => isId(relatedId)).slice(0, MAX_RELATED)
-    : undefined;
-  const titleExtras = title as Record<string, unknown>;
-  const original = titleExtras["original"];
-  const originalLanguage = titleExtras["originalLanguage"];
-  const subcategory = field(taxonomy, "subcategory");
-  const region = field(place, "region");
-  const community = field(place, "community");
-  const description = field(value, "description");
-  const period = field(value, "period");
-  const subject = field(value, "subject");
-  const media = parseCultureMedia(field(value, "media"));
-  const item: CultureItem = {
+  const slug = field(value, "slug");
+  if (!isBoundedString(slug, MAX_SLUG_LENGTH)) return null;
+  const contentType = parseEnum<CultureContentType>(field(value, "contentType"), CONTENT_TYPE_SET);
+  if (!contentType) return null;
+  const category = parseEnum<CultureCategory>(field(value, "category"), CATEGORY_SET);
+  if (!category) return null;
+  const title = parseLocalizedText(field(value, "title"), MAX_TITLE_LENGTH);
+  if (!title) return null;
+  const deck = parseLocalizedText(field(value, "deck"), MAX_TEASER_LENGTH);
+  if (!deck) return null;
+  const teaser = parseLocalizedText(field(value, "teaser"), MAX_TEASER_LENGTH);
+  if (!teaser) return null;
+  const readingMinutes = parseIntegerInRange(
+    field(value, "readingMinutes"),
+    1,
+    MAX_READING_MINUTES,
+  );
+  if (readingMinutes === null) return null;
+  const sections = parseSections(field(value, "sections"));
+  if (!sections) return null;
+  const context = parseContext(field(value, "context"));
+  if (!context) return null;
+  const tags = parseTags(field(value, "tags"));
+  if (!tags) return null;
+  const sources = parseSources(field(value, "sources"));
+  if (!sources) return null;
+  const status = parseStatus(field(value, "status"));
+  if (!status) return null;
+  const related = parseRelated(field(value, "related"));
+  if (!related) return null;
+  const publishedAt = parseDateString(field(value, "publishedAt"));
+  if (!publishedAt) return null;
+  const expression = parseExpression(field(value, "expression"));
+  if (expression === INVALID) return null;
+  const example = parseOptionalLocalized(field(value, "example"), MAX_TEASER_LENGTH);
+  if (example === INVALID) return null;
+  const misunderstanding = parseOptionalLocalized(
+    field(value, "misunderstanding"),
+    MAX_TEASER_LENGTH,
+  );
+  if (misunderstanding === INVALID) return null;
+  const comparison = parseOptionalLocalized(field(value, "comparison"), MAX_TEASER_LENGTH);
+  if (comparison === INVALID) return null;
+  return {
     id,
     version: CULTURE_SCHEMA_VERSION,
-    title: {
-      ar: title.ar,
-      de: title.de,
-      en: title.en,
-      ...(typeof original === "string" ? { original } : {}),
-      ...(typeof originalLanguage === "string" ? { originalLanguage } : {}),
-    },
-    summary,
-    taxonomy: {
-      category: category as CultureCategory,
-      ...(typeof subcategory === "string" ? { subcategory } : {}),
-    },
-    place: {
-      continent: continent as CultureContinent,
-      countries,
-      ...(typeof region === "string" ? { region } : {}),
-      ...(typeof community === "string" ? { community } : {}),
-    },
-    ...(isLocalizedText(description) ? { description } : {}),
-    ...(typeof period === "string" ? { period } : {}),
-    ...(typeof subject === "string" ? { subject } : {}),
-    tags: toTags(rawTags),
-    ...(media ? { media } : {}),
-    source: {
-      organization: field(source, "organization") as string,
-      url: field(source, "url") as string,
-      license: field(source, "license") as string,
-      attribution: field(source, "attribution") as string,
-      ...(typeof field(source, "licenseUrl") === "string"
-        ? { licenseUrl: field(source, "licenseUrl") as string }
-        : {}),
-      ...(typeof field(source, "modified") === "string"
-        ? { modified: field(source, "modified") as string }
-        : {}),
-    },
-    provenance: provenance as CultureItem["provenance"],
-    ...(related && related.length ? { related } : {}),
-    ingestedAt,
+    slug,
+    contentType,
+    category,
+    title,
+    deck,
+    teaser,
+    readingMinutes,
+    sections,
+    context,
+    tags,
+    sources,
+    status,
+    related,
+    publishedAt,
+    ...(expression === undefined ? {} : { expression }),
+    ...(example === undefined ? {} : { example }),
+    ...(misunderstanding === undefined ? {} : { misunderstanding }),
+    ...(comparison === undefined ? {} : { comparison }),
   };
-  // Optional editorial block the reading surface can show when the corpus states it. It is
-  // validated as localized text and preserved verbatim; absence stays absence (the source
-  // stated no reason, and the UI never invents one).
-  const whyDistinctive = field(value, "whyDistinctive");
-  if (isLocalizedText(whyDistinctive)) item.whyDistinctive = whyDistinctive;
-  return item;
 }
 
 /* ----------------------------------------------------------------- parsing payloads */
 
-interface ParsedIndex {
-  status: CultureLoadStatus;
-  version: number | null;
-  entries: CultureIndexEntry[];
-  dropped: number;
-  chunkSize: number;
+function parseChunkSize(value: unknown, fallback: number): number {
+  return parseIntegerInRange(value, 1, MAX_CHUNK_SIZE_VALUE) ?? fallback;
 }
 
-function parseIndexPayload(raw: unknown, fallbackChunkSize: number): ParsedIndex {
-  const unavailable: ParsedIndex = {
+function parseIndexPayload(raw: unknown, fallbackChunkSize: number): CultureIndexLoad {
+  const unavailable: CultureIndexLoad = {
     status: "unavailable",
     version: null,
     entries: [],
@@ -330,19 +533,14 @@ function parseIndexPayload(raw: unknown, fallbackChunkSize: number): ParsedIndex
     chunkSize: fallbackChunkSize,
   };
   if (!isRecord(raw)) return unavailable;
-  const version =
-    typeof raw["version"] === "number" && Number.isInteger(raw["version"]) ? raw["version"] : null;
+  const version = parseIntegerInRange(field(raw, "version"), 0, Number.MAX_SAFE_INTEGER);
   if (version === null) return unavailable;
-  const declaredChunkSize = raw["chunkSize"];
-  const chunkSize =
-    typeof declaredChunkSize === "number" &&
-    Number.isInteger(declaredChunkSize) &&
-    declaredChunkSize > 0 &&
-    declaredChunkSize <= MAX_CHUNK_SIZE
-      ? declaredChunkSize
-      : fallbackChunkSize;
-  const rows = raw["entries"];
+  const chunkSize = parseChunkSize(field(raw, "chunkSize"), fallbackChunkSize);
+  const rows = field(raw, "entries");
   if (!Array.isArray(rows)) return { ...unavailable, version, chunkSize };
+  if (version !== CULTURE_SCHEMA_VERSION) {
+    return { status: "version-mismatch", version, entries: [], dropped: 0, chunkSize };
+  }
   let dropped = 0;
   const seen = new Set<string>();
   const entries: CultureIndexEntry[] = [];
@@ -355,11 +553,8 @@ function parseIndexPayload(raw: unknown, fallbackChunkSize: number): ParsedIndex
     seen.add(entry.id);
     entries.push(entry);
   }
-  if (version !== CULTURE_SCHEMA_VERSION) {
-    return { status: "version-mismatch", version, entries: [], dropped, chunkSize };
-  }
   return {
-    status: entries.length ? "ok" : "empty",
+    status: entries.length > 0 ? "ok" : "empty",
     version,
     entries,
     dropped,
@@ -375,9 +570,11 @@ interface ParsedChunk {
 function parseChunkPayload(raw: unknown): ParsedChunk | null {
   if (Array.isArray(raw)) return { items: raw, version: null };
   if (!isRecord(raw)) return null;
-  const items = raw["items"];
+  const items = field(raw, "items");
   if (!Array.isArray(items)) return null;
-  const version = typeof raw["version"] === "number" ? raw["version"] : null;
+  const rawVersion = field(raw, "version");
+  const version =
+    typeof rawVersion === "number" && Number.isInteger(rawVersion) ? rawVersion : null;
   return { items, version };
 }
 
@@ -385,6 +582,8 @@ function parseChunkPayload(raw: unknown): ParsedChunk | null {
 
 type ModuleImporter = () => Promise<unknown>;
 
+// Lazy by construction: these objects only hold importers; no data module is evaluated
+// until loadCultureIndex/loadCultureItem actually asks for it.
 const indexModules: Record<string, ModuleImporter> = import.meta.glob("./data/index.ts");
 const chunkModules: Record<string, ModuleImporter> = import.meta.glob("./data/chunk-*.ts");
 
@@ -411,15 +610,16 @@ function getDefaultSource(): CultureDataSource {
     },
     async loadChunk(window: number) {
       const importer = chunks.get(window);
-      if (!importer)
-        throw new Error(`culture detail chunk ${String(window)} is not part of this build`);
+      if (!importer) {
+        throw new Error("culture detail chunk " + String(window) + " is not part of this build");
+      }
       return unwrapModule(await importer());
     },
   };
   return defaultSource;
 }
 
-/* ------------------------------------------------------------------ loader state */
+/* --------------------------------------------------------------------- loader state */
 
 let sourceOverride: CultureDataSource | null = null;
 let indexPromise: Promise<CultureIndexLoad> | null = null;
@@ -428,14 +628,14 @@ let idPositions: Map<string, number> | null = null;
 let chunkSize = CULTURE_CHUNK_SIZE;
 let detailVersionMismatch = false;
 
-const chunkCache = new Map<number, readonly CultureItem[]>();
-const chunkPromises = new Map<number, Promise<readonly CultureItem[] | null>>();
+const chunkCache = new Map<number, readonly CultureArticle[]>();
+const chunkPromises = new Map<number, Promise<readonly CultureArticle[] | null>>();
 
 function activeSource(): CultureDataSource {
   return sourceOverride ?? getDefaultSource();
 }
 
-function clearCaches() {
+function clearCaches(): void {
   indexPromise = null;
   loadedIndex = null;
   idPositions = null;
@@ -446,9 +646,9 @@ function clearCaches() {
 }
 
 /**
- * Replace module resolution with an adapter (integration for a different generated
- * layout, or a test fixture). Pass `null` to go back to the bundled data modules.
- * The loader's caches are dropped so the next read uses the new source.
+ * Replace module resolution with an adapter (integration for a different generated layout,
+ * or a test fixture). Pass null to go back to the bundled data modules. The loader's
+ * caches are dropped so the next read uses the new source.
  */
 export function setCultureDataSource(source: CultureDataSource | null): void {
   sourceOverride = source;
@@ -460,7 +660,12 @@ export function resetCultureLoader(): void {
   clearCaches();
 }
 
-/** Synchronous peek: the validated index once loaded, otherwise `null`. Never triggers a load. */
+/** Diagnostics/tests: how many detail chunks are currently retained (bounded by the limit). */
+export function cultureLoaderCacheSize(): number {
+  return chunkCache.size;
+}
+
+/** Synchronous peek: the validated index once loaded, otherwise null. Never triggers a load. */
 export function peekCultureIndex(): readonly CultureIndexEntry[] | null {
   return loadedIndex && loadedIndex.status === "ok" ? loadedIndex.entries : null;
 }
@@ -477,7 +682,7 @@ export function cultureIndexStatus(): CultureLoadStatus | "idle" {
 export function loadCultureIndex(): Promise<CultureIndexLoad> {
   if (indexPromise) return indexPromise;
   indexPromise = (async () => {
-    let result: ParsedIndex;
+    let result: CultureIndexLoad;
     try {
       result = parseIndexPayload(await activeSource().loadIndex(), CULTURE_CHUNK_SIZE);
     } catch {
@@ -501,7 +706,7 @@ export function loadCultureIndex(): Promise<CultureIndexLoad> {
   return indexPromise;
 }
 
-function trimChunkCache() {
+function trimChunkCache(): void {
   while (chunkCache.size > CULTURE_CHUNK_CACHE_LIMIT) {
     const oldest = chunkCache.keys().next();
     if (oldest.done) break;
@@ -509,7 +714,7 @@ function trimChunkCache() {
   }
 }
 
-function ensureChunk(window: number): Promise<readonly CultureItem[] | null> {
+function ensureChunk(window: number): Promise<readonly CultureArticle[] | null> {
   const cached = chunkCache.get(window);
   if (cached) {
     // Refresh LRU position: a just-read chunk must not be the next one evicted.
@@ -519,7 +724,7 @@ function ensureChunk(window: number): Promise<readonly CultureItem[] | null> {
   }
   const pending = chunkPromises.get(window);
   if (pending) return pending;
-  const promise = (async (): Promise<readonly CultureItem[] | null> => {
+  const promise = (async (): Promise<readonly CultureArticle[] | null> => {
     try {
       const parsed = parseChunkPayload(await activeSource().loadChunk(window));
       if (!parsed) return null;
@@ -527,9 +732,9 @@ function ensureChunk(window: number): Promise<readonly CultureItem[] | null> {
         detailVersionMismatch = true;
         return null;
       }
-      const items: CultureItem[] = [];
+      const items: CultureArticle[] = [];
       for (const raw of parsed.items) {
-        const item = parseCultureItem(raw);
+        const item = parseCultureArticle(raw);
         if (item) items.push(item);
       }
       chunkCache.set(window, items);
@@ -547,21 +752,23 @@ function ensureChunk(window: number): Promise<readonly CultureItem[] | null> {
 }
 
 /**
- * Load the full bodies for the requested ids, preserving the requested order and
- * deduplicating repeats. Ids that are not in the compact index are `missing` without
- * any chunk request. Chunk loads are cached (bounded) and concurrent loads of the same
- * window share one request. Never throws.
+ * Load the article bodies for the requested ids, preserving the requested order and
+ * deduplicating repeats. Ids that are not in the compact index are missing without any
+ * chunk request. Chunk loads are cached (bounded) and concurrent loads of the same window
+ * share one request. Never throws.
  */
 export async function loadCultureItems(ids: readonly string[]): Promise<CultureDetailLoad> {
   const requested = [...new Set(ids)];
   if (requested.length === 0) return { status: "ok", items: [], missing: [] };
   const index = await loadCultureIndex();
+  if (index.status === "version-mismatch") {
+    return { status: "version-mismatch", items: [], missing: requested };
+  }
+  if (index.status === "empty") {
+    return { status: "not-found", items: [], missing: requested };
+  }
   if (index.status !== "ok" || !idPositions) {
-    return {
-      status: index.status === "version-mismatch" ? "version-mismatch" : "unavailable",
-      items: [],
-      missing: requested,
-    };
+    return { status: "unavailable", items: [], missing: requested };
   }
   const positions = idPositions;
   const windows = new Set<number>();
@@ -576,40 +783,40 @@ export async function loadCultureItems(ids: readonly string[]): Promise<CultureD
   const loaded = await Promise.all(
     [...windows].map(async (window) => ({ window, items: await ensureChunk(window) })),
   );
-  const byId = new Map<string, CultureItem>();
+  const byId = new Map<string, CultureArticle>();
   for (const chunk of loaded) {
     if (!chunk.items) continue;
     for (const item of chunk.items) {
       const position = positions.get(item.id);
+      // A chunk may only serve ids that belong to its positional window; a misplaced body
+      // is a corpus bug, not a reason to show the wrong article.
       if (position === undefined || Math.floor(position / chunkSize) !== chunk.window) continue;
       byId.set(item.id, item);
     }
   }
-  const items: CultureItem[] = [];
+  const items: CultureArticle[] = [];
   const missing: string[] = [];
   for (const id of requested) {
     const item = byId.get(id);
     if (item) items.push(item);
     else missing.push(id);
   }
-  const status =
-    items.length === 0
-      ? detailVersionMismatch
-        ? "version-mismatch"
-        : "unavailable"
-      : missing.length
-        ? "partial"
-        : "ok";
+  const status: CultureDetailLoad["status"] = (() => {
+    if (items.length === 0) {
+      return detailVersionMismatch ? "version-mismatch" : "unavailable";
+    }
+    return missing.length > 0 ? "partial" : "ok";
+  })();
   return { status, items, missing };
 }
 
-/** Load one item body by id. */
-export async function loadCultureItem(id: string): Promise<CultureItem | null> {
+/** Load one article body by id. Returns null when it is absent from this library. */
+export async function loadCultureItem(id: string): Promise<CultureArticle | null> {
   const result = await loadCultureItems([id]);
   return result.items.find((item) => item.id === id) ?? null;
 }
 
-/** Exposed for diagnostics and tests: current detail-chunk window for an id, if indexed. */
+/** Diagnostics and tests: the detail-chunk window an indexed id lives in, if known. */
 export function cultureChunkWindow(id: string): number | null {
   const position = idPositions?.get(id);
   return position === undefined ? null : Math.floor(position / chunkSize);

@@ -214,24 +214,24 @@ composer is busy. Weather failures never touch the translation.
 
 ## 13. Discover cultures of the world below the translator
 
-**A.** The same page continues into "Culture in context": a daily featured record, then a mixed feed
-of genuinely different compositions. Every card has a real title, place, category, source, licence
-and — when the source provides one — an image with credit, or a typographic composition when it
-does not. Records can be searched (titles, tags, subjects), filtered by category/continent/country,
-saved offline and opened in a detail dialog with the full provenance, licence and attribution.
+**A.** The same page continues into a written cultural library (نافذة على العالم): a daily featured
+article, then a mixed stream of text-first editorial compositions - feature, cultural note, language
+window (a real expression in its own script with transliteration and gloss), everyday scene, cultural
+contrast and thoughtful detail. Every article has a specific title, a compelling introduction, a
+localized teaser, reading time and geographic/community context; there are no images, galleries or
+museum objects anywhere.
 
-**B.** Browsing is deliberate, not an infinite feed: an initial batch, an explicit "more" affordance
-plus an approach-triggered nudge with in-flight guards and a cap, a stable cursor, no duplicate
-cards, scroll position restored after closing a record, and every reading available from the
-keyboard. Content is bundled and works offline; images load lazily from the allow-listed host and
-degrade to the typographic composition when unavailable.
+**B.** Reading opens a composed article: heading and deck, structured sections, a concrete everyday
+example, a qualification about regional/generational variation, optional expression, misunderstanding
+or comparison, context, and a restrained References area whose links open only when chosen. The
+article can be saved, a genuinely related article opened, and the reader returns to the exact previous
+position. Everything is available offline because the library is bundled.
 
-**C.** The corpus is sourced, not invented: 595 verified Metropolitan Museum of Art Open Access
-records (CC0) with English, Arabic and German titles/summaries; machine-translated copy is labelled
-as such; every record carries its source URL, licence, attribution, image credit and ingestion date.
-Practice-based categories without a rights-cleared source are documented as a gap, not filled with
-fabricated content (TD44). The daily feature is a deterministic function of the local day and never
-repeats yesterday's record.
+**C.** The content is written knowledge about people and societies, not a catalogue: a broad taxonomy
+of everyday life, social behaviour, language and communication, traditions, family, food and
+hospitality, work and education, cities and community, music and dance, games, storytelling,
+clothing, nature and seasons, beliefs and folklore, migration, humour and cultural change. Each
+record carries its sources and a truthful status (machine-drafted first build; see the audit).
 
 ## Acceptance criteria (testable)
 

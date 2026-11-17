@@ -1,25 +1,25 @@
 /**
- * Saved culture records — device-only, bounded and validated on read.
+ * Saved culture articles -- device-only, bounded and validated on read.
  *
- * This is a local bookmark list for the discovery surface, not a profile: it lives under
- * its own `lingua.culture.*` key through the app's device-storage façade
- * (`readDeviceValue`/`writeDeviceValue`, which is localStorage on the web and the
- * hydrated DataStore snapshot on Android), it is never sent anywhere, and nothing in it
- * identifies a person. The document is a versioned envelope rather than a bare array so a
- * future shape can be refused instead of misread:
+ * This is a local reading list for the discovery surface, not a profile: it lives under its
+ * own lingua.culture.* key through the app's device-storage facade (readDeviceValue /
+ * writeDeviceValue / removeDeviceValue -- localStorage on the web, the hydrated DataStore
+ * snapshot on Android), it is never sent anywhere, and nothing in it identifies a person.
+ * The document is a versioned envelope rather than a bare array so a future shape can be
+ * refused instead of misread:
  *
- *   { "v": 1, "ids": ["met-1234", "met-42"] }   // most recently saved first
+ *   { "version": 2, "ids": ["culture-food-bread", "culture-language-salaam"] }
  *
- * Every read goes through `parseCultureSavedRaw`: a damaged document, another version, a
+ * Every read goes through parseCultureSavedValue: a damaged document, another version, a
  * non-array or an invalid id yields the valid subset (or nothing), never a crash and never
- * an unbounded list. Writes keep the newest `CULTURE_SAVED_LIMIT` ids and are optimistic
- * in memory; the device-write result is returned, never hidden.
+ * an unbounded list. Writes keep the newest CULTURE_SAVED_LIMIT ids and are optimistic in
+ * memory; the device-write result is returned, never hidden.
  */
 import { useSyncExternalStore } from "react";
-import { writeDeviceValue, readDeviceValue } from "../persistence/settings";
+import { readDeviceValue, removeDeviceValue, writeDeviceValue } from "../persistence/settings";
 
-export const CULTURE_SAVED_KEY = "lingua.culture.saved.v1";
-export const CULTURE_SAVED_VERSION = 1;
+export const CULTURE_SAVED_KEY = "lingua.culture.saved.v2";
+export const CULTURE_SAVED_VERSION = 2;
 export const CULTURE_SAVED_LIMIT = 500;
 
 const MAX_ID_LENGTH = 128;
@@ -27,7 +27,7 @@ const MAX_ID_LENGTH = 128;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Ids are opaque catalog keys; they may not be blank, whitespace or control characters. */
+/** Ids are opaque article keys; they may not be blank, whitespace or control characters. */
 export function isCultureId(value: unknown): value is string {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_ID_LENGTH) {
     return false;
@@ -40,18 +40,18 @@ export function isCultureId(value: unknown): value is string {
 }
 
 export interface CultureSavedDocument {
-  v: typeof CULTURE_SAVED_VERSION;
+  version: typeof CULTURE_SAVED_VERSION;
   ids: string[];
 }
 
 /**
- * Validate a parsed saved document. Returns `null` when the document itself is not this
+ * Validate a parsed saved document. Returns null when the document itself is not this
  * store's shape (wrong envelope/version), and a filtered, deduplicated, bounded list when
- * individual ids are unusable — one bad id must not throw away the person's other saves.
+ * individual ids are unusable -- one bad id must not throw away the person's other saves.
  */
 export function parseCultureSavedValue(value: unknown): string[] | null {
   if (!isRecord(value)) return null;
-  if (value["v"] !== CULTURE_SAVED_VERSION) return null;
+  if (value["version"] !== CULTURE_SAVED_VERSION) return null;
   const ids = value["ids"];
   if (!Array.isArray(ids)) return null;
   const out: string[] = [];
@@ -75,7 +75,7 @@ export function parseCultureSavedRaw(raw: string | null): string[] {
 
 /** The exact document written for a list, so tests and diagnostics compare bytes. */
 export function serializeCultureSaved(ids: readonly string[]): string {
-  const document: CultureSavedDocument = { v: CULTURE_SAVED_VERSION, ids: [...ids] };
+  const document: CultureSavedDocument = { version: CULTURE_SAVED_VERSION, ids: [...ids] };
   return JSON.stringify(document);
 }
 
@@ -83,7 +83,7 @@ const EMPTY: readonly string[] = [];
 let cache: string[] | null = null;
 const listeners = new Set<() => void>();
 
-function emit() {
+function emit(): void {
   for (const listener of listeners) listener();
 }
 
@@ -116,7 +116,7 @@ async function persist(next: readonly string[]): Promise<boolean> {
   }
 }
 
-/** Save a record (move-to-front); returns whether the device kept it. */
+/** Save an article (move-to-front); returns whether the device kept it. */
 export async function saveCultureItem(id: string): Promise<boolean> {
   if (!isCultureId(id)) return false;
   const list = current();
@@ -124,7 +124,7 @@ export async function saveCultureItem(id: string): Promise<boolean> {
   return persist([id, ...list.filter((saved) => saved !== id)]);
 }
 
-/** Remove one saved record; returns whether the device kept the change. */
+/** Remove one saved article; returns whether the device kept the change. */
 export async function removeCultureItem(id: string): Promise<boolean> {
   if (!isCultureId(id)) return false;
   const list = current();
@@ -132,7 +132,7 @@ export async function removeCultureItem(id: string): Promise<boolean> {
   return persist(list.filter((saved) => saved !== id));
 }
 
-/** Flip a record's saved state; resolves to the new state (`true` = saved). */
+/** Flip an article's saved state; resolves to the new state (true = saved). */
 export async function toggleCultureSaved(id: string): Promise<boolean> {
   if (isCultureSaved(id)) {
     await removeCultureItem(id);
@@ -142,9 +142,15 @@ export async function toggleCultureSaved(id: string): Promise<boolean> {
   return true;
 }
 
-/** Clear the whole list (device document included). */
+/** Clear the whole list and remove the device document. */
 export async function clearCultureSaved(): Promise<boolean> {
-  return persist([]);
+  cache = [];
+  emit();
+  try {
+    return await removeDeviceValue(CULTURE_SAVED_KEY);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -157,14 +163,14 @@ export function resetCultureSavedCache(): void {
 }
 
 /**
- * Subscribe to saved-list changes (any mutation, including `clearCultureSaved` and a
+ * Subscribe to saved-list changes (any mutation, including clearCultureSaved and a
  * cross-tab write). Returns the unsubscribe function. The UI adapter wraps this in its
  * port; returning it publicly is what makes non-toggle mutations observable.
  */
 export function subscribeCultureSaved(listener: () => void): () => void {
   listeners.add(listener);
   if (typeof window === "undefined") return () => listeners.delete(listener);
-  const onStorage = (event: StorageEvent) => {
+  const onStorage = (event: StorageEvent): void => {
     if (event.key !== null && event.key !== CULTURE_SAVED_KEY) return;
     cache = null;
     listener();

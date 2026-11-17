@@ -1,50 +1,54 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizeSearchText,
-  searchCulture,
-  searchCultureItems,
   prepareCultureSearch,
   SEARCH_DEFAULT_LIMIT,
   SEARCH_MAX_LIMIT,
+  searchCulture,
+  searchTokens,
 } from "./search";
-import { makeEntry } from "./testing";
+import { localized, makeCultureEntry } from "./testing";
 
 const catalog = [
-  makeEntry("met-1", {
+  makeCultureEntry("culture-coffee", {
     title: { ar: "القهوة العربية", de: "Arabischer Kaffee", en: "Arabic coffee" },
+    teaser: localized("coffee-teaser"),
     tags: ["قهوة", "Kaffee", "coffee"],
-    category: "food-culture",
+    category: "food-and-hospitality",
     continent: "asia",
     countries: ["SA"],
     weight: 0.9,
   }),
-  makeEntry("met-2", {
+  makeCultureEntry("culture-coffee-short", {
     title: { ar: "قهوة", de: "Kaffee", en: "Coffee" },
-    tags: ["getränk"],
-    category: "food-culture",
+    teaser: localized("drink-teaser"),
+    tags: ["getrank"],
+    category: "food-and-hospitality",
     continent: "europe",
     countries: ["DE"],
     weight: 0.2,
   }),
-  makeEntry("met-3", {
+  makeCultureEntry("culture-mueller", {
     title: { ar: "موسيقى", de: "Müller-Tradition", en: "Miller tradition" },
+    teaser: localized("muller-teaser"),
     tags: ["tradition", "muller"],
-    category: "music",
+    category: "music-and-dance",
     continent: "europe",
     countries: ["DE"],
     weight: 0.5,
   }),
-  makeEntry("met-4", {
+  makeCultureEntry("culture-market", {
     title: { ar: "سوق", de: "Markt", en: "Market" },
+    teaser: localized("handel-teaser"),
     tags: ["handel"],
-    category: "trade",
+    category: "cities-and-community",
     continent: "africa",
     countries: ["MA"],
     weight: 0.4,
   }),
 ];
 
-describe("search normalisation", () => {
+describe("culture search normalisation", () => {
   it("folds Arabic harakat, alef forms, hamza seats, alef maqsura and taa marbuta", () => {
     expect(normalizeSearchText("القَهْوَة")).toBe("القهوه");
     expect(normalizeSearchText("القهوة")).toBe("القهوه");
@@ -60,7 +64,7 @@ describe("search normalisation", () => {
     expect(normalizeSearchText("۱۲۳")).toBe("123");
   });
 
-  it("folds German umlauts and ß to the forms people can type", () => {
+  it("folds German umlauts and eszett to the forms people can type", () => {
     expect(normalizeSearchText("Müller")).toBe("muller");
     expect(normalizeSearchText("Mueller")).toBe("muller");
     expect(normalizeSearchText("MUELLER")).toBe("muller");
@@ -77,92 +81,122 @@ describe("search normalisation", () => {
     expect(normalizeSearchText("Kaffee  &   Kultur")).toBe("kaffee kultur");
     expect(normalizeSearchText("   ")).toBe("");
     expect(normalizeSearchText("")).toBe("");
+    expect(searchTokens("kaffee kultur")).toEqual(["kaffee", "kultur"]);
   });
 });
 
-describe("culture search", () => {
+describe("culture search ranking", () => {
   it("matches titles in every display language, whatever the query script", () => {
-    expect(searchCulture(catalog, "القهوه").map((hit) => hit.entry.id)).toContain("met-1");
+    expect(searchCulture(catalog, "القهوه").map((hit) => hit.entry.id)).toContain("culture-coffee");
     expect(searchCulture(catalog, "kaffee").map((hit) => hit.entry.id)).toEqual(
-      expect.arrayContaining(["met-1", "met-2"]),
+      expect.arrayContaining(["culture-coffee", "culture-coffee-short"]),
     );
     expect(searchCulture(catalog, "coffee").map((hit) => hit.entry.id)).toEqual(
-      expect.arrayContaining(["met-1", "met-2"]),
+      expect.arrayContaining(["culture-coffee", "culture-coffee-short"]),
     );
-    expect(searchCulture(catalog, "muller").map((hit) => hit.entry.id)).toEqual(["met-3"]);
-    expect(searchCulture(catalog, "mueller").map((hit) => hit.entry.id)).toEqual(["met-3"]);
+    expect(searchCulture(catalog, "muller").map((hit) => hit.entry.id)).toEqual([
+      "culture-mueller",
+    ]);
+    expect(searchCulture(catalog, "mueller").map((hit) => hit.entry.id)).toEqual([
+      "culture-mueller",
+    ]);
+    expect(searchCulture(catalog, "strasse")).toEqual([]);
   });
 
-  it("ranks exact and prefix title matches above tag matches", () => {
-    const hits = searchCulture(catalog, "kaffee");
-    expect(hits[0]?.entry.id).toBe("met-2"); // exact German title "Kaffee"
-    expect(hits[0]?.fields).toContain("title");
-    const tagOnly = hits.find((hit) => hit.entry.id === "met-4");
-    expect(tagOnly).toBeUndefined();
+  it("finds records through their teaser when the title does not mention the query", () => {
+    const rows = [
+      makeCultureEntry("culture-a", {
+        title: { ar: "سوق", de: "Markt", en: "Market" },
+        teaser: { ar: "قهوة الصباح", de: "Kaffee am Morgen", en: "Morning coffee" },
+        tags: [],
+      }),
+    ];
+    expect(searchCulture(rows, "kaffee").map((hit) => hit.entry.id)).toEqual(["culture-a"]);
+    expect(searchCulture(rows, "قهوة").map((hit) => hit.entry.id)).toEqual(["culture-a"]);
+    expect(searchCulture(rows, "kaffee")[0]?.fields).toContain("teaser");
+  });
+
+  it("ranks title over tags over teaser", () => {
+    const rows = [
+      makeCultureEntry("culture-teaser", {
+        title: { ar: "سوق", de: "Markt", en: "Market" },
+        teaser: { ar: "كافيه", de: "Kaffee am Morgen", en: "Morning coffee" },
+        tags: [],
+      }),
+      makeCultureEntry("culture-tag", {
+        title: { ar: "سوق", de: "Markt", en: "Market" },
+        teaser: { ar: "سوق", de: "Markt", en: "Market" },
+        tags: ["kaffee"],
+      }),
+      makeCultureEntry("culture-title", {
+        title: { ar: "قهوة", de: "Kaffee", en: "Coffee" },
+        teaser: { ar: "مشروب", de: "Getrank", en: "Drink" },
+        tags: [],
+      }),
+    ];
+    expect(searchCulture(rows, "kaffee").map((hit) => hit.entry.id)).toEqual([
+      "culture-title",
+      "culture-tag",
+      "culture-teaser",
+    ]);
   });
 
   it("requires every query token to match somewhere (AND, not OR)", () => {
-    const both = [
-      makeEntry("met-9", {
+    const rows = [
+      makeCultureEntry("culture-both", {
         title: { ar: "سوق", de: "Markt", en: "Market" },
+        teaser: localized("teaser"),
         tags: ["kaffee", "marokko"],
       }),
     ];
-    expect(searchCulture(both, "kaffee marokko")).toHaveLength(1);
-    expect(searchCulture(both, "kaffee tunesien")).toHaveLength(0);
+    expect(searchCulture(rows, "kaffee marokko")).toHaveLength(1);
+    expect(searchCulture(rows, "kaffee tunesien")).toHaveLength(0);
     expect(searchCulture(catalog, "kaffee marokko")).toHaveLength(0);
   });
 
   it("uses the editorial weight to break ties between equally matched records", () => {
     const rows = [
-      makeEntry("met-low", {
+      makeCultureEntry("culture-low", {
         title: { ar: "تراث", de: "Erbe", en: "Heritage" },
+        teaser: localized("heritage"),
         tags: ["berber"],
         weight: 0.1,
       }),
-      makeEntry("met-high", {
+      makeCultureEntry("culture-high", {
         title: { ar: "تراث", de: "Erbe", en: "Heritage" },
+        teaser: localized("heritage"),
         tags: ["berber"],
         weight: 0.9,
       }),
     ];
     expect(searchCulture(rows, "berber").map((hit) => hit.entry.id)).toEqual([
-      "met-high",
-      "met-low",
+      "culture-high",
+      "culture-low",
     ]);
-  });
-
-  it("searches the subject only when the caller can supply it", () => {
-    const subjects = new Map([["met-4", "Regenwald und Handelswege"]]);
-    expect(searchCulture(catalog, "regenwald")).toEqual([]);
-    const withSubjects = searchCulture(catalog, "regenwald", {
-      subjects: (id) => subjects.get(id),
-    });
-    expect(withSubjects).toHaveLength(1);
-    expect(withSubjects[0]?.entry.id).toBe("met-4");
-    expect(withSubjects[0]?.fields).toContain("subject");
   });
 
   it("returns nothing for an empty query and is deterministic", () => {
     expect(searchCulture(catalog, "")).toEqual([]);
     expect(searchCulture(catalog, "   ")).toEqual([]);
-    expect(searchCulture(catalog, "tradition").map((hit) => hit.entry.id)).toEqual(
-      searchCulture(catalog, "tradition").map((hit) => hit.entry.id),
-    );
     expect(searchCulture(catalog, "zzzzz")).toEqual([]);
+    expect(searchCulture(catalog, "kaffee").map((hit) => hit.entry.id)).toEqual(
+      searchCulture(catalog, "kaffee").map((hit) => hit.entry.id),
+    );
   });
 
   it("bounds the result list even when many records match", () => {
-    const many = Array.from({ length: 100 }, (_, i) =>
-      makeEntry(`met-${String(i)}`, {
+    const many = Array.from({ length: 100 }, (_, index) =>
+      makeCultureEntry("culture-" + String(index), {
         title: { ar: "قهوة", de: "Kaffee", en: "Coffee" },
+        teaser: localized("coffee"),
         tags: ["kaffee"],
-        weight: (i % 10) / 10,
+        weight: (index % 10) / 10,
       }),
     );
     expect(searchCulture(many, "kaffee")).toHaveLength(SEARCH_DEFAULT_LIMIT);
     expect(searchCulture(many, "kaffee", { limit: 5 })).toHaveLength(5);
     expect(searchCulture(many, "kaffee", { limit: 999 })).toHaveLength(SEARCH_MAX_LIMIT);
+    expect(searchCulture(many, "kaffee", { limit: 0 })).toHaveLength(1);
   });
 
   it("prepares a reusable matcher that returns the same order as the shortcut", () => {
@@ -170,35 +204,20 @@ describe("culture search", () => {
     expect(prepared.search("kaffee").map((hit) => hit.entry.id)).toEqual(
       searchCulture(catalog, "kaffee").map((hit) => hit.entry.id),
     );
-  });
-});
-
-describe("culture item search", () => {
-  const item = (id: string, title: string, tags: string[], subject?: string) => ({
-    id,
-    title: { ar: title, de: title, en: title },
-    tags,
-    ...(subject === undefined ? {} : { subject }),
+    expect(prepared.search("")).toEqual([]);
   });
 
-  it("ranks titles over tags over subjects", () => {
+  it("matches a query token inside a multi-word tag and vice versa", () => {
     const rows = [
-      item("subject", "Markt", ["handel"], "Kaffee"),
-      item("tag", "Markt", ["kaffee"]),
-      item("title", "Kaffee", ["getrank"]),
+      makeCultureEntry("culture-tagphrase", {
+        title: { ar: "سوق", de: "Markt", en: "Market" },
+        teaser: localized("market"),
+        tags: ["arabische kaffee kultur"],
+      }),
     ];
-    expect(searchCultureItems(rows, "kaffee").map((row) => row.id)).toEqual([
-      "title",
-      "tag",
-      "subject",
+    expect(searchCulture(rows, "kaffee").map((hit) => hit.entry.id)).toEqual(["culture-tagphrase"]);
+    expect(searchCulture(rows, "arabische kaffee").map((hit) => hit.entry.id)).toEqual([
+      "culture-tagphrase",
     ]);
-  });
-
-  it("is bounded, diacritic-insensitive and empty for no query", () => {
-    const rows = [item("a", "Müller", []), item("b", "Muller", [])];
-    // Both fold to the same title; the stable tie-break is the id.
-    expect(searchCultureItems(rows, "muller").map((row) => row.id)).toEqual(["a", "b"]);
-    expect(searchCultureItems(rows, "")).toEqual([]);
-    expect(searchCultureItems(rows, "muller", 1)).toHaveLength(1);
   });
 });

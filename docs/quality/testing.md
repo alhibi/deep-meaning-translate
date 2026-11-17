@@ -7,19 +7,19 @@ Android rows are the ones executed for this upgrade. Details and evidence:
 
 ## Gates
 
-| Command                            | What it proves                                               | Latest executed result (2026-11-17)                                                   |
-| ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `npm run typecheck`                | TypeScript consistency                                       | PASS, 0 errors                                                                        |
-| `npm run lint -- --max-warnings 0` | ESLint + Prettier                                            | PASS, 0 warnings                                                                      |
-| `npm run test`                     | Vitest unit/integration suite with coverage                  | **1344 passed, 4 skipped, 138 files**                                                   |
-| `npm run check:contrast`           | WCAG AA for theme token pairs                                | **51/51 pairs**                                                                       |
-| `npm run check:docs`               | Documentation links and inventory                            | PASS, all current documents indexed                                                   |
-| `npm run build`                    | Worker bundle + headers + PWA generation                     | PASS after the upgrade; see "Executed upgrade"                                        |
-| `npm run check:pwa`                | Non-empty precache with hashed assets                        | PASS; **67 precached files, 65 hashed assets**                                        |
-| `npm run build:native:web`         | Prerendered native web assets and CSP preparation            | PASS; **11 entries**; no APK/device claim                                             |
+| Command                            | What it proves                                               | Latest executed result (2026-11-17)                                                              |
+| ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `npm run typecheck`                | TypeScript consistency                                       | PASS, 0 errors                                                                                   |
+| `npm run lint -- --max-warnings 0` | ESLint + Prettier                                            | PASS, 0 warnings                                                                                 |
+| `npm run test`                     | Vitest unit/integration suite with coverage                  | **1304 passed, 4 skipped, 135 files**                                                            |
+| `npm run check:contrast`           | WCAG AA for theme token pairs                                | **51/51 pairs**                                                                                  |
+| `npm run check:docs`               | Documentation links and inventory                            | PASS, all current documents indexed                                                              |
+| `npm run build`                    | Worker bundle + headers + PWA generation                     | PASS after the upgrade; see "Executed upgrade"                                                   |
+| `npm run check:pwa`                | Non-empty precache with hashed assets                        | PASS; **70 precached files, 68 hashed assets**                                                   |
+| `npm run build:native:web`         | Prerendered native web assets and CSP preparation            | PASS; **11 entries**; no APK/device claim                                                        |
 | `npm run test:e2e:fields`          | Native editing, stream ownership, field geometry and caret   | **39 geometry + 109 interaction/caret checks**, production preview (Chromium 140; 153 confirmed) |
-| `npm run test:e2e:nav`             | Session restore, SPA navigation, background/theme continuity | **15 checks**, production preview                                                     |
-| `npm run test:e2e`                 | General Python Playwright smoke script                       | Not rerun in this editor follow-up                                                    |
+| `npm run test:e2e:nav`             | Session restore, SPA navigation, background/theme continuity | **15 checks**, production preview                                                                |
+| `npm run test:e2e`                 | General Python Playwright smoke script                       | Not rerun in this editor follow-up                                                               |
 
 `npm run verify` ran types, zero-warning lint, coverage tests, contrast and docs together.
 Coverage floors in `vitest.config.ts` (statements/branches/functions/lines: **46/39/39/48**) are a

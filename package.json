@@ -19,7 +19,7 @@
     "check:pwa": "node scripts/check-pwa.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:docs": "node scripts/check-docs.mjs",
-    "check:security": "node tests/security/csp-image-hosts.mjs",
+    "check:security": "node tests/security/culture-content-gate.mjs",
     "verify": "npm run typecheck && npm run lint -- --max-warnings 0 && npm run test && npm run check:contrast && npm run check:docs && npm run check:security",
     "og": "node scripts/make-og.mjs",
     "format:check": "prettier --check .",
@@ -28,7 +28,10 @@
     "android:assembleDebug": "cd android && ./gradlew :app:assembleDebug",
     "android:assembleRelease": "cd android && ./gradlew :app:assembleRelease",
     "android:test": "cd android && ./gradlew :app:testDebugUnitTest",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "culture:generate": "node scripts/culture/pipeline.mjs generate",
+    "culture:build": "node scripts/culture/pipeline.mjs build",
+    "culture:validate": "node scripts/culture/pipeline.mjs validate"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",

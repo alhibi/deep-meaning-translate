@@ -1,0 +1,2700 @@
+[
+  {
+    "id": "arb-001",
+    "category": "social-behaviour",
+    "contentType": "feature",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The majlis is a room with a seating chart",
+    "facts": [
+      "A majlis is the formal guest room of a Gulf house, usually with its own entrance, a long carpet and cushions along the walls.",
+      "Placement is not random: older guests, visitors from another town and men with a claim to be heard sit nearest the host, while regulars take the sides.",
+      "Kuwait and Saudi candidates for public office still campaign through majlis visits, because one evening can reach a whole neighbourhood.",
+      "Family and commercial disputes are often first heard in a majlis, with respected guests acting as informal mediators before police or courts are involved.",
+      "Arabic coffee is poured in a fixed order, always with the right hand, and the guest shakes the small cup gently to signal that the round is finished."
+    ],
+    "exampleEn": "In a Riyadh neighbourhood, a man with a complaint about a neighbour's construction asks a mutual friend for a place at that friend's father's majlis; the two men are seated opposite the host, family news is exchanged for twenty minutes, and only then does the host invite the complaint to be stated.",
+    "qualificationEn": "The majlis is a Gulf institution, but not every household has a separate room, and younger urban families may use it mostly for formal visitors; the seating order is also looser than etiquette books suggest.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Majlis",
+        "url": "https://en.wikipedia.org/wiki/Majlis"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Eastern Arabia",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Eastern_Arabia"
+      }
+    ]
+  },
+  {
+    "id": "arb-002",
+    "category": "social-behaviour",
+    "contentType": "feature",
+    "countries": [
+      "KW"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Diwaniya: Kuwait's rotating evening parliament",
+    "facts": [
+      "A diwaniya is a men's evening gathering held in a private reception room, usually once a week, with tea, coffee and an open-ended seating circle.",
+      "Regulars rotate between houses on different nights of the week, so a neighbourhood can have a diwaniya almost every evening and a shared political calendar.",
+      "Parliamentary candidates are expected to visit diwaniyas across constituencies, which makes the rooms a recognised campaign channel rather than mere hospitality.",
+      "The talk ranges from poetry and business to foreign policy, and a host who cuts a guest short can damage the family's standing more than a lost argument.",
+      "Women now host and attend their own diwaniyas, especially among professional and university-educated Kuwaitis."
+    ],
+    "exampleEn": "A Kuwaiti family opens its diwaniya on Tuesday nights; the host's cousin brings a candidate for the municipal council, who speaks for fifteen minutes and then sits through two hours of questions about a flooded street, a school bus route and a land dispute.",
+    "qualificationEn": "Kuwaiti diwaniya culture is unusually institutional, but the term also names the room itself, and in other Gulf states similar gatherings are called majlis or by family names.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Dewaniya",
+        "url": "https://en.wikipedia.org/wiki/Dewaniya"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Kuwait",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Kuwait"
+      }
+    ]
+  },
+  {
+    "id": "arb-003",
+    "category": "social-behaviour",
+    "contentType": "scene",
+    "countries": [
+      "YE"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The qat circle: Yemen's afternoon parliament",
+    "facts": [
+      "Khat, called qat in Yemen, is a leafy stimulant chewed in long afternoon sessions that usually begin after lunch and last into the evening.",
+      "Hosts prepare a room with cushions and water pipes; the leaves are bought fresh that morning, and the quality of the bundle is a point of hospitality.",
+      "The session is also a negotiation: marriage plans, land disputes, job offers and political alliances are discussed in a setting where direct confrontation is bad form.",
+      "Women hold their own qat sessions, which are important for neighbourhood news and matchmaking.",
+      "The habit consumes household money and scarce irrigation water, and Yemeni health campaigns and some employers have pushed back against it."
+    ],
+    "exampleEn": "In a Sanaa house, a father buys two bundles of qat on the way home and receives his brother, a neighbour and a cousin; the talk moves from a cousin's wedding to a shared boundary wall, and by the end the men have agreed who will measure the plot.",
+    "qualificationEn": "Chewing qat is widespread in Yemen's highlands and among Yemeni men, but it is not universal: many families abstain, and the rhythm differs between cities, villages and diaspora communities.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Khat",
+        "url": "https://en.wikipedia.org/wiki/Khat"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Yemen",
+        "url": "https://en.wikipedia.org/wiki/Yemen"
+      }
+    ]
+  },
+  {
+    "id": "arb-004",
+    "category": "social-behaviour",
+    "contentType": "feature",
+    "countries": [
+      "JO",
+      "PS"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Sulh: how a killing can end in a handshake",
+    "facts": [
+      "Sulh is a negotiated settlement in which elders from both families of a dispute meet in a guest house and agree on compensation, apology and a public reconciliation.",
+      "In cases of homicide or serious injury, the process runs alongside state law; the family of the accused may ask for a truce first so that the funeral and mourning can proceed without reprisals.",
+      "The agreement is sealed in front of witnesses, and the wronged family's formal acceptance is treated as a debt of honour that later generations are expected to respect.",
+      "Jordanian and Palestinian towns often keep a standing committee of mediators, drawn from large families, who can convene a sulh within days.",
+      "Money alone does not close the case: the ceremony, the public handshake and the shared meal do the social work that the payment cannot."
+    ],
+    "exampleEn": "After a road accident kills a young man from one village and injures a driver from another, the driver's family sends a delegation to request a truce; a week later forty men from each side meet in the victim's family's guest house, and the driver's father is led forward to shake hands with the dead man's father.",
+    "qualificationEn": "Sulh practice varies by country and by whether the dispute falls under tribal, clan or urban custom; in some cases the state refuses to recognise the settlement, and in others it is formally integrated into the courts.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Sulh",
+        "url": "https://en.wikipedia.org/wiki/Sulh"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Urf",
+        "url": "https://en.wikipedia.org/wiki/Urf"
+      }
+    ]
+  },
+  {
+    "id": "arb-005",
+    "category": "everyday-life",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Baksheesh is smaller than a bribe and bigger than a tip",
+    "facts": [
+      "Baksheesh is a small payment for a service, a favour or a bit of access, and it shades into charity, tipping and informal bribery depending on the situation.",
+      "In Cairo it is routine for car guards, mosque caretakers, toilet attendants and the man who finds a parking space to expect a coin or a note.",
+      "The word comes from Persian and is used across the region, but its everyday economy is especially visible in Egypt, where low wages make small payments part of service work.",
+      "The etiquette is to offer folded notes discreetly rather than announce an amount, and refusing too firmly can be read as a judgement about the person's dignity.",
+      "Egyptians themselves complain about baksheesh while also paying it, and reform campaigns have rarely made it disappear."
+    ],
+    "exampleEn": "A Cairo driver pulls into a street where a man in a galabiya moves a traffic cone and gestures to a space; when the driver returns, the man is waiting, and the driver hands him a folded five-pound note without a word.",
+    "qualificationEn": "Not every request for a small payment is baksheesh, and the same word can mean a donation to a beggar; the line between tip, service fee and bribe is a matter of context and is contested in Egypt itself.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Baksheesh",
+        "url": "https://en.wikipedia.org/wiki/Baksheesh"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Egypt",
+        "url": "https://en.wikipedia.org/wiki/Egypt"
+      }
+    ]
+  },
+  {
+    "id": "arb-006",
+    "category": "everyday-life",
+    "contentType": "scene",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The ahwa: Cairo's open-air debating society",
+    "facts": [
+      "An ahwa is a neighbourhood café with plastic chairs on the pavement, tea in a glass, coffee and a television that nobody is really watching.",
+      "Backgammon and dominoes give the ahwa its soundtrack, and a table that keeps losing is expected to pay for the next round of tea.",
+      "The café opens early for workers and fills again after nightfall, when politics, football and family disputes are argued at a volume that sounds like a fight to outsiders.",
+      "Waiters balance several glasses on one tray and remember a regular's order without asking; a good waiter is a social broker as much as a server.",
+      "Women use ahwas too, especially in central Cairo and in the newer chain cafés, though street ahwas remain mostly male spaces."
+    ],
+    "exampleEn": "On a narrow street off Sharia Ramses, a retired teacher takes the same corner table every evening; when a younger man denies that the 1973 war was won on the negotiating table, the whole café turns to listen, and the waiter puts down two fresh teas without being asked.",
+    "qualificationEn": "Café life in Cairo is loud and argumentative by reputation, but many ahwas are quiet places for tea and television, and the culture differs sharply between central districts, popular neighbourhoods and the new satellite cities.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Coffeehouse",
+        "url": "https://en.wikipedia.org/wiki/Coffeehouse"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Cairo",
+        "url": "https://en.wikipedia.org/wiki/Cairo"
+      }
+    ]
+  },
+  {
+    "id": "arb-007",
+    "category": "everyday-life",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The microbus: Cairo's informal transit grammar",
+    "facts": [
+      "Cairo's white microbus is a fourteen-seat van that runs fixed routes without official stops, filling up before it leaves and dropping passengers wherever they ask.",
+      "The destination is shouted by the driver's assistant, or baltagi, who hangs out of the door calling the name of the final stop to people on the pavement.",
+      "Fares are passed hand to hand through the van, and change comes back the same way, which makes the vehicle a small moving queue of trust.",
+      "Routes overlap with the metro and buses but reach neighbourhoods the formal network does not serve, and they run from early morning until late night.",
+      "The system is cheap, fast and largely self-organising, but it is also unregulated, and overcrowding and unsafe driving are constant complaints."
+    ],
+    "exampleEn": "A woman in a headscarf raises her hand at a main road in Giza; a microbus slows, the assistant calls out the name of a district, she says the name of a smaller street, climbs in, passes her fare to the man in front of her and receives her change from a stranger two rows ahead.",
+    "qualificationEn": "Microbus routes, colours and fare rules change by city and even by neighbourhood, and Cairo has added new formal minibus and bus services that copy the same logic.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Minibus",
+        "url": "https://en.wikipedia.org/wiki/Minibus"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Cairo",
+        "url": "https://en.wikipedia.org/wiki/Cairo"
+      }
+    ]
+  },
+  {
+    "id": "arb-008",
+    "category": "everyday-life",
+    "contentType": "detail",
+    "countries": [
+      "MA"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The hammam keeps the neighbourhood's timetable",
+    "facts": [
+      "The hammam is a public steam bath found in most Moroccan and Levantine towns, with a hot room, a warm room, a cold room and a scrubbing area.",
+      "Hours are usually separated by gender, and women's afternoons are a social institution in which news, marriage prospects and family problems circulate.",
+      "The scrubber uses a rough glove called a kessa and black olive-oil soap, and the amount of dead skin removed is a measure of how long it has been since the last visit.",
+      "Bridal parties book the hammam before a wedding, and the bride's first visit with her female relatives is a photographed ritual.",
+      "As home plumbing improved, some hammams closed, but in older medinas the bathhouse remains a neighbourhood service with its own regulars."
+    ],
+    "exampleEn": "On a Thursday afternoon in Marrakesh, three generations of a family meet at the neighbourhood hammam: the grandmother brings a bag of soap and a comb, the mother books the scrubber, and the teenage daughter films the steam for her friends while pretending not to enjoy it.",
+    "qualificationEn": "Hammam customs vary widely between Morocco, Egypt, Syria and Iraq, and many modern apartments have made the weekly visit optional rather than necessary.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Hammam",
+        "url": "https://en.wikipedia.org/wiki/Hammam"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Public bathing",
+        "url": "https://en.wikipedia.org/wiki/Public_bathing"
+      }
+    ]
+  },
+  {
+    "id": "arb-009",
+    "category": "work-and-education",
+    "contentType": "feature",
+    "countries": [
+      "SA",
+      "AE",
+      "QA",
+      "KW"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Kafala: the sponsorship paper behind the skyline",
+    "facts": [
+      "Under the kafala system a migrant worker's residence permit is tied to a citizen or company sponsor, who controls the legal basis of the worker's stay.",
+      "Gulf states rely on it because nationals are a small minority of the workforce, and construction, domestic work and services are staffed largely by South Asian and other foreign workers.",
+      "For decades changing jobs required the sponsor's permission, and in practice many workers surrendered their passports, although the practice is illegal in several states.",
+      "Reforms since 2017 have loosened some rules: Qatar introduced a minimum wage and removed exit permits for most workers, and the UAE allowed job changes without employer consent in many cases.",
+      "Domestic workers are often covered by separate laws, which is why household employment remains the weakest link in the reform story."
+    ],
+    "exampleEn": "A Nepali construction worker in Doha keeps his passport in a locked box at home as the law requires; when a better-paid job opens with another company, he checks whether his contract and visa category allow him to move before telling his supervisor.",
+    "qualificationEn": "Kafala rules differ between the six Gulf states and have changed repeatedly, so any statement about sponsorship is time-sensitive; the system also covers highly paid professionals, not only manual workers.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kafala system",
+        "url": "https://en.wikipedia.org/wiki/Kafala_system"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Migrant workers in the United Arab Emirates",
+        "url": "https://en.wikipedia.org/wiki/Migrant_workers_in_the_United_Arab_Emirates"
+      }
+    ]
+  },
+  {
+    "id": "arb-010",
+    "category": "work-and-education",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The fatwa counter: asking a scholar a practical question",
+    "facts": [
+      "A fatwa is a non-binding opinion on a point of Islamic law, and Egyptians can request one in person, by phone or online from state and independent institutions.",
+      "Al-Azhar, founded in the tenth century, and Egypt's Dar al-Ifta are the best-known issuing bodies, and their answers carry social weight even when they are not legally binding.",
+      "Questions are often about inheritance shares, divorce procedure, bank interest, dress and medical treatment rather than abstract theology.",
+      "A mufti has to know both the classical legal schools and the local custom of the questioner, since the same question can have different practical answers for a farmer and a civil servant.",
+      "State-appointed fatwas have occasionally clashed with independent preachers, which makes the fatwa counter a quiet arena for arguments about religious authority."
+    ],
+    "exampleEn": "A Cairo widow visits a Dar al-Ifta office with a folder of property papers: her husband died without a written will, and she wants to know how the flat should be divided among her children before the family meeting that evening.",
+    "qualificationEn": "Fatwa practice is not uniform: Sunni and Shia institutions differ, and individual muftis may disagree; a fatwa is an opinion, not a court ruling, and Egyptian courts apply state law.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Al-Azhar University",
+        "url": "https://en.wikipedia.org/wiki/Al-Azhar_University"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Fatwa",
+        "url": "https://en.wikipedia.org/wiki/Fatwa"
+      }
+    ]
+  },
+  {
+    "id": "arb-011",
+    "category": "work-and-education",
+    "contentType": "feature",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The Zabbaleen: Cairo's waste as a family business",
+    "facts": [
+      "The Zabbaleen are a largely Coptic Christian community of informal waste collectors who have handled much of Cairo's household rubbish for generations.",
+      "They live mainly in Manshiyat Nasser below the Muqattam cliffs, where narrow streets double as sorting yards for paper, plastic, metal and glass.",
+      "Collection is door-to-door and personal: a family's collector is known by name, and the rubbish is carried away in sacks or pick-up trucks rather than dumped in containers.",
+      "Because sorting happens at home, the community recycles a high share of what it collects, far more than the municipal contractors who replaced them in some districts.",
+      "A 2009 government cull of pigs, which ate organic waste, and later contract changes disrupted the system and pushed some families out of work."
+    ],
+    "exampleEn": "In a middle-class Cairo building, the bawwab keeps the rubbish separate because the Zabbaleen collector pays a small monthly fee to the building and sells the sorted plastic and cardboard on; the organic scraps go to a neighbour's pigs.",
+    "qualificationEn": "Cairo's waste system has been reorganised several times, and not all rubbish in the city is handled by Zabbaleen; the community's role, income and living conditions vary between Manshiyat Nasser and newer settlements.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Zabbaleen",
+        "url": "https://en.wikipedia.org/wiki/Zabbaleen"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Cairo",
+        "url": "https://en.wikipedia.org/wiki/Cairo"
+      }
+    ]
+  },
+  {
+    "id": "arb-012",
+    "category": "cities-and-community",
+    "contentType": "scene",
+    "countries": [
+      "KW"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Souq Al-Mubarakiya is older than the oil state",
+    "facts": [
+      "Souq Al-Mubarakiya is a covered market in central Kuwait City that predates the country's oil economy and was long the main trading heart of the town.",
+      "Its lanes specialise: dates and spices, fish, jewellery, household goods, and small cafés where merchants close deals over tea.",
+      "The market survived the Iraqi occupation and was restored in stages, keeping its low arcades and narrow passages rather than becoming a mall.",
+      "Kuwaiti families treat a Friday evening walk through the souq as a routine outing, and the smell of saffron and dried limes is a shared childhood memory.",
+      "The old market now sits beside glass towers and a metro station, which makes it a daily test of how the city balances heritage with redevelopment."
+    ],
+    "exampleEn": "A Kuwaiti father takes his children to the spice lane on a Friday, buys a bag of dried limes from a shop his own father used, and stops at the same tea stall where the owner still remembers his order.",
+    "qualificationEn": "The souq is a symbol of old Kuwait, but most Kuwaitis now shop in malls and supermarkets; its survival depends on restoration budgets, tourism and the stallholders who still make a living there.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Souq Al-Mubarakiya",
+        "url": "https://en.wikipedia.org/wiki/Souq_Al-Mubarakiya"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Kuwait City",
+        "url": "https://en.wikipedia.org/wiki/Kuwait_City"
+      }
+    ]
+  },
+  {
+    "id": "arb-013",
+    "category": "cities-and-community",
+    "contentType": "feature",
+    "countries": [
+      "OM"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Aflaj: water shared by the minute",
+    "facts": [
+      "An aflaj system channels water from a spring or a wadi by gravity through a tunnel or open channel to fields and villages, sometimes over several kilometres.",
+      "Water rights are measured in time shares: a household or plot is entitled to the flow for a fixed number of minutes or hours on a rotating schedule, day and night.",
+      "Local committees of water owners maintain the channels, settle disputes and auction surplus water, especially in the dry summer months.",
+      "Oman's aflaj are recognised by UNESCO, and five of the systems are inscribed as World Heritage for their engineering and communal management.",
+      "The system is fragile: falling water tables, urban growth and the cost of repairing tunnels have led some villages to abandon aflaj for pumped wells."
+    ],
+    "exampleEn": "In a village near Nizwa, the water owner checks the clock at the channel gate, opens his share for twenty minutes to flood his date palms, then closes it so the next family's share can run; the schedule was set generations ago and is written in the village ledger.",
+    "qualificationEn": "Aflaj exist across Oman and parts of the UAE, but the share system and the committee's authority differ from village to village, and many farms now mix aflaj water with pumped groundwater.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Aflaj Irrigation Systems of Oman",
+        "url": "https://en.wikipedia.org/wiki/Aflaj_Irrigation_Systems_of_Oman"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Qanat",
+        "url": "https://en.wikipedia.org/wiki/Qanat"
+      }
+    ]
+  },
+  {
+    "id": "arb-014",
+    "category": "cities-and-community",
+    "contentType": "feature",
+    "countries": [
+      "IQ"
+    ],
+    "continent": "asia",
+    "region": "Mesopotamia",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Al-Mutanabbi Street: Baghdad's open-air library",
+    "facts": [
+      "Al-Mutanabbi Street is a book market in central Baghdad named after the tenth-century Abbasid poet, and its Friday stalls have sold books, stationery and printing for generations.",
+      "Booksellers set out titles on the pavement and in carts, and the street is one of the few places where Iraqi readers can browse Arabic literature, religious texts and foreign translations side by side.",
+      "A car bomb in March 2007 killed dozens of people, mostly booksellers and customers, and the attack became a symbol of the targeting of Iraqi intellectual life.",
+      "The street was rebuilt and reopened, and a memorial sculpture of books stands near the site; the Friday market continues despite security restrictions.",
+      "Writers and publishers use the street for readings and launches, which makes it a rare public literary space in a city with few safe cultural venues."
+    ],
+    "exampleEn": "On a Friday morning a Baghdad student walks the length of Al-Mutanabbi Street, checks three stalls for a used copy of a novel by Ahmed Saadawi, and pays with a folded note while the seller argues about another customer's reservation.",
+    "qualificationEn": "Security closures and the book trade's shift online have reduced the street's daily life; the Friday market is the enduring part, and its bookshops operate on a smaller scale than before 2003.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mutanabbi Street",
+        "url": "https://en.wikipedia.org/wiki/Mutanabbi_Street"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Baghdad",
+        "url": "https://en.wikipedia.org/wiki/Baghdad"
+      }
+    ]
+  },
+  {
+    "id": "arb-015",
+    "category": "cities-and-community",
+    "contentType": "scene",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The City of the Dead is also a city of the living",
+    "facts": [
+      "Cairo's historic cemeteries stretch for kilometres east of the old city, and their mausoleums, courtyards and small houses are home to tens of thousands of people.",
+      "Families live among the tombs because rent is low and the cemetery plots have been in their families for generations, often occupied by the caretakers of a grave or by relatives of the deceased.",
+      "The settlement has shops, workshops, a school and its own rhythms, and some residents run businesses that serve visitors during Eid and Ramadan.",
+      "Grave visiting is a serious family obligation in Egypt, especially before Eid, when families clean the tomb, recite Quran and share food with the poor.",
+      "Urban plans to clear or redevelop parts of the cemetery have repeatedly met resistance because living and dead are bound together by property claims and custom."
+    ],
+    "exampleEn": "A family from a northern Cairo neighbourhood drives to the cemetery before Eid with brooms, a thermos of tea and a box of sweets; they clean the tomb of the grandfather, greet the caretaker's family who live in the courtyard, and eat lunch beside the grave.",
+    "qualificationEn": "The City of the Dead is not a single place but several cemetery districts, and most Cairenes visit for burial and Eid rather than living there; conditions differ sharply from one district to another.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "City of the Dead (Cairo)",
+        "url": "https://en.wikipedia.org/wiki/City_of_the_Dead_(Cairo)"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Cairo",
+        "url": "https://en.wikipedia.org/wiki/Cairo"
+      }
+    ]
+  },
+  {
+    "id": "arb-016",
+    "category": "music-and-dance",
+    "contentType": "feature",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Ardah: the sword dance that performs authority",
+    "facts": [
+      "Ardah is a line dance performed by men holding swords or sticks, with a drummer and a poet or chanter leading the rhythm and the verses.",
+      "Rows face each other and move in step, while the lead singer sets a call that the line answers, so the dance is also a poetry duel and a display of coordination.",
+      "It grew out of Bedouin war and celebration customs and became the national dance of Saudi Arabia, performed at state occasions, weddings and the Janadriyah festival.",
+      "The verses can praise the host, the tribe or the nation, and the choice of poem is read as a political statement as much as entertainment.",
+      "The dance is all male in its public form, but women's celebratory line dances with different rhythms are common at weddings."
+    ],
+    "exampleEn": "At a Riyadh wedding, twenty men form two facing rows in the courtyard, the drummer sets a slow beat, a cousin steps forward with a poem praising the bride's father, and the rows raise their swords together on the refrain.",
+    "qualificationEn": "Ardah has regional variants and different names across the Gulf, and the sword version is the ceremonial form rather than the everyday dance in most communities.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Ardah",
+        "url": "https://en.wikipedia.org/wiki/Ardah"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Saudi Arabia",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Saudi_Arabia"
+      }
+    ]
+  },
+  {
+    "id": "arb-017",
+    "category": "music-and-dance",
+    "contentType": "feature",
+    "countries": [
+      "LB",
+      "SY",
+      "JO",
+      "PS"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Dabke: the line that turns a wedding into a village",
+    "facts": [
+      "Dabke is a Levantine line dance in which dancers link hands, arms or shoulders and move in a coordinated pattern led by a dancer at the head of the line.",
+      "The rhythm is built on a heavy stamp and a hop, and the lead dancer can break into improvised steps that the line must match or ignore.",
+      "It is performed at weddings, harvest celebrations and national occasions, and its songs range from love poetry to political anthems.",
+      "Regional styles differ: Lebanese dabke is smoother and more stage-like, while Jordanian and Palestinian versions are often heavier and more communal.",
+      "Since the 2000s, dabke has been remixed with electronic beats by diaspora artists, which has made it a symbol of both tradition and modern identity."
+    ],
+    "exampleEn": "At a village wedding in northern Jordan, the men form a line in the courtyard, the drummer speeds up, an uncle in a grey suit leads the stomp, and the bride's family joins from the other side until the two lines meet in the middle.",
+    "qualificationEn": "Dabke is shared across Lebanon, Syria, Jordan and Palestine but is not identical in any two places, and in some religious communities mixed-gender dancing is avoided or replaced by separate lines.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Dabke",
+        "url": "https://en.wikipedia.org/wiki/Dabke"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Folk dance",
+        "url": "https://en.wikipedia.org/wiki/Folk_dance"
+      }
+    ]
+  },
+  {
+    "id": "arb-018",
+    "category": "music-and-dance",
+    "contentType": "note",
+    "countries": [
+      "BH"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Fijiri: the songs pearl divers sang at sea",
+    "facts": [
+      "Fijiri is the vocal music of the Gulf pearl divers, built on a call-and-response between a lead singer and a chorus of men.",
+      "The songs accompanied long months at sea and were performed on land during the pearl season's celebrations, with drums and hand-clapping setting the rhythm.",
+      "Bahrain and Kuwait preserve the strongest fijiri traditions, and the music is associated with the communities of the old pearling towns rather than with the oil-era cities.",
+      "The songs describe the sea, the boat, the captain and the hardship of diving, and their slow, heavy pulse matches the rhythm of rowing and hauling.",
+      "After the pearl industry collapsed in the twentieth century, fijiri survived through state ensembles, recordings and the Gulf's heritage festivals."
+    ],
+    "exampleEn": "In a Muharraq courtyard, a group of older men sit in a circle after a wedding dinner; the lead singer opens with a long phrase about the boat, and the chorus answers with a low repeated line while a young relative films it on his phone.",
+    "qualificationEn": "Fijiri is a regional Gulf tradition and is often confused with other sea music such as the Kuwaiti songs of the same repertory; performances today are staged heritage rather than the working music they once were.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Fijiri",
+        "url": "https://en.wikipedia.org/wiki/Fijiri"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Pearl hunting",
+        "url": "https://en.wikipedia.org/wiki/Pearl_hunting"
+      }
+    ]
+  },
+  {
+    "id": "arb-019",
+    "category": "music-and-dance",
+    "contentType": "feature",
+    "countries": [
+      "IQ"
+    ],
+    "continent": "asia",
+    "region": "Mesopotamia",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The Iraqi maqam: one night, one poem, one voice",
+    "facts": [
+      "The Iraqi maqam is a suite of sung poetry performed by a lead singer with a small ensemble of santur, joza, oud, ney and drums.",
+      "Each maqam has its own melodic path and its own set of traditional poems in classical Arabic, and a full performance can last for hours.",
+      "Singers learn the repertory from a master in a lineage of teachers, and the Baghdad conservatory and UNESCO patronage have helped keep it alive.",
+      "The maqam is performed at weddings and family gatherings, not only in concert halls, and the audience's response is part of the performance.",
+      "Iraqi maqam was inscribed on UNESCO's intangible heritage list in 2008, and Baghdad still hosts an annual festival."
+    ],
+    "exampleEn": "At a family gathering in Baghdad, an older singer sits cross-legged while the santur player tunes; the singer opens with a long improvised phrase, then begins a classical poem, and the guests fall silent until the first section ends.",
+    "qualificationEn": "Iraqi maqam is a distinct tradition from the Arabic maqam system of scales, and its performance practice varies between Baghdad, Mosul and the diaspora; younger audiences often know it through recordings rather than live nights.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Iraqi maqam",
+        "url": "https://en.wikipedia.org/wiki/Iraqi_maqam"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic maqam",
+        "url": "https://en.wikipedia.org/wiki/Arabic_maqam"
+      }
+    ]
+  },
+  {
+    "id": "arb-020",
+    "category": "music-and-dance",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Mahraganat: the street's own pop music",
+    "facts": [
+      "Mahraganat is an Egyptian electronic genre that grew out of working-class neighbourhoods in Cairo and the Delta in the late 2000s.",
+      "Its sound mixes cheap synthesizers, autotuned vocals and rapid hi-hat patterns, and its lyrics are blunt about money, police, love and survival.",
+      "Tracks spread first through wedding DJs, tuk-tuk sound systems and YouTube, bypassing radio and record labels.",
+      "The genre became a national sensation around 2010 and was performed at international festivals, while state media and some musicians criticised it as vulgar.",
+      "Mahraganat artists remain tied to neighbourhood audiences, and live shows can be as much a street party as a concert."
+    ],
+    "exampleEn": "A Cairo tuk-tuk driver plays a mahraganat track through a phone speaker on the dashboard while waiting at a light; a teenager on the pavement recognises the refrain and joins in for two lines before the light changes.",
+    "qualificationEn": "Mahraganat is not the only Egyptian popular music and is not uniformly loved; its reputation has been shaped by moral panics, and some of its stars have moved toward more mainstream pop.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mahraganat",
+        "url": "https://en.wikipedia.org/wiki/Mahraganat"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Music of Egypt",
+        "url": "https://en.wikipedia.org/wiki/Music_of_Egypt"
+      }
+    ]
+  },
+  {
+    "id": "arb-021",
+    "category": "games-and-leisure",
+    "contentType": "feature",
+    "countries": [
+      "AE"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Camel racing: robots, tribes and prize money",
+    "facts": [
+      "Camel racing is a traditional Gulf sport in which camels bred for speed run a track of several kilometres, accompanied by owners in SUVs and a crowd at the finish.",
+      "In the 2000s robot jockeys replaced child jockeys, whose use had drawn international criticism; the robots carry a walkie-talkie and a whip that the owner controls remotely.",
+      "Races run from October to April, and elite camels are worth large sums, with owners often breeding bloodlines for decades.",
+      "The sport is organised by clubs and government-backed festivals, and prizes include cars as well as cash.",
+      "Training and veterinary care have become professionalised, and camel hospitals in the region treat racing injuries and breeding problems."
+    ],
+    "exampleEn": "At an Abu Dhabi racetrack, a camel owner drives beside the track in a white SUV, speaks into a radio handset, and the robot jockey on the camel's back raises a small whip as the animal enters the final kilometre.",
+    "qualificationEn": "Camel racing is a Gulf tradition but not an everyday hobby for most residents; it is heavily state-sponsored and largely confined to Gulf nationals and a few expatriate owners.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Camel racing",
+        "url": "https://en.wikipedia.org/wiki/Camel_racing"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Emiratis",
+        "url": "https://en.wikipedia.org/wiki/Emiratis"
+      }
+    ]
+  },
+  {
+    "id": "arb-022",
+    "category": "games-and-leisure",
+    "contentType": "note",
+    "countries": [
+      "AE"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Falconry: a hunting season that teaches patience",
+    "facts": [
+      "Falconry in the Gulf is practised with peregrine, saker and lanner falcons, trapped or purchased in autumn and trained through the winter hunting season.",
+      "A falcon is taught to fly to a lure and to return to the falconer, and the relationship is built on feeding, weight control and daily handling rather than affection.",
+      "Hunting trips are social occasions in the desert, with a camp, vehicles and a hierarchy among the men who own and fly the birds.",
+      "The UAE and Qatar have built falcon hospitals, breeding centres and a passport system for birds, and falconry is on UNESCO's intangible heritage list.",
+      "Wild trapping is now restricted in several Gulf states, and most hunting is done during short winter trips rather than year-round."
+    ],
+    "exampleEn": "At a desert camp outside Al Ain in December, a young falconer removes his bird's hood, swings the lure, and the falcon circles once before dropping to the glove; the men drink tea and talk about the bird's weight for tomorrow's hunt.",
+    "qualificationEn": "Falconry is a minority pursuit even in the Gulf, associated with established families and heritage programmes; the everyday relationship most residents have with it is via festivals, not hunting.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Falconry",
+        "url": "https://en.wikipedia.org/wiki/Falconry"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of the United Arab Emirates",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_the_United_Arab_Emirates"
+      }
+    ]
+  },
+  {
+    "id": "arb-023",
+    "category": "storytelling",
+    "contentType": "feature",
+    "countries": [
+      "PS"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Handala: the boy who turned his back on the world",
+    "facts": [
+      "Handala is a cartoon figure created by the Palestinian artist Naji al-Ali in 1969: a barefoot boy in patched clothes, always seen from behind.",
+      "He is ten years old, the age al-Ali was when his family fled their village in 1948, and the artist said the boy would grow up only when Palestinians returned home.",
+      "Handala appears in al-Ali's political cartoons, usually silent and watching the scene, and his turned back is a refusal to accept the viewer's framing.",
+      "After al-Ali was assassinated in London in 1987, the figure became a widely used symbol of Palestinian identity on posters, walls and social media.",
+      "Because the design is simple, Handala is often redrawn by children and appears in graffiti from Gaza to Beirut."
+    ],
+    "exampleEn": "On a wall in a Palestinian refugee camp, a teenager sprays a simple outline of a boy in patched trousers facing away from the viewer; the caption beneath is one word, the name of the village his grandparents left.",
+    "qualificationEn": "Handala carries a specific political meaning and is not a neutral national logo; different Palestinian factions and artists have used him in ways Naji al-Ali might not have endorsed.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Handala",
+        "url": "https://en.wikipedia.org/wiki/Handala"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Naji al-Ali",
+        "url": "https://en.wikipedia.org/wiki/Naji_al-Ali"
+      }
+    ]
+  },
+  {
+    "id": "arb-024",
+    "category": "storytelling",
+    "contentType": "feature",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Sirat Bani Hilal: an epic sung for three nights",
+    "facts": [
+      "Sirat Bani Hilal is the oral epic of the Banu Hilal tribe's migration from Arabia to North Africa, performed by a poet-singer who accompanies himself on a rababa fiddle.",
+      "In Upper Egypt the epic is performed at weddings and saint's festivals, sometimes over several nights, with the audience calling for favourite episodes.",
+      "The performer, called a sha'ir, is both narrator and musician, switching between sung verse, spoken explanation and direct address to the listeners.",
+      "The epic's heroes include Abu Zayd al-Hilali and the princess Jazia, and the story mixes warfare, trickery, love and genealogy.",
+      "UNESCO added the Al-Hilali epic to its intangible heritage list in 2008, and Egyptian radio and television have recorded full performances."
+    ],
+    "exampleEn": "In a village near Sohag, a sha'ir sits on a chair with his rababa at a wedding, begins with a long invocation, then asks the crowd which episode they want; the men shout for the battle of Jazia, and he sings until two in the morning.",
+    "qualificationEn": "The epic survives mainly in Upper Egypt and among diaspora communities, and younger Egyptians are more likely to know it through recordings, school texts or television than through live nights.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Sirat Bani Hilal",
+        "url": "https://en.wikipedia.org/wiki/Sirat_Bani_Hilal"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Oral poetry",
+        "url": "https://en.wikipedia.org/wiki/Oral_poetry"
+      }
+    ]
+  },
+  {
+    "id": "arb-025",
+    "category": "storytelling",
+    "contentType": "note",
+    "countries": [
+      "SA",
+      "KW"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Nabati poetry: the poem as a public CV",
+    "facts": [
+      "Nabati poetry is vernacular verse in the dialects of the Arabian Peninsula, distinct from classical Arabic poetry in metre and vocabulary.",
+      "It is often composed for a specific occasion: a reconciliation between tribes, a praise of a host, a lament, or a challenge to a rival poet.",
+      "The poem is a social document, and a well-known verse can settle a dispute or damage a reputation more effectively than a newspaper article.",
+      "Television talent shows such as Million's Poet made Nabati a mass-media genre, and winners become celebrities with large followings.",
+      "The form is still taught informally, with young poets reciting in majlis and at festivals before they publish anything."
+    ],
+    "exampleEn": "At a family wedding in Riyadh, a cousin stands and recites a Nabati poem he wrote the night before, praising the bride's mother and gently mocking the groom's lateness; the room laughs and the host repeats the best line all evening.",
+    "qualificationEn": "Nabati is a Gulf and Bedouin tradition, not the only poetry of the region, and its dialect and imagery differ across Saudi Arabia, Kuwait and the Emirates; many Arabs outside the Gulf cannot follow it easily.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Nabati",
+        "url": "https://en.wikipedia.org/wiki/Nabati"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic poetry",
+        "url": "https://en.wikipedia.org/wiki/Arabic_poetry"
+      }
+    ]
+  },
+  {
+    "id": "arb-026",
+    "category": "clothing-and-design",
+    "contentType": "feature",
+    "countries": [
+      "SA",
+      "AE",
+      "QA"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The abaya is a wardrobe, not a uniform",
+    "facts": [
+      "The abaya is a loose cloak worn over clothes in public in much of the Gulf, and it is a social garment rather than a religious requirement in the way the hijab is often described.",
+      "Styles vary enormously: open-fronted, buttoned, embroidered, plain black, coloured, worn with a matching shayla headscarf or left open over jeans.",
+      "In Saudi Arabia the abaya was effectively required in public until the 2018 reforms relaxed enforcement, and today many women choose it while others wear modest alternatives.",
+      "Designer abayas have become a fashion sector, with seasonal collections and couture prices, and Gulf women often own several for different occasions.",
+      "Men's equivalent, the thawb or kandura, is also a regional garment with variations in collar, cuffs and colour between Gulf states."
+    ],
+    "exampleEn": "In a Dubai mall, two Emirati friends meet for coffee: one wears a black abaya with gold embroidery and a matching shayla, the other an open beige abaya over a tracksuit, and neither comments on the difference.",
+    "qualificationEn": "Abaya practice differs sharply between Saudi Arabia, the UAE, Qatar and the wider Arab world, and among families; assumptions that all Gulf women wear black abayas are outdated and often wrong.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Abaya",
+        "url": "https://en.wikipedia.org/wiki/Abaya"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Hijab",
+        "url": "https://en.wikipedia.org/wiki/Hijab"
+      }
+    ]
+  },
+  {
+    "id": "arb-027",
+    "category": "clothing-and-design",
+    "contentType": "detail",
+    "countries": [
+      "MA"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The caftan is a wedding garment with regional accents",
+    "facts": [
+      "The Moroccan caftan is a long, often embroidered robe worn by women at weddings and family celebrations, and there are male versions worn on formal occasions.",
+      "Regional styles differ in cut and ornament: Fez is associated with fine embroidery, Rabat with particular belt styles, and the south with heavier silver jewellery.",
+      "A bride may change into several caftans during a wedding, each with its own belt, jewellery and hairstyle, and the sequence is photographed and discussed by guests.",
+      "Tailors and embroidery workshops in the medinas make made-to-measure caftans, and the craft is passed through families and apprenticeships.",
+      "Modern designers have shortened and simplified the caftan for daywear, and Moroccan diaspora brides often order theirs from home."
+    ],
+    "exampleEn": "At a Casablanca wedding, the bride appears in a white caftan for the henna night, changes into a red velvet one with a gold belt for the dinner, and ends the evening in a lighter silk version for the dancing.",
+    "qualificationEn": "The caftan is not limited to Morocco or to women, and neighbouring Maghreb countries have their own versions; what counts as traditional dress at a wedding varies by family and budget.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kaftan",
+        "url": "https://en.wikipedia.org/wiki/Kaftan"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Morocco",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Morocco"
+      }
+    ]
+  },
+  {
+    "id": "arb-028",
+    "category": "clothing-and-design",
+    "contentType": "detail",
+    "countries": [
+      "PS",
+      "JO"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The keffiyeh: a headscarf that became a flag",
+    "facts": [
+      "The keffiyeh is a square cotton headscarf worn by men in the Levant and the Gulf, folded into a triangle and held by a cord called an agal.",
+      "The black-and-white fishnet pattern associated with Palestinian nationalism is often called the Yasser Arafat style, while red-and-white versions are common in Jordan and the Gulf.",
+      "Palestinian villages had their own weaving patterns, and the scarf's pattern has been read as a map of fields, roads and olive trees, though that reading is disputed.",
+      "In the 2000s the keffiyeh became a global fashion item, which Palestinians sometimes welcome as visibility and sometimes criticise as appropriation.",
+      "Wearing it is a political statement in some contexts and simply practical sun protection in others, and the meaning changes with the wearer and the place."
+    ],
+    "exampleEn": "At a demonstration in Ramallah, a teenager wraps a black-and-white keffiyeh around his neck rather than his head; an older man adjusts it for him, saying that a scarf worn loosely is fashion and one worn properly is respect.",
+    "qualificationEn": "The keffiyeh's symbolism is contested and varies by colour, pattern and context; treating it as a universal Palestinian flag flattens its use by Jordanians, Gulf Arabs and non-Arab wearers.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Keffiyeh",
+        "url": "https://en.wikipedia.org/wiki/Keffiyeh"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Palestine",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Palestine"
+      }
+    ]
+  },
+  {
+    "id": "arb-029",
+    "category": "nature-and-seasons",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Khamsin: the fifty days of dust",
+    "facts": [
+      "Khamsin is the hot, dry, dust-laden wind that blows across Egypt in spring, usually between March and May, and it can turn the sky yellow within hours.",
+      "The name comes from the Arabic word for fifty, referring to the roughly fifty-day period after the spring equinox when such winds are expected.",
+      "The wind raises sand that closes schools, grounds flights and worsens asthma and eye complaints; hospitals report more respiratory cases during a bad spell.",
+      "Egyptians close windows, wet the floors to settle dust and avoid hanging laundry, and people with allergies prepare medication in advance.",
+      "The same seasonal wind is known by other names in Libya and the Levant, and its timing varies from year to year."
+    ],
+    "exampleEn": "In late March a Cairo family wakes to an orange sky and a layer of sand on the balcony; the mother closes the windows, wets a towel to seal the gap under the door and calls the children to stay home from school because the street is invisible.",
+    "qualificationEn": "Khamsin is not a fixed calendar event, and not every spring produces a severe one; the name is also used loosely for any hot dusty wind in the region.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Khamsin",
+        "url": "https://en.wikipedia.org/wiki/Khamsin"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Sirocco",
+        "url": "https://en.wikipedia.org/wiki/Sirocco"
+      }
+    ]
+  },
+  {
+    "id": "arb-030",
+    "category": "nature-and-seasons",
+    "contentType": "feature",
+    "countries": [
+      "OM"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Khareef: the monsoon that turns Dhofar green",
+    "facts": [
+      "Between June and September, the southwest monsoon pushes moist air onto the Dhofar mountains, producing drizzle, fog and a green landscape that contrasts with the surrounding desert.",
+      "The season is called the khareef, and it is the only time of year when the hills around Salalah are covered in grass and streams run in the wadis.",
+      "Families from Oman, the Gulf and beyond travel to Dhofar in summer for the cool, wet weather, and the regional economy shifts toward tourism and fruit stands.",
+      "Local agriculture benefits: coconuts, bananas and frankincense trees grow in the coastal strip, and the monsoon's moisture feeds the frankincense belt.",
+      "The khareef also disrupts roads and outdoor work, and heavy rain can cause flooding in the wadis."
+    ],
+    "exampleEn": "An Omani family drives from Muscat to Salalah in July, stops at a roadside stall for fresh coconut and corn, and takes photographs of the mist rolling over the green mountains while their relatives in the capital complain about the heat.",
+    "qualificationEn": "The khareef affects Dhofar and southern Oman, not the whole country; the rest of Oman remains hot and dry during the same months, and the monsoon's strength varies between years.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Khareef",
+        "url": "https://en.wikipedia.org/wiki/Khareef"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Dhofar",
+        "url": "https://en.wikipedia.org/wiki/Dhofar"
+      }
+    ]
+  },
+  {
+    "id": "arb-031",
+    "category": "nature-and-seasons",
+    "contentType": "feature",
+    "countries": [
+      "PS"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The olive harvest is a family accounting",
+    "facts": [
+      "The Palestinian olive harvest runs from October into November, and entire extended families go to the groves for days of picking, picnicking and catching up.",
+      "Families often own trees inherited across generations, and the harvest is divided among relatives and pressed at a shared press into oil for the year.",
+      "The olive tree is a symbol of rootedness in Palestinian culture, and the phrase 'the olive tree' appears in poetry, embroidery and political speech.",
+      "Harvest access is restricted in some areas near settlements and the separation barrier, and international volunteers sometimes accompany pickers.",
+      "Olive oil is used in cooking, soap-making and cosmetics, and a good year's oil is a point of family pride."
+    ],
+    "exampleEn": "In a village near Nablus, three generations climb ladders with plastic buckets, spread a tarpaulin under each tree and shake the branches; at midday they eat bread, cheese and olives on the ground, and in the evening the truck takes the sacks to the press.",
+    "qualificationEn": "Olive cultivation is widespread across the Levant and the Mediterranean, and the harvest's political weight is specific to the Palestinian context; not every family owns trees, and many urban Palestinians have no grove to visit.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Olive",
+        "url": "https://en.wikipedia.org/wiki/Olive"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Olive oil",
+        "url": "https://en.wikipedia.org/wiki/Olive_oil"
+      }
+    ]
+  },
+  {
+    "id": "arb-032",
+    "category": "beliefs-and-folklore",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Mashallah: the compliment that blocks the evil eye",
+    "facts": [
+      "Mashallah means 'what God has willed', and it is said when admiring a person, a child, a house or a possession to prevent envy from causing harm.",
+      "The belief behind it is the evil eye: a look of envy can bring misfortune, illness or spoilage, and the spoken phrase redirects the moment toward God.",
+      "Parents say it over their children, and adults may say it when a friend shows off a new car or a good exam result, sometimes with a deliberate lack of enthusiasm.",
+      "The phrase travels with protective objects such as the blue nazar bead and the hand-shaped khamsa, though many Egyptians use the words alone.",
+      "Egyptians also say 'mashallah' as genuine praise, so tone and context decide whether it is admiration, protection or a polite warning."
+    ],
+    "exampleEn": "A Cairo aunt sees her nephew's new flat, says 'mashallah' before commenting on the furniture, and then taps the doorframe twice; her sister thanks her for not drawing attention to the flat's price.",
+    "qualificationEn": "The evil eye is a folk belief rather than an official doctrine, and not all Egyptians take it literally; some use the phrase purely as polite admiration, and stricter Muslims may reject amulets while keeping the words.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mashallah",
+        "url": "https://en.wikipedia.org/wiki/Mashallah"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Evil eye",
+        "url": "https://en.wikipedia.org/wiki/Evil_eye"
+      }
+    ]
+  },
+  {
+    "id": "arb-033",
+    "category": "beliefs-and-folklore",
+    "contentType": "scene",
+    "countries": [
+      "SD"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Zar: when a spirit has to be negotiated with",
+    "facts": [
+      "Zar is a spirit-possession ritual practised in Sudan, Egypt and parts of the Horn of Africa, in which a person's illness or misfortune is attributed to a spirit with its own name and preferences.",
+      "The diagnosis is made by a ritual specialist, often a woman called a sheikha, who negotiates with the spirit and prescribes offerings, music and sometimes a new clothing or scent.",
+      "Ceremonies involve drumming, dancing and incense, and the possessed person may speak in the voice of the spirit and state what it wants.",
+      "Zar is more common among women and in communities where access to formal medicine is limited, but it is not exclusive to them.",
+      "Officially, zar is condemned by many religious authorities as un-Islamic, yet it persists in urban and rural Sudan and has been studied by anthropologists since the nineteenth century."
+    ],
+    "exampleEn": "In a Khartoum neighbourhood, a woman who has had months of headaches visits a sheikha; after a session of drumming and incense, the sheikha says the spirit wants a red dress and a particular perfume, and the family arranges a small ceremony.",
+    "qualificationEn": "Zar is a minority practice and is not accepted by most Sudanese religious authorities; descriptions of it often come from outside observers, and families may be reluctant to discuss it openly.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Zār",
+        "url": "https://en.wikipedia.org/wiki/Z%C4%81r"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Sudan",
+        "url": "https://en.wikipedia.org/wiki/Sudan"
+      }
+    ]
+  },
+  {
+    "id": "arb-034",
+    "category": "beliefs-and-folklore",
+    "contentType": "note",
+    "countries": [
+      "MA"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Aisha Qandisha, the jinniyya of the river",
+    "facts": [
+      "Aisha Qandisha is a female jinn figure in Moroccan popular belief, associated with rivers, springs and thresholds, and said to possess people who disturb her places.",
+      "She is described in different ways: as a beautiful woman with camel hooves, as a protective spirit, or as a dangerous presence who demands offerings.",
+      "Ritual specialists in towns such as Meknes and Fez perform ceremonies for people believed to be affected, involving music, incense and sometimes a contract with the jinn.",
+      "Her cult overlaps with the veneration of saints and with the shikhat, women performers who sing at weddings and are sometimes linked to her.",
+      "Academic study of Aisha Qandisha treats her as a window into Moroccan ideas about gender, water and the boundary between the human and the unseen."
+    ],
+    "exampleEn": "A family in Meknes whose daughter has nightmares is advised to visit a specialist; the ceremony includes incense, a white chicken and a promise to give alms, and the girl is told not to fetch water alone at dusk.",
+    "qualificationEn": "Belief in Aisha Qandisha is a popular tradition, not official Islam, and many Moroccans dismiss it as superstition; the stories vary by region and are told differently by men and women.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Aisha Qandicha",
+        "url": "https://en.wikipedia.org/wiki/Aisha_Qandicha"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Jinn",
+        "url": "https://en.wikipedia.org/wiki/Jinn"
+      }
+    ]
+  },
+  {
+    "id": "arb-035",
+    "category": "beliefs-and-folklore",
+    "contentType": "feature",
+    "countries": [
+      "MA"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Marabouts and moussems: the saint as a local institution",
+    "facts": [
+      "A marabout is a saintly figure or the shrine that marks the saint's tomb, found across the Maghreb and especially in Morocco.",
+      "Shrines are visited for healing, fertility, exam success and protection, and each has its own reputation and clientele.",
+      "An annual moussem gathers a shrine's followers for a festival with music, processions, trade and animal sacrifice.",
+      "Saints are understood to carry baraka, a blessing or spiritual force, which can be transmitted through touch, food or proximity to the tomb.",
+      "State authorities have alternately patronised and restricted saint veneration, and reformist movements have criticised it as un-Islamic."
+    ],
+    "exampleEn": "In a small town outside Fez, families pitch tents around a shrine for the annual moussem, a troupe of Ahwach musicians plays through the night, and a mother ties a strip of cloth to the shrine's door as a vow for her son's exams.",
+    "qualificationEn": "Saint veneration is stronger in Morocco than in some other Arab countries, and even in Morocco it is contested; urban, reformist and Salafi Muslims may reject it, while rural families keep it as a calendar anchor.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Marabout",
+        "url": "https://en.wikipedia.org/wiki/Marabout"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Mawsim",
+        "url": "https://en.wikipedia.org/wiki/Mawsim"
+      }
+    ]
+  },
+  {
+    "id": "arb-036",
+    "category": "migration-and-identity",
+    "contentType": "contrast",
+    "countries": [
+      "AE"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Dubai's expatriate majority rewrites the etiquette of a city",
+    "facts": [
+      "Roughly nine in ten residents of the UAE are foreign nationals, and Dubai's population is dominated by workers from India, Pakistan, Bangladesh, the Philippines, Egypt and other countries.",
+      "English is the default language of offices, shops and mixed social life, while Arabic remains the official language and the marker of Emirati identity.",
+      "Residents organise their year around home-country holidays as well as Islamic ones, and schools, churches, temples and mosques sit in the same city.",
+      "The state's citizenship rules make long-term residents permanently temporary, and even people born in Dubai may never become citizens.",
+      "Etiquette adapts: alcohol is legal in licensed venues, public behaviour rules are stricter than in many home countries, and dress codes vary by place."
+    ],
+    "exampleEn": "An Indian accountant who has lived in Dubai for twenty years talks to his landlord in English, greets his Emirati colleagues in Arabic, and flies to Kerala every August for the school holidays; his children speak Malayalam at home and English at school.",
+    "qualificationEn": "The 90 per cent figure covers the UAE as a whole and is not uniform: some northern emirates have a higher Emirati share, and the experience of a professional expatriate differs sharply from that of a construction worker.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Expatriates in the United Arab Emirates",
+        "url": "https://en.wikipedia.org/wiki/Expatriates_in_the_United_Arab_Emirates"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Demographics of Dubai",
+        "url": "https://en.wikipedia.org/wiki/Demographics_of_Dubai"
+      }
+    ]
+  },
+  {
+    "id": "arb-037",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "TZ"
+    ],
+    "continent": "africa",
+    "region": "East Africa",
+    "community": "Omani-Zanzibari",
+    "languages": [
+      "ar",
+      "sw"
+    ],
+    "titleEn": "Zanzibar's Omani layer sits under the Swahili surface",
+    "facts": [
+      "From the late eighteenth century, Omani sultans ruled Zanzibar and moved their court there in the 1840s, building Stone Town's palaces, mosques and customs houses.",
+      "Clove plantations owned by Omani and Swahili elites made Zanzibar a major exporter, and the island's economy depended on enslaved labour from the mainland.",
+      "The 1964 revolution overthrew the sultanate and killed or expelled many Arabs, and the memory is still politically sensitive on the island.",
+      "Swahili is the everyday language, but Arabic words, names, food and Islamic practice remain woven into Zanzibar's coastal culture.",
+      "Stone Town's carved doors, coral-stone houses and narrow lanes are a UNESCO World Heritage site and the clearest surviving statement of the Omani-Swahili mix."
+    ],
+    "exampleEn": "In Stone Town a guide points out a carved door with Indian and Omani motifs, explains that the brass spikes were a sign of status rather than defence, and then orders a cup of spiced coffee in Swahili with an Arabic loanword for the cardamom.",
+    "qualificationEn": "Zanzibar's Arab heritage is real but entangled with slavery and the 1964 revolution, and the island's identity is primarily Swahili; the Omani layer is one strand, not the whole story.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Zanzibar",
+        "url": "https://en.wikipedia.org/wiki/Zanzibar"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Omani Empire",
+        "url": "https://en.wikipedia.org/wiki/Omani_Empire"
+      }
+    ]
+  },
+  {
+    "id": "arb-038",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "FR",
+      "DZ"
+    ],
+    "continent": "europe",
+    "region": "Western Europe",
+    "community": "Harkis",
+    "languages": [
+      "ar",
+      "fr"
+    ],
+    "titleEn": "The Harkis: a memory France kept in camps",
+    "facts": [
+      "Harkis were Algerians who served as auxiliary soldiers and local officials for the French army during the Algerian War of 1954 to 1962.",
+      "When Algeria became independent, tens of thousands of them and their families were evacuated to France, where many were housed in forest camps and transit centres for years.",
+      "The French state long treated them as a footnote, and their descendants have campaigned for recognition, housing and pensions.",
+      "In 2021 President Macron asked for forgiveness on behalf of France and announced a law to recognise the community's suffering, but compensation remains contested.",
+      "Many Harkis settled in southern France, and their family stories are a distinct strand of French Arab and Muslim identity."
+    ],
+    "exampleEn": "In a town near Marseille, a retired Harki's son shows visitors the camp barracks where his family lived for years after 1962, then drives to the municipal cemetery where his grandfather's name is carved on a memorial plaque.",
+    "qualificationEn": "The Harki story is specific to the Algerian War and to those who chose French service; it should not be generalised to all Algerians in France, many of whom came later and have different histories.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Harki",
+        "url": "https://en.wikipedia.org/wiki/Harki"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Algerian War",
+        "url": "https://en.wikipedia.org/wiki/Algerian_War"
+      }
+    ]
+  },
+  {
+    "id": "arb-039",
+    "category": "migration-and-identity",
+    "contentType": "note",
+    "countries": [
+      "US"
+    ],
+    "continent": "north-america",
+    "region": "Great Lakes",
+    "community": "Arab Americans",
+    "languages": [
+      "ar",
+      "en"
+    ],
+    "titleEn": "Dearborn: the Arab capital of America",
+    "facts": [
+      "Dearborn, Michigan, has one of the highest concentrations of Arab Americans in the United States, with roots going back to Lebanese and Syrian immigrants who came to work in Henry Ford's factories.",
+      "The city's South End has Arabic-language shop signs, bakeries, mosques and community centres, and Arabic is heard in schools and clinics.",
+      "A later wave of Yemeni immigration made Dearborn a centre of Yemeni American life, and the city's politics have been shaped by both communities.",
+      "The Arab American National Museum is in Dearborn, and the city hosts a large annual Arab International Festival.",
+      "Residents also navigate the usual American immigrant experience: bilingual children, mixed marriages, and generational tension over tradition and independence."
+    ],
+    "exampleEn": "On a Friday in Dearborn, a Yemeni American mechanic closes his shop for prayer, walks to the mosque a few blocks away, then eats lunch at a Lebanese bakery where the owner's children switch between English and Arabic depending on who is at the counter.",
+    "qualificationEn": "Dearborn's Arab community is not monolithic and is largely Lebanese and Yemeni; estimates of its size vary widely, and many Arab Americans live in other Detroit suburbs or in cities with no large Arab population.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Dearborn, Michigan",
+        "url": "https://en.wikipedia.org/wiki/Dearborn,_Michigan"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arab Americans",
+        "url": "https://en.wikipedia.org/wiki/Arab_Americans"
+      }
+    ]
+  },
+  {
+    "id": "arb-040",
+    "category": "migration-and-identity",
+    "contentType": "feature",
+    "countries": [
+      "BR"
+    ],
+    "continent": "south-america",
+    "region": "South America",
+    "community": "Arab Brazilians",
+    "languages": [
+      "ar",
+      "pt"
+    ],
+    "titleEn": "Brazil's Arab diaspora began as peddlers",
+    "facts": [
+      "Lebanese and Syrian immigrants began arriving in Brazil in the late nineteenth century, many as peddlers who walked inland selling cloth and household goods.",
+      "Families that started as travelling salesmen later opened shops, factories and import businesses, and Arab Brazilians are now prominent in commerce and politics.",
+      "São Paulo's central market and the neighbourhoods around Avenida Paulista preserve Levantine bakeries, restaurants and clubs.",
+      "Most descendants no longer speak Arabic, and intermarriage has made identification cultural rather than linguistic.",
+      "The community's influence is visible in Brazilian food, architecture and family names, from esfiha chains to politicians with Arabic surnames."
+    ],
+    "exampleEn": "In a São Paulo bakery, a third-generation descendant of Lebanese immigrants serves esfiha and kibbeh while explaining that his grandfather sold fabrics door-to-door in the interior and never learned Portuguese properly.",
+    "qualificationEn": "Arab Brazilian identity is often symbolic after several generations, and the community is not a single group: Lebanese, Syrians and Palestinians arrived in different periods and regions of Brazil.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Arab Brazilians",
+        "url": "https://en.wikipedia.org/wiki/Arab_Brazilians"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arab diaspora",
+        "url": "https://en.wikipedia.org/wiki/Arab_diaspora"
+      }
+    ]
+  },
+  {
+    "id": "arb-041",
+    "category": "regional-humour",
+    "contentType": "contrast",
+    "countries": [
+      "EG",
+      "SY"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Juha's foolishness is a licence to tell the truth",
+    "facts": [
+      "Juha, known as Nasreddin Hoca in Turkish and Mullah Nasruddin in Persian, is a trickster figure shared across the Middle East and the Balkans.",
+      "In Arabic-speaking countries he is usually called Juha, a fool whose apparent stupidity exposes greed, hypocrisy and the absurdity of authority.",
+      "The stories are short and oral, and the same plot can be told about a judge, a miser, a husband or a political ruler depending on the teller's target.",
+      "Egyptian television and Levantine stage comedians have adapted Juha stories for satire, especially when direct criticism is risky.",
+      "Many of the jokes are classroom material for teaching Arabic and are among the first stories children hear at home."
+    ],
+    "exampleEn": "A Syrian family on a long car trip passes around Juha stories: the one about the man who searches for his lost key under the street lamp because the light is better there, and the uncle adds a new ending about a Ministry official.",
+    "qualificationEn": "Juha is not exclusively Arab, and the corpus varies from country to country; some stories are bawdy or cruel, and the character's meaning shifts between children's fable and political satire.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Nasreddin",
+        "url": "https://en.wikipedia.org/wiki/Nasreddin"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arab humor",
+        "url": "https://en.wikipedia.org/wiki/Arab_humor"
+      }
+    ]
+  },
+  {
+    "id": "arb-042",
+    "category": "cultural-change",
+    "contentType": "feature",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "After the cinema ban: Saudi entertainment and its critics",
+    "facts": [
+      "Public cinemas were effectively banned in Saudi Arabia from the 1980s, and films were watched at home or abroad rather than in theatres.",
+      "The ban was lifted in 2018 as part of Vision 2030, and the first cinema opened in Riyadh the same year; the General Entertainment Authority was created in 2016 to license concerts and events.",
+      "Saudi filmmakers such as Haifaa al-Mansour had built careers abroad, and the new policy promised a domestic industry as well as imported blockbusters.",
+      "Concerts, festivals and cinemas have changed the rhythm of urban life, and young Saudis now plan weekends around events that did not exist a decade earlier.",
+      "The opening has been uneven: conservatives object to some content, ticket prices are high for many families, and the industry is still small."
+    ],
+    "exampleEn": "A Riyadh student books cinema tickets for a Thursday night, checks that the film is approved, meets friends at the mall and takes a selfie in front of the screen before the lights go down; her mother still prefers to watch at home.",
+    "qualificationEn": "Saudi entertainment policy is state-led and changes quickly, and the experience differs between Riyadh, Jeddah and smaller cities; the reforms have not been universally welcomed, and some restrictions remain.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Cinema of Saudi Arabia",
+        "url": "https://en.wikipedia.org/wiki/Cinema_of_Saudi_Arabia"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "General Entertainment Authority",
+        "url": "https://en.wikipedia.org/wiki/General_Entertainment_Authority"
+      }
+    ]
+  },
+  {
+    "id": "arb-043",
+    "category": "cultural-change",
+    "contentType": "feature",
+    "countries": [
+      "MA",
+      "DZ"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar",
+      "fr"
+    ],
+    "titleEn": "Tamazight comes back into the classroom",
+    "facts": [
+      "Tamazight is the umbrella name for the Berber languages spoken by Amazigh communities across Morocco, Algeria, Libya and the diaspora.",
+      "Morocco made Tamazight an official language in its 2011 constitution, and Algeria recognised it as a national and official language in 2016.",
+      "The standardised Moroccan variety, called Standard Moroccan Tamazight, is written in Tifinagh script and taught in some schools, though implementation has been slow.",
+      "Algeria's Kabyle language has a strong literary and musical tradition, and Kabyle activism has pushed language rights for decades.",
+      "Younger Amazigh activists use social media, music and clothing to assert identity, while many families still speak the language at home without reading it."
+    ],
+    "exampleEn": "In a village in the High Atlas, a primary school teacher writes Tamazight words in Tifinagh on the board while the children's grandmothers speak the local variety at home; the children switch between the two without noticing.",
+    "qualificationEn": "Amazigh identity is not a single movement: Morocco, Algeria and Libya have different language policies, and many Amazigh people use Arabic or French as their main written language.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Berber languages",
+        "url": "https://en.wikipedia.org/wiki/Berber_languages"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Standard Moroccan Amazigh",
+        "url": "https://en.wikipedia.org/wiki/Standard_Moroccan_Amazigh"
+      }
+    ]
+  },
+  {
+    "id": "arb-044",
+    "category": "communication",
+    "contentType": "language",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Inshallah is not a promise, it is a hedge before God",
+    "facts": [
+      "Inshallah means 'if God wills', and it is attached to almost any statement about the future, from a wedding date to a business deal.",
+      "Religiously it expresses that human plans are conditional on divine will, and it appears in the Quran in exactly that sense.",
+      "In everyday use it can also soften a refusal: 'I will come, inshallah' may mean 'I will try, but do not count on me'.",
+      "Egyptians sprinkle it into sentences where no theology is intended, and a speaker who omits it can sound boastful about the future.",
+      "Because the phrase is so common, foreigners sometimes hear it as a firm commitment; Egyptians themselves know it can mean anything from certainly to maybe."
+    ],
+    "exampleEn": "A Cairo shopkeeper tells a customer that the new delivery will arrive on Tuesday, inshallah; the customer nods, and both understand that Tuesday is a hope rather than a schedule, so the customer will call on Wednesday to check.",
+    "qualificationEn": "The phrase's weight varies with context and region, and in formal or contractual settings it is not a substitute for a date; Egyptians also use it sincerely, not only to avoid commitment.",
+    "expression": {
+      "original": "إن شاء الله",
+      "transliteration": "in shāʾ Allāh",
+      "language": "العربية",
+      "glossEn": "if God wills"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Inshallah",
+        "url": "https://en.wikipedia.org/wiki/Inshallah"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Modern Standard Arabic",
+        "url": "https://en.wikipedia.org/wiki/Modern_Standard_Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-045",
+    "category": "communication",
+    "contentType": "language",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Alhamdulillah is the answer to 'how are you?'",
+    "facts": [
+      "Alhamdulillah means 'praise be to God', and it is the standard response when someone asks how you are, even during a difficult period.",
+      "The phrase covers both gratitude and acceptance: a person who has lost a job may still say it, meaning that they trust the outcome rather than that they are happy.",
+      "After a sneeze, the sneezer says alhamdulillah and the hearer replies yarhamukallah, a sequence taught to children early.",
+      "It opens sermons, closes meals and appears on car stickers and shop signs, so it is as much a social formula as a religious statement.",
+      "Non-Muslim Arabs use it too in some countries, especially where it has become a general expression of relief."
+    ],
+    "exampleEn": "A Saudi employee whose project is cancelled says alhamdulillah when a colleague asks how the meeting went; the colleague nods, and the conversation moves on without further explanation.",
+    "qualificationEn": "The formula is used across the Arab world but with different frequency and intonation; in some circles it is a pious statement, in others a habit, and irony is possible.",
+    "expression": {
+      "original": "الحمد لله",
+      "transliteration": "al-ḥamdu lillāh",
+      "language": "العربية",
+      "glossEn": "praise be to God"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Alhamdulillah",
+        "url": "https://en.wikipedia.org/wiki/Alhamdulillah"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic",
+        "url": "https://en.wikipedia.org/wiki/Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-046",
+    "category": "communication",
+    "contentType": "language",
+    "countries": [
+      "SA",
+      "AE"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Eid Mubarak and the business of congratulating",
+    "facts": [
+      "Eid Mubarak means 'blessed Eid' and is said during both Eid al-Fitr, after Ramadan, and Eid al-Adha, the festival of sacrifice.",
+      "The standard reply is 'Allah yubarak feek' or the same phrase repeated, and the exchange can last several seconds with handshakes or embraces.",
+      "Eid al-Fitr is marked by morning prayer, new clothes, family visits and Eidi, the cash given to children.",
+      "The greeting is sent by phone and WhatsApp to relatives who cannot be visited, and a message with a typo or a missing name can cause offence.",
+      "Different countries favour different formulas: 'Eid Mubarak', 'Eid Saeed' and local dialect versions coexist, and religious authorities debate which is correct."
+    ],
+    "exampleEn": "On the first morning of Eid in Jeddah, a family visits the grandparents, the children line up for Eidi, and the father spends an hour phoning relatives in Egypt and Sudan to say 'Eid Mubarak' in the same words each year.",
+    "qualificationEn": "Eid customs differ between the two Eids and between countries: in some places visits are spread over three days, in others the first day is reserved for close family, and the greeting itself has local variants.",
+    "expression": {
+      "original": "عيد مبارك",
+      "transliteration": "ʿīd mubārak",
+      "language": "العربية",
+      "glossEn": "blessed Eid"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Eid Mubarak",
+        "url": "https://en.wikipedia.org/wiki/Eid_Mubarak"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Eid al-Fitr",
+        "url": "https://en.wikipedia.org/wiki/Eid_al-Fitr"
+      }
+    ]
+  },
+  {
+    "id": "arb-047",
+    "category": "communication",
+    "contentType": "language",
+    "countries": [
+      "LB",
+      "SY",
+      "JO"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Salaam: the greeting that expects its mirror",
+    "facts": [
+      "As-salamu alaykum means 'peace be upon you', and the reply is wa alaykumu s-salam, adding the 'and' to return the wish.",
+      "The greeting is used by Muslims and Arabic-speaking Christians and Jews, and its shorter form, 'salam', is common between friends and in text messages.",
+      "It is not only a greeting: it opens a phone call, closes a visit and can signal that a conversation is finished.",
+      "The phrase travelled with Arabic and Islam into Persian, Urdu, Turkish, Malay and many African languages, where it is used far beyond Arab communities.",
+      "Among Levantine friends, the full formula is often skipped for 'marhaba' or a kiss on both cheeks, with the religious greeting reserved for more formal encounters."
+    ],
+    "exampleEn": "A Lebanese student enters a shared taxi and says 'as-salamu alaykum' to the driver and passengers; the driver replies 'wa alaykumu s-salam' while the others nod, and the greeting has established that the ride is social, not just commercial.",
+    "qualificationEn": "The greeting is not exclusively Arab or Islamic, and its use varies by country and generation; in some secular circles a simple 'hello' or 'bonjour' has replaced it in daily life.",
+    "expression": {
+      "original": "السلام عليكم",
+      "transliteration": "as-salāmu ʿalaykum",
+      "language": "العربية",
+      "glossEn": "peace be upon you"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "As-salamu alaykum",
+        "url": "https://en.wikipedia.org/wiki/As-salamu_alaykum"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Greeting",
+        "url": "https://en.wikipedia.org/wiki/Greeting"
+      }
+    ]
+  },
+  {
+    "id": "arb-048",
+    "category": "communication",
+    "contentType": "language",
+    "countries": [
+      "KW",
+      "QA",
+      "AE"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Shlonak? The Gulf greeting that wants an update",
+    "facts": [
+      "Shlonak is Gulf Arabic for 'how are you?', built from 'shlon' plus a pronoun suffix, and it usually follows the salaam greeting.",
+      "The reply is 'bikhair' (fine) or a more local 'zein', and the question is often repeated back with the speaker's pronoun changed.",
+      "Unlike the formal 'kayfa haluk', shlonak belongs to dialect speech and signals familiarity rather than distance.",
+      "Variants run across the Gulf: shlonek, shlonik and shlonak differ by gender and by the speaker's dialect.",
+      "The exchange can go on for several rounds before business is raised, and starting with the question is a way of acknowledging the other person's family and health."
+    ],
+    "exampleEn": "A Kuwaiti man calls his cousin and opens with 'shlonak?', listens to a report about the children, asks again about the cousin's mother, and only then mentions the reason for the call, a shared investment.",
+    "qualificationEn": "Shlonak is Gulf and Iraqi dialect usage, not standard Arabic, and its form changes with gender and region; using it outside the Gulf can sound like an attempt at local slang.",
+    "expression": {
+      "original": "شلونك؟",
+      "transliteration": "shlōnak?",
+      "language": "العربية",
+      "glossEn": "how are you?"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Gulf Arabic",
+        "url": "https://en.wikipedia.org/wiki/Gulf_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Eastern Arabia",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Eastern_Arabia"
+      }
+    ]
+  },
+  {
+    "id": "arb-049",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Why Cairo says gamīl, not jamīl",
+    "facts": [
+      "In Egyptian Arabic the letter jim is usually pronounced g, so classical jamīl ('beautiful') becomes gamīl and jamal ('camel') becomes gamal.",
+      "The shift is one of the clearest markers of Egyptian speech and is immediately audible to other Arabic speakers.",
+      "It is not universal: some Egyptian words and learned religious vocabulary keep the classical j, and Upper Egypt has its own pronunciations.",
+      "The letter's name itself changes: Egyptians call it 'gim', while most other Arabic speakers call it 'jim'.",
+      "Place names and personal names reflect the shift: Gamal Abdel Nasser's first name is the same word as jamal."
+    ],
+    "exampleEn": "A Cairene teacher asks a class to read the word for 'beautiful' and a pupil says gamīla; the teacher corrects the spelling, not the pronunciation, and explains that in Cairo the letter is read as a g.",
+    "qualificationEn": "The Egyptian g is a dialect feature, not a rule of Arabic, and it varies within Egypt; formal recitation, news reading and religious texts often restore the classical j.",
+    "expression": {
+      "original": "جميل",
+      "transliteration": "gamīl",
+      "language": "العامية المصرية",
+      "glossEn": "beautiful"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Egyptian Arabic",
+        "url": "https://en.wikipedia.org/wiki/Egyptian_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Standard Arabic phonology",
+        "url": "https://en.wikipedia.org/wiki/Standard_Arabic_phonology"
+      }
+    ]
+  },
+  {
+    "id": "arb-050",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Sun and moon letters: why 'the sun' swallows its L",
+    "facts": [
+      "The Arabic definite article al- changes pronunciation depending on the first letter of the following word: before a 'sun letter' the l assimilates, before a 'moon letter' it stays.",
+      "So al-shams is pronounced ash-shams ('the sun'), while al-qamar is pronounced al-qamar ('the moon').",
+      "There are fourteen sun letters, including t, th, d, dh, r, z, s, sh, ṣ, ḍ, ṭ, ẓ, l and n; the rest are moon letters.",
+      "The written form keeps the l in both cases, which is why learners must memorise the pronunciation rather than trust the spelling.",
+      "The rule is taught in Quran recitation because correct assimilation affects the sound of the recited text."
+    ],
+    "exampleEn": "A Quran teacher asks a student to read 'the sun' and 'the moon' aloud; the student writes both with al- but reads ash-shams and al-qamar, and the teacher explains that the letter, not the spelling, decides.",
+    "qualificationEn": "The assimilation is a feature of standard and most dialect pronunciations, but the details vary in some regional accents, and not every speaker applies the rule with equal consistency in fast speech.",
+    "expression": {
+      "original": "الشمس",
+      "transliteration": "ash-shams",
+      "language": "العربية",
+      "glossEn": "the sun"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Sun and moon letters",
+        "url": "https://en.wikipedia.org/wiki/Sun_and_moon_letters"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic alphabet",
+        "url": "https://en.wikipedia.org/wiki/Arabic_alphabet"
+      }
+    ]
+  },
+  {
+    "id": "arb-051",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "LB"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Three letters, a whole family: the root k-t-b",
+    "facts": [
+      "Arabic builds much of its vocabulary from three-consonant roots, and the root k-t-b carries the idea of writing.",
+      "From one root come kataba ('he wrote'), kitāb ('book'), maktab ('office' or 'desk'), maktaba ('library' or 'bookshop') and kuttāb ('Quran school').",
+      "Each word is produced by fitting the root into a pattern that adds grammatical meaning, so the system is closer to a template than to prefixes and suffixes alone.",
+      "Arabic dictionaries are organised by root, which means a learner who knows the root can find a word even without knowing its exact form.",
+      "The same system explains why nouns, verbs and adjectives that look unrelated to a learner often share a semantic core."
+    ],
+    "exampleEn": "A Beirut language student learns the root k-t-b, then recognises kitāb on a shop sign, maktab on an office door and maktaba on a library plaque within a single walk through the city.",
+    "qualificationEn": "The root system is central to Arabic but not every word is transparently derived from a three-consonant root: loanwords and some frequent words fall outside the pattern, and dialects add their own forms.",
+    "expression": {
+      "original": "كَتَبَ",
+      "transliteration": "kataba",
+      "language": "العربية",
+      "glossEn": "he wrote"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Semitic root",
+        "url": "https://en.wikipedia.org/wiki/Semitic_root"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic grammar",
+        "url": "https://en.wikipedia.org/wiki/Arabic_grammar"
+      }
+    ]
+  },
+  {
+    "id": "arb-052",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Diglossia: the news is in one language and the kitchen in another",
+    "facts": [
+      "Arabic has a prestigious written and formal variety, usually called Modern Standard Arabic, and regional spoken varieties that differ in grammar, vocabulary and pronunciation.",
+      "A news bulletin, a university lecture and a government form use the standard; a family argument, a football chant and a shop negotiation use the dialect.",
+      "The two are not separate languages for most speakers, but the gap is wide enough that children learn the standard largely through schooling.",
+      "Speakers move along a continuum, mixing standard phrases into dialect and dialect into formal speech depending on audience and topic.",
+      "The phenomenon was named 'diglossia' by the linguist Charles Ferguson in 1959, using Arabic as one of his main examples."
+    ],
+    "exampleEn": "An Egyptian doctor explains a diagnosis to a patient in dialect, then dictates the same diagnosis into a medical record in standard Arabic, switching grammar and vocabulary without leaving the room.",
+    "qualificationEn": "The gap between standard and dialect differs by country and by speaker: television presenters, preachers and teachers often use a mixed register, and some dialects are closer to the standard than others.",
+    "expression": {
+      "original": "أريد أن أذهب",
+      "transliteration": "urīdu an adhhaba",
+      "language": "العربية",
+      "glossEn": "I want to go (standard Arabic)"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Diglossia",
+        "url": "https://en.wikipedia.org/wiki/Diglossia"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic",
+        "url": "https://en.wikipedia.org/wiki/Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-053",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "IQ"
+    ],
+    "continent": "asia",
+    "region": "Mesopotamia",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Aku and ma aku: Iraqi Arabic's everyday existence",
+    "facts": [
+      "Iraqi Arabic uses 'aku' for 'there is' and 'ma aku' for 'there is not', forms that are rare or absent in standard Arabic.",
+      "The words appear constantly in speech: 'aku shi?' ('is there anything?'), 'ma aku mushkila' ('there is no problem').",
+      "Iraqi Arabic also uses the prefix 'da-' for present actions and a distinctive pronunciation of qaf as g in many words.",
+      "The dialect has absorbed vocabulary from Turkish, Persian, Kurdish and English, reflecting the country's layered history.",
+      "Baghdadi speech is not the same as southern or Mosuli speech, and Iraqis can often place a speaker by a handful of words."
+    ],
+    "exampleEn": "A Baghdad shopkeeper tells a customer 'ma aku' when the item is out of stock, then adds 'aku bukra' ('there is tomorrow'), and the customer understands that a delivery may come the next day.",
+    "qualificationEn": "Iraqi Arabic is not uniform: Baghdad, Basra, Mosul and the Kurdish regions have distinct varieties, and the spelling of dialect words in Latin letters varies widely.",
+    "expression": {
+      "original": "أكو",
+      "transliteration": "aku",
+      "language": "العربية العراقية",
+      "glossEn": "there is"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mesopotamian Arabic",
+        "url": "https://en.wikipedia.org/wiki/Mesopotamian_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic",
+        "url": "https://en.wikipedia.org/wiki/Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-054",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "YE"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Ma shi: Yemeni Arabic's old-fashioned 'there isn't'",
+    "facts": [
+      "Yemeni Arabic uses 'ma shi' for 'there is not' and 'shi' for 'a thing', a construction that preserves features older than the dialects of the Gulf and Levant.",
+      "The negative is often built as ma plus the verb or particle, and the shi element reinforces the negation.",
+      "Yemeni speech keeps many classical features in vocabulary and pronunciation, especially in the highlands and in Hadhramaut.",
+      "The dialect varies enormously: Sanaani, Taizi, Hadhrami and Tihami varieties can be mutually difficult for Yemenis from different regions.",
+      "Yemeni poetry and songs use dialect forms that are close to the everyday language, which helps keep the old vocabulary alive."
+    ],
+    "exampleEn": "A Sanaa taxi driver tells a passenger 'ma shi banzin' ('there is no petrol') and points to the next station; the passenger understands both the words and the implication that the fare may need to change.",
+    "qualificationEn": "Yemeni Arabic is a family of dialects rather than one variety, and the 'ma shi' pattern is not equally common everywhere; formal writing and news continue to use standard Arabic.",
+    "expression": {
+      "original": "ما شي",
+      "transliteration": "mā shī",
+      "language": "العربية اليمنية",
+      "glossEn": "there is not / there isn't any"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Yemeni Arabic",
+        "url": "https://en.wikipedia.org/wiki/Yemeni_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic",
+        "url": "https://en.wikipedia.org/wiki/Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-055",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "SD"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Shinu? Sudanese Arabic's short question",
+    "facts": [
+      "Sudanese Arabic uses 'shinu' for 'what?', a compressed form that is one of the dialect's most recognisable words.",
+      "The dialect pronounces jim as g and qaf as g in many words, and it has absorbed vocabulary from Nubian, Beja and other Sudanese languages.",
+      "Sudanese speech is often described as slower and more sing-song than Egyptian Arabic, with distinctive greetings such as 'kefnak?' and 'kefik?'.",
+      "The dialect is the everyday language of Khartoum and much of the north, while southern Sudan has other languages and Juba Arabic as a lingua franca.",
+      "Sudanese songs and poetry frequently use dialect, and radio presenters switch between dialect and standard Arabic depending on the programme."
+    ],
+    "exampleEn": "A Khartoum market seller calls out 'shinu ya bashmuhandis?' ('what do you need, engineer?') to a regular customer, using the dialect's habit of adding a joking title to the greeting.",
+    "qualificationEn": "Sudanese Arabic covers a family of regional varieties, and the country's linguistic map includes Nubian, Beja, Fur and many other languages; 'shinu' is not equally common in every region.",
+    "expression": {
+      "original": "شنو",
+      "transliteration": "shinu",
+      "language": "العربية السودانية",
+      "glossEn": "what?"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Sudanese Arabic",
+        "url": "https://en.wikipedia.org/wiki/Sudanese_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic",
+        "url": "https://en.wikipedia.org/wiki/Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-056",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "TN"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Barcha: Tunisian Arabic's word for plenty",
+    "facts": [
+      "Barcha means 'a lot' or 'very much' in Tunisian Arabic, and it is used as an intensifier in everyday speech.",
+      "Tunisian Arabic is distinctive in the Maghreb for its heavy borrowing from French, Italian and Berber, and for its fast, clipped pronunciation.",
+      "Speakers often code-switch mid-sentence between Tunisian Arabic, French and standard Arabic, and the choice signals education, class or humour.",
+      "The dialect is not usually written in official contexts, so the same word may appear in many spellings when Tunisians text each other.",
+      "Tunisian television and music have spread some dialect words across the region, but barcha remains a marker of Tunisian identity."
+    ],
+    "exampleEn": "A Tunisian friend asks how the wedding was and gets the answer 'barcha barcha' ('very, very much'); the repetition is the joke, and the speaker switches into French for the next sentence about the food.",
+    "qualificationEn": "Tunisian Arabic is one dialect within a varied Maghrebi continuum, and barcha is not standard Arabic; Moroccans and Algerians may use different words for 'a lot'.",
+    "expression": {
+      "original": "برشة",
+      "transliteration": "barcha",
+      "language": "العربية التونسية",
+      "glossEn": "a lot"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Tunisian Arabic",
+        "url": "https://en.wikipedia.org/wiki/Tunisian_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic",
+        "url": "https://en.wikipedia.org/wiki/Arabic"
+      }
+    ]
+  },
+  {
+    "id": "arb-057",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "MA"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar",
+      "fr"
+    ],
+    "titleEn": "Darija runs on two grammars at once",
+    "facts": [
+      "Moroccan Arabic, called Darija, is the everyday spoken language of most Moroccans, while Modern Standard Arabic dominates official writing and formal speech.",
+      "Darija has absorbed a large French vocabulary from the protectorate period and a layer of Spanish in the north, plus Amazigh words from the languages spoken before Arabic arrived.",
+      "Code-switching is normal: a single sentence may contain Darija grammar, French nouns, Arabic connective phrases and an English brand name.",
+      "Moroccans write Darija in Arabic script, in Latin script with numbers for Arabic sounds, or not at all, and advertising often mixes scripts.",
+      "The dialect has no single standard, so spelling and vocabulary differ between Casablanca, Fez, Tangier and the south."
+    ],
+    "exampleEn": "A Casablanca office worker tells a colleague 'wāsh bghīti n-dīr l-i rendez-vous?' ('do you want me to make an appointment?'), with the French word embedded in a Darija sentence and no pause for the switch.",
+    "qualificationEn": "Darija is not a single uniform dialect, and many Moroccans switch between several registers during one day; literacy in standard Arabic still shapes formal and religious speech.",
+    "expression": {
+      "original": "واش بغيتي؟",
+      "transliteration": "wāsh bghīti?",
+      "language": "الدارجة المغربية",
+      "glossEn": "do you want?"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Moroccan Arabic",
+        "url": "https://en.wikipedia.org/wiki/Moroccan_Arabic"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Code-switching",
+        "url": "https://en.wikipedia.org/wiki/Code-switching"
+      }
+    ]
+  },
+  {
+    "id": "arb-058",
+    "category": "languages",
+    "contentType": "language",
+    "countries": [
+      "IQ"
+    ],
+    "continent": "asia",
+    "region": "Mesopotamia",
+    "community": "Kurds",
+    "languages": [
+      "ku",
+      "ar"
+    ],
+    "titleEn": "Silaw: a Kurdish hello written in Arabic letters",
+    "facts": [
+      "Sorani is a Kurdish dialect spoken mainly in Iraq and western Iran, and it is written in a modified Arabic script, unlike the Latin-script Kurmanji of Turkey and Syria.",
+      "The everyday greeting 'silaw' means 'hello' or 'be well', and it is used across Sorani-speaking areas alongside the Arabic 'salam'.",
+      "Sorani has its own literary tradition, with poetry, newspapers and school textbooks, and it is an official language of the Kurdistan Region of Iraq.",
+      "Kurdish is an Indo-European language, so its grammar is not related to Arabic even though the two share vocabulary and script.",
+      "Many Iraqi Kurds are bilingual in Sorani and Arabic, and code-switching between them is common in offices and universities."
+    ],
+    "exampleEn": "A student in Erbil greets a professor with 'silaw', then continues the conversation in Arabic when the professor asks about a form written in Arabic; the two languages share the sentence without friction.",
+    "qualificationEn": "Kurdish is not a single language, and Sorani speakers may not easily understand Kurmanji; Arabic-script Sorani is also different from the Kurdish spoken in Turkey and Syria.",
+    "expression": {
+      "original": "سڵاو",
+      "transliteration": "silaw",
+      "language": "کوردی",
+      "glossEn": "hello"
+    },
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Central Kurdish",
+        "url": "https://en.wikipedia.org/wiki/Central_Kurdish"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Kurdish language",
+        "url": "https://en.wikipedia.org/wiki/Kurdish_language"
+      }
+    ]
+  },
+  {
+    "id": "arb-059",
+    "category": "family-and-friendship",
+    "contentType": "note",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Mahr: the marriage payment that is not a price",
+    "facts": [
+      "Mahr is the payment a groom owes the bride under an Islamic marriage contract, and it can be paid in cash, gold, property or any agreed value.",
+      "It is usually split into an advance portion paid at the wedding and a deferred portion payable if the marriage ends or the husband dies.",
+      "The mahr belongs to the bride personally, not to her father, and it is recorded in the written contract.",
+      "It is often described as a bride price in English, but it is a right of the bride rather than a purchase of her, and it can be modest or symbolic.",
+      "Negotiations over mahr are a normal part of Egyptian and wider Arab marriage talks, and inflated demands have become a public complaint."
+    ],
+    "exampleEn": "At a Cairo engagement, the two families agree on a mahr of a gold set plus a deferred sum recorded in the contract; the bride's mother notes the figure in a notebook, and the imam will read it aloud at the signing.",
+    "qualificationEn": "Mahr practice varies widely by country, class and family, and it is not the same as the wedding expenses or the dowry brought by the bride; some couples agree on a token amount.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mahr",
+        "url": "https://en.wikipedia.org/wiki/Mahr"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Marriage in Islam",
+        "url": "https://en.wikipedia.org/wiki/Marriage_in_Islam"
+      }
+    ]
+  },
+  {
+    "id": "arb-060",
+    "category": "family-and-friendship",
+    "contentType": "detail",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The kunya: a parent renamed after a child",
+    "facts": [
+      "A kunya is a teknonymy: a person is addressed as Abu (father of) or Umm (mother of) followed by the name of the eldest child, usually the son.",
+      "It is a mark of respect and familiarity, and using it instead of a first name can be warmer or more formal depending on the relationship.",
+      "Parents acquire the kunya after the birth of their first child, and it may change if the child's name is changed or if a later child becomes better known.",
+      "The device is also used as a pseudonym in politics and war, and many public figures are known mainly by their kunya.",
+      "A childless adult may still be given a kunya as a courtesy, and women often use one publicly even when their own name is well known."
+    ],
+    "exampleEn": "A Riyadh office worker who has always been called Saad is addressed as 'Abu Faisal' after his son is born; colleagues switch within days, and only his mother still uses his first name.",
+    "qualificationEn": "Kunya use varies by region and generation, and younger urban Saudis may use first names more often; the choice of the eldest child's name is a convention rather than a rule.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Kunya (Arabic)",
+        "url": "https://en.wikipedia.org/wiki/Kunya_(Arabic)"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic name",
+        "url": "https://en.wikipedia.org/wiki/Arabic_name"
+      }
+    ]
+  },
+  {
+    "id": "arb-061",
+    "category": "family-and-friendship",
+    "contentType": "note",
+    "countries": [
+      "EG",
+      "SA"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The Eid visit: who goes to whom, and in what order",
+    "facts": [
+      "Eid al-Fitr follows Ramadan, and Eid al-Adha follows the pilgrimage season; both begin with a morning prayer and a round of family visits.",
+      "The usual order is grandparents first, then parents and siblings, then aunts, uncles and close friends, with the eldest relatives receiving visits rather than making them.",
+      "Children receive Eidi, cash gifts that can be a significant sum for a child and a source of competition among cousins.",
+      "In Egypt many families visit cemeteries before or after Eid to clean graves and recite Quran, a custom that mixes celebration with mourning.",
+      "The visit is short and formulaic: greetings, sweets, tea, a report on the family's news, and a promise to meet again; staying too long is a minor social error."
+    ],
+    "exampleEn": "On the first morning of Eid in Cairo, a family drives to the grandmother's flat at nine, eats kahk and drinks tea, then makes two shorter visits to uncles before lunch; the children count their Eidi in the car.",
+    "qualificationEn": "Eid visiting customs differ between the two Eids and between countries, and many families now spread visits over several days or replace them with phone calls; the cemetery visit is common in Egypt but not universal.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Eid al-Fitr",
+        "url": "https://en.wikipedia.org/wiki/Eid_al-Fitr"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Eid al-Adha",
+        "url": "https://en.wikipedia.org/wiki/Eid_al-Adha"
+      }
+    ]
+  },
+  {
+    "id": "arb-062",
+    "category": "food-and-hospitality",
+    "contentType": "detail",
+    "countries": [
+      "SA"
+    ],
+    "continent": "asia",
+    "region": "Arabian Peninsula",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The cup that is never filled: qahwa service",
+    "facts": [
+      "Arabic coffee, qahwa, is brewed from lightly roasted beans with cardamom and sometimes saffron or cloves, and it is served in small handleless cups called finjan.",
+      "It is poured from a long-spouted dallah, always with the right hand, and the cup is filled only a third full so that the guest can drink it hot and accept a refill.",
+      "The serving order follows seniority and status, and it is the youngest or a servant who carries the dallah, not the host.",
+      "A guest signals that they have had enough by shaking the cup gently from side to side; handing the cup back full is a silent refusal.",
+      "Qahwa is served at weddings, funerals, business meetings and ordinary visits, and the ritual is as important as the drink."
+    ],
+    "exampleEn": "At a funeral in Riyadh, a boy walks the row of seated men with a dallah and a stack of cups; each man takes one with his right hand, drinks, and shakes the cup when he is finished, and the boy moves on without a word.",
+    "qualificationEn": "Coffee ritual varies across the Gulf and the Levant: cardamom-heavy qahwa is typical of the Gulf, while Levantine coffee is usually served in larger cups and without cardamom; Turkish-style coffee is common in cities.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Arabic coffee",
+        "url": "https://en.wikipedia.org/wiki/Arabic_coffee"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Dallah (coffee pot)",
+        "url": "https://en.wikipedia.org/wiki/Dallah_(coffee_pot)"
+      }
+    ]
+  },
+  {
+    "id": "arb-063",
+    "category": "food-and-hospitality",
+    "contentType": "feature",
+    "countries": [
+      "JO"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Mansaf: one platter, many hands",
+    "facts": [
+      "Mansaf is Jordan's national dish: lamb cooked in jameed, a hard dried yoghurt, and served over rice and thin shrak bread.",
+      "It is traditionally eaten from a single large platter, with guests using their right hand to roll rice and meat into a ball.",
+      "The dish is the standard hospitality meal for weddings, funerals, tribal gatherings and religious holidays, and serving it signals that the host is honouring the guests.",
+      "The jameed is made by salting and drying goat's or sheep's milk, then soaking and blending it into the cooking liquid.",
+      "A whole lamb on top of the rice is the most prestigious presentation, and the best pieces are offered to the most senior guest."
+    ],
+    "exampleEn": "At a Jordanian wedding in Karak, the host's family sets down a platter for eight men; an uncle tears the meat and rolls rice, the eldest guest is offered the first bite, and the meal ends with tea and thanks to the host's ancestors.",
+    "qualificationEn": "Mansaf is strongly associated with Jordan but is also eaten in parts of Syria and Palestine; the dish's prestige and the size of the gathering depend on the family and the occasion, and younger urban families sometimes serve it plated.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mansaf",
+        "url": "https://en.wikipedia.org/wiki/Mansaf"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Jordanian cuisine",
+        "url": "https://en.wikipedia.org/wiki/Jordanian_cuisine"
+      }
+    ]
+  },
+  {
+    "id": "arb-064",
+    "category": "food-and-hospitality",
+    "contentType": "feature",
+    "countries": [
+      "LB"
+    ],
+    "continent": "asia",
+    "region": "Levant",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Mezze is a conversation, not a starter",
+    "facts": [
+      "Mezze is a spread of many small dishes served at the start of a Levantine meal or as the meal itself, with hummus, mutabbal, tabbouleh, kibbeh, pickles and olives as staples.",
+      "In Lebanon and Syria it is often eaten with arak, an aniseed spirit diluted with water, and the meal can last for hours.",
+      "The dishes are placed in the centre of the table and shared, and the host keeps adding plates until the guests refuse.",
+      "Mezze is a restaurant institution as well as a home practice, and Beirut's restaurants compete on the number and quality of cold and hot dishes.",
+      "The word is used across the region, but its content and order differ: in Greece and Turkey, meze is a smaller accompaniment to drinks rather than the main event."
+    ],
+    "exampleEn": "A Sunday lunch in a Lebanese village begins with twelve cold dishes and a bottle of arak; the men talk and eat slowly, the host's mother sends out hot kibbeh in rounds, and nobody mentions the main course until two hours have passed.",
+    "qualificationEn": "Mezze is not uniform across the Levant, and its role changes between home and restaurant; a home meal may have only three or four dishes, while a restaurant mezze can run to twenty.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Meze",
+        "url": "https://en.wikipedia.org/wiki/Meze"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arak (drink)",
+        "url": "https://en.wikipedia.org/wiki/Arak_(drink)"
+      }
+    ]
+  },
+  {
+    "id": "arb-065",
+    "category": "food-and-hospitality",
+    "contentType": "scene",
+    "countries": [
+      "MA"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Pouring mint tea from a height",
+    "facts": [
+      "Maghrebi mint tea is green tea with fresh spearmint and a large amount of sugar, and it is the standard drink of hospitality in Morocco.",
+      "It is poured from a height so that the stream aerates the tea and creates a thin foam, and the pour is a performance that guests watch.",
+      "The usual gesture is three glasses: the first is said to be bitter like life, the second sweet like love, and the third gentle like death.",
+      "The tea is served in small decorated glasses, and refusing it or commenting on its sweetness is a social statement.",
+      "Families buy mint by the bunch at the market, and the quality of the tea and the quantity of sugar are measures of how the host values the guest."
+    ],
+    "exampleEn": "On a rooftop in Fez, the host lifts the teapot a metre above the glass, pours a long stream, and hands the first glass to the oldest guest; the foam settles, and the conversation resumes only after everyone has drunk.",
+    "qualificationEn": "The three-glass explanation is a popular saying rather than a rule, and the strength and sweetness of the tea vary by region and family; in Algeria and Tunisia the same ritual exists with local variations.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Maghrebi mint tea",
+        "url": "https://en.wikipedia.org/wiki/Maghrebi_mint_tea"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Morocco",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Morocco"
+      }
+    ]
+  },
+  {
+    "id": "arb-066",
+    "category": "food-and-hospitality",
+    "contentType": "feature",
+    "countries": [
+      "MA",
+      "DZ",
+      "TN",
+      "LY"
+    ],
+    "continent": "africa",
+    "region": "Maghreb",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Couscous belongs to Friday",
+    "facts": [
+      "Couscous is steamed semolina served with meat, vegetables and a broth, and in the Maghreb it is traditionally the Friday lunch after the mosque.",
+      "The grain is rolled by hand from semolina and water, then steamed three times, which makes it light and separate rather than sticky.",
+      "Families eat from a shared platter, and the cook's skill is judged by the fineness of the grain and the balance of the broth.",
+      "Each country has its own versions: Moroccan couscous is often sweeter and uses seven vegetables, Algerian and Tunisian versions differ in spicing and in the meat used.",
+      "The dish is also a diaspora staple, and Friday couscous in Paris or Marseille is a way of keeping the family calendar."
+    ],
+    "exampleEn": "In a Casablanca house, the grandmother steams the couscous over the broth while the men return from Friday prayer; the platter is placed in the middle of the table, and everyone eats from the same mound with a spoon or by hand.",
+    "qualificationEn": "Couscous is eaten on other days too, and the Friday tradition is strongest in Morocco, Algeria and Tunisia; the recipe and the vegetables change with the season and the family's budget.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Couscous",
+        "url": "https://en.wikipedia.org/wiki/Couscous"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Maghreb",
+        "url": "https://en.wikipedia.org/wiki/Maghreb"
+      }
+    ]
+  },
+  {
+    "id": "arb-067",
+    "category": "traditions",
+    "contentType": "scene",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "The fanous: a lantern children carry through Ramadan",
+    "facts": [
+      "Fanous Ramadan is a lantern associated with the month of Ramadan, and it is especially linked to Egypt, where the tradition is said to go back to the Fatimid period.",
+      "Children carry the lanterns through the streets after iftar, sing Ramadan songs and compare designs; the classic form is coloured glass and metal.",
+      "The most famous song, 'Wahawi ya wahawi', is sung by children during the month and has dozens of verses.",
+      "Modern fanous are often battery-powered plastic, but craftsmen in Cairo still make the traditional glass and tin versions for wealthier buyers.",
+      "Lanterns also decorate balconies, shop windows and mosque courtyards, and the first night of Ramadan is marked by their appearance."
+    ],
+    "exampleEn": "On the first night of Ramadan in a Cairo neighbourhood, a grandmother gives her grandson a red-and-green glass fanous; he walks the alley with friends, singing the 'wahawi' song, and the adults sit on the doorstep watching.",
+    "qualificationEn": "The fanous is an Egyptian tradition that has spread across the Arab world, but its form and importance vary; in some countries lanterns are decorative only, and many families now use LED versions.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Fanous",
+        "url": "https://en.wikipedia.org/wiki/Fanous"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Ramadan",
+        "url": "https://en.wikipedia.org/wiki/Ramadan"
+      }
+    ]
+  },
+  {
+    "id": "arb-068",
+    "category": "traditions",
+    "contentType": "feature",
+    "countries": [
+      "KW",
+      "BH",
+      "SA",
+      "QA"
+    ],
+    "continent": "asia",
+    "region": "Gulf",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Gargee'an: the door-to-door nights of Ramadan",
+    "facts": [
+      "Gargee'an is a Gulf celebration in which children dress in traditional clothes and go door to door on the 13th, 14th and 15th nights of Ramadan.",
+      "Neighbours fill their bags with sweets, nuts and coins, and the children sing a short song that names the house and asks for treats.",
+      "The custom is strongest in Kuwait, Bahrain, eastern Saudi Arabia and Qatar, and it has a Sha'ban counterpart in some communities.",
+      "Households prepare baskets of sweets in advance, and the size of the bag a child brings home is a small marker of neighbourhood generosity.",
+      "In Iraq, a related tradition is called Girgian or Qarqe'an, with similar door-to-door visits and songs."
+    ],
+    "exampleEn": "In a Kuwaiti neighbourhood on the 14th night of Ramadan, a group of children in embroidered clothes knock on doors, sing 'gargee'an, gargee'an', and come home with bags of nuts and sweets that their mothers sort on the kitchen table.",
+    "qualificationEn": "Gargee'an is a Gulf tradition with local names and dates, and not every family participates; in mixed expatriate neighbourhoods the door-to-door practice may be limited to Gulf households.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Gargee'an",
+        "url": "https://en.wikipedia.org/wiki/Gargee%27an"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Culture of Eastern Arabia",
+        "url": "https://en.wikipedia.org/wiki/Culture_of_Eastern_Arabia"
+      }
+    ]
+  },
+  {
+    "id": "arb-069",
+    "category": "traditions",
+    "contentType": "feature",
+    "countries": [
+      "EG"
+    ],
+    "continent": "africa",
+    "region": "Nile Valley",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Mawlid: the saint's birthday and the street fair",
+    "facts": [
+      "Mawlid is the celebration of the Prophet Muhammad's birthday on 12 Rabi al-Awwal, observed across the Muslim world with public holidays, processions and sweets.",
+      "Egypt adds a second layer of mawlids for local saints, when entire neighbourhoods gather at a shrine with music, food stalls and rides.",
+      "The Cairo mawlid season includes famous celebrations such as Sayyida Zeinab and al-Hussein, where Sufi orders chant and families camp for days.",
+      "Halawet al-mawlid, a sweet made of semolina, nuts and syrup, and a decorated doll made of sugar or felt are sold in the streets for children.",
+      "Some Sunni reformist movements reject mawlid celebrations as an innovation, while Sufi orders treat them as central acts of devotion."
+    ],
+    "exampleEn": "During the mawlid of Sayyida Zeinab in Cairo, a family buys halawet al-mawlid and a sugar doll for the children, walks through the crowded square and stops to listen to a Sufi chanting group outside the mosque.",
+    "qualificationEn": "Mawlid practices differ widely between countries and between Sunni and Shia communities, and not all Muslims celebrate it; the Egyptian saint mawlids are a local tradition that is distinct from the Prophet's birthday.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Mawlid",
+        "url": "https://en.wikipedia.org/wiki/Mawlid"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Cairo",
+        "url": "https://en.wikipedia.org/wiki/Cairo"
+      }
+    ]
+  },
+  {
+    "id": "arb-070",
+    "category": "traditions",
+    "contentType": "feature",
+    "countries": [
+      "IQ"
+    ],
+    "continent": "asia",
+    "region": "Mesopotamia",
+    "community": null,
+    "languages": [
+      "ar"
+    ],
+    "titleEn": "Ashura: the street becomes a mourning procession",
+    "facts": [
+      "Ashura falls on the 10th of Muharram and commemorates the death of Hussein, the Prophet's grandson, at Karbala in 680.",
+      "In Iraq, Shia communities mark it with processions, black banners, latmiya poetry and ritual mourning, and some men perform tatbir, self-flagellation with blades.",
+      "Karbala and Najaf receive millions of pilgrims, and many Iraqis walk for days to reach the shrines.",
+      "Arba'een, forty days after Ashura, is one of the largest annual pilgrimages in the world, with processions and free food stations along the route.",
+      "Sunni Muslims generally mark Ashura with fasting, and the difference in practice is one of the visible distinctions between the two communities."
+    ],
+    "exampleEn": "In a Baghdad street during Muharram, a procession of men in black beats their chests in rhythm while a loudspeaker carries a latmiya poem; a stall beside them hands out water and dates to anyone walking past, regardless of sect.",
+    "qualificationEn": "Ashura practice varies sharply between Shia communities in Iraq, Iran, Lebanon and the Gulf, and between Sunni and Shia observance; media images of self-flagellation are only one part of a much broader ritual calendar.",
+    "expression": null,
+    "sources": [
+      {
+        "organization": "Wikipedia",
+        "title": "Ashura",
+        "url": "https://en.wikipedia.org/wiki/Ashura"
+      },
+      {
+        "organization": "Wikipedia",
+        "title": "Arba'in",
+        "url": "https://en.wikipedia.org/wiki/Arba%27in"
+      }
+    ]
+  }
+]

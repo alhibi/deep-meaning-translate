@@ -1,270 +1,350 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CultureListPage } from "@/lib/culture/adapter";
 import { CultureDiscovery } from "./CultureDiscovery";
 import { COPY } from "./copy";
-import { makeAdapter, makeEntry, makeFacets, makeMedia, makePage } from "./testFixtures";
+import { MAX_PAGES, MORE_COOLDOWN_MS } from "./useDiscovery";
+import { createFakeAdapter, makeArticle, makeEntry, text } from "./testFixtures";
 
-/**
- * Section-level behaviour: the first paint, every calm state, the controlled browsing loop,
- * debounced search, filters, the saved view and the Arabic/RTL shell.
- */
-
-const a = makeEntry({ id: "alpha", category: "objects", countries: ["MA"] });
-const b = makeEntry({ id: "beta", category: "music", countries: ["JP"] });
-const c = makeEntry({ id: "gamma", category: "language", countries: ["EG"] });
-const d = makeEntry({ id: "delta", category: "crafts", countries: ["TR"] });
-
-function cards(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>("article")];
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
-class FakeIntersectionObserver implements IntersectionObserver {
-  static instances: FakeIntersectionObserver[] = [];
-  readonly root = null;
-  readonly rootMargin = "";
-  readonly scrollMargin = "";
-  readonly thresholds: readonly number[] = [];
-  private readonly callback: IntersectionObserverCallback;
-  constructor(callback: IntersectionObserverCallback) {
-    this.callback = callback;
-    FakeIntersectionObserver.instances.push(this);
-  }
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
-  takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
-  trigger(): void {
-    this.callback(
-      [{ isIntersecting: true } as IntersectionObserverEntry],
-      this as unknown as IntersectionObserver,
-    );
-  }
-}
+const section = () => screen.getByRole("region", { hidden: true });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-  FakeIntersectionObserver.instances = [];
+  document.body.style.overflow = "";
 });
 
-describe("section identity", () => {
-  it("opens with a quiet label, one sentence and the first small batch", async () => {
-    const adapter = makeAdapter({ pages: [makePage([a, b], "c1")] });
-    render(<CultureDiscovery adapter={adapter} locale="en" pageSize={2} />);
-    expect(screen.getByText(COPY.en.sectionLabel)).toBeInTheDocument();
-    expect(screen.getByText(COPY.en.introLine)).toBeInTheDocument();
-    await waitFor(() => expect(cards()).toHaveLength(2));
-    const more = screen.getByRole("button", { name: COPY.en.more });
-    expect(more).toBeInTheDocument();
-    expect(more.className).toContain("min-h-11");
-    const search = screen.getByRole("searchbox", { name: COPY.en.searchLabel });
-    expect(search.closest("label")?.className).toContain("h-11");
-  });
-
-  it("asks for the small default batch and never mounts the whole catalog", async () => {
-    const adapter = makeAdapter({ pages: [makePage([a, b, c], "c1")] });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(cards()).toHaveLength(3));
-    expect(adapter.calls.pages[0]?.limit).toBe(8);
-  });
-
-  it("adds no continuous animation and no hard-coded colour", async () => {
-    const adapter = makeAdapter({ pages: [makePage([a, b])] });
-    const { container } = render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(cards()).toHaveLength(2));
-    const section = container.querySelector("section");
-    if (!section) throw new Error("no section");
-    // Reduced motion: the section has nothing to pause because nothing animates.
-    expect(section.querySelectorAll('[class*="animate-"]')).toHaveLength(0);
-    expect(section.querySelectorAll('[class*="transition-transform"]')).toHaveLength(0);
-    // Three themes: component colour comes from semantic tokens only.
-    expect(section.innerHTML).not.toMatch(/#[0-9a-fA-F]{3,8}/);
-    expect(section.innerHTML).not.toMatch(/\b(?:rgb|hsl|oklch)\(/);
-  });
-
-  it("is RTL and Arabic-typographic in the Arabic interface", async () => {
-    const adapter = makeAdapter({ pages: [makePage([a])] });
-    render(<CultureDiscovery adapter={adapter} locale="ar" pageSize={2} />);
-    const section = document.querySelector("section");
-    expect(section).toHaveAttribute("dir", "rtl");
-    expect(section).toHaveAttribute("lang", "ar");
-    expect(screen.getByText(COPY.ar.sectionLabel)).toBeInTheDocument();
-    await waitFor(() => expect(cards()).toHaveLength(1));
-    expect(screen.getAllByRole("button", { name: COPY.ar.saveLabel }).length).toBeGreaterThan(0);
-  });
-
-  it("features one discovery above the feed", async () => {
-    const featured = makeEntry({
-      id: "featured",
-      category: "architecture",
-      media: makeMedia(),
-      hasMedia: true,
+describe("the library section", () => {
+  it("shows a quiet loading state, then the mixed feed", async () => {
+    const pending = deferred<CultureListPage>();
+    const fake = createFakeAdapter({
+      loadPage: () => pending.promise,
+      loadFeatured: async () => null,
     });
-    const adapter = makeAdapter({ pages: [makePage([a])], featured });
-    render(<CultureDiscovery adapter={adapter} locale="en" pageSize={2} />);
-    await waitFor(() => expect(cards().length).toBe(2));
-    expect(screen.getByText(COPY.en.featuredLabel)).toBeInTheDocument();
-    expect(screen.getByRole("img")).toHaveAttribute("loading", "lazy");
-  });
-});
-
-describe("states", () => {
-  it("shows a calm loading surface before anything arrives", () => {
-    const adapter = makeAdapter();
-    adapter.loadPage = () => new Promise(() => undefined);
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    expect(screen.getByRole("status")).toHaveTextContent(COPY.en.loading);
-    expect(cards()).toHaveLength(0);
-  });
-
-  it("shows the empty sentence when nothing matches", async () => {
-    const adapter = makeAdapter({ pages: [makePage([])] });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(screen.getByText(COPY.en.empty)).toBeInTheDocument());
-  });
-
-  it("explains a failure calmly and retries into the feed", async () => {
-    const adapter = makeAdapter({ pages: [makePage([a, b])], pageError: "failed" });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(screen.getByText(COPY.en.errorTitle)).toBeInTheDocument());
-    expect(screen.getByText(COPY.en.errorBody)).toBeInTheDocument();
-    adapter.setPageError(null);
-    fireEvent.click(screen.getByRole("button", { name: COPY.en.retry }));
-    await waitFor(() => expect(cards()).toHaveLength(2));
-  });
-
-  it("offers the offline wording and keeps saved records available without a network", async () => {
-    const adapter = makeAdapter({
-      pages: [makePage([a, b])],
-      pageError: "offline",
-      online: false,
-      saved: { ids: [a.id], entries: [a] },
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    const root = document.querySelector<HTMLElement>("[data-culture-section]");
+    expect(root?.dataset["state"]).toBe("loading");
+    expect(screen.getByText(COPY.en.loading)).toBeInTheDocument();
+    pending.resolve({
+      items: [makeEntry({ id: "n1" })],
+      total: 1,
     });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(screen.getByText(COPY.en.offlineTitle)).toBeInTheDocument());
-    const pageCalls = adapter.calls.pages.length;
-
-    fireEvent.click(screen.getByRole("button", { name: new RegExp("^" + COPY.en.savedView) }));
-    await waitFor(() => expect(cards()).toHaveLength(1));
-    expect(screen.getByText(COPY.en.savedOnDevice)).toBeInTheDocument();
-    // Opening the saved view never touches the network.
-    expect(adapter.calls.pages.length).toBe(pageCalls);
-  });
-});
-
-describe("controlled browsing", () => {
-  it("loads one more page on request and never renders a duplicate card", async () => {
-    const adapter = makeAdapter({
-      pages: [makePage([a, b], "c1"), makePage([b, c])],
-    });
-    render(<CultureDiscovery adapter={adapter} locale="en" pageSize={2} />);
-    await waitFor(() => expect(cards()).toHaveLength(2));
-    fireEvent.click(screen.getByRole("button", { name: COPY.en.more }));
-    await waitFor(() => expect(cards()).toHaveLength(3));
-    expect(screen.queryByRole("button", { name: COPY.en.more })).not.toBeInTheDocument();
-  });
-
-  it("nudges the next page from the observer, once, within its guards", async () => {
-    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
-    const adapter = makeAdapter({
-      pages: [makePage([a, b], "c1"), makePage([c, d])],
-    });
-    render(<CultureDiscovery adapter={adapter} locale="en" pageSize={2} />);
-    await waitFor(() => expect(cards()).toHaveLength(2));
-    await waitFor(() => expect(FakeIntersectionObserver.instances.length).toBe(1));
-    const observer = FakeIntersectionObserver.instances[0];
-    if (!observer) throw new Error("no observer");
-    act(() => observer.trigger());
-    await waitFor(() => expect(cards()).toHaveLength(4));
-    // A second intersection inside the cooldown must not start another read.
-    act(() => observer.trigger());
-    expect(adapter.calls.pages).toHaveLength(2);
-  });
-});
-
-describe("search and filters", () => {
-  it("debounces search instead of requesting per keystroke", async () => {
-    const adapter = makeAdapter({
-      pages: [makePage([a], "c1"), makePage([b]), makePage([c])],
-    });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(cards()).toHaveLength(1));
-    const input = screen.getByRole("searchbox", { name: COPY.en.searchLabel });
-    fireEvent.change(input, { target: { value: "m" } });
-    fireEvent.change(input, { target: { value: "mu" } });
-    fireEvent.change(input, { target: { value: "mus" } });
-    expect(adapter.calls.pages).toHaveLength(1);
-    await waitFor(() => expect(adapter.calls.pages).toHaveLength(2), { timeout: 1500 });
-    expect(adapter.calls.pages[1]?.search).toBe("mus");
-  });
-
-  it("restarts the feed from the first page when a filter is chosen and can clear it", async () => {
-    const adapter = makeAdapter({
-      pages: [makePage([a], "c1"), makePage([b]), makePage([c])],
-    });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(cards()).toHaveLength(1));
-    fireEvent.change(screen.getByLabelText(COPY.en.filterCategory), {
-      target: { value: "music" },
-    });
-    await waitFor(() => expect(adapter.calls.pages).toHaveLength(2));
-    expect(adapter.calls.pages[1]?.category).toBe("music");
-    expect(adapter.calls.pages[1]?.cursor).toBeUndefined();
-
-    fireEvent.click(screen.getByRole("button", { name: COPY.en.clearFilters }));
-    await waitFor(() => expect(adapter.calls.pages).toHaveLength(3));
-    expect(adapter.calls.pages[2]?.category).toBeUndefined();
-  });
-
-  it("offers filter options from the facets, and still works when the facet read fails", async () => {
-    const adapter = makeAdapter({
-      pages: [makePage([a])],
-      facets: makeFacets(["objects"], ["africa"]),
-    });
-    const first = render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(adapter.calls.facets).toBe(1));
-    const category = screen.getByLabelText(COPY.en.filterCategory);
-    await waitFor(() => expect(category.querySelectorAll("option").length).toBeGreaterThan(1));
-    expect(screen.getByRole("option", { name: /Objects/ })).toBeInTheDocument();
-    first.unmount();
-
-    const failing = makeAdapter({ pages: [makePage([b])], facets: null });
-    render(<CultureDiscovery adapter={failing} locale="en" />);
-    await waitFor(() => expect(failing.calls.facets).toBe(1));
-    const fallback = screen.getByLabelText(COPY.en.filterCategory);
-    expect(fallback.querySelectorAll("option").length).toBeGreaterThan(20);
-  });
-});
-
-describe("saved view", () => {
-  it("toggles a discovery and lists it without any further page request", async () => {
-    const adapter = makeAdapter({
-      pages: [makePage([a, b])],
-      // The port resolves saved ids against locally cached entries; both records are cached here.
-      saved: { ids: [], entries: [a, b] },
-    });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(cards()).toHaveLength(2));
-    const pageCalls = adapter.calls.pages.length;
-
-    fireEvent.click(screen.getAllByRole("button", { name: COPY.en.saveLabel })[0]!);
-    await waitFor(() => expect(adapter.calls.savedToggles).toEqual([a.id]));
-    await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: COPY.en.unsaveLabel }).length).toBe(1),
+    const card = await screen.findByText("A quiet habit");
+    expect(card).toBeInTheDocument();
+    expect(document.querySelector<HTMLElement>("[data-culture-section]")?.dataset["state"]).toBe(
+      "ready",
     );
-
-    fireEvent.click(screen.getByRole("button", { name: new RegExp("^" + COPY.en.savedView) }));
-    await waitFor(() => expect(cards()).toHaveLength(1));
-    expect(adapter.calls.pages.length).toBe(pageCalls);
   });
 
-  it("explains an empty saved view honestly", async () => {
-    const adapter = makeAdapter({ pages: [makePage([a])], saved: { ids: [], entries: [] } });
-    render(<CultureDiscovery adapter={adapter} locale="en" />);
-    await waitFor(() => expect(cards()).toHaveLength(1));
-    fireEvent.click(screen.getByRole("button", { name: new RegExp("^" + COPY.en.savedView) }));
-    await waitFor(() => expect(screen.getByText(COPY.en.savedEmpty)).toBeInTheDocument());
+  it("shows empty, error, offline and catalogue-unavailable states with a way back", async () => {
+    // empty
+    const empty = createFakeAdapter({
+      loadPage: async () => ({ items: [], total: 0 }),
+      loadFeatured: async () => null,
+    });
+    const emptyView = render(<CultureDiscovery adapter={empty.adapter} locale="en" />);
+    expect(await screen.findByText(COPY.en.empty)).toBeInTheDocument();
+    emptyView.unmount();
+
+    // error, with a retry that succeeds
+    const retryPage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValue({ items: [makeEntry({ id: "n2" })], total: 1 });
+    const failed = createFakeAdapter({ loadPage: retryPage, loadFeatured: async () => null });
+    const errorView = render(<CultureDiscovery adapter={failed.adapter} locale="en" />);
+    expect(await screen.findByText(COPY.en.errorTitle)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: COPY.en.retry }));
+    expect(await screen.findByText("A quiet habit")).toBeInTheDocument();
+    errorView.unmount();
+
+    // offline
+    const offline = createFakeAdapter({
+      loadPage: async () => {
+        throw new Error("network");
+      },
+      online: false,
+      loadFeatured: async () => null,
+    });
+    const offlineView = render(<CultureDiscovery adapter={offline.adapter} locale="en" />);
+    expect(await screen.findByText(COPY.en.offlineTitle)).toBeInTheDocument();
+    offlineView.unmount();
+
+    // unavailable catalogue
+    const catalog = createFakeAdapter({
+      loadPage: async () => {
+        throw new Error("culture-catalog-unavailable");
+      },
+      loadFeatured: async () => null,
+    });
+    render(<CultureDiscovery adapter={catalog.adapter} locale="en" />);
+    expect(await screen.findByText(COPY.en.catalogTitle)).toBeInTheDocument();
+  });
+
+  it("features one daily reading and never renders a duplicate card", async () => {
+    const feature = makeEntry({ id: "featured-1", contentType: "feature" });
+    const note = makeEntry({ id: "note-1", contentType: "note", title: text("A second note") });
+    const fake = createFakeAdapter({
+      entries: [feature, note],
+      loadFeatured: async () => feature,
+    });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText(COPY.en.featuredLabel);
+    await screen.findByText("A second note");
+    const ids = [...document.querySelectorAll<HTMLElement>("[data-entry-id]")].map(
+      (card) => card.dataset["entryId"],
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.filter((id) => id === "featured-1")).toHaveLength(1);
+  });
+
+  it("debounces search and sends one page request after the person stops typing", async () => {
+    const fake = createFakeAdapter({ loadFeatured: async () => null });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("A note on greetings");
+    expect(fake.loadPage).toHaveBeenCalledTimes(1);
+    const search = screen.getByRole("searchbox", { name: COPY.en.searchLabel });
+    fireEvent.change(search, { target: { value: "g" } });
+    fireEvent.change(search, { target: { value: "gr" } });
+    fireEvent.change(search, { target: { value: "greeting" } });
+    expect(fake.loadPage).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(fake.loadPage).toHaveBeenCalledTimes(2), { timeout: 2000 });
+    const lastQuery = fake.loadPage.mock.calls[1]?.[0] as { search?: string };
+    expect(lastQuery.search).toBe("greeting");
+  });
+
+  it("applies the language filter through the same debounced request", async () => {
+    const fake = createFakeAdapter({ loadFeatured: async () => null });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("A note on greetings");
+    fireEvent.change(screen.getByRole("combobox", { name: COPY.en.filterLanguage }), {
+      target: { value: "ar" },
+    });
+    await waitFor(() => expect(fake.loadPage).toHaveBeenCalledTimes(2), { timeout: 2000 });
+    const lastQuery = fake.loadPage.mock.calls[1]?.[0] as { language?: string };
+    expect(lastQuery.language).toBe("ar");
+  });
+
+  it("guards progressive loading: one page in flight, no duplicate pieces, cursor paging", async () => {
+    const a = makeEntry({ id: "a", contentType: "note", title: text("Piece A") });
+    const b = makeEntry({ id: "b", contentType: "note", title: text("Piece B") });
+    const c = makeEntry({ id: "c", contentType: "note", title: text("Piece C") });
+    const second = deferred<CultureListPage>();
+    let calls = 0;
+    const fake = createFakeAdapter({
+      loadPage: async (query) => {
+        calls += 1;
+        if (!query.cursor) return { items: [a, b], total: 3, nextCursor: "c1" };
+        return second.promise;
+      },
+      loadFeatured: async () => null,
+    });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("Piece A");
+    expect(calls).toBe(1);
+    const more = screen.getByRole("button", { name: new RegExp(COPY.en.more, "i") });
+    // The first page arms a short cooldown; it is not a request storm, it is a reading pause.
+    await waitFor(() => expect(more).not.toBeDisabled(), { timeout: 2000 });
+    fireEvent.click(more);
+    fireEvent.click(more);
+    expect(calls).toBe(2);
+    second.resolve({ items: [b, c], total: 3 });
+    await screen.findByText("Piece C");
+    const ids = [...document.querySelectorAll<HTMLElement>("[data-entry-id]")].map(
+      (card) => card.dataset["entryId"],
+    );
+    expect(ids.filter((id) => id === "b")).toHaveLength(1);
+    expect(ids).toEqual(["a", "b", "c"]);
+    // The cursor is gone, so the feed states its end instead of looping.
+    await screen.findByText(COPY.en.endOfFeed);
+  });
+
+  it("enforces the page cooldown before accepting another explicit load", async () => {
+    const a = makeEntry({ id: "a", contentType: "note", title: text("Piece A") });
+    const b = makeEntry({ id: "b", contentType: "note", title: text("Piece B") });
+    const second = deferred<CultureListPage>();
+    let calls = 0;
+    const fake = createFakeAdapter({
+      loadPage: async (query) => {
+        calls += 1;
+        if (!query.cursor) return { items: [a], total: 2, nextCursor: "c1" };
+        return second.promise;
+      },
+      loadFeatured: async () => null,
+    });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("Piece A");
+    const firstMore = screen.getByRole("button", { name: new RegExp(COPY.en.more, "i") });
+    await waitFor(() => expect(firstMore).not.toBeDisabled(), { timeout: 2000 });
+    fireEvent.click(firstMore);
+    expect(calls).toBe(2);
+    second.resolve({ items: [b], total: 2, nextCursor: "c2" });
+    await screen.findByText("Piece B");
+    const moreButton = screen.getByRole("button", { name: new RegExp(COPY.en.more, "i") });
+    expect(moreButton).toBeDisabled();
+    await waitFor(() => expect(moreButton).not.toBeDisabled(), { timeout: 2000 });
+    fireEvent.click(moreButton);
+    await waitFor(() => expect(calls).toBe(3), { timeout: 2000 });
+  });
+
+  it("opens a saved shelf that is local, immediate and filterable", async () => {
+    const a = makeEntry({ id: "saved-1", contentType: "note", title: text("Kept piece") });
+    const b = makeEntry({ id: "other-1", contentType: "note", title: text("Other piece") });
+    const fake = createFakeAdapter({
+      entries: [a, b],
+      loadFeatured: async () => null,
+    });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("Kept piece");
+    fireEvent.click(
+      screen.getByRole("button", { name: COPY.en.saveAria.replace("{title}", "Kept piece") }),
+    );
+    expect(fake.savedToggle).toHaveBeenCalledWith("saved-1");
+    expect(
+      screen.getByRole("button", { name: COPY.en.savedAria.replace("{title}", "Kept piece") }),
+    ).toBeInTheDocument();
+    const savedTab = document.querySelector<HTMLButtonElement>('[data-culture-view="saved"]');
+    expect(savedTab).toBeTruthy();
+    fireEvent.click(savedTab as HTMLButtonElement);
+    await waitFor(() =>
+      expect(screen.getAllByText(COPY.en.savedOnDevice).length).toBeGreaterThan(0),
+    );
+    expect(screen.getByText("Kept piece")).toBeInTheDocument();
+    expect(screen.queryByText("Other piece")).toBeNull();
+    expect(fake.loadPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the saved shelf's own empty state", async () => {
+    const fake = createFakeAdapter({ loadFeatured: async () => null });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("A note on greetings");
+    fireEvent.click(screen.getByRole("button", { name: "Kept" }));
+    expect(screen.getByText(COPY.en.savedEmpty)).toBeInTheDocument();
+  });
+
+  it("offers another discovery that opens a written piece", async () => {
+    const feature = makeEntry({ id: "featured-1", contentType: "feature" });
+    const note = makeEntry({ id: "note-1", contentType: "note", title: text("A second note") });
+    const article = makeArticle({
+      id: "note-1",
+      contentType: "note",
+      title: text("A second note"),
+    });
+    const fake = createFakeAdapter({
+      entries: [feature, note],
+      loadFeatured: async () => feature,
+      loadItem: async () => article,
+    });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("A second note");
+    fireEvent.click(screen.getByRole("button", { name: COPY.en.anotherDiscovery }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("sets RTL for Arabic and keeps the copy in the interface language", async () => {
+    const fake = createFakeAdapter({
+      loadFeatured: async () => null,
+      loadPage: async () => ({ items: [makeEntry({ id: "ar-1" })], total: 1 }),
+    });
+    const { container } = render(<CultureDiscovery adapter={fake.adapter} locale="ar" />);
+    const root = container.querySelector<HTMLElement>("[data-culture-section]");
+    expect(root?.getAttribute("dir")).toBe("rtl");
+    expect(screen.getByRole("region", { hidden: true })).toBeInTheDocument();
+    expect(screen.getByText(COPY.ar.sectionLabel)).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: COPY.ar.searchLabel })).toBeInTheDocument();
+  });
+
+  it("carries the reduced-motion class contract on its loading surface", () => {
+    const pending = deferred<CultureListPage>();
+    const fake = createFakeAdapter({
+      loadPage: () => pending.promise,
+      loadFeatured: async () => null,
+    });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    const pulses = [...document.querySelectorAll<HTMLElement>(".animate-pulse")];
+    expect(pulses.length).toBeGreaterThan(0);
+    for (const pulse of pulses) expect(pulse.className).toContain("motion-reduce:animate-none");
+    pending.resolve({ items: [], total: 0 });
+  });
+
+  it("never renders an image anywhere in the section", async () => {
+    const fake = createFakeAdapter({ loadFeatured: async () => null });
+    const { container } = render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("A note on greetings");
+    expect(container.querySelectorAll("img, picture, video, iframe")).toHaveLength(0);
+    expect(container.querySelector('[style*="url("]')).toBeNull();
+  });
+});
+
+describe("the page cap", () => {
+  it("stops at MAX_PAGES and says so instead of looping forever", async () => {
+    vi.useFakeTimers();
+    try {
+      const entries = [makeEntry({ id: "cap-0", contentType: "note", title: text("Cap piece 0") })];
+      let calls = 0;
+      const fake = createFakeAdapter({
+        loadPage: async (query) => {
+          calls += 1;
+          const page = calls;
+          return {
+            items: [
+              ...(query.cursor ? [] : entries),
+              ...(query.cursor
+                ? [
+                    makeEntry({
+                      id: "cap-" + String(page),
+                      contentType: "note",
+                      title: text("Cap piece " + String(page)),
+                    }),
+                  ]
+                : []),
+            ],
+            total: 200,
+            // Always a cursor: only the UI's own cap can end this feed.
+            nextCursor: "cursor-" + String(page),
+          };
+        },
+        loadFeatured: async () => null,
+      });
+      render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      for (let page = 1; page < MAX_PAGES; page += 1) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(MORE_COOLDOWN_MS + 20);
+        });
+        const more = screen.getByRole("button", { name: new RegExp(COPY.en.more, "i") });
+        fireEvent.click(more);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10);
+        });
+      }
+      expect(calls).toBe(MAX_PAGES);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(MORE_COOLDOWN_MS + 20);
+      });
+      expect(screen.getByText(COPY.en.endOfFeed)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("section accessibility", () => {
+  it("names the section with a real heading and labels the controls", async () => {
+    const fake = createFakeAdapter({ loadFeatured: async () => null });
+    render(<CultureDiscovery adapter={fake.adapter} locale="en" />);
+    await screen.findByText("A note on greetings");
+    const region = screen.getByRole("region", { name: COPY.en.feedLabel });
+    expect(within(region).getByRole("searchbox")).toBeInTheDocument();
   });
 });

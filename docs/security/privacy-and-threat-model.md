@@ -108,17 +108,19 @@ flowchart LR
   attribution; the resolved label carries "Place name © OpenStreetMap contributors" (rendered in the
   expanded sheet and city picker). Failures degrade to an honest coordinate label or no candidate —
   never an invented city.
-- **Cultural discovery makes no runtime API calls to museums.** The catalog and its three-language
-  metadata are bundled with the app (loaded lazily, cached offline by the service worker). The only
-  third-party contact is the artwork image host `images.metmuseum.org`, allow-listed in
-  `src/lib/culture/media-hosts.json` and in both CSPs (`tests/security/csp-image-hosts.mjs` enforces
-  exact equality and refuses wildcards). That host sees ordinary request metadata (IP) as any image
-  host does; the public page discloses it. Attribution, licence and source URLs are part of every
-  record and are rendered on the card/detail surface.
-- **No model calls for discovery**: ingestion-time machine translation is labelled
+- **The cultural library makes no runtime network calls at all.** It is written editorial content
+  bundled with the app (lazy validated chunks, precached for offline reading); there are no images,
+  no external content hosts and no museum APIs. Browsing sends nothing about the reader. Every
+  article carries its references; a link opens in a new tab only when the reader chooses it.
+- **No model calls and no personal data for discovery**: the corpus is generated once at build time
+  from curated research seeds and public references; runtime contains no generation. No user text,
+  location or browsing behaviour reaches the library. Saved/seen lists stay device-only, bounded and
+  cleared by forget-everything (including their caches).
+
   `provenance: machine-translated`; no user text or browsing behaviour is sent anywhere by the
   discovery section. Saved/seen lists are device-only, bounded, validated on read and cleared by
   "forget everything" (including their in-memory caches).
+
 - **Failure isolation:** a weather or discovery failure never affects translation; both are lazy,
   mounted below the composer, and their refresh/feed work is deferred while the composer is busy.
 
@@ -140,20 +142,20 @@ flowchart LR
 
 ## Verified vs unverified
 
-| Claim | Status |
-| --- | --- |
-| Keys only in server code | VERIFIED by source inspection |
-| No translation text in logs/metrics | VERIFIED by source inspection |
-| Same-origin + schema + size bounds | VERIFIED by source and tests |
-| Model output cannot become HTML | VERIFIED by rendering path |
-| Device stores validated on read | VERIFIED by validators and tests |
-| CSP/headers present in built output | VERIFIED by build output; runtime header check not pen-tested |
-| Production Permissions-Policy allows self-geolocation only | VERIFIED by the generated `_headers` + `tests/security/csp-image-hosts.mjs` |
-| Culture image host allowlist = web CSP = native CSP = runtime validator | VERIFIED by the security gate (negative-tested against drift/wildcard/scheme-wide) |
-| Weather coordinates never written to URLs or logs; POST-only, no-store | VERIFIED by source inspection + route tests + live 405/403/400 probes |
-| Location is opt-in, coarse-rounded and never persisted raw | VERIFIED by unit tests (privacy suite) and by a live browser consent probe; physical GPS not verified (TD48) |
-| "Forget everything" clears weather and culture stores plus their RAM caches | VERIFIED by unit test after D81 |
-| Museum catalogue rights/provenance for the shipped corpus | VERIFIED by the ingestion validator (source URL, CC0-1.0, credit, image allowlist); human legal review NOT_VERIFIED |
-| Prompt-injection resistance | NOT_VERIFIED (design only) |
-| Dependency vulnerabilities | NOT_VERIFIED (no `npm audit` in this audit) |
-| Edge abuse protection | NOT_APPLICABLE to this repo; hosting responsibility |
+| Claim                                                                       | Status                                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Keys only in server code                                                    | VERIFIED by source inspection                                                                                       |
+| No translation text in logs/metrics                                         | VERIFIED by source inspection                                                                                       |
+| Same-origin + schema + size bounds                                          | VERIFIED by source and tests                                                                                        |
+| Model output cannot become HTML                                             | VERIFIED by rendering path                                                                                          |
+| Device stores validated on read                                             | VERIFIED by validators and tests                                                                                    |
+| CSP/headers present in built output                                         | VERIFIED by build output; runtime header check not pen-tested                                                       |
+| Production Permissions-Policy allows self-geolocation only                  | VERIFIED by the generated `_headers` + `tests/security/csp-image-hosts.mjs`                                         |
+| Culture image host allowlist = web CSP = native CSP = runtime validator     | VERIFIED by the security gate (negative-tested against drift/wildcard/scheme-wide)                                  |
+| Weather coordinates never written to URLs or logs; POST-only, no-store      | VERIFIED by source inspection + route tests + live 405/403/400 probes                                               |
+| Location is opt-in, coarse-rounded and never persisted raw                  | VERIFIED by unit tests (privacy suite) and by a live browser consent probe; physical GPS not verified (TD48)        |
+| "Forget everything" clears weather and culture stores plus their RAM caches | VERIFIED by unit test after D81                                                                                     |
+| Museum catalogue rights/provenance for the shipped corpus                   | VERIFIED by the ingestion validator (source URL, CC0-1.0, credit, image allowlist); human legal review NOT_VERIFIED |
+| Prompt-injection resistance                                                 | NOT_VERIFIED (design only)                                                                                          |
+| Dependency vulnerabilities                                                  | NOT_VERIFIED (no `npm audit` in this audit)                                                                         |
+| Edge abuse protection                                                       | NOT_APPLICABLE to this repo; hosting responsibility                                                                 |

@@ -1,161 +1,134 @@
 /**
- * Shared cultural-discovery contract (Phase II).
- *
- * Content is sourced, licensed and traceable. Every display record carries its provenance;
- * machine-translated copy is labelled as such and is never presented as institutional wording.
- * The catalog is large, so the search/filter index and the item bodies live in separate chunks.
+ * The cultural knowledge library: written editorial articles about people, societies,
+ * languages and everyday life. There is no catalogue object here and no media requirement —
+ * the article is the product.
  */
+export const CULTURE_SCHEMA_VERSION = 2;
 
-export const CULTURE_SCHEMA_VERSION = 1;
-
-/** Broad editorial categories. A record has exactly one primary category and optional tags. */
 export const CULTURE_CATEGORIES = [
-  "traditions",
-  "architecture",
-  "indigenous-knowledge",
-  "crafts",
-  "textiles",
-  "food-culture",
-  "ingredients",
-  "music",
-  "dance",
-  "festivals",
-  "storytelling",
-  "language",
-  "untranslatable",
-  "games",
-  "tools",
-  "astronomy",
-  "agriculture",
-  "trade",
-  "landscapes",
-  "medicine-knowledge",
-  "ritual-objects",
-  "endangered-crafts",
-  "design",
   "everyday-life",
-  "objects",
+  "social-behaviour",
+  "languages",
+  "communication",
+  "traditions",
+  "family-and-friendship",
+  "food-and-hospitality",
+  "work-and-education",
+  "cities-and-community",
+  "music-and-dance",
+  "games-and-leisure",
+  "storytelling",
+  "clothing-and-design",
+  "nature-and-seasons",
+  "beliefs-and-folklore",
+  "migration-and-identity",
+  "regional-humour",
+  "cultural-change",
 ] as const;
-
 export type CultureCategory = (typeof CULTURE_CATEGORIES)[number];
-
-/** The three interface languages the core display metadata must provide. */
-export type CultureLocale = "ar" | "de" | "en";
-
-export type LocalizedText = Record<CultureLocale, string>;
 
 export type CultureContinent =
   "africa" | "asia" | "europe" | "north-america" | "south-america" | "oceania";
+export type CultureLocale = "ar" | "de" | "en";
+export type LocalizedText = Record<CultureLocale, string>;
 
-/** Where a statement came from, and how sure we are allowed to be about it. */
-export type CultureProvenance =
-  /** Institutional description kept as-is (translated only). */
-  | "institution"
-  /** Our own short translation/paraphrase of an institutional text. */
-  | "machine-translated"
-  /** Editorially reviewed wording written from the source. */
-  | "editorial-reviewed";
+export type CultureContentType = "feature" | "note" | "language" | "scene" | "contrast" | "detail";
+
+/** One section of one locale's article text. */
+export interface CultureSection {
+  heading: string;
+  paragraphs: string[];
+}
+
+export interface CultureExpression {
+  original: string;
+  transliteration?: string;
+  language: string;
+  gloss: LocalizedText;
+  usage: LocalizedText;
+}
 
 export interface CultureSource {
-  /** Human-readable organization, e.g. "The Metropolitan Museum of Art". */
   organization: string;
-  /** Stable source URL for this item. */
+  title: LocalizedText;
   url: string;
-  /** License identifier, e.g. "CC0-1.0", "CC-BY-4.0", "PDM-1.0". */
-  license: string;
-  licenseUrl?: string | undefined;
-  /** Required attribution line. */
-  attribution: string;
-  /** ISO date of the source record's own last modification, when supplied. */
-  modified?: string | undefined;
+  published?: string;
+  accessed: string;
+  supports: LocalizedText;
 }
 
-export interface CultureMedia {
-  url: string;
-  /** Rights are per item, never assumed from the collection. */
-  license: string;
-  credit: string;
-  width?: number | undefined;
-  height?: number | undefined;
-  /** Small variant for lists when the source offers one. */
-  thumbnailUrl?: string | undefined;
+export type CultureVerification = "source-linked" | "double-checked" | "unverified";
+export type CultureReview = "machine-drafted" | "editor-reviewed" | "not-reviewed";
+
+export interface CultureStatus {
+  verification: CultureVerification;
+  editorial: CultureReview;
+  translation: CultureReview;
+  revision: number;
+  published: boolean;
 }
 
-export interface CultureTaxonomy {
-  category: CultureCategory;
-  subcategory?: string | undefined;
-}
-
-export interface CulturePlace {
-  continent: CultureContinent;
-  /** ISO 3166-1 alpha-2 codes; empty for cultures that span states or are not state-bound. */
+export interface CultureContext {
   countries: string[];
-  region?: string | undefined;
-  /** Named community/people/tradition when the source provides one. */
-  community?: string | undefined;
+  region?: string;
+  community?: string;
+  continent: CultureContinent;
+  languages: string[];
+  period?: "contemporary" | "historical" | "both";
 }
 
-export interface CultureItem {
+export interface CultureArticle {
   id: string;
   version: typeof CULTURE_SCHEMA_VERSION;
-  title: LocalizedText & { original?: string | undefined; originalLanguage?: string | undefined };
-  /** One or two sentences for lists. */
-  summary: LocalizedText;
-  /** Longer editorial text for the detail surface. */
-  description?: LocalizedText | undefined;
-  taxonomy: CultureTaxonomy;
-  place: CulturePlace;
-  /** Historical period or date as documented by the source (never estimated). */
-  period?: string | undefined;
-  /** The source's own subject label, kept in its original wording. */
-  subject?: string | undefined;
+  slug: string;
+  contentType: CultureContentType;
+  category: CultureCategory;
+  title: LocalizedText;
+  deck: LocalizedText;
+  teaser: LocalizedText;
+  readingMinutes: number;
+  /** Article body per interface language; the reader sees exactly one locale's sections. */
+  sections: Record<CultureLocale, CultureSection[]>;
+  expression?: CultureExpression;
+  example?: LocalizedText;
+  misunderstanding?: LocalizedText;
+  comparison?: LocalizedText;
+  context: CultureContext;
   tags: string[];
-  media?: CultureMedia | undefined;
-  source: CultureSource;
-  provenance: CultureProvenance;
-  /**
-   * The reason the item is distinctive, in the source's or an editor's own words. Absent
-   * when the source states no reason: the interface never invents one.
-   */
-  whyDistinctive?: LocalizedText | undefined;
-  /** Related item ids from genuine metadata relationships (same culture, technique, theme). */
-  related?: string[] | undefined;
-  /** Ingestion date (ISO). */
-  ingestedAt: string;
+  sources: CultureSource[];
+  status: CultureStatus;
+  related: string[];
+  publishedAt: string;
 }
 
-/** Compact record used by the search/filter index. Kept small so the first payload stays light. */
 export interface CultureIndexEntry {
   id: string;
   title: LocalizedText;
+  teaser: LocalizedText;
   category: CultureCategory;
+  contentType: CultureContentType;
   continent: CultureContinent;
   countries: string[];
   tags: string[];
-  /** 0–1 editorial emphasis used for featured selection, from documented criteria. */
+  readingMinutes: number;
   weight: number;
-  hasMedia: boolean;
-  /**
-   * Small media block (URL + credit + licence + aspect) so a feed card can show the real
-   * image without opening the full record. Absent = the card uses a typographic composition.
-   */
-  media?: CultureMedia | undefined;
+  hasExpression: boolean;
 }
 
 export interface CultureFilters {
-  category?: CultureCategory | undefined;
-  continent?: CultureContinent | undefined;
-  country?: string | undefined;
-  /** Free text over titles, tags and subject. */
-  search?: string | undefined;
-  savedOnly?: boolean | undefined;
-  /** Cursor from the previous page (stable id of the last item seen). */
-  cursor?: string | undefined;
-  limit?: number | undefined;
+  category?: CultureCategory;
+  continent?: CultureContinent;
+  country?: string;
+  language?: string;
+  contentType?: CultureContentType;
+  search?: string;
+  savedOnly?: boolean;
+  cursor?: string;
+  limit?: number;
 }
 
 export interface CulturePage {
   items: CultureIndexEntry[];
-  nextCursor?: string | undefined;
-  total?: number | undefined;
+  nextCursor?: string;
+  total?: number;
 }

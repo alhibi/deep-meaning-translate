@@ -1,70 +1,109 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { CultureCategory, CultureContinent } from "@/lib/culture/types";
 import type {
-  CultureDetailItem,
   CultureDiscoveryAdapter,
   CultureFacets,
-  CultureListEntry,
   CulturePageQuery,
-  CultureSavedPort,
-} from "./contract";
+} from "@/lib/culture/adapter";
+import type {
+  CultureCategory,
+  CultureContentType,
+  CultureContinent,
+  CultureIndexEntry,
+  CultureLocale,
+} from "@/lib/culture/types";
+import { COPY } from "./copy";
 
 /**
- * Feed state for the discovery section.
+ * Feed state for the written library.
  *
- * The index is local, but every page read still costs work, so three guards keep the
- * browsing loop controlled:
- * - an in-flight flag: one page at a time, whatever the input does;
- * - a cooldown after each page, so an advertising sentinel or a fast scroll cannot fire
- *   back-to-back requests;
- * - a hard cap on *automatic* incremental pages; past it the person has to ask for more.
+ * The library is local, but browsing is still a reading loop that must stay quiet:
+ * - the search is debounced, so a sentence being typed is not a request per keystroke;
+ * - one page is in flight at a time, whatever the person does;
+ * - a short cooldown follows every page, so a held key or a fast tap cannot fire again;
+ * - there is a hard page cap and an explicit "more" control — no scroll sentinel, no
+ *   uncontrolled infinite feed;
+ * - cursors that repeat end the feed instead of looping, and entries are de-duplicated
+ *   by id so the same piece is never rendered twice.
  *
- * A page whose cursor repeats the cursor that produced it ends the feed instead of
- * looping, and entries are de-duplicated by id so no card is ever rendered twice.
+ * The saved view is entirely local: it opens with no request and works offline.
  */
 
-export const SEARCH_DEBOUNCE_MS = 260;
-export const MORE_COOLDOWN_MS = 900;
-export const AUTO_PAGE_LIMIT = 2;
-export const DEFAULT_PAGE_SIZE = 8;
-export const RELATED_LIMIT = 6;
+export const SEARCH_DEBOUNCE_MS = 280;
+export const MORE_COOLDOWN_MS = 700;
+/** Hard cap on pages fetched in one feed lifetime, including the first one. */
+export const MAX_PAGES = 12;
+export const PAGE_SIZE = 8;
 
-export type FeedStatus = "loading" | "ready" | "error";
-export type FeedErrorKind = "offline" | "failed";
+export const CONTENT_TYPES: readonly CultureContentType[] = [
+  "feature",
+  "note",
+  "language",
+  "scene",
+  "contrast",
+  "detail",
+];
 
-interface FeedFilters {
-  category?: CultureCategory | undefined;
-  continent?: CultureContinent | undefined;
-  country?: string | undefined;
-  search: string;
+export const CONTINENTS: readonly CultureContinent[] = [
+  "africa",
+  "asia",
+  "europe",
+  "north-america",
+  "south-america",
+  "oceania",
+];
+
+export const ALL_CATEGORIES: readonly CultureCategory[] = Object.keys(
+  COPY.en.categories,
+) as CultureCategory[];
+
+export type DiscoveryStatus =
+  "loading" | "ready" | "empty" | "error" | "offline" | "catalog-unavailable";
+
+export type FeedFailure = "failed" | "offline" | "catalog";
+
+function classifyFailure(error: unknown, online: boolean): FeedFailure {
+  const message = error instanceof Error ? error.message : "";
+  // The production adapter rejects with "culture-catalog-<status>" when the bundled
+  // catalog cannot be read at all; that is a different surface from a failed page.
+  if (/catalog|version/i.test(message)) return "catalog";
+  return online ? "failed" : "offline";
 }
 
-function buildQuery(
-  filters: FeedFilters,
-  cursor: string | undefined,
-  limit: number,
-): CulturePageQuery {
-  const query: CulturePageQuery = { limit };
-  if (filters.category) query.category = filters.category;
-  if (filters.continent) query.continent = filters.continent;
-  if (filters.country) query.country = filters.country;
-  if (filters.search) query.search = filters.search;
-  if (cursor !== undefined) query.cursor = cursor;
-  return query;
+function statusFor(failure: FeedFailure): DiscoveryStatus {
+  if (failure === "catalog") return "catalog-unavailable";
+  if (failure === "offline") return "offline";
+  return "error";
 }
 
-function uniqueById(items: readonly CultureListEntry[]): CultureListEntry[] {
-  const seen = new Set<string>();
-  const unique: CultureListEntry[] = [];
-  for (const item of items) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    unique.push(item);
-  }
-  return unique;
+/** Real connectivity, read as an external store: no polling and no effect write. */
+export function useIsOnline(adapter: CultureDiscoveryAdapter): boolean {
+  const getSnapshot = useCallback(
+    () => (adapter.online ? adapter.online() : navigator.onLine !== false),
+    [adapter],
+  );
+  const subscribe = useCallback((onChange: () => void) => {
+    window.addEventListener("online", onChange);
+    window.addEventListener("offline", onChange);
+    return () => {
+      window.removeEventListener("online", onChange);
+      window.removeEventListener("offline", onChange);
+    };
+  }, []);
+  return useSyncExternalStore(subscribe, getSnapshot, () => true);
 }
 
-function subscribeConnectivity(onChange: () => void) {
+/** One state value that only changes after the person stopped typing. */
+export function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    if (Object.is(value, debounced)) return undefined;
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, debounced, delay]);
+  return debounced;
+}
+
+function subscribeConnectivity(onChange: () => void): () => void {
   window.addEventListener("online", onChange);
   window.addEventListener("offline", onChange);
   return () => {
@@ -73,427 +112,449 @@ function subscribeConnectivity(onChange: () => void) {
   };
 }
 
-/**
- * Real connectivity, read as an external store (no effect write, no polling). The server
- * snapshot is "online" so server-rendered markup and the first client paint agree.
- */
-export function useIsOnline(adapter?: Pick<CultureDiscoveryAdapter, "online">): boolean {
-  const getSnapshot = useCallback(
-    () => (adapter?.online ? adapter.online() : navigator.onLine !== false),
-    [adapter],
-  );
-  return useSyncExternalStore(subscribeConnectivity, getSnapshot, () => true);
+function buildQuery(input: {
+  category?: CultureCategory | undefined;
+  continent?: CultureContinent | undefined;
+  country?: string | undefined;
+  language?: CultureLocale | undefined;
+  contentType?: CultureContentType | undefined;
+  search?: string | undefined;
+  cursor?: string | undefined;
+}): CulturePageQuery {
+  const query: CulturePageQuery = { limit: PAGE_SIZE };
+  if (input.category) query.category = input.category;
+  if (input.continent) query.continent = input.continent;
+  if (input.country) query.country = input.country;
+  if (input.language) query.language = input.language;
+  if (input.contentType) query.contentType = input.contentType;
+  if (input.search) query.search = input.search;
+  if (input.cursor) query.cursor = input.cursor;
+  return query;
 }
 
-/** One state value that only changes after the person stopped typing. */
-export function useDebouncedValue<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    if (Object.is(value, debounced)) return;
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, debounced, delay]);
-  return debounced;
+function uniqueEntries(
+  items: readonly CultureIndexEntry[],
+  seen: Set<string>,
+): CultureIndexEntry[] {
+  const out: CultureIndexEntry[] = [];
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}
+
+function matchesSavedFilters(
+  entry: CultureIndexEntry,
+  filters: {
+    category?: CultureCategory | undefined;
+    continent?: CultureContinent | undefined;
+    country?: string | undefined;
+    contentType?: CultureContentType | undefined;
+    language?: string | undefined;
+    search?: string | undefined;
+  },
+): boolean {
+  if (filters.category && entry.category !== filters.category) return false;
+  if (filters.continent && entry.continent !== filters.continent) return false;
+  if (filters.country && !entry.countries.includes(filters.country)) return false;
+  if (filters.contentType && entry.contentType !== filters.contentType) return false;
+  if (filters.language) {
+    const needle = filters.language.toLowerCase();
+    const inTags = entry.tags.some((tag) => tag.toLowerCase().includes(needle));
+    if (!inTags) return false;
+  }
+  if (filters.search) {
+    const needle = filters.search.toLowerCase();
+    const haystack = [
+      entry.title.ar,
+      entry.title.de,
+      entry.title.en,
+      entry.teaser.ar,
+      entry.teaser.de,
+      entry.teaser.en,
+      ...entry.tags,
+    ]
+      .join(" ")
+      .toLowerCase();
+    if (!haystack.includes(needle)) return false;
+  }
+  return true;
 }
 
 export interface CultureFeed {
-  entries: CultureListEntry[];
-  total: number | undefined;
-  status: FeedStatus;
-  error: FeedErrorKind | null;
-  loadingMore: boolean;
-  moreError: FeedErrorKind | null;
-  canLoadMore: boolean;
-  hasMore: boolean;
+  status: DiscoveryStatus;
+  entries: CultureIndexEntry[];
+  total: number;
+  featured: CultureIndexEntry | null;
+  facets: CultureFacets | null;
+  online: boolean;
+  savedOnly: boolean;
+  savedIds: ReadonlySet<string>;
+  savedEntries: readonly CultureIndexEntry[];
   category: CultureCategory | undefined;
   continent: CultureContinent | undefined;
   country: string | undefined;
+  language: CultureLocale | undefined;
+  contentType: CultureContentType | undefined;
   search: string;
   searchPending: boolean;
-  activeFilters: boolean;
-  setCategory: (value: CultureCategory | undefined) => void;
-  setContinent: (value: CultureContinent | undefined) => void;
-  setCountry: (value: string | undefined) => void;
-  setSearch: (value: string) => void;
-  clearFilters: () => void;
-  retry: () => void;
-  loadMore: (auto?: boolean) => void;
+  filtersActive: boolean;
+  setCategory(value: CultureCategory | undefined): void;
+  setContinent(value: CultureContinent | undefined): void;
+  setCountry(value: string | undefined): void;
+  setLanguage(value: CultureLocale | undefined): void;
+  setContentType(value: CultureContentType | undefined): void;
+  setSearch(value: string): void;
+  setSavedOnly(value: boolean): void;
+  clearFilters(): void;
+  retry(): void;
+  loadMore(): void;
+  canLoadMore: boolean;
+  loadingMore: boolean;
+  moreError: boolean;
+  cooldown: boolean;
+  pageCount: number;
+  isSaved(id: string): boolean;
+  toggleSaved(id: string): void;
 }
 
-/**
- * The reading surface mounts fresh per record, so an id change is a remount rather than a
- * reset-in-effect: the record can never be shown for the wrong id, and the new read starts
- * from a clean loading state.
- */
-export function useCultureFeed(
-  adapter: CultureDiscoveryAdapter,
-  pageSize = DEFAULT_PAGE_SIZE,
-): CultureFeed {
-  const [category, setCategoryState] = useState<CultureCategory | undefined>(undefined);
-  const [continent, setContinentState] = useState<CultureContinent | undefined>(undefined);
-  const [country, setCountryState] = useState<string | undefined>(undefined);
+export function useCultureFeed(adapter: CultureDiscoveryAdapter): CultureFeed {
+  const online = useIsOnline(adapter);
+
+  const [category, setCategory] = useState<CultureCategory | undefined>(undefined);
+  const [continent, setContinent] = useState<CultureContinent | undefined>(undefined);
+  const [country, setCountry] = useState<string | undefined>(undefined);
+  const [language, setLanguage] = useState<CultureLocale | undefined>(undefined);
+  const [contentType, setContentType] = useState<CultureContentType | undefined>(undefined);
   const [search, setSearch] = useState("");
+  const [savedOnly, setSavedOnly] = useState(false);
 
   const trimmedSearch = search.trim();
   const debouncedSearch = useDebouncedValue(trimmedSearch, SEARCH_DEBOUNCE_MS);
 
-  const [entries, setEntries] = useState<CultureListEntry[]>([]);
-  const [total, setTotal] = useState<number | undefined>(undefined);
+  const [entries, setEntries] = useState<CultureIndexEntry[]>([]);
+  const [total, setTotal] = useState(0);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
-  const [status, setStatus] = useState<FeedStatus>("loading");
-  const [error, setError] = useState<FeedErrorKind | null>(null);
+  const [status, setStatus] = useState<DiscoveryStatus>("loading");
+  const [featured, setFeatured] = useState<CultureIndexEntry | null>(null);
+  const [facets, setFacets] = useState<CultureFacets | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [moreError, setMoreError] = useState<FeedErrorKind | null>(null);
-
-  const online = useIsOnline(adapter);
-  const onlineRef = useRef(online);
-  useEffect(() => {
-    onlineRef.current = online;
-  }, [online]);
+  const [moreError, setMoreError] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [pageCount, setPageCount] = useState(0);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const generation = useRef(0);
-  const busy = useRef(false);
-  const cursorRef = useRef<string | undefined>(undefined);
-  const loadedIds = useRef<Set<string>>(new Set());
-  const autoPages = useRef(0);
-  const autoCooldownUntil = useRef(0);
   const controllers = useRef<Set<AbortController>>(new Set());
+  const cursorRef = useRef<string | undefined>(undefined);
+  const seenIds = useRef<Set<string>>(new Set());
+  const pagesRef = useRef(0);
+  const loadingMoreRef = useRef(false);
+  const cooldownUntil = useRef(0);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const armCooldown = useCallback(() => {
+    if (typeof window === "undefined") return;
+    cooldownUntil.current = Date.now() + MORE_COOLDOWN_MS;
+    setCooldown(true);
+    if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+    cooldownTimer.current = setTimeout(() => {
+      cooldownUntil.current = 0;
+      cooldownTimer.current = null;
+      setCooldown(false);
+    }, MORE_COOLDOWN_MS);
+  }, []);
 
   const abortAll = useCallback(() => {
     for (const controller of controllers.current) controller.abort();
     controllers.current.clear();
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const current = controllers.current;
+    return () => {
       generation.current += 1;
-      abortAll();
-    },
-    [abortAll],
-  );
+      for (const controller of current) controller.abort();
+      current.clear();
+      if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+      cooldownTimer.current = null;
+    };
+  }, []);
 
-  const filters = useMemo<FeedFilters>(
-    () => ({ category, continent, country, search: debouncedSearch }),
-    [category, continent, country, debouncedSearch],
-  );
-
-  const firstPage = useCallback(() => {
-    const generationId = ++generation.current;
-    abortAll();
-    busy.current = true;
-    cursorRef.current = undefined;
-    loadedIds.current = new Set();
-    autoPages.current = 0;
-    autoCooldownUntil.current = 0;
-    setEntries([]);
-    setNextCursor(undefined);
-    setTotal(undefined);
-    setStatus("loading");
-    setError(null);
-    setLoadingMore(false);
-    setMoreError(null);
-
-    const controller = new AbortController();
-    controllers.current.add(controller);
+  /* Facets and the daily feature are independent, one-shot reads; either failing is
+     local and never takes the feed down with it. */
+  useEffect(() => {
+    let cancelled = false;
     adapter
-      .loadPage(buildQuery(filters, undefined, pageSize), controller.signal)
-      .then((page) => {
-        if (generation.current !== generationId) return;
-        const pageEntries = uniqueById(page.items);
-        loadedIds.current = new Set(pageEntries.map((entry) => entry.id));
-        setEntries(pageEntries);
-        if (page.total !== undefined) setTotal(page.total);
-        if (page.nextCursor === undefined) {
-          cursorRef.current = undefined;
-          setNextCursor(undefined);
-        } else {
-          cursorRef.current = page.nextCursor;
-          setNextCursor(page.nextCursor);
-        }
-        setStatus("ready");
+      .loadFacets()
+      .then((value) => {
+        if (!cancelled) setFacets(value);
       })
       .catch(() => {
-        if (generation.current !== generationId || controller.signal.aborted) return;
-        setStatus("error");
-        setError(onlineRef.current ? "failed" : "offline");
-      })
-      .finally(() => {
-        controllers.current.delete(controller);
-        if (generation.current === generationId) busy.current = false;
+        if (!cancelled) setFacets(null);
       });
-  }, [abortAll, adapter, filters, pageSize]);
+    adapter
+      .loadFeatured()
+      .then((value) => {
+        if (!cancelled) setFeatured(value);
+      })
+      .catch(() => {
+        if (!cancelled) setFeatured(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [adapter]);
 
-  // The initial read and every filter/search change restart from the first cursor. The
-  // loading reset is part of that query change (it is not an event of its own), and the
-  // read itself is asynchronous; a synchronous setState here is the intended pattern.
+  /* A new query is a new first page. The generation counter is the only thing allowed
+     to commit a result: an aborted or superseded response resolves into the void. */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset-on-query-change is derived state, not an event
-    firstPage();
-  }, [firstPage]);
-
-  const loadMore = useCallback(
-    (auto = false) => {
-      const cursor = cursorRef.current;
-      if (busy.current || cursor === undefined) return;
-      if (auto) {
-        if (autoPages.current >= AUTO_PAGE_LIMIT) return;
-        if (Date.now() < autoCooldownUntil.current) return;
-      }
-
-      const generationId = generation.current;
-      busy.current = true;
-      setLoadingMore(true);
-      setMoreError(null);
-      const controller = new AbortController();
-      controllers.current.add(controller);
-      adapter
-        .loadPage(buildQuery(filters, cursor, pageSize), controller.signal)
-        .then((page) => {
-          if (generation.current !== generationId) return;
-          const fresh: CultureListEntry[] = [];
-          for (const entry of page.items) {
-            if (loadedIds.current.has(entry.id)) continue;
-            loadedIds.current.add(entry.id);
-            fresh.push(entry);
-          }
-          if (fresh.length) setEntries((previous) => [...previous, ...fresh]);
-          if (page.total !== undefined) setTotal(page.total);
-          const next = page.nextCursor;
-          if (next === undefined || next === cursor) {
-            // A repeated cursor would replay the same page forever; end the feed instead.
-            cursorRef.current = undefined;
-            setNextCursor(undefined);
-          } else {
-            cursorRef.current = next;
-            setNextCursor(next);
-          }
-          if (auto) autoPages.current += 1;
-          autoCooldownUntil.current = Date.now() + MORE_COOLDOWN_MS;
-          setLoadingMore(false);
-        })
-        .catch(() => {
-          if (generation.current !== generationId || controller.signal.aborted) return;
-          setMoreError(onlineRef.current ? "failed" : "offline");
-          setLoadingMore(false);
-          autoCooldownUntil.current = Date.now() + MORE_COOLDOWN_MS;
-        })
-        .finally(() => {
-          controllers.current.delete(controller);
-          if (generation.current === generationId) busy.current = false;
-        });
-    },
-    [adapter, filters, pageSize],
-  );
-
-  const retry = useCallback(() => {
-    if (status === "error") {
-      firstPage();
-      return;
+    if (savedOnly) {
+      // The device shelf is local and synchronous: no request may outlive this view.
+      generation.current += 1;
+      abortAll();
+      return undefined;
     }
-    if (moreError) loadMore(false);
-  }, [firstPage, loadMore, moreError, status]);
+    const controller = new AbortController();
+    controllers.current.add(controller);
+    const generationId = ++generation.current;
+    pagesRef.current = 0;
+    loadingMoreRef.current = false;
+    seenIds.current = new Set();
+    cursorRef.current = undefined;
 
-  const setCategory = useCallback((value: CultureCategory | undefined) => {
-    setCategoryState(value);
-  }, []);
-  const setContinent = useCallback((value: CultureContinent | undefined) => {
-    setContinentState(value);
-  }, []);
-  const setCountry = useCallback((value: string | undefined) => {
-    setCountryState(value);
-  }, []);
-  const clearFilters = useCallback(() => {
-    setCategoryState(undefined);
-    setContinentState(undefined);
-    setCountryState(undefined);
-    setSearch("");
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new query owns a fresh feed state
+    setEntries([]);
+    setTotal(0);
+    setNextCursor(undefined);
+    setStatus("loading");
+    setMoreError(false);
+    setLoadingMore(false);
+    setPageCount(0);
+    setCooldown(false);
+    cooldownUntil.current = 0;
 
-  return {
-    entries,
-    total,
-    status,
-    error,
-    loadingMore,
-    moreError,
-    canLoadMore: nextCursor !== undefined && status === "ready",
-    hasMore: nextCursor !== undefined,
+    adapter
+      .loadPage(
+        buildQuery({
+          category,
+          continent,
+          country,
+          language,
+          contentType,
+          search: debouncedSearch || undefined,
+        }),
+        controller.signal,
+      )
+      .then((page) => {
+        if (generation.current !== generationId) return;
+        const items = uniqueEntries(page.items, seenIds.current);
+        pagesRef.current = 1;
+        cursorRef.current = page.nextCursor;
+        setEntries(items);
+        setTotal(page.total);
+        setNextCursor(page.nextCursor);
+        setPageCount(1);
+        setStatus(items.length > 0 ? "ready" : "empty");
+        armCooldown();
+      })
+      .catch((error: unknown) => {
+        if (generation.current !== generationId || controller.signal.aborted) return;
+        setStatus(statusFor(classifyFailure(error, online)));
+      });
+
+    return () => {
+      controller.abort();
+    };
+    // The debounced search is the query; raw keystrokes deliberately do not run this
+    // effect. A language filter is one deliberate choice, not typing.
+  }, [
+    adapter,
+    savedOnly,
     category,
     continent,
     country,
+    contentType,
+    language,
+    debouncedSearch,
+    online,
+    reloadNonce,
+    armCooldown,
+    abortAll,
+  ]);
+
+  const loadMore = useCallback(() => {
+    const cursor = cursorRef.current;
+    if (savedOnly || !cursor) return;
+    if (loadingMoreRef.current) return;
+    if (Date.now() < cooldownUntil.current) return;
+    if (pagesRef.current >= MAX_PAGES) return;
+    const controller = new AbortController();
+    controllers.current.add(controller);
+    const generationId = generation.current;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setMoreError(false);
+
+    adapter
+      .loadPage(
+        buildQuery({
+          category,
+          continent,
+          country,
+          language,
+          contentType,
+          search: debouncedSearch || undefined,
+          cursor,
+        }),
+        controller.signal,
+      )
+      .then((page) => {
+        if (generation.current !== generationId) return;
+        const fresh = uniqueEntries(page.items, seenIds.current);
+        pagesRef.current += 1;
+        const next = page.nextCursor;
+        // A cursor that repeats the one that produced this page would loop forever.
+        cursorRef.current = next === cursor ? undefined : next;
+        setEntries((previous) => [...previous, ...fresh]);
+        setNextCursor(cursorRef.current);
+        setPageCount(pagesRef.current);
+        armCooldown();
+      })
+      .catch((error: unknown) => {
+        if (generation.current !== generationId || controller.signal.aborted) return;
+        // A failed next page is retryable immediately: do not keep the reading cooldown
+        // from a page that never arrived.
+        cooldownUntil.current = 0;
+        setCooldown(false);
+        setMoreError(true);
+        void error;
+      })
+      .finally(() => {
+        if (generation.current !== generationId) return;
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      });
+  }, [
+    adapter,
+    savedOnly,
+    category,
+    continent,
+    country,
+    contentType,
+    language,
+    debouncedSearch,
+    armCooldown,
+  ]);
+
+  const retry = useCallback(() => setReloadNonce((value) => value + 1), []);
+
+  const clearFilters = useCallback(() => {
+    setCategory(undefined);
+    setContinent(undefined);
+    setCountry(undefined);
+    setLanguage(undefined);
+    setContentType(undefined);
+    setSearch("");
+  }, []);
+
+  const subscribeSaved = useCallback(
+    (onChange: () => void) => adapter.saved.subscribe(onChange),
+    [adapter],
+  );
+  const getSavedIds = useCallback(() => adapter.saved.ids(), [adapter]);
+  const savedIdsList = useSyncExternalStore(subscribeSaved, getSavedIds, getSavedIds);
+  // The saved ids are the stable external snapshot; the compact records are derived from
+  // them, so the store never has to fake a new array identity on every read.
+  const savedEntriesAll = useMemo(() => {
+    const byId = new Map(adapter.saved.entries().map((entry) => [entry.id, entry]));
+    return savedIdsList.flatMap((id) => {
+      const entry = byId.get(id);
+      return entry ? [entry] : [];
+    });
+  }, [adapter, savedIdsList]);
+  const savedIds = useMemo(() => new Set(savedIdsList), [savedIdsList]);
+
+  const filters = useMemo(
+    () => ({
+      category,
+      continent,
+      country,
+      contentType,
+      language,
+      search: debouncedSearch || undefined,
+    }),
+    [category, continent, country, contentType, language, debouncedSearch],
+  );
+
+  const savedEntries = useMemo(
+    () => savedEntriesAll.filter((entry) => matchesSavedFilters(entry, filters)),
+    [savedEntriesAll, filters],
+  );
+
+  const filtersActive =
+    category !== undefined ||
+    continent !== undefined ||
+    country !== undefined ||
+    contentType !== undefined ||
+    language !== undefined ||
+    trimmedSearch !== "";
+
+  const visibleEntries = savedOnly ? savedEntries : entries;
+  const resolvedStatus: DiscoveryStatus = savedOnly
+    ? savedEntries.length > 0
+      ? "ready"
+      : "empty"
+    : status;
+
+  const toggleSaved = useCallback((id: string) => adapter.saved.toggle(id), [adapter]);
+
+  const searchPending = trimmedSearch !== debouncedSearch;
+
+  const canLoadMore =
+    !savedOnly &&
+    status === "ready" &&
+    nextCursor !== undefined &&
+    !loadingMore &&
+    !cooldown &&
+    pageCount < MAX_PAGES;
+
+  return {
+    status: resolvedStatus,
+    entries: visibleEntries,
+    total: savedOnly ? savedEntries.length : total,
+    featured,
+    facets,
+    online,
+    savedOnly,
+    savedIds,
+    savedEntries: savedEntriesAll,
+    category,
+    continent,
+    country,
+    language,
+    contentType,
     search,
-    searchPending: trimmedSearch !== debouncedSearch,
-    activeFilters: Boolean(category ?? continent ?? country ?? trimmedSearch),
+    searchPending,
+    filtersActive,
     setCategory,
     setContinent,
     setCountry,
+    setLanguage,
+    setContentType,
     setSearch,
+    setSavedOnly,
     clearFilters,
     retry,
     loadMore,
+    canLoadMore,
+    loadingMore,
+    moreError,
+    cooldown,
+    pageCount,
+    isSaved: (id: string) => savedIds.has(id),
+    toggleSaved,
   };
-}
-
-const EMPTY_SAVED: readonly string[] = [];
-const savedSnapshots = new WeakMap<
-  CultureSavedPort,
-  { raw: readonly string[]; stable: readonly string[] }
->();
-
-/**
- * A stable snapshot for `useSyncExternalStore`: if the port hands back an equal array
- * with a new identity, the previous reference is kept so React does not loop.
- */
-function savedIdsSnapshot(port: CultureSavedPort): readonly string[] {
-  const raw = port.ids();
-  const cached = savedSnapshots.get(port);
-  if (
-    cached &&
-    cached.raw.length === raw.length &&
-    cached.raw.every((id, index) => id === raw[index])
-  ) {
-    return cached.stable;
-  }
-  savedSnapshots.set(port, { raw: raw.slice(), stable: raw });
-  return raw;
-}
-
-export interface SavedCultureState {
-  ids: ReadonlySet<string>;
-  entries: readonly CultureListEntry[];
-  isSaved: (id: string) => boolean;
-  toggle: (id: string) => void;
-}
-
-/** Device-local saved set. Reading it never touches the network, so it works offline. */
-export function useSavedCulture(port: CultureSavedPort): SavedCultureState {
-  const subscribe = useCallback((onChange: () => void) => port.subscribe(onChange), [port]);
-  const getSnapshot = useCallback(() => savedIdsSnapshot(port), [port]);
-  const ids = useSyncExternalStore(subscribe, getSnapshot, () => EMPTY_SAVED);
-  const savedSet = useMemo(() => new Set(ids), [ids]);
-  const entries = port.entries();
-  const toggle = useCallback(
-    (id: string) => {
-      port.toggle(id);
-    },
-    [port],
-  );
-  return {
-    ids: savedSet,
-    entries,
-    isSaved: (id: string) => savedSet.has(id),
-    toggle,
-  };
-}
-
-export interface FeaturedState {
-  status: "loading" | "ready" | "error";
-  item: CultureListEntry | null;
-}
-
-/** The editorial feature: one record, loaded once. Its failure is silent by design. */
-export function useFeatured(adapter: CultureDiscoveryAdapter): FeaturedState {
-  const [state, setState] = useState<FeaturedState>({ status: "loading", item: null });
-  useEffect(() => {
-    let active = true;
-    adapter
-      .loadFeatured()
-      .then((item) => {
-        if (!active) return;
-        setState({ status: "ready", item });
-      })
-      .catch(() => {
-        if (!active) return;
-        setState({ status: "error", item: null });
-      });
-    return () => {
-      active = false;
-    };
-  }, [adapter]);
-  return state;
-}
-
-export type RecordState =
-  | { status: "loading" }
-  | { status: "error"; offline: boolean }
-  | { status: "ready"; item: CultureDetailItem; related: CultureListEntry[] };
-
-export interface CultureRecordHandle {
-  state: RecordState;
-  retry: () => void;
-}
-
-/**
- * One record for the reading surface. Related records are a second, optional read: a
- * failure there never hides the record that is already readable.
- */
-export function useCultureRecord(
-  adapter: CultureDiscoveryAdapter,
-  itemId: string,
-  online: boolean,
-): CultureRecordHandle {
-  const [nonce, setNonce] = useState(0);
-  const [state, setState] = useState<RecordState>({ status: "loading" });
-
-  useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const item = await adapter.loadItem(itemId);
-        if (!active) return;
-        if (!item) {
-          setState({ status: "error", offline: false });
-          return;
-        }
-        setState({ status: "ready", item, related: [] });
-        try {
-          const related = await adapter.loadRelated(
-            item.id,
-            (item.related ?? []).slice(0, RELATED_LIMIT),
-          );
-          if (!active) return;
-          setState((previous) =>
-            previous.status === "ready" ? { ...previous, related } : previous,
-          );
-        } catch {
-          // Related items are an enhancement; the record stays fully readable without them.
-        }
-      } catch {
-        if (!active || controller.signal.aborted) return;
-        setState({ status: "error", offline: !online });
-      }
-    })();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [adapter, itemId, online, nonce]);
-
-  const retry = useCallback(() => {
-    setState({ status: "loading" });
-    setNonce((value) => value + 1);
-  }, []);
-
-  return { state, retry };
-}
-
-/** Filter options and their totals, read once. Failure degrades to the built-in lists. */
-export function useFacets(adapter: CultureDiscoveryAdapter): CultureFacets | null {
-  const [facets, setFacets] = useState<CultureFacets | null>(null);
-  useEffect(() => {
-    let active = true;
-    adapter
-      .loadFacets()
-      .then((next) => {
-        if (active) setFacets(next);
-      })
-      .catch(() => {
-        if (active) setFacets(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [adapter]);
-  return facets;
 }
