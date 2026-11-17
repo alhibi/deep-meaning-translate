@@ -173,8 +173,8 @@ async def main():
             }"""
         )
         check(
-            abs(composer["height"] - 3 * composer["lh"]) < 1,
-            f"composer is a compact three-line field ({composer['height']:.1f}px for {composer['lh']:.1f}px lines)",
+            abs(composer["height"] - 2 * composer["lh"]) < 1,
+            f"composer is a compact two-line field ({composer['height']:.1f}px for {composer['lh']:.1f}px lines)",
         )
         await page.wait_for_timeout(1500)
         idle_later = await page.evaluate(GEOMETRY)
@@ -194,8 +194,8 @@ async def main():
             }"""
         )
         check(
-            abs(arabic_composer["height"] - 3 * arabic_composer["lh"]) < 1,
-            f"Arabic composer is also a compact three-line field ({arabic_composer['height']:.1f}px)",
+            abs(arabic_composer["height"] - 2 * arabic_composer["lh"]) < 1,
+            f"Arabic composer is also a compact two-line field ({arabic_composer['height']:.1f}px)",
         )
         # The regression this guards: the canvas used to animate the composer's and the
         # result's heights between writing/translating/settled, so the field moved under

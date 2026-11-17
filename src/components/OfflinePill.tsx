@@ -4,13 +4,16 @@ import { useI18n } from "@/lib/i18n";
 
 export const OfflinePill = memo(function OfflinePill() {
   const { t } = useI18n();
-  const [offline, setOffline] = useState(() =>
-    typeof navigator !== "undefined" ? !navigator.onLine : false,
-  );
+  // Start offline=false on both server and client so the first render matches;
+  // the real connectivity state arrives in the effect below. Reading
+  // `navigator.onLine` in the initializer mismatched SSR (workerd reports
+  // onLine=false) and broke hydration.
+  const [offline, setOffline] = useState(false);
   const [restored, setRestored] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    setOffline(!navigator.onLine);
     const onOffline = () => {
       if (timer.current) clearTimeout(timer.current);
       setRestored(false);
