@@ -234,7 +234,9 @@ if (existsSync(dataDir)) {
     corpusFiles += 1;
     const text = read(join("src/lib/culture/data", name));
     for (const block of text.matchAll(/"?media"?\s*:\s*\{[\s\S]*?\}/g)) {
-      for (const urlMatch of block[0].matchAll(/(?:^|[,{\s])(?:url|thumbnailUrl)\s*:\s*"([^"]+)"/g)) {
+      for (const urlMatch of block[0].matchAll(
+        /(?:^|[,{\s])(?:url|thumbnailUrl)\s*:\s*"([^"]+)"/g,
+      )) {
         mediaUrls += 1;
         let parsed;
         try {
