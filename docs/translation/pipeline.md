@@ -100,9 +100,11 @@ model is also asked to classify situation and source tags; those are optional me
 ## 6. Repair and review
 
 A settled result with deterministic issues triggers **one** quiet repair pass. The repaired result
-is shown only if it clears more issues than it creates. With no deterministic issue, a second brain
-may review the sentence; DeepSeek never reviews its own writing, and with Luna paused a clean
-DeepSeek result makes no review round trip at all, so the review path is effectively inactive. The
+is shown only if it clears more issues than it creates. With no deterministic issue, DeepSeek may
+review a Luna-written sentence; it never reviews its own writing. The stream response reports the
+brain that actually wrote the answer (`X-Translation-Writer`) and the client passes it back as
+`writer` on the review, so a DeepSeek fallback that rescued a failed Luna request is not reviewed as
+Luna's. A clean DeepSeek result makes no review round trip at all. The
 second-pass review is quiet background work: it waits in the same paced queue as the dictionary and
 the shadow (§8), with the highest priority because its result can replace the visible sentence.
 Repair is not a loop and is not exposed as machinery to the person.
@@ -257,8 +259,8 @@ a truncated sentence or an invented repetition loop must never become a settled 
   any fetch; the app's own 5,000-character schema leaves large headroom, and an input that could not
   fit is a loud `input` error rather than a truncation or a chunker.
 - When the writer is DeepSeek and the sentence has no deterministic issue, no repair round trip is
-  made: with Luna paused there is no second brain that could change the result. A result with a lost
-  number or link still gets its repair.
+  made: DeepSeek never reviews its own writing. A clean Luna-written sentence gets exactly one
+  DeepSeek review. A result with a lost number or link still gets its repair either way.
 - A newer stream cancels the older prefix stream as soon as it has caught up on screen, and a
   committed result cancels it immediately; two providers never finish the same sentence.
 
@@ -291,5 +293,7 @@ a truncated sentence or an invented repetition loop must never become a settled 
   that exhausted the old ceiling. The prompt now mirrors source length and repetition explicitly,
   the ceiling leaves room for a legitimate long answer, and a degenerate loop that still occurs is
   rejected by the verifier before it can be shown.
-- Luna is behind `LUNA_ENABLED = false` and no OpenCode key exists in this environment; its paths
-  are unit-tested but not live-verified. Cloud voice and dictation likewise remain NOT_VERIFIED.
+- Luna is enabled (`LUNA_ENABLED = true`); its live/settled streaming, DeepSeek fallback, DeepSeek
+  review and the Android direct-key guard are unit-tested. No provider key is configured in this
+  environment, so a live Luna call, its latency and linguistic quality are **NOT_VERIFIED**. Cloud
+  voice and dictation likewise remain NOT_VERIFIED.

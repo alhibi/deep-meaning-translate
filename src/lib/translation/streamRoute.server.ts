@@ -150,6 +150,9 @@ export async function handleTranslateStream(request: Request): Promise<Response>
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store, no-transform",
       "X-Accel-Buffering": "no",
+      // The brain that actually wrote it (after any fallback), so the quiet review is
+      // never sent as if the requested model had written a rescued answer.
+      "X-Translation-Writer": brain,
     },
   });
 }

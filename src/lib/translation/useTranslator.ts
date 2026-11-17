@@ -3,7 +3,7 @@ import { callRepair } from "../native/rpc";
 import { parseResult } from "./parse";
 import { verifyTranslation } from "./verify";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
-import { DEFAULT_BRAIN, LUNA_ENABLED, type Brain } from "./types";
+import { DEFAULT_BRAIN, type Brain } from "./types";
 import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
 import { streamTranslate, warmTranslation } from "./stream";
@@ -419,7 +419,14 @@ export function useTranslator(opts: {
           return verifyTranslation(data, value).length ? null : value;
         };
         type Settled =
-          | { ok: true; result: TranslationResult; needsRepair: boolean; salvaged?: true }
+          | {
+              ok: true;
+              result: TranslationResult;
+              needsRepair: boolean;
+              salvaged?: true;
+              /** Who actually wrote it; absent when the transport cannot say. */
+              writer?: Brain;
+            }
           | { ok: false; kind: ErrorKind; cancelled?: true };
         let res: Settled;
         if (prov) {
@@ -453,6 +460,7 @@ export function useTranslator(opts: {
                 ok: true,
                 result: parsed,
                 needsRepair: verifyTranslation(data, parsed).length > 0,
+                ...(r.writer ? { writer: r.writer } : {}),
               };
             } catch {
               const value = attempt === 0 ? await salvage() : null;
@@ -488,11 +496,12 @@ export function useTranslator(opts: {
           // answer for this sentence forever after from device memory.
           const verified = !prov && !res.salvaged;
           if (verified) memorySet(key, res.result);
-          if (verified && (res.needsRepair || LUNA_ENABLED)) {
+          if (verified && (res.needsRepair || res.writer === "luna")) {
             // Shown already. Finished sentences get a quiet second look only when it can
-            // change something: deterministic issues need a repair, and a second brain
-            // needs to exist to review. With Luna paused, a clean DeepSeek result would
-            // make a guaranteed-null round trip, so it is not sent at all.
+            // change something: deterministic issues need a repair, and DeepSeek only
+            // reviews sentences Luna actually wrote. A clean DeepSeek result — including
+            // one that rescued a failed Luna request — would make a guaranteed-null round
+            // trip, so it is not sent at all.
             //
             // The review is quiet background work, so it waits at the same paced door as
             // the dictionary and the shadow — with the highest priority, because its
@@ -504,7 +513,10 @@ export function useTranslator(opts: {
             void enqueueEnrichment(
               (signal) =>
                 callRepair({
-                  data: { request: data, previous: res.result },
+                  data: {
+                    request: { ...data, ...(res.writer ? { writer: res.writer } : {}) },
+                    previous: res.result,
+                  },
                   signal,
                 }),
               {

@@ -58,7 +58,7 @@ Arabic–German guidance pages; offline shell; installable PWA.
 
 | Term | Meaning in this project |
 | --- | --- |
-| **Brain** | The model that writes a translation. `deepseek` is active; `luna` (OpenCode) is implemented but paused. |
+| **Brain** | The model that writes a translation. `deepseek` is the default and the independent reviewer; `luna` (OpenCode) is selectable, and the other model is the automatic fallback. |
 | **Live** | Provisional plain-text stream while the person is still typing. |
 | **Full / settled** | Structured translation of a finished sentence, verified and eligible for repair. |
 | **Register / style** | Natural, Formal or Casual. A semantic instruction, not a label. |

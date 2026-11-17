@@ -22,7 +22,7 @@ flowchart TD
   T -->|server functions: translate, repair, lexicon, shadow| W
   V -->|/api/speak, /api/eleven-speak| W
   W --> D[DeepSeek]
-  W -. paused .-> L[OpenCode / Luna]
+  W --> L[OpenCode / Luna]
 ```
 
 ## Layers and dependency direction
@@ -56,13 +56,18 @@ route. Provider modules are server-only.
 
 `src/lib/weather/` (contract, provider adapter + server route, bounded cache, `useWeather`,
 `useWeatherLocation`) and `src/lib/culture/` (contract, generated corpus under `data/`, loader,
-search, discovery, saved/seen, production adapter) are **independent verticals** composed by the
-route. The route owns only the composition (`WeatherSection`, `CultureSection`, lazy + deferred by
-`DeferredMount`); the weather module owns its two hooks and its dialogs, the culture section owns
+search, discovery, saved/seen, production adapter) are **independent verticals** composed by
+`BelowCanvas`. The route renders that one component; it owns the lazy + deferred composition
+(`WeatherSection`, `CultureSection` behind `DeferredMount`), while the weather module owns its two hooks and its dialogs, the culture section owns
 its adapter and scroll/dialog state. Both are below the canvas in the same scroll container, never
 overlays over the composer, and neither can fail the translation: their failures are local calm
 states. Server boundaries are `POST /api/weather`, `POST /api/weather/place` and their
 `/api/native/v1/*` twins; the culture catalog is bundled (no runtime API).
+
+In this release both are **switched off in the translator**: `src/lib/features.ts`
+(`SHOW_WEATHER`, `SHOW_CULTURE`) makes the `BelowCanvas` composition render nothing, so the
+route reaches neither the lazy chunks nor the weather routes. The verticals, routes, corpus and
+tests remain in place — hiding is not deletion — and turning a switch on restores the composition.
 
 ## State ownership
 
@@ -87,9 +92,10 @@ states. Server boundaries are `POST /api/weather`, `POST /api/weather/place` and
 
 ## External boundaries
 
-- **DeepSeek** writes translations and performs repair/review. Active.
-- **OpenCode / Luna** is implemented but paused (`LUNA_ENABLED = false`); no request may silently
-  use it while paused.
+- **DeepSeek** is the default writer, the independent reviewer of Luna-written sentences, and the
+  repair/analysis provider. Active.
+- **OpenCode / Luna** is a selectable writer and the automatic fallback when DeepSeek fails. Active;
+  routing lives in `engine.server.ts` and the translate-stream route, and both keys stay server-side.
 - **Speech providers** are called only by server routes; keys never reach the browser.
 - **Google Fonts** are self-hosted; there is no font CDN in the critical path.
 

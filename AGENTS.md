@@ -125,9 +125,15 @@ npm run preview          # serve the built Worker on Node
 
 ### Phase II surfaces (added 2026-11-17)
 
-- **The translator stays first.** Weather and cultural discovery are lazy sections below the canvas
-  in the same scroll container — never overlays, never part of the entry chunk, never a request that
-  can delay or fail a translation. Their failures render local calm states.
+- **Hidden in this release, not deleted.** Weather and the cultural library are built, tested and
+  still routed, but switched off at the one product seam (`src/lib/features.ts`:
+  `SHOW_WEATHER`, `SHOW_CULTURE`). `BelowCanvas` renders nothing while both are off, so the
+  translator stays one screen and neither a lazy chunk nor a weather route is reached. The modules,
+  routes, corpus, stores and tests stay; re-enabling a surface is flipping its switch and updating
+  its documents.
+- **The translator stays first.** When switched on, weather and cultural discovery are lazy sections
+  below the canvas in the same scroll container — never overlays, never part of the entry chunk,
+  never a request that can delay or fail a translation. Their failures render local calm states.
 - **Location is opt-in and coarse.** Never request geolocation on load; request it only from an
   explicit user gesture, with `enableHighAccuracy: false`, no watch, and round to two decimals
   *before* any request or persistence. No raw fix, no location history, no location in translation,

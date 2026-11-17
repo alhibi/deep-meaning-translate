@@ -1,4 +1,5 @@
 import type { ErrorKind } from "./useTranslator";
+import type { Brain } from "./types";
 import { partialTranslation } from "./parse";
 import { isNativeApp, nativeApiUrl } from "../native/config";
 import { hasProviderKey } from "./providerKey";
@@ -16,7 +17,8 @@ const streamUrl = () =>
   isNativeApp() ? nativeApiUrl("/api/native/v1/translate-stream") : "/api/translate-stream";
 
 export type StreamResponse =
-  { ok: true; text: string } | { ok: false; kind: ErrorKind; cancelled?: true };
+  | { ok: true; text: string; /** Actual writer, after any provider fallback. */ writer?: Brain }
+  | { ok: false; kind: ErrorKind; cancelled?: true };
 
 function errorKindFor(kind: DiagnosticKind, status?: number): ErrorKind {
   if (status === 401) return "auth";
@@ -42,10 +44,14 @@ export async function streamTranslate(
 ): Promise<StreamResponse> {
   // Personal-key mode: call DeepSeek from this device, bypassing the deployed service and
   // its shared admission budget. A network/provider failure falls back to the service, so
-  // a key never makes the app less available than it was without one.
-  if (isNativeApp() && hasProviderKey()) {
+  // a key never makes the app less available than it was without one. Luna is a
+  // server-side brain: a Luna request must stay on the service rather than be silently
+  // written by DeepSeek with the device key.
+  if (isNativeApp() && hasProviderKey() && data["brain"] !== "luna") {
     const direct = await streamDirect(data, signal, onText, mode);
-    if (direct.ok || direct.cancelled) return direct;
+    // The device path is DeepSeek by construction.
+    if (direct.ok) return { ...direct, writer: "deepseek" };
+    if (direct.cancelled) return direct;
     if (direct.kind !== "network" && direct.kind !== "timeout" && direct.kind !== "provider")
       return direct;
   }
@@ -124,7 +130,11 @@ export async function streamTranslate(
       bytes,
       ...(text ? {} : { kind: "empty" as const }),
     });
-    return text ? { ok: true, text } : { ok: false, kind: "provider" };
+    if (!text) return { ok: false, kind: "provider" };
+    const header = res.headers.get("x-translation-writer");
+    const writer: Brain | undefined =
+      header === "luna" || header === "deepseek" ? header : undefined;
+    return { ok: true, text, ...(writer ? { writer } : {}) };
   } catch (error) {
     const name = (error as Error)?.name;
     const cancelled = signal.aborted;

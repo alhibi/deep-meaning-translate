@@ -75,17 +75,25 @@ quotes stay exact. Bounds are checked before admission, so an oversized body spe
 
 ## Provider selection
 
-`src/lib/translation/types.ts` defines `DEFAULT_BRAIN = "deepseek"` and **`LUNA_ENABLED = false`**.
-`effectiveBrain()` therefore returns `deepseek` for every request, including an old saved
-preference that says `luna`. While paused:
+`src/lib/translation/types.ts` defines `DEFAULT_BRAIN = "deepseek"` and **`LUNA_ENABLED = true`**.
+`effectiveBrain()` returns the selected or saved brain, falling back to DeepSeek when none was
+chosen. Both brains are active:
 
-- no Luna request is attempted;
-- there is no Luna→DeepSeek or DeepSeek→Luna fallback, because the disabled provider is not a
-  candidate;
-- the engine's fallback helpers remain implemented for the day the flag is enabled.
+- the request's `brain` picks the writer (`deepseek` default, `luna` when selected);
+- when the chosen writer fails — quota, rate, network or provider error — the other model takes
+  over; an `input` error and a caller cancellation never fall back;
+- DeepSeek reviews Luna-written settled sentences; it never reviews its own writing, so a clean
+  DeepSeek result makes no review round trip;
+- the OpenCode/Luna path covers live streaming, settled streaming, buffered translation and repair;
+- dictionary and Sentence Shadow analysis deliberately stays on DeepSeek: its capability profile is
+  verified only there, and enrichment must not gain a second, unverified provider path;
+- the stream response reports the brain that actually wrote the answer (`X-Translation-Writer`) and
+  the client sends it back as `writer` on the quiet review, so a DeepSeek fallback that rescued a
+  failed Luna request is never reviewed as Luna's writing.
 
-Provider keys are read only in server modules (`process.env`), never in client code. DeepSeek is
-the active writer; the OpenCode/Luna provider remains in the codebase behind the flag.
+Provider keys are read only in server modules (`process.env`), never in client code. A single
+configured key still yields a working translator: the other brain's paths simply report the
+configured provider's error when neither is available.
 
 ## Task capability profiles
 

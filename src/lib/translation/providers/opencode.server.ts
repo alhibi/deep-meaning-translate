@@ -241,7 +241,7 @@ export async function analyzeLexicon(
   return analyzeLexiconWith((s, u) => call(apiKey, s, u, signal), input);
 }
 
-/** Same dictionary analysis on any chat model (DeepSeek while Luna is paused). */
+/** Same dictionary analysis on any chat model (the analysis provider supplies the call). */
 export async function analyzeLexiconWith(
   chat: (system: string, user: string) => Promise<string>,
   input: {
@@ -254,7 +254,7 @@ export async function analyzeLexiconWith(
   },
 ): Promise<LexiconResult | null> {
   // The prompt and parser are the lexicon module's contract; this wrapper only supplies a
-  // chat function so a caller that still uses Luna keeps working while it is paused.
+  // chat function so a caller can use any model without importing its provider module.
   const query: LexiconQuery = {
     text: input.text,
     source: input.source,

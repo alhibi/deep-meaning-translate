@@ -3,8 +3,12 @@ export type StyleOverride = "natural" | "formal" | "casual";
 export type Dialect = "auto" | "msa" | "levant" | "egypt" | "gulf" | "iraq" | "maghreb";
 export type Brain = "deepseek" | "luna";
 export const DEFAULT_BRAIN: Brain = "deepseek";
-/** Luna is paused ("soon"): every request runs on DeepSeek, with no Luna fallback. */
-export const LUNA_ENABLED = false;
+/**
+ * Luna is enabled: a selected or saved brain is honoured as the writer, the other model is
+ * the automatic fallback, and DeepSeek reviews Luna-written sentences. Typed as a plain
+ * boolean on purpose — it is a runtime safety switch, not a compile-time constant.
+ */
+export const LUNA_ENABLED: boolean = true;
 /** The brain that actually writes, whatever an old saved preference asked for. */
 export const effectiveBrain = (b?: Brain): Brain =>
   LUNA_ENABLED ? (b ?? DEFAULT_BRAIN) : "deepseek";
@@ -20,6 +24,11 @@ export interface TranslationRequest {
   dialect?: Dialect;
   /** Which model writes the translation; the other is the automatic backup. */
   brain?: Brain;
+  /**
+   * Which model actually wrote the shown result, when the transport knows it. A fallback
+   * must never be reviewed as if the requested brain wrote it.
+   */
+  writer?: Brain | undefined;
   /** Text still being typed: translate provisionally, skip the repair pass. */
   partial?: boolean;
 }

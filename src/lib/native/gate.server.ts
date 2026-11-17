@@ -51,7 +51,7 @@ export function nativeGate(request: Request): NativeGate | null {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Accept",
       "Access-Control-Max-Age": "600",
-      "Access-Control-Expose-Headers": "Retry-After",
+      "Access-Control-Expose-Headers": "Retry-After, X-Translation-Writer",
       Vary: "Origin",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",

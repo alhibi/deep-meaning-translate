@@ -1,27 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Brain, TranslationRequest, TranslationResult } from "./types";
+import type { TranslationRequest, TranslationResult } from "./types";
 
 /**
  * Cancellation contract for the quiet second pass.
  *
  * A caller-owned AbortSignal must reach the provider request, so a disconnected client
  * (or a superseded sentence) stops the repair/review call instead of paying for it to
- * completion. The Luna-enabled path is faked here because production currently runs
- * DeepSeek-only; the routing under test is the same engine code either way.
+ * completion. The request names Luna as the writer, so the real enabled routing under test
+ * is Luna repair → DeepSeek review.
  */
 const mocks = vi.hoisted(() => ({
   lunaRepair: vi.fn(),
   review: vi.fn(),
 }));
-
-vi.mock("./types", async (orig) => {
-  const actual = await orig<typeof import("./types")>();
-  return {
-    ...actual,
-    LUNA_ENABLED: true,
-    effectiveBrain: (brain?: Brain) => brain ?? "luna",
-  };
-});
 
 vi.mock("./providers/opencode.server", () => ({
   createOpenCodeLunaProvider: () => ({

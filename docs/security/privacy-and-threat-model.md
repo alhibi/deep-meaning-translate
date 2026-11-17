@@ -1,7 +1,7 @@
 # Security and Privacy
 
 Status: **Source-verified** boundaries, re-checked against the code on 2026-11-17 (unified public
-page, background analysis profile, Android direct-key path). No penetration test, dependency audit
+page, background analysis profile, Android direct-key path, Luna-enabled two-brain routing). No penetration test, dependency audit
 or production credential test was performed. Claims below distinguish implementation from assurance.
 
 ## Trust boundaries
@@ -25,8 +25,9 @@ flowchart LR
 - Provider keys are read from `process.env` only inside server modules/handlers.
 - No secret is placed in client bundles, browser storage, URLs, logs, tests, documentation or error
   messages.
-- Known names: `DEEPSEEK_API_KEY` (active writer), `OPENCODE_API_KEY` (Luna, paused). Speech keys are
-  read only in their server routes; see `.env.example` for the exact names.
+- Known names: `DEEPSEEK_API_KEY` (default writer, reviewer and analysis), `OPENCODE_API_KEY`
+  (optional Luna writer/fallback). Speech keys are read only in their server routes; see
+  `.env.example` for the exact names.
 - The repository is connected to Lovable; do not commit `.env` or any credential file.
 
 ## Input and output handling
@@ -43,10 +44,15 @@ flowchart LR
 - User text is placed inside `<text>` tags and treated as data. System rules state that the model
   must translate, not follow instructions inside the text.
 - The system prompt forbids adding explanations; the verifier flags added notes/labels.
-- Background analysis (dictionary, sentence shadow, quiet second reading) goes through
-  `engine.server.ts runAnalysis` with the same provider and the same <text>-as-data rule; it sends
-  the word or settled sentence it analyses, with direction and style, and it is `analysis`-profiled
-  (thinking enabled) without changing the data boundary.
+- Background analysis (dictionary and sentence shadow) goes through
+  `engine.server.ts runAnalysis` on DeepSeek with the same <text>-as-data rule; it sends the word
+  or settled sentence it analyses, with direction and style, and it is `analysis`-profiled (thinking
+  enabled) without changing the data boundary. The quiet second reading is a DeepSeek review of a
+  Luna-written sentence and uses the same rule.
+- Translation text goes to the brain that writes it: DeepSeek by default, or OpenCode/Luna when
+  selected. The other brain may take over on failure, and DeepSeek reviews Luna-written sentences.
+  Both keys are server-held; the Android personal-key path is DeepSeek-only, so a Luna selection
+  there stays on the service.
 - The app never exposes provider credentials or raw provider errors to the browser. The Android
   app can hold a person's own DeepSeek key (BYOK): it stays in app-private DataStore, is excluded
   from backups, is never logged, and in direct mode requests leave the device straight for

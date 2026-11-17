@@ -44,8 +44,8 @@ describe("restoring a saved session", () => {
       dialect: "levant",
       brain: "luna",
     });
-    // Luna is paused: every request runs on DeepSeek even if a stale preference says otherwise.
-    expect(plan.brain).toBe("deepseek");
+    // Luna is enabled: the saved choice is honoured as the writer.
+    expect(plan.brain).toBe("luna");
     expect(plan.dialect).toBe("levant");
   });
 

@@ -78,6 +78,8 @@ describe("the native gate's responses", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe(app);
     expect(response.headers.get("Access-Control-Allow-Origin")).not.toBe("*");
     expect(response.headers.get("Access-Control-Allow-Headers")).toContain("Content-Type");
+    // The app must be able to read who actually wrote a streamed answer (fallback-safe review).
+    expect(response.headers.get("Access-Control-Expose-Headers")).toContain("X-Translation-Writer");
     expect(response.headers.get("Vary")).toBe("Origin");
   });
 
