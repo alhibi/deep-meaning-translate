@@ -42,7 +42,11 @@ export async function callLexicon(input: {
     target: string;
     uiLocale: "ar" | "en" | "de";
     translation?: string;
+    /** Full source sentence for context ranking (lexicon v2). */
+    context?: string;
     dialect?: string;
+    /** Register the reading is ranked for (lexicon v2). */
+    style?: string;
   };
 }): Promise<{ ok: true; lexicon: LexiconResult | null }> {
   if (isNativeApp()) {

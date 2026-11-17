@@ -459,19 +459,14 @@ html.theme-fade *::after {
     transform: none;
   }
 }
-@keyframes bead {
-  0% {
-    inset-inline-start: 0.5rem;
-    transform: translateY(-50%) scale(0.6);
-  }
-  60% {
-    transform: translateY(-50%) scale(1.1);
-  }
-  100% {
-    inset-inline-start: calc(100% - 1.125rem);
-    transform: translateY(-50%) scale(1);
-  }
-}
+/* The switch bead is painted by transform only (see FeelSection); the old `bead`
+ * keyframes and its utility were dead. They are removed because a logical property
+ * inside @keyframes is lowered differently for the Android build: Lightning CSS's
+ * chrome80 lowering hoisted `inset-inline-start` out of the keyframe and scoped the
+ * resulting physical left/right rule to the NEXT rule in the file — which was
+ * `.composer-editor`, pushing the whole editing box (and the native caret) hundreds of
+ * pixels away from its field. Keep logical properties out of @keyframes; the build
+ * guard in scripts/prepare-native-web.mjs fails if that artefact ever returns. */
 @keyframes from-start {
   from {
     opacity: 0;
@@ -548,9 +543,6 @@ html.theme-fade *::after {
 }
 @utility animate-cross-from-end {
   animation: cross-from-end 320ms var(--ease-out) both;
-}
-@utility animate-bead {
-  animation: bead 380ms var(--ease-out) both;
 }
 @utility animate-exchange {
   animation: exchange 300ms var(--ease-out);
@@ -652,6 +644,12 @@ html.theme-fade *::after {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   line-height: 40px;
+  /* The mirror exists to predict the field's own wrapping. Chromium renders a textarea
+   * with text-rendering: auto whatever it inherits, so the document-wide
+   * optimizeLegibility made the hidden mirror measure a different line than the field
+   * drew — a height that disagreed with the text under the caret. Pin both to the
+   * field's real value so the two layers can only wrap identically. */
+  text-rendering: auto;
 }
 .composer-editor:has(textarea:focus-visible)::after {
   content: "";
@@ -747,7 +745,6 @@ html.theme-fade *::after {
     animation-name: fade !important;
   }
   .animate-exchange,
-  .animate-bead,
   .live-line::after,
   .shimmer::after,
   .progress-line::after {

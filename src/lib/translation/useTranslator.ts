@@ -8,6 +8,7 @@ import { delayFor, isProvisional, normalize, worthTranslating } from "./schedule
 import { metrics } from "./metrics";
 import { streamTranslate, warmTranslation } from "./stream";
 import { memoryGet, memorySet } from "./memory";
+import { enqueueEnrichment } from "./enrichment";
 
 export type ErrorKind =
   "auth" | "quota" | "rate" | "network" | "offline" | "timeout" | "provider" | "input";
@@ -180,6 +181,13 @@ export function useTranslator(opts: {
   const committedKey = useRef<string | null>(restoredKey);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cache = useRef(new Map<string, Cached>());
+  /** Paint frames and request watchdogs, so an unmount can cancel every one of them. */
+  const frames = useRef(new Set<number>());
+  const requestTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  /** The quiet review (if any) whose result may still replace this sentence. */
+  const repairAbort = useRef<AbortController | null>(null);
+  /** After unmount a late transport callback must not schedule paint or write state. */
+  const disposed = useRef(false);
   const deliberate = useRef(false);
   const lastRaw = useRef("");
   const lastKeyAt = useRef(0);
@@ -290,6 +298,7 @@ export function useTranslator(opts: {
         timedOut = true;
         ctrl.abort();
       }, REQUEST_TIMEOUT_MS);
+      requestTimers.current.add(timer);
 
       setStreaming(false);
       setPhase(attempt > 0 ? "RETRYING" : hasResult.current ? "UPDATING" : "TRANSLATING");
@@ -336,7 +345,8 @@ export function useTranslator(opts: {
       const paint = () => {
         frame = 0;
         const partialText = pendingText;
-        if (!partialText || token < shown.current || ctrl.signal.aborted) return;
+        if (disposed.current || !partialText || token < shown.current || ctrl.signal.aborted)
+          return;
         const draft = current.current;
         const ownsDraft = token === latest.current && draft.key === key;
         const usefulPrefix =
@@ -362,13 +372,22 @@ export function useTranslator(opts: {
         setProvisional(true);
       };
       const onText = (partialText: string) => {
+        if (disposed.current) return;
         pendingText = partialText;
         if (frame) return;
-        frame = scheduleFrame(paint);
+        const id = scheduleFrame(() => {
+          frames.current.delete(id);
+          paint();
+        });
+        frame = id;
+        frames.current.add(id);
       };
       /** Cancel a pending paint so it can never overwrite a more complete answer. */
       const dropFrame = () => {
-        if (frame) cancelFrame(frame);
+        if (frame) {
+          cancelFrame(frame);
+          frames.current.delete(frame);
+        }
         frame = 0;
       };
 
@@ -474,10 +493,29 @@ export function useTranslator(opts: {
             // change something: deterministic issues need a repair, and a second brain
             // needs to exist to review. With Luna paused, a clean DeepSeek result would
             // make a guaranteed-null round trip, so it is not sent at all.
-            void callRepair({ data: { request: data, previous: res.result } })
+            //
+            // The review is quiet background work, so it waits at the same paced door as
+            // the dictionary and the shadow — with the highest priority, because its
+            // result can replace the sentence already on screen. Its own signal makes a
+            // superseded review cancel before it spends a request.
+            repairAbort.current?.abort();
+            const review = new AbortController();
+            repairAbort.current = review;
+            void enqueueEnrichment(
+              () => callRepair({ data: { request: data, previous: res.result } }),
+              {
+                purpose: "review",
+                signal: review.signal,
+                isValid: () =>
+                  committedKey.current === key &&
+                  current.current.key === key &&
+                  token === latest.current,
+              },
+            )
               .then((r) => {
                 if (
                   !r?.result ||
+                  review.signal.aborted ||
                   committedKey.current !== key ||
                   current.current.key !== key ||
                   token !== latest.current
@@ -524,6 +562,7 @@ export function useTranslator(opts: {
           setStreaming(false);
         }
         clearTimeout(timer);
+        requestTimers.current.delete(timer);
         if (inflight.current?.ctrl === ctrl) inflight.current = null;
         if (lingering.current === ctrl) lingering.current = null;
       }
@@ -555,6 +594,8 @@ export function useTranslator(opts: {
       shownLen.current = 0;
       dropLingering();
       clearRetry();
+      repairAbort.current?.abort();
+      repairAbort.current = null;
       inflight.current?.ctrl.abort();
       inflight.current = null;
       committedKey.current = null;
@@ -586,6 +627,10 @@ export function useTranslator(opts: {
       // an old completion/retry can land during the pause and be archived for a new draft.
       clearRetry();
       latest.current++;
+      // A quiet review belongs to the sentence that asked for it; a new draft must not be
+      // improved, archived or repeated by it.
+      repairAbort.current?.abort();
+      repairAbort.current = null;
       const append =
         !composing &&
         !paramsChanged &&
@@ -714,6 +759,8 @@ export function useTranslator(opts: {
         inflight.current?.ctrl.abort();
         inflight.current = null;
         dropLingering();
+        repairAbort.current?.abort();
+        repairAbort.current = null;
         setStreaming(false);
       }
       current.current = {
@@ -775,6 +822,8 @@ export function useTranslator(opts: {
     const onOffline = () => {
       setStreaming(false);
       dropLingering();
+      repairAbort.current?.abort();
+      repairAbort.current = null;
       if (inflight.current) {
         shown.current = ++latest.current;
         inflight.current.ctrl.abort();
@@ -794,14 +843,32 @@ export function useTranslator(opts: {
     };
   }, []);
 
+  // Development StrictMode mounts effects, cleans them up and mounts them again on the
+  // same instance. The teardown below marks the instance disposed, so the remount must
+  // re-arm it — otherwise every streamed word is dropped for the rest of the session (the
+  // request still runs and paints nothing). Production mounts once; the latch is the same.
+  useEffect(() => {
+    disposed.current = false;
+  }, []);
+
   useEffect(
     () => () => {
+      // Route change / unmount: nothing belonging to this screen may keep running, paint
+      // or hold a timer. Mark disposed FIRST so a transport callback that fires during
+      // teardown cannot schedule a new frame.
+      disposed.current = true;
       shown.current = ++latest.current;
       current.current = { norm: "", key: "", provisional: false, params: "", composing: false };
       committedKey.current = null;
       inflight.current?.ctrl.abort();
       dropLingering();
       clearRetry();
+      repairAbort.current?.abort();
+      repairAbort.current = null;
+      for (const frame of frames.current) cancelFrame(frame);
+      frames.current.clear();
+      for (const timer of requestTimers.current) clearTimeout(timer);
+      requestTimers.current.clear();
     },
     [],
   );

@@ -1,5 +1,6 @@
 import type { HistoryEntry } from "../history";
 import { countWords, deriveRegister, localDomain, localIntent, localKind } from "./classify";
+import { memoArray, memoEntry } from "./memo";
 import type { Dimension, Domain, Intent, Kind, Register } from "./taxonomy";
 
 /**
@@ -81,7 +82,7 @@ export const isDayKey = (v: unknown): v is string =>
 
 /* --------------------------------------------------------------- records */
 
-export function toRecord(e: HistoryEntry, timeZone?: string): StatRecord {
+function buildRecord(e: HistoryEntry, timeZone?: string): StatRecord {
   const source = lang(e.source);
   const target = lang(e.target);
   const fix = e.fix ?? {};
@@ -123,6 +124,17 @@ export function toRecord(e: HistoryEntry, timeZone?: string): StatRecord {
     origin: { kind: kind.o, domain: domain.o, intent: intent.o, register: registerOrigin },
     legacy: e.v !== 2,
   };
+}
+
+/**
+ * The per-row record, memoised by entry object + time zone. A tag correction maps one
+ * entry to a new object and leaves the others as they were, so the statistics screen
+ * re-classifies only the corrected row instead of all ~2,000. A different time zone is a
+ * different day derivation, so it gets its own key; mutating an entry in place is not
+ * something the archive does (every write builds a new row object).
+ */
+export function toRecord(e: HistoryEntry, timeZone?: string): StatRecord {
+  return memoEntry(e, `record:${timeZone ?? ""}`, () => buildRecord(e, timeZone));
 }
 
 /** One record per id, newest first; empty translations are not translations. */
@@ -274,19 +286,21 @@ export function distribution(
   key: Dimension | "pair",
   all?: readonly string[],
 ): Slice[] {
-  const m = new Map<string, { count: number; words: number }>();
-  for (const id of all ?? []) m.set(id, { count: 0, words: 0 });
-  for (const r of records) {
-    const id = r[key];
-    const s = m.get(id) ?? { count: 0, words: 0 };
-    s.count++;
-    s.words += r.words;
-    m.set(id, s);
-  }
-  return [...m.entries()]
-    .map(([id, s]) => ({ id, ...s, share: share(s.count, records.length) }))
-    .filter((s) => s.count > 0)
-    .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id));
+  return memoArray(records, `distribution:${key}:${all ? all.join("|") : ""}`, () => {
+    const m = new Map<string, { count: number; words: number }>();
+    for (const id of all ?? []) m.set(id, { count: 0, words: 0 });
+    for (const r of records) {
+      const id = r[key];
+      const s = m.get(id) ?? { count: 0, words: 0 };
+      s.count++;
+      s.words += r.words;
+      m.set(id, s);
+    }
+    return [...m.entries()]
+      .map(([id, s]) => ({ id, ...s, share: share(s.count, records.length) }))
+      .filter((s) => s.count > 0)
+      .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id));
+  });
 }
 
 /** Top N slices, the rest folded into one "others" slice so a chart never becomes a crowded wheel. */
@@ -363,6 +377,8 @@ export function insights(records: StatRecord[], b: Bounds | null): Insight[] {
   if (total < INSIGHT_MIN) return [];
   const out: Insight[] = [];
 
+  // The three distributions are shared with the route's panels (memoised per array), so
+  // insights costs one extra pass over the archive, not one per pattern.
   const doms = distribution(records, "domain").filter((s) => s.id !== "none");
   if (
     doms[0] &&
@@ -380,13 +396,37 @@ export function insights(records: StatRecord[], b: Bounds | null): Insight[] {
   if (kinds[0] && kinds[0].share >= 0.4 && kinds[0].count > (kinds[1]?.count ?? 0))
     out.push({ type: "topKind", kind: kinds[0].id, count: kinds[0].count, total });
 
-  // Repeated source text: the same words translated on separate occasions.
+  // The remaining patterns share one pass: repeated source texts, the estimated share and
+  // the two intent halves. Splitting them into separate filters walked the archive once per
+  // pattern on every filter/period change.
   const rep = new Map<string, { text: string; times: number }>();
+  const split = b && b.days >= 2 ? addDays(b.from, Math.floor(b.days / 2) - 1) : null;
+  const firstCounts = new Map<string, number>();
+  const secondCounts = new Map<string, number>();
+  const firstOrder: string[] = [];
+  const secondOrder: string[] = [];
+  let firstTotal = 0;
+  let secondTotal = 0;
+  let estimated = 0;
   for (const r of records) {
     const k = r.original.trim().toLowerCase().replace(/\s+/g, " ");
     const cur = rep.get(k) ?? { text: r.original.trim(), times: 0 };
     cur.times += r.uses;
     rep.set(k, cur);
+
+    if (r.origin.domain === "local") estimated++;
+
+    if (split !== null && r.intent !== "none") {
+      if (r.day <= split) {
+        firstTotal++;
+        if (!firstCounts.has(r.intent)) firstOrder.push(r.intent);
+        firstCounts.set(r.intent, (firstCounts.get(r.intent) ?? 0) + 1);
+      } else {
+        secondTotal++;
+        if (!secondCounts.has(r.intent)) secondOrder.push(r.intent);
+        secondCounts.set(r.intent, (secondCounts.get(r.intent) ?? 0) + 1);
+      }
+    }
   }
   const repeated = [...rep.values()]
     .filter((x) => x.times >= 2)
@@ -395,27 +435,21 @@ export function insights(records: StatRecord[], b: Bounds | null): Insight[] {
   if (repeated.length) out.push({ type: "repeated", items: repeated });
 
   // Intent shift between the first and second half of the period (both halves need evidence).
-  if (b && b.days >= 2) {
-    const mid = addDays(b.from, Math.floor(b.days / 2) - 1);
-    const first = records.filter((r) => r.day <= mid && r.intent !== "none");
-    const second = records.filter((r) => r.day > mid && r.intent !== "none");
-    if (first.length >= INSIGHT_MIN && second.length >= INSIGHT_MIN) {
-      let best: Insight | null = null;
-      let bestDelta = 0;
-      const ids = new Set([...first, ...second].map((r) => r.intent));
-      for (const id of ids) {
-        const before = share(first.filter((r) => r.intent === id).length, first.length);
-        const after = share(second.filter((r) => r.intent === id).length, second.length);
-        if (Math.abs(after - before) >= 0.15 && Math.abs(after - before) > bestDelta) {
-          bestDelta = Math.abs(after - before);
-          best = { type: "intentShift", intent: id, before, after };
-        }
+  if (firstTotal >= INSIGHT_MIN && secondTotal >= INSIGHT_MIN) {
+    let best: Insight | null = null;
+    let bestDelta = 0;
+    const ids = new Set([...firstOrder, ...secondOrder]);
+    for (const id of ids) {
+      const before = share(firstCounts.get(id) ?? 0, firstTotal);
+      const after = share(secondCounts.get(id) ?? 0, secondTotal);
+      if (Math.abs(after - before) >= 0.15 && Math.abs(after - before) > bestDelta) {
+        bestDelta = Math.abs(after - before);
+        best = { type: "intentShift", intent: id, before, after };
       }
-      if (best) out.push(best);
     }
+    if (best) out.push(best);
   }
 
-  const estimated = records.filter((r) => r.origin.domain === "local").length;
   if (estimated) out.push({ type: "estimated", count: estimated, total });
   return out;
 }

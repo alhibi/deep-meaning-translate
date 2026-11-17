@@ -1,7 +1,8 @@
 # Project Map
 
-Status: **Verified** against the repository on 2026-11-17. This is a map, not a specification;
-behaviour is documented in the linked files.
+Status: **Verified** against the repository on 2026-11-17 (after the upgrade recorded in
+`docs/audits/2026-11-17-upgrade.md`). This is a map, not a specification; behaviour is documented
+in the linked files.
 
 ## Runtime shape
 
@@ -10,8 +11,10 @@ Browser
   └─ TanStack Start document (SSR shell + hydration)
        ├─ root route: theme/locale/intro boot scripts, providers, error screens
        ├─ "/" translator route: composer, language bar, style, result, sheets
+       ├─ "/about" the one public page: philosophy, how translation works, data, controls
+       │    (sections #meaning, #translation, #privacy, #sent, #third-parties, #controls)
+       ├─ "/privacy" → 301 /about#privacy, "/arabic-german-translation" → 301 /about#translation
        ├─ "/stats" local statistics (private, noindex)
-       ├─ "/privacy", "/arabic-german-translation" public content
        └─ "/lab" development-only experiments
 
 Worker (Cloudflare target; Node adapter locally)
@@ -39,9 +42,12 @@ today.fluently.app (Capacitor 8, minSdk 24, targetSdk 36)
 | `src/routes/__root.tsx`                                   | Document shell, pre-paint scripts, root error/not-found                                                                                               | theme, i18n, intro, FailureScreen               |
 | `src/routes/index.tsx`                                    | Translator composition, boot restore, session/prefs writes, voice/shadow wiring                                                                       | lib/translation, persist, components/translator |
 | `src/routes/stats.tsx`                                    | Statistics from the local archive; opens a record in the translator                                                                                   | lib/stats, history                              |
-| `src/routes/privacy.tsx`, `arabic-german-translation.tsx` | Public, linked, sitemap content                                                                                                                       | i18n, content constants                         |
+| `src/routes/about.tsx`                                     | The one public page: product explanation, translation philosophy, data disclosure, third parties, controls                                     | i18n, DataControls, ProviderKey, DiagnosticsPanel |
+| `src/routes/privacy.tsx`, `arabic-german-translation.tsx` | Permanent (301) redirects into `/about` sections; keep old URLs and search results alive                                                          | TanStack `redirect`                            |
 | `src/routes/api/*`                                        | Streaming, speech endpoints; same-origin, bounded JSON, per-purpose throttles                                                                         | lib/translation, lib/voice, requestSafety       |
-| `src/lib/translation/`                                    | Scheduler, frame-coalesced stream client, prompt, providers (bounded retry + protocol completion), parse, verify, memory, salvage, enrichment, shadow | types, requestSafety                            |
+| `src/lib/translation/`                                    | Scheduler (NFC identity), frame-coalesced stream client, prompt, providers (capability profiles per task class, bounded retry, protocol completion), parse, verify, memory, salvage, bounded priority enrichment queue, lexicon, shadow | types, requestSafety                            |
+| `src/lib/translation/providers/capabilities.ts`            | The one table of what the active model can do, per task class (thinking/effort/temperature/JSON/output ceiling) and the context-fit guard             | budget, types                                   |
+| `src/lib/translation/engine.server.ts`                     | Provider routing: translation, repair, review, and `runAnalysis` for dictionary/shadow; no feature imports a provider                               | providers, verify                               |
 | `src/lib/persist.ts`                                      | Validated prefs/session, session recency (stale-write refusal), cross-tab subscription, module-level remembered snapshot, durable-storage request     | types, persistence                              |
 | `src/lib/history.ts`, `saved.ts`, `stats/`                | Local archive, saved phrases, pure statistics                                                                                                         | persist-style validation                        |
 | `src/lib/theme.ts`                                        | Three themes, pre-paint boot, `syncThemeColor`, view-transition reveal                                                                                | CSS tokens                                      |

@@ -55,6 +55,22 @@ describe("ComposerField editing contract", () => {
     expect(mirror?.textContent).toBe("Short\u200b");
   });
 
+  it("gives the mirror and the field the same direction contract", () => {
+    // The mirror exists to predict the field's wrapping. Both boxes must resolve the same
+    // direction from the same prop; a mirror that silently inherited the interface
+    // direction while the field followed the draft would size the editor from a different
+    // paragraph and move the field's height away from the text under the caret.
+    for (const rtl of [false, true]) {
+      const { field, container, unmount } = setup({ rtl }, rtl ? "مرحباً" : "Hallo");
+      const mirror = container.querySelector(".composer-mirror");
+      expect(field).toHaveAttribute("dir", rtl ? "rtl" : "ltr");
+      expect(mirror).toHaveAttribute("dir", field.getAttribute("dir"));
+      expect(mirror).toHaveAttribute("aria-hidden", "true");
+      expect(mirror?.getAttribute("tabindex")).toBeNull();
+      unmount();
+    }
+  });
+
   it("bounds dictation inside the same content-sized editor and reading direction", () => {
     const draft = "نص مكتوب\n\nوكلمات منطوقة";
     const { field, container } = setup(

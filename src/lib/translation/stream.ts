@@ -74,6 +74,10 @@ export async function streamTranslate(
       return { ok: false, kind: "provider", cancelled: true };
     }
     if (!res.ok || !res.body) {
+      // Nobody will read this body. Release the connection instead of leaving it open for
+      // a response that is already classified; a burst of rate-limit replies otherwise
+      // keeps sockets alive until the browser reaps them.
+      void res.body?.cancel().catch(() => {});
       const payload = (await res.json().catch(() => null)) as { kind?: ErrorKind } | null;
       const detail = classifyStatus(res.status);
       diagnostics.finish({
@@ -86,16 +90,34 @@ export async function streamTranslate(
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let text = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks += 1;
-      bytes += value.byteLength;
-      text += dec.decode(value, { stream: true });
-      const visible = mode === "full" ? partialTranslation(text) : text;
-      if (visible.trim()) onText(visible.trim());
+    // An abort must also unblock a body that never sends another chunk: a browser fetch
+    // errors the body on abort, but a mocked/WebView transport can leave reader.read()
+    // pending forever, which kept a dead request alive until the connection died.
+    const stopReading = () => {
+      void reader.cancel().catch(() => {});
+    };
+    signal.addEventListener("abort", stopReading, { once: true });
+    try {
+      if (signal.aborted) stopReading();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks += 1;
+        bytes += value.byteLength;
+        text += dec.decode(value, { stream: true });
+        const visible = mode === "full" ? partialTranslation(text) : text;
+        if (visible.trim()) onText(visible.trim());
+      }
+      text = (text + dec.decode()).trim();
+    } finally {
+      signal.removeEventListener("abort", stopReading);
     }
-    text = (text + dec.decode()).trim();
+    // reader.cancel() ends the loop quietly; the caller's abort is still a cancellation,
+    // never a complete answer and never a retryable provider failure.
+    if (signal.aborted) {
+      diagnostics.finish({ stage: "error", kind: "abort", chunks, bytes, cancelled: true });
+      return { ok: false, kind: "provider", cancelled: true };
+    }
     diagnostics.finish({
       stage: "done",
       chunks,
@@ -104,17 +126,22 @@ export async function streamTranslate(
     });
     return text ? { ok: true, text } : { ok: false, kind: "provider" };
   } catch (error) {
-    const kind = classifyFetchError(error);
     const name = (error as Error)?.name;
+    const cancelled = signal.aborted;
+    const kind = classifyFetchError(error);
     diagnostics.finish({
       stage: "error",
       kind,
-      ...(kind === "abort" && signal.aborted ? { cancelled: true } : {}),
+      ...(cancelled ? { cancelled: true } : {}),
       ...(name ? { errorName: name } : {}),
       ...(safeDiagnosticMessage((error as Error)?.message)
         ? { errorMessage: safeDiagnosticMessage((error as Error)?.message) }
         : {}),
     });
+    // The caller's own AbortSignal went off: the request was superseded, the screen was
+    // left or the watchdog fired. That is a quiet end, never a provider failure that a
+    // caller could retry — only the caller's signal knows, not the error's shape.
+    if (cancelled) return { ok: false, kind: "provider", cancelled: true };
     return { ok: false, kind: errorKindFor(kind) };
   }
 }

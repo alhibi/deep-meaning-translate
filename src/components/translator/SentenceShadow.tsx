@@ -58,6 +58,7 @@ export function ShadowInk({
             key={i}
             className="shadow-spot"
             data-severity={s.loss.severity}
+            data-loss-id={s.loss.id}
             data-focus={focusId === s.loss.id ? "true" : focusId ? "dim" : undefined}
           >
             {s.text}
@@ -98,8 +99,9 @@ export function ShadowHits({
             type="button"
             className="shadow-hit"
             data-severity={s.loss.severity}
+            data-loss-id={s.loss.id}
             data-focus={focusId === s.loss.id ? "true" : undefined}
-            aria-label={`${t("shTitle")}: ${t(`sc_${s.loss.category}`)} — ${s.text}`}
+            aria-label={`${t("shTitle")} · ${s.loss.kind === "weakened" ? t("shWeakened") : t("shLost")} · ${t(`sc_${s.loss.category}`)} · ${t("shStrength")} ${s.loss.severity}/3 · ${t("shConfidence")} ${s.loss.confidence >= 0.75 ? t("shLikely") : t("shPossible")}`}
             onClick={() => onPick(s.loss!.id)}
           >
             {s.text}

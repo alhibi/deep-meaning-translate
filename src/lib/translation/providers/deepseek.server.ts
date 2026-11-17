@@ -11,12 +11,13 @@ import { TranslationError } from "../types";
 import { parseResult } from "../parse";
 import { textDeltas } from "./opencode.server";
 import { fetchWithRetry } from "./retry.server";
-import { outputTokenBudget } from "../budget";
+import { assertContextFits, capabilityRequest, type TaskProfile } from "./capabilities";
+import { requireCompletion } from "./completion";
 
 /**
  * Second brain: DeepSeek V4.1 Flash on DeepSeek's own OpenAI-compatible API.
- * `deepseek-flash` always points at the newest Flash build. Thinking is disabled
- * so it answers as fast as a chat reply.
+ * `deepseek-flash` is the documented model id (served by DeepSeek-V4.1-Flash-1017); the
+ * verified capability contract and its documentation sources live in `capabilities.ts`.
  */
 const BASE = "https://api.deepseek.com";
 export const DEEPSEEK_MODEL = "deepseek-flash";
@@ -27,17 +28,27 @@ export function deepseekKey(): string | null {
   return k && k.trim() ? k.trim() : null;
 }
 
+/**
+ * One provider request with the capability shape of its task class.
+ *
+ * Every call names a profile: the model's thinking mode defaults ON, so an omitted toggle
+ * silently turns a fast live request into a reasoning one. The body is built before the
+ * fetch so a context-guard failure is an `input` error, never a misreported network one.
+ */
 async function send(
   apiKey: string,
   system: string,
   user: string,
   signal: AbortSignal | undefined,
   stream: boolean,
-  json: boolean,
-  chars = user.length,
+  profile: TaskProfile,
+  chars: number,
 ): Promise<Response> {
   const cancelled = () => Object.assign(new Error("cancelled"), { name: "AbortError" });
   if (signal?.aborted) throw cancelled();
+  const capabilities = capabilityRequest(profile, chars);
+  // Input and output share the documented context window: too much input fails loudly.
+  assertContextFits(system.length + user.length, capabilities.max_tokens);
   let res: Response;
   try {
     res = await fetchWithRetry(
@@ -48,10 +59,7 @@ async function send(
         body: JSON.stringify({
           model: DEEPSEEK_MODEL,
           stream,
-          thinking: { type: "disabled" },
-          temperature: 0.3,
-          max_tokens: outputTokenBudget(chars, json),
-          ...(json ? { response_format: { type: "json_object" } } : {}),
+          ...capabilities,
           messages: [
             { role: "system", content: system },
             { role: "user", content: user },
@@ -76,18 +84,58 @@ async function send(
   return res;
 }
 
+/** Per-task overrides for a non-streaming completion. */
+export interface ChatSettings {
+  /** Task class and its documented capability shape; "full" when omitted. */
+  profile?: TaskProfile | undefined;
+  signal?: AbortSignal | undefined;
+  /** Source characters sizing the runaway ceiling; defaults to the user prompt length. */
+  chars?: number | undefined;
+}
+
+/**
+ * One non-streaming completion. The provider's completion is checked before its text is
+ * used: a `length` reply is a provider error, not "malformed model output" (TD35).
+ */
+export async function chat(
+  apiKey: string,
+  system: string,
+  user: string,
+  settings: ChatSettings = {},
+): Promise<string> {
+  const res = await send(
+    apiKey,
+    system,
+    user,
+    settings.signal,
+    false,
+    settings.profile ?? "full",
+    settings.chars ?? user.length,
+  );
+  const payload = (await res.json()) as {
+    choices?: { message?: { content?: unknown }; finish_reason?: unknown }[];
+  };
+  const choice = payload.choices?.[0];
+  requireCompletion(choice?.finish_reason);
+  const text = choice?.message?.content;
+  if (typeof text !== "string") throw new TranslationError("provider", "Empty DeepSeek reply.");
+  return text;
+}
+
+/**
+ * Backwards-compatible completion call: `(key, system, user, signal?, chars?)`.
+ * An optional settings argument can be passed last; new call sites should use `chat` with
+ * an explicit profile (`{ profile: "analysis" }` for dictionary/shadow work).
+ */
 export async function call(
   apiKey: string,
   system: string,
   user: string,
   signal?: AbortSignal,
   chars = user.length,
-) {
-  const res = await send(apiKey, system, user, signal, false, true, chars);
-  const payload = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };
-  const text = payload.choices?.[0]?.message?.content;
-  if (typeof text !== "string") throw new TranslationError("provider", "Empty DeepSeek reply.");
-  return text;
+  settings: Omit<ChatSettings, "signal" | "chars"> = {},
+): Promise<string> {
+  return chat(apiKey, system, user, { ...settings, signal, chars });
 }
 
 export async function streamDeepSeekLive(
@@ -101,7 +149,7 @@ export async function streamDeepSeekLive(
     buildLiveUserPrompt(req),
     signal,
     true,
-    false,
+    "live",
     req.text.length,
   );
   if (!res.body) throw new TranslationError("provider", "Empty DeepSeek stream.");
@@ -119,7 +167,7 @@ export async function streamDeepSeekFull(
     buildUserPrompt(req),
     signal,
     true,
-    true,
+    "full",
     req.text.length,
   );
   if (!res.body) throw new TranslationError("provider", "Empty DeepSeek stream.");
@@ -130,18 +178,23 @@ export function createDeepSeekProvider(apiKey: string): TranslationProvider {
   return {
     id: "deepseek",
     async translate(req, signal) {
-      return parseResult(
-        await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, req.text.length),
-        req,
-      );
+      const raw = await chat(apiKey, buildSystemPrompt(), buildUserPrompt(req), {
+        profile: "full",
+        signal,
+        chars: req.text.length,
+      });
+      return parseResult(raw, req);
     },
     async repair(req, previous, issues, signal) {
-      const raw = await call(
+      const raw = await chat(
         apiKey,
         buildSystemPrompt(),
         buildRepairPrompt(req, previous, issues),
-        signal,
-        req.text.length,
+        {
+          profile: "repair",
+          signal,
+          chars: req.text.length,
+        },
       );
       return parseResult(raw, req);
     },
@@ -158,13 +211,11 @@ export async function reviewTranslation(
   previous: TranslationResult,
   signal?: AbortSignal,
 ): Promise<TranslationResult | null> {
-  const raw = await call(
-    apiKey,
-    buildSystemPrompt(),
-    buildReviewPrompt(req, previous),
+  const raw = await chat(apiKey, buildSystemPrompt(), buildReviewPrompt(req, previous), {
+    profile: "review",
     signal,
-    req.text.length,
-  );
+    chars: req.text.length,
+  });
   return parseReview(raw, req);
 }
 

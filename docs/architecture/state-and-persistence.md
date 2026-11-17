@@ -2,8 +2,10 @@
 
 Status: **Verified** against source and tests on 2026-11-17. Keys below were read from the
 implementation, not invented. The web session race fix, cross-tab sync and storage-health surface
-were added in the web upgrade audit; the native adapter was not changed and is device-NOT_VERIFIED
-for those specific behaviours.
+were added in the 2026-11-16 web upgrade; the 2026-11-17 upgrade added whole-array stale-write
+reconciliation, the native complete-window statistics cache and the clamped archive count, all
+unit-tested with a mocked bridge. Device runtime for the native statistics changes remains
+**NOT_VERIFIED** here.
 
 ## Ownership
 
@@ -73,6 +75,12 @@ translator uses the values as **initial state only**:
   an observation; `clearAll()` starts a fresh epoch. An empty draft is written as an **empty
   record** with a newer `at`, never as a key deletion (a deletion would let an old tab resurrect
   its draft on the next boot).
+- **Whole-array writes reconcile first (web):** the archive and the phrasebook are one JSON array
+  per key, so add, retag, remove, toggle and update all rewrite the whole document. Before every
+  such write, `history` and `saved` compare the stored document string with the token the cache was
+  read from or last wrote; if another tab wrote in between they re-read before merging, because a
+  `storage` event is asynchronous and a stale snapshot used to erase newer rows. The comparison is
+  one `localStorage` read; rows are parsed only when the document actually changed.
 - Device translation memory stores only settled, verified results.
 
 ## Restore
@@ -98,22 +106,39 @@ draft to return without its translation and a second paid request. See ADR 0002.
   `storage` event (including a clear) drops this tab's in-memory copy.
 - History is a lightweight archive, not a chat log. Statistics are computed from it; there is no
   second stats store to drift.
+- Native statistics reads keep a **complete-window cache**: once `history.all()` has returned every
+  stored row, a tag correction or an exact re-translation re-derives the view without re-transferring
+  up to 2,000 rows over the bridge, and the cache is invalidated on hydrate, reload or failure.
+  `history.count()` is clamped to `HISTORY_LIMIT`, so a reported count can never drift above the
+  rows the device actually holds.
+- Statistics derivation is memoised per archive array with a bounded key map (32 keys), insights
+  and the practice profile are built in single passes, and one local-origin pass feeds all panel
+  notes. Measured in jsdom/node (labelled; not device claims): derivation reads 19,840 → 13,360 per
+  pass, a one-row tag correction 50.05 → 0.20 ms, `saved.find` 110.8 → 4.1 µs per call, and stats
+  preferences 2,000 → 1 JSON.parse.
 - Saved phrases are explicit user actions, not an automatic archive.
 - Nothing in this section is uploaded. The translation provider receives the text needed to produce
   the translation; it does not receive the archive, theme, locale or saved phrases.
 
 ## Clearing data
 
-The privacy page exposes the local-data controls implemented by the app. `clearDeviceData()` is the
-single removal path: it resets the phrasebook, history and translation-memory caches, then removes
-every `lingua.*` value through `persist.clearAll()`. A new store must join it and its test; removing
-storage keys alone leaves module caches alive and a cleared translation can still answer from RAM.
+The public About page (`/about`) exposes the local-data controls implemented by the app
+(`DataControls`; the installed app adds `ProviderKey` and `DiagnosticsPanel` there too).
+`clearDeviceData()` is the single removal path: it resets the phrasebook, history and
+translation-memory caches, then removes every `lingua.*` value through `persist.clearAll()`. A new
+store must join it and its test; removing storage keys alone leaves module caches alive and a cleared
+translation can still answer from RAM.
 
 ## Known limits
 
 - Storage can be blocked or full; writes report failure and the app continues without persistence.
-  The privacy page now shows archive/saved counts, `navigator.storage.estimate()` usage/quota,
-  persisted status and last-write/trim warnings, with a "make storage durable" action.
+  The About page's controls (`DataControls`) show archive/saved counts,
+  `navigator.storage.estimate()` usage/quota, persisted status and last-write/trim warnings, with a
+  "make storage durable" action.
+- The archive is still one JSON array on the web: a save at the 2,000-row limit rewrites ≈0.5 MB
+  (≈1.2 ms jsdom/node), the cold statistics conversion costs ≈60 ms jsdom/node once per archive
+  revision, and the native boot window is unchanged. These structural costs are recorded in TD25,
+  not hidden.
 - Session recency protects **stale** tabs. Two up-to-date tabs still resolve by last-write-wins:
   the later empty draft intentionally claims the newer state.
 - The remembered copy is now cross-tab synced for prefs/session through `storage` events and
@@ -134,6 +159,7 @@ keys above and their validators; the native adapter replaces only the transport:
 | Settings map (`lingua.prefs.v1` and the individual keys)   | `localStorage`            | one Preferences DataStore JSON map                     |
 | Read timing                                                | synchronous               | synchronous cache, hydrated from the bridge at boot    |
 | Write timing                                               | synchronous               | queued async bridge call; failure reported, cache kept |
+| Statistics reads                                           | archive already in memory | complete-window cache; `history.count()` clamped       |
 | Backup                                                     | file download/upload      | Storage Access Framework                               |
 
 Boot order (root gate) is: inline palette/dir script → bridge `boot` → caches → appearance →

@@ -88,8 +88,16 @@ export const ComposerField = memo(function ComposerField({
         }`}
       >
         {/* Pure CSS intrinsic sizing: no scrollHeight writes or resize feedback. The
-            sentinel keeps a trailing newline/empty line as tall as the native field. */}
-        <div aria-hidden="true" className="composer-mirror pe-14">
+            sentinel keeps a trailing newline/empty line as tall as the native field.
+
+            The mirror repeats the field's direction and padding so the two boxes lay the
+            same text out in the same lines. It is invisible and cannot paint a caret: the
+            only caret on screen is the textarea's own, drawn at the inline-start content
+            edge of whatever the browser resolves for the current value. A zero-width
+            sentinel is not enough here — if the mirror inherited a different direction,
+            its wrapping (and therefore the field's height under a long draft) would drift
+            from the text the person is actually editing. */}
+        <div aria-hidden="true" dir={rtl ? "rtl" : "ltr"} className="composer-mirror pe-14">
           {`${value}\u200b`}
         </div>
         <textarea

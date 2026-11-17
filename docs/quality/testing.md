@@ -1,8 +1,9 @@
 # Testing Strategy
 
-Status: **Verified** content-led canvas/editor follow-up on 2026-11-17. Counts below are from executed commands,
-not estimates. The Android table retains its dated 2026-11-16 evidence; Gradle and devices were not
-rerun in this follow-up.
+Status: **Verified** after the full-stack upgrade on 2026-11-17 (evening run). Counts below are from
+executed commands, not estimates. The Android rows dated 2026-11-16 stay historical; the 2026-11-17
+Android rows are the ones executed for this upgrade. Details and evidence:
+[the upgrade audit](../audits/2026-11-17-upgrade.md).
 
 ## Gates
 
@@ -10,14 +11,14 @@ rerun in this follow-up.
 | ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `npm run typecheck`                | TypeScript consistency                                       | PASS, 0 errors                                                                        |
 | `npm run lint -- --max-warnings 0` | ESLint + Prettier                                            | PASS, 0 warnings                                                                      |
-| `npm run test`                     | Vitest unit/integration suite with coverage                  | **514 passed, 4 skipped, 79 files**                                                   |
+| `npm run test`                     | Vitest unit/integration suite with coverage                  | **735 passed, 4 skipped, 99 files**                                                   |
 | `npm run check:contrast`           | WCAG AA for theme token pairs                                | **51/51 pairs**                                                                       |
 | `npm run check:docs`               | Documentation links and inventory                            | PASS, all current documents indexed                                                   |
-| `npm run build`                    | Worker bundle + headers + PWA generation                     | PASS; **56 precached files**                                                          |
-| `npm run check:pwa`                | Non-empty precache with hashed assets                        | PASS; **54 hashed assets**                                                            |
+| `npm run build`                    | Worker bundle + headers + PWA generation                     | PASS after the upgrade; see "Executed upgrade"                                        |
+| `npm run check:pwa`                | Non-empty precache with hashed assets                        | PASS; **54 precached files, 52 hashed assets**                                        |
 | `npm run build:native:web`         | Prerendered native web assets and CSP preparation            | PASS; **11 entries**; no APK/device claim                                             |
-| `npm run test:e2e:fields`          | Native editing, stream ownership and field geometry          | **39 geometry + 76 interaction/matrix checks**, Chromium 153, final production bundle |
-| `npm run test:e2e:nav`             | Session restore, SPA navigation, background/theme continuity | **15 checks**, Chromium 153, final production bundle                                  |
+| `npm run test:e2e:fields`          | Native editing, stream ownership, field geometry and caret   | **39 geometry + 109 interaction/caret checks**, production preview (Chromium 140; 153 confirmed) |
+| `npm run test:e2e:nav`             | Session restore, SPA navigation, background/theme continuity | **15 checks**, production preview                                                     |
 | `npm run test:e2e`                 | General Python Playwright smoke script                       | Not rerun in this editor follow-up                                                    |
 
 `npm run verify` ran types, zero-warning lint, coverage tests, contrast and docs together.
@@ -25,6 +26,54 @@ Coverage floors in `vitest.config.ts` (statements/branches/functions/lines: **46
 regression guard, not a quality score. This run measured **53.03/45.43/46.03/55.51** respectively.
 The 2026-11-14 baseline measured 51.79/41.86/42.92/53.74. Four explicitly skipped tests remain
 skipped, not passed.
+
+## Executed upgrade (2026-11-17)
+
+Every number in this section comes from a command run in this environment; the audit records the
+classifications and the remaining gaps.
+
+- **Unit/integration**: the full Vitest suite after the upgrade — **99 files, 735 tests passed, 4
+  skipped** (the upgrade added coverage for capability profiles, completion contracts, the enrichment
+  queue, NFC identity, storage reconciliation, statistics memoisation, lexicon parsing/gating, shadow
+  anchoring/windowing/eval, the composer mirror contract and the stylesheet build guard). Coverage
+  floors are unchanged.
+- **Browser suites, against the production preview** (`npm run build` then `PORT=8090 npm run preview`):
+  - `composer_interactions.py`: **109 checks** (was 76). The suite gained the `caret_geometry` section
+    (mirror/field inline-metric agreement and "first glyph sits at the native caret's inline-start
+    edge" in RTL and LTR), the removal of the visible "translates as you type" caption (with the
+    screen-reader description kept), and a platform-correct undo accelerator (Command on macOS,
+    Control elsewhere). The rest is unchanged and still runs the real scheduler/parser/components
+    with a controllable stream at the fetch boundary.
+  - `field_layout.py`: **39 checks**. Now also brings the headless page to the front before asserting
+    the focus marker, because `:focus`/`:focus-visible` only match while the document is focused.
+  - `navigation_stability.py`: **15 checks**.
+  - `seo_navigation.py`: **21 checks** (rewritten): exactly one footer entry, both legacy paths answer
+    **301** and land on their `/about` section, self-canonical indexable `/about`, and the three
+    localizations render their own title and sections.
+  - `shadow.py` (live model, synthetic text): **44 checks** on a 424-wide Arabic phone and a 1280-wide
+    German desktop: no shadow while typing, arrival after settle, linked counterpart highlighting,
+    stacked vs side-by-side layout, separated strength/confidence, diff preview before applying,
+    apply + archive + undo, toggle off.
+  - `pwa_navigation.py`: **8 of 9 checks** pass (worker ready and controlling, both online navigations
+    render the app, the document is cached by NetworkFirst). The offline-fallback check is
+    **NOT_VERIFIED** in this environment: Playwright's offline emulation did not gate the
+    service-worker fetch, so the navigation reached the preview server's 404 shell instead of failing.
+    `npm run check:pwa` still proves the precache is non-empty and `offline.html` is precached.
+- **Stylesheet/Android build guards**: `src/lib/styles.test.ts` fails if any `@keyframes` animates a
+  logical property, and `scripts/prepare-native-web.mjs` fails the native build if the lowered CSS
+  gives `.composer-editor` a physical left/right offset. Both exist because of D73: a dead keyframe
+  was hoisted onto the editor rule by Lightning CSS in the Chrome 80 target and moved the whole field
+  (and the caret) off its canvas in the packaged app only.
+- **Android (2026-11-17)**: `./gradlew :app:testDebugUnitTest` — **13 tests, 0 failures**;
+  `./gradlew :app:assembleDebug` — PASS; `apksigner verify` reports a V2 **debug** certificate (not a
+  publishable artefact); the APK was installed on emulator-5554 (API 35, WebView 124) and the app was
+  exercised: cold launch, restored session, LTR/RTL composer geometry, empty-field RTL caret measured
+  from the framebuffer (995–997 device px against an expected 997.5), and `/about` reached from the
+  single footer entry. `connectedDebugAndroidTest` and any release build were **not** run
+  (no upload keystore; signing fails closed) — TD17/TD42.
+- **Deterministic evaluation**: `node tests/eval/shadow_eval.ts` — **19/19** cases pass (ar→de and de→ar,
+  MSA and Levantine, daily and formal, idiom, sarcasm, respect, implied meaning, joke, ambiguity, and
+  correct translations with nothing lost); no paid call is made.
 
 ## Android gates
 

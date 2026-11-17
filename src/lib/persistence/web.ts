@@ -143,10 +143,33 @@ export function writeSessionState(session: Session | null, meta: SessionMeta): b
   }
 }
 
-export function readHistory(): HistoryEntry[] {
-  if (typeof window === "undefined") return [];
-  const parsed = parse(get(HISTORY));
-  if (!Array.isArray(parsed)) return [];
+/** A validated store plus the exact document it came from. */
+export interface WebSnapshot<T> {
+  rows: T[];
+  /** The stored string, or null when absent/damaged; the token for stale-write checks. */
+  raw: string | null;
+}
+
+/**
+ * Only the stored document string, without parsing or validating it. A whole-array write
+ * is preceded by a token comparison; reading the string is one storage call, while parsing
+ * 2,000 rows would undo the cost the write is already paying (measured in
+ * storage.bench.test.ts).
+ */
+export function readStoredRaw(key: string): string | null {
+  return typeof window === "undefined" ? null : get(key);
+}
+
+/** Raw phrasebook document, for the same cheap stale-write token check. */
+export const readSavedRaw = (): string | null => readStoredRaw(SAVED);
+/** Raw archive document, for the same cheap stale-write token check. */
+export const readHistoryRaw = (): string | null => readStoredRaw(HISTORY);
+
+export function readHistorySnapshot(): WebSnapshot<HistoryEntry> {
+  if (typeof window === "undefined") return { rows: [], raw: null };
+  const raw = get(HISTORY);
+  const parsed = parse(raw);
+  if (!Array.isArray(parsed)) return { rows: [], raw };
   const seen = new Set<string>();
   const out: HistoryEntry[] = [];
   for (const row of parsed as unknown[]) {
@@ -154,13 +177,25 @@ export function readHistory(): HistoryEntry[] {
     seen.add(row.id);
     out.push(sanitizeEntry(row));
   }
-  return out;
+  return { rows: out, raw };
+}
+
+export function readHistory(): HistoryEntry[] {
+  return readHistorySnapshot().rows;
+}
+
+export function readSavedSnapshot(): WebSnapshot<SavedPhrase> {
+  if (typeof window === "undefined") return { rows: [], raw: null };
+  const raw = get(SAVED);
+  const parsed = parse(raw);
+  return {
+    rows: Array.isArray(parsed) ? (parsed as unknown[]).filter(isPhrase).slice(0, SAVED_LIMIT) : [],
+    raw,
+  };
 }
 
 export function readSaved(): SavedPhrase[] {
-  if (typeof window === "undefined") return [];
-  const parsed = parse(get(SAVED));
-  return Array.isArray(parsed) ? (parsed as unknown[]).filter(isPhrase).slice(0, SAVED_LIMIT) : [];
+  return readSavedSnapshot().rows;
 }
 
 export function readMemory(): MemoryRow[] {
@@ -179,7 +214,12 @@ export function readMemory(): MemoryRow[] {
   return out;
 }
 
-export function writeHistorySync(rows: HistoryEntry[]): { ok: boolean; rows: HistoryEntry[] } {
+export function writeHistorySync(rows: HistoryEntry[]): {
+  ok: boolean;
+  rows: HistoryEntry[];
+  /** The document this call left in storage (or tried to); null when nothing was written. */
+  raw: string;
+} {
   let next = rows.slice(0, HISTORY_LIMIT);
   let json = JSON.stringify(next);
   let evicted = 0;
@@ -194,7 +234,7 @@ export function writeHistorySync(rows: HistoryEntry[]): { ok: boolean; rows: His
     try {
       window.localStorage.setItem(HISTORY, json);
       lastEvicted = evicted;
-      return { ok: true, rows: next };
+      return { ok: true, rows: next, raw: json };
     } catch {
       if (next.length <= 1) break;
       const before = next.length;
@@ -204,10 +244,26 @@ export function writeHistorySync(rows: HistoryEntry[]): { ok: boolean; rows: His
     }
   }
   lastEvicted = evicted;
-  return { ok: false, rows: next };
+  return { ok: false, rows: next, raw: json };
 }
 
 let lastEvicted = 0;
+
+/** Write the phrasebook document; the caller keeps the returned raw string as its token. */
+export function writeSavedSync(rows: SavedPhrase[]): {
+  ok: boolean;
+  rows: SavedPhrase[];
+  raw: string;
+} {
+  const next = rows.filter(isPhrase).slice(0, SAVED_LIMIT);
+  const raw = JSON.stringify(next);
+  try {
+    window.localStorage.setItem(SAVED, raw);
+    return { ok: true, rows: next, raw };
+  } catch {
+    return { ok: false, rows: next, raw };
+  }
+}
 
 function writeMemory(rows: MemoryRow[]): boolean {
   let out = rows.slice(0, MEMORY_MAX_ENTRIES);
@@ -326,15 +382,7 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
   },
 
   async savedWrite(rows) {
-    try {
-      window.localStorage.setItem(
-        SAVED,
-        JSON.stringify(rows.filter(isPhrase).slice(0, SAVED_LIMIT)),
-      );
-      return true;
-    } catch {
-      return false;
-    }
+    return writeSavedSync(rows).ok;
   },
 
   async memoryWrite(rows) {

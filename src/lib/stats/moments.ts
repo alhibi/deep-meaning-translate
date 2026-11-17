@@ -6,6 +6,7 @@ import {
   type Slice,
   type StatRecord,
 } from "./engine";
+import { memoArray } from "./memo";
 
 /**
  * The second layer of Translation Statistics: shape over time rather than totals.
@@ -65,6 +66,12 @@ export function weekdayIndex(day: string): number {
 }
 
 export function rhythm(records: StatRecord[], timeZone?: string): Rhythm {
+  // Two panels derive the rhythm from the same array (the rhythm block and the records
+  // panel); each record's hour costs an Intl.DateTimeFormat call, so it is derived once.
+  return memoArray(records, `rhythm:${timeZone ?? ""}`, () => buildRhythm(records, timeZone));
+}
+
+function buildRhythm(records: StatRecord[], timeZone?: string): Rhythm {
   const hours = Array.from({ length: 24 }, () => 0);
   const weekdays = Array.from({ length: 7 }, () => 0);
   const parts: Record<PartOfDay, number> = { night: 0, morning: 0, afternoon: 0, evening: 0 };
@@ -105,15 +112,18 @@ export interface PracticeProfile {
 
 export function practiceProfile(records: StatRecord[], bounds: Bounds | null): PracticeProfile {
   const domains = distribution(records, "domain").filter((slice) => slice.id !== "none");
-  const activeDays = new Set(records.map((record) => record.day)).size;
+  // Days and repeat uses in the same pass; they used to walk the period twice.
+  const active = new Set<string>();
   let revisitedPhrases = 0;
   let repeatUses = 0;
   for (const record of records) {
+    active.add(record.day);
     if (record.uses > 1) {
       revisitedPhrases++;
       repeatUses += record.uses - 1;
     }
   }
+  const activeDays = active.size;
   return {
     domains,
     focus: domains[0] ?? null,

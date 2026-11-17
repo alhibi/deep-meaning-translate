@@ -54,14 +54,40 @@ export function takePendingPick(): PendingPick | null {
 }
 
 const PREFS = "lingua.stats.v1";
-export function readStatsPrefs(): { insightsHidden: boolean } {
-  try {
-    const v = JSON.parse(readDeviceValue(PREFS) ?? "null");
-    return { insightsHidden: v?.insightsHidden === true };
-  } catch {
-    return { insightsHidden: false };
-  }
+/** Shape of the statistics-related preference; one object, shared by readers. */
+export interface StatsPrefs {
+  insightsHidden: boolean;
 }
+
+const DEFAULT_PREFS: StatsPrefs = { insightsHidden: false };
+/**
+ * The route reads this during render (routes/stats.tsx:162), and the page re-renders on
+ * every sheet, metric toggle and URL sync. The stored string is the source of truth and is
+ * compared on every read, so a cross-tab change or a cleared device is seen immediately;
+ * only a changed value costs a JSON.parse. The returned object is stable for one value,
+ * which also keeps the render-time comparison cheap.
+ */
+let prefsCache: { raw: string | null; value: StatsPrefs } | null = null;
+
+export function readStatsPrefs(): StatsPrefs {
+  const raw = readDeviceValue(PREFS);
+  if (prefsCache && prefsCache.raw === raw) return prefsCache.value;
+  let value: StatsPrefs;
+  try {
+    const parsed = JSON.parse(raw ?? "null") as { insightsHidden?: unknown } | null;
+    value = { insightsHidden: parsed?.insightsHidden === true };
+  } catch {
+    value = DEFAULT_PREFS;
+  }
+  prefsCache = { raw, value };
+  return value;
+}
+
 export function writeStatsPrefs(p: { insightsHidden: boolean }) {
-  void writeDeviceValue(PREFS, JSON.stringify(p));
+  const value: StatsPrefs = { insightsHidden: p.insightsHidden === true };
+  const raw = JSON.stringify(value);
+  // The web write is synchronous and the native write updates its snapshot synchronously,
+  // so priming the cache with the value the next read will see is not an assumption.
+  prefsCache = { raw, value };
+  void writeDeviceValue(PREFS, raw);
 }

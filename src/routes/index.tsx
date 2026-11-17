@@ -598,6 +598,10 @@ function Translator() {
     uiLocale: locale,
     settled: settled && !!result && !pending && !error,
     translation: result?.translation,
+    // The sentence the term was written in ranks the readings; the register is part of the
+    // lookup identity, so a formal request never reuses a natural reading from the cache.
+    context: text,
+    style,
     dialect,
   });
   const shadowSettled = settled && !!result && !pending && !error;
@@ -639,11 +643,8 @@ function Translator() {
       ? undo
       : null;
   const focusLoss = shadowLosses.find((l) => l.id === shadowFocus) ?? null;
-  useEffect(() => {
-    if (!undo) return;
-    const id = setTimeout(() => setUndo(null), 6000);
-    return () => clearTimeout(id);
-  }, [undo]);
+  // Undo stays until the draft or the base translation changes (validUndo checks both),
+  // so a calm decision is never taken away by a timer.
   const closeShadow = useCallback(() => setShadowFocus(null), []);
   const closeShadowMap = useCallback(() => setShadowMapOpen(false), []);
   const pickShadow = useCallback((id: string) => {
@@ -1042,11 +1043,6 @@ function Translator() {
                       <Mic className="relative size-[18px]" strokeWidth={1.7} />
                     </button>
                   ) : null}
-                  {!speech.listening && !speech.error ? (
-                    <span aria-hidden className="text-[11px] text-faint">
-                      {t("automaticTranslation")}
-                    </span>
-                  ) : null}
                   {speech.listening ? (
                     <span className="mic-wave text-[12px] text-signal-text" aria-live="polite">
                       {t("micListening")}
@@ -1168,26 +1164,21 @@ function Translator() {
               </SafeArea>
             </div>
           </div>
-          {/* Public pages reachable for keyboard and search, without adding chrome to the translator. */}
+          {/* One quiet entry to the public page. The old pair-guide and privacy links
+              (and every external link that pointed at them) now land on /about, whose
+              sections carry the same content; keeping a single entry avoids splitting
+              the same reader between two doors. */}
           <nav
             dir={uiRtl ? "rtl" : "ltr"}
-            aria-label={t("pairGuide")}
+            aria-label={t("aboutEntry")}
             className="flex shrink-0 flex-wrap items-center justify-center gap-4 py-3 text-[11px] text-faint"
           >
             <Link
               viewTransition
-              to="/arabic-german-translation"
+              to="/about"
               className="press-soft underline-offset-4 hover:underline"
             >
-              {t("pairGuide")}
-            </Link>
-            <span aria-hidden className="size-1 rotate-45 rounded-[1px] bg-border-strong" />
-            <Link
-              viewTransition
-              to="/privacy"
-              className="press-soft underline-offset-4 hover:underline"
-            >
-              {t("privacy")}
+              {t("aboutEntry")}
             </Link>
           </nav>
         </div>

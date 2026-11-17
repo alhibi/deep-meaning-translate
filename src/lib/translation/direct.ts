@@ -1,4 +1,3 @@
-import { outputTokenBudget } from "./budget";
 import { partialTranslation } from "./parse";
 import {
   buildLiveSystemPrompt,
@@ -9,6 +8,8 @@ import {
 import { readProviderKey } from "./providerKey";
 import { beginTransport } from "../native/diagnostics";
 import { TranslationError, type TranslationRequest } from "./types";
+import { assertContextFits, capabilityRequest, type TaskProfile } from "./providers/capabilities";
+import { completionError, requireCompletion } from "./providers/completion";
 
 /**
  * Direct, device-issued DeepSeek calls for the personal-key mode.
@@ -39,7 +40,6 @@ export interface DirectCallbacks {
 function bodyFor(
   data: Record<string, unknown>,
   mode: "live" | "full",
-  stream: boolean,
 ): { system: string; user: string; chars: number } {
   const request = data as unknown as TranslationRequest;
   return mode === "full"
@@ -55,19 +55,23 @@ function bodyFor(
       };
 }
 
+/**
+ * The documented request shape of the task class. The full settled reply always asks for
+ * JSON output, streaming or not, so the client's partial-JSON reader receives a JSON
+ * envelope; the live provisional stream stays plain text (fastest first words).
+ */
 function requestPayload(
   data: Record<string, unknown>,
   mode: "live" | "full",
   stream: boolean,
 ): string {
-  const { system, user, chars } = bodyFor(data, mode, stream);
+  const { system, user, chars } = bodyFor(data, mode);
+  const capabilities = capabilityRequest(mode, chars);
+  assertContextFits(system.length + user.length, capabilities.max_tokens);
   return JSON.stringify({
     model: DIRECT_MODEL,
     stream,
-    thinking: { type: "disabled" },
-    temperature: 0.3,
-    max_tokens: outputTokenBudget(chars, mode === "full"),
-    ...(mode === "full" && !stream ? { response_format: { type: "json_object" } } : {}),
+    ...capabilities,
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -113,25 +117,99 @@ async function callDirectNative(
   if (res.status < 200 || res.status >= 300)
     throw new TranslationError("provider", `DeepSeek responded ${res.status}`);
   const value = res.data as {
-    choices?: { message?: { content?: unknown } }[];
+    choices?: { message?: { content?: unknown }; finish_reason?: unknown }[];
   };
-  const text = value?.choices?.[0]?.message?.content;
+  const choice = value?.choices?.[0];
+  // The buffered transport is still a provider completion: a cut reply is a provider
+  // error, never a text that the JSON parser later rejects (TD34/TD35).
+  requireCompletion(choice?.finish_reason);
+  const text = choice?.message?.content;
   if (typeof text !== "string" || !text.trim())
     throw new TranslationError("provider", "Empty direct reply.");
   return text;
 }
 
-/** Reads one "data: {...}" SSE payload into the text delta (or ""). */
-export function deltaFromSsePayload(payload: string): string {
-  if (!payload || payload === "[DONE]") return "";
+interface DirectSseEvent {
+  delta: string;
+  finishReason: string | null;
+  /** The `[DONE]` protocol terminator. */
+  done: boolean;
+  /** A provider error envelope. */
+  failed: boolean;
+}
+
+/** Reads one "data: {...}" SSE payload into its text delta and protocol fields. */
+export function eventFromSsePayload(payload: string): DirectSseEvent | null {
+  const raw = payload.trim();
+  if (!raw) return null;
+  if (raw === "[DONE]") return { delta: "", finishReason: null, done: true, failed: false };
   try {
-    const value = JSON.parse(payload) as {
-      choices?: { delta?: { content?: unknown } }[];
+    const value = JSON.parse(raw) as {
+      error?: unknown;
+      choices?: { delta?: { content?: unknown }; finish_reason?: unknown }[];
     };
-    const delta = value.choices?.[0]?.delta?.content;
-    return typeof delta === "string" ? delta : "";
+    if (value?.error) return { delta: "", finishReason: null, done: false, failed: true };
+    const choice = value.choices?.[0];
+    const delta = typeof choice?.delta?.content === "string" ? choice.delta.content : "";
+    const finishReason = typeof choice?.finish_reason === "string" ? choice.finish_reason : null;
+    return { delta, finishReason, done: false, failed: false };
   } catch {
-    return "";
+    return null; // keep-alive or a non-JSON line, not answer data
+  }
+}
+
+/** Text delta only; kept because the parse path and tests use it directly. */
+export function deltaFromSsePayload(payload: string): string {
+  return eventFromSsePayload(payload)?.delta ?? "";
+}
+
+/**
+ * Reads the direct DeepSeek SSE body and yields answer text.
+ *
+ * A complete answer is a protocol fact, not a guess from the closing bytes. This mirrors
+ * the server's `textDeltas` contract (TD34): `finish_reason: "stop"` or `[DONE]` completes
+ * the reply; `finish_reason: "length"` / `content_filter` / any unknown reason and a
+ * premature EOF are provider errors. A cut reply must never be committed. The
+ * `reasoning_content` deltas of a thinking model are ignored: only the answer is text.
+ */
+export async function* directDeltas(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completed = false;
+  const handle = (rawLine: string): string => {
+    const line = rawLine.trim();
+    if (!line.startsWith("data:")) return "";
+    const event = eventFromSsePayload(line.slice(5).trim());
+    if (!event) return "";
+    if (event.failed) throw new TranslationError("provider", "The provider stream failed.");
+    if (event.done) {
+      completed = true;
+      return "";
+    }
+    if (event.finishReason !== null) {
+      const failure = completionError(event.finishReason);
+      if (failure) throw failure;
+      completed = true;
+    }
+    return event.delta;
+  };
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += done ? decoder.decode() + "\n" : decoder.decode(value, { stream: true });
+      let newline: number;
+      while ((newline = buffer.indexOf("\n")) !== -1) {
+        const delta = handle(buffer.slice(0, newline));
+        buffer = buffer.slice(newline + 1);
+        if (delta) yield delta;
+      }
+      if (done) break;
+    }
+    if (!completed) throw new TranslationError("provider", "Incomplete provider stream.");
+  } finally {
+    void reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
 }
 
@@ -147,6 +225,13 @@ export async function streamDirect(
 ): Promise<DirectResponse> {
   const key = readProviderKey();
   if (!key) return { ok: false, kind: "auth" };
+  let payload: string;
+  try {
+    payload = requestPayload(data, mode, true);
+  } catch (error) {
+    if (error instanceof TranslationError) return { ok: false, kind: error.kind };
+    return { ok: false, kind: "provider" };
+  }
   const diagnostics = beginTransport({
     transport: "deepseek-direct",
     method: "POST",
@@ -167,7 +252,7 @@ export async function streamDirect(
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
-      body: requestPayload(data, mode, true),
+      body: payload,
       signal: first.signal,
       credentials: "omit",
       cache: "no-store",
@@ -207,9 +292,6 @@ export async function streamDirect(
   // A CORS/proxy/WebView failure below is retried through the Android network stack once;
   // a real HTTP status was already classified above and must not be retried.
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
   let raw = "";
   let visible = "";
   const emit = (next: string) => {
@@ -219,35 +301,15 @@ export async function streamDirect(
     }
   };
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let newline = buffer.indexOf("\n");
-      while (newline >= 0) {
-        const line = buffer.slice(0, newline).trim();
-        buffer = buffer.slice(newline + 1);
-        if (line.startsWith("data:")) {
-          const delta = deltaFromSsePayload(line.slice(5).trim());
-          if (delta) {
-            raw += delta;
-            emit(mode === "full" ? partialTranslation(raw).trim() : raw.trim());
-          }
-        }
-        newline = buffer.indexOf("\n");
-      }
-    }
-    buffer += decoder.decode();
-    const tail = buffer.trim();
-    if (tail.startsWith("data:")) {
-      const delta = deltaFromSsePayload(tail.slice(5).trim());
-      if (delta) {
-        raw += delta;
-        emit(mode === "full" ? partialTranslation(raw).trim() : raw.trim());
-      }
+    for await (const delta of directDeltas(res.body)) {
+      raw += delta;
+      emit(mode === "full" ? partialTranslation(raw).trim() : raw.trim());
     }
   } catch (error) {
     if (signal.aborted) return { ok: false, kind: "provider", cancelled: true };
+    // A protocol failure is a provider fact, not a transport accident: the response was
+    // already handed off, so it must not be replayed through the buffered transport.
+    if (error instanceof TranslationError) return { ok: false, kind: error.kind };
     // The stream died mid-read; try the Android stack once before giving up.
     try {
       const text = await callDirectNative(data, mode);
@@ -272,9 +334,12 @@ export async function callPromptDirect(
   structured: boolean,
   chars: number,
   signal?: AbortSignal,
+  profile: TaskProfile = structured ? "repair" : "live",
 ): Promise<string> {
   const key = readProviderKey();
   if (!key) throw new TranslationError("auth", "No personal key.");
+  const capabilities = capabilityRequest(profile, chars);
+  assertContextFits(system.length + user.length, capabilities.max_tokens);
   let res: Response;
   try {
     res = await fetch(DIRECT_URL, {
@@ -286,10 +351,7 @@ export async function callPromptDirect(
       body: JSON.stringify({
         model: DIRECT_MODEL,
         stream: false,
-        thinking: { type: "disabled" },
-        temperature: 0.3,
-        max_tokens: outputTokenBudget(chars, structured),
-        ...(structured ? { response_format: { type: "json_object" } } : {}),
+        ...capabilities,
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
@@ -307,9 +369,11 @@ export async function callPromptDirect(
     throw new TranslationError(errorKind(res.status), `DeepSeek responded ${res.status}`);
   }
   const payload = (await res.json()) as {
-    choices?: { message?: { content?: unknown } }[];
+    choices?: { message?: { content?: unknown }; finish_reason?: unknown }[];
   };
-  const text = payload.choices?.[0]?.message?.content;
+  const choice = payload.choices?.[0];
+  requireCompletion(choice?.finish_reason);
+  const text = choice?.message?.content;
   if (typeof text !== "string" || !text.trim())
     throw new TranslationError("provider", "Empty direct reply.");
   return text;

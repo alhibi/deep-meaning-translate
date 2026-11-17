@@ -4,9 +4,20 @@
  * No side effects, no network — easy to reason about and test.
  */
 
-/** Harmless formatting noise out, meaningful structure (paragraphs, lists) kept. */
+/**
+ * Canonical form for request identity and for the text sent to the model.
+ *
+ * Harmless formatting noise out, meaningful structure (paragraphs, lists) kept. Unicode
+ * is composed to NFC first: the same visible word reaches the app as different code
+ * points from different keyboards and clipboards (macOS copies `u` + combining diaeresis,
+ * Windows and web forms send precomposed `ü`; Arabic alef + hamza has the same split).
+ * Without canonical composition the identical sentence has two request keys, so it is
+ * translated and paid for twice and device memory misses. NFC is canonical equivalence
+ * only: it changes no letter, mark or emoji.
+ */
 export function normalize(raw: string): string {
   return raw
+    .normalize("NFC")
     .replace(/\r\n?/g, "\n")
     .replace(/[\u200B\uFEFF]/g, "")
     .replace(/[ \t\u00A0]+/g, " ")

@@ -8,7 +8,13 @@ import {
 import type { TranslationProvider, TranslationRequest, TranslationResult } from "../types";
 import { TranslationError } from "../types";
 import { parseResult } from "../parse";
-import { parseLexicon, type LexiconResult } from "../lexicon";
+import {
+  LEXICON_SYSTEM,
+  lexiconUserPrompt,
+  readLexiconReply,
+  type LexiconQuery,
+  type LexiconResult,
+} from "../lexicon";
 import { fetchWithRetry } from "./retry.server";
 
 const BASE = "https://opencode.ai/zen/go/v1";
@@ -226,11 +232,6 @@ export async function streamFullTranslation(
   return textDeltas(res.body);
 }
 
-const LEXICON_SYSTEM = `You are a precise multilingual lexicographer with deep coverage of Modern Standard Arabic, Arabic dialects (Levantine, Egyptian, Gulf, Iraqi, Maghrebi), German (incl. Austrian/Swiss variants, colloquial) and other languages. Analyze only a single word, proper name, adjective, verb, idiom, or short term. Recognize dialect spellings, Arabizi, missing hamza/diacritics, German umlaut substitutes (ae/oe/ue/ss) and inflected forms, and resolve them to the lemma. If the input is a sentence, random text, or has no useful dictionary readings, return null.
-Return ONLY minified JSON (or the literal null). Give distinct common readings, not a thesaurus dump. Rank by everyday frequency; the reading that matches the given model translation comes first. Definitions brief, in the UI language. Examples natural and short.
-forms: key inflections (German: article+gender, plural, genitive, verb Präteritum/Perfekt, comparative; Arabic: plural/broken plural, feminine, past/present/masdar, dialect variants). synonyms: 2-6 target-language synonyms. frequency: 0-1 commonness. register: dialect/register label in UI language or "".
-Schema: {"sourceTerm":lemma,"sourceLanguage":iso639-1,"targetLanguage":iso639-1,"translation":string,"entries":[1-10 items: {"term":string,"partOfSpeech":"noun"|"adjective"|"verb"|"adverb"|"phrase"|"proper_noun"|"term","meanings":[1-6],"definition":string,"example":string,"exampleTranslation":string,"primary":boolean,"forms":[string],"synonyms":[string],"frequency":number,"register":string}]}`;
-
 /** Optional dictionary pass. It is deliberately separate so translation streaming is never delayed. */
 export async function analyzeLexicon(
   apiKey: string,
@@ -252,19 +253,18 @@ export async function analyzeLexiconWith(
     dialect?: string | undefined;
   },
 ): Promise<LexiconResult | null> {
-  const raw = await chat(
-    LEXICON_SYSTEM,
-    `UI language: ${input.uiLocale}\nTranslate/analyze: ${input.source}→${input.target}${
-      input.dialect && input.dialect !== "auto" ? `\nArabic dialect: ${input.dialect}` : ""
-    }${input.translation ? `\nModel translation: ${input.translation}` : ""}\n<term>\n${input.text}\n</term>`,
-  );
-  if (raw.trim() === "null") return null;
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start === -1 || end === -1) return null;
-  try {
-    return parseLexicon(JSON.parse(raw.slice(start, end + 1)));
-  } catch {
-    return null;
-  }
+  // The prompt and parser are the lexicon module's contract; this wrapper only supplies a
+  // chat function so a caller that still uses Luna keeps working while it is paused.
+  const query: LexiconQuery = {
+    text: input.text,
+    source: input.source,
+    target: input.target,
+    uiLocale: input.uiLocale,
+    ...(input.translation ? { translation: input.translation } : {}),
+    ...(input.dialect && input.dialect !== "auto"
+      ? { dialect: input.dialect as LexiconQuery["dialect"] }
+      : {}),
+    style: "natural",
+  };
+  return readLexiconReply(await chat(LEXICON_SYSTEM, lexiconUserPrompt(query)));
 }

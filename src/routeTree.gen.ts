@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as ArabicGermanTranslationRouteImport } from './routes/arabic-german-translation'
 import { Route as LabRouteImport } from './routes/lab'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -29,6 +30,11 @@ import { Route as ApiNativeV1TranslateStreamRouteImport } from './routes/api/nat
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ArabicGermanTranslationRoute = ArabicGermanTranslationRouteImport.update({
@@ -111,6 +117,7 @@ const ApiNativeV1TranslateStreamRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
   '/privacy': typeof PrivacyRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
   '/privacy': typeof PrivacyRoute
@@ -148,6 +156,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/arabic-german-translation': typeof ArabicGermanTranslationRoute
   '/lab': typeof LabRoute
   '/privacy': typeof PrivacyRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/arabic-german-translation'
     | '/lab'
     | '/privacy'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/arabic-german-translation'
     | '/lab'
     | '/privacy'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/arabic-german-translation'
     | '/lab'
     | '/privacy'
@@ -223,6 +235,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   ArabicGermanTranslationRoute: typeof ArabicGermanTranslationRoute
   LabRoute: typeof LabRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -247,6 +260,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/arabic-german-translation': {
@@ -359,6 +379,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   ArabicGermanTranslationRoute: ArabicGermanTranslationRoute,
   LabRoute: LabRoute,
   PrivacyRoute: PrivacyRoute,

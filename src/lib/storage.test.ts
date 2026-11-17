@@ -51,6 +51,66 @@ describe("saved phrases", () => {
     const { saved } = await import("./saved");
     expect(saved.list()).toEqual([]);
   });
+  it("normalises each phrase once, not on every render lookup", async () => {
+    // The translator asks "is this draft saved?" during render; the phrasebook can hold
+    // 300 phrases, so a per-render scan would normalise every phrase on every keystroke.
+    const rows = Array.from({ length: 300 }, (_, i) => ({
+      id: `p${i}`,
+      source: "de",
+      target: "ar",
+      original: `Phrase ${i}`,
+      translated: "جملة",
+      createdAt: 1,
+      known: 0,
+      reviewedAt: 0,
+    }));
+    localStorage.setItem("lingua.saved.v1", JSON.stringify(rows));
+    const { saved } = await import("./saved");
+    expect(saved.list()).toHaveLength(300);
+    const replace = vi.spyOn(String.prototype, "replace");
+    for (let i = 0; i < 100; i++) expect(saved.find("Phrase 299", "ar")?.id).toBe("p299");
+    const normalisations = replace.mock.calls.length;
+    replace.mockRestore();
+    // One index build (300) plus one query normalisation per call (100), not 300 per call.
+    expect(normalisations).toBeLessThan(500);
+  });
+  it("keeps the phrasebook bounded over a long session loop", async () => {
+    const { saved } = await import("./saved");
+    for (let i = 0; i < 310; i++)
+      await saved.toggle({
+        source: "de",
+        target: "ar",
+        original: `Phrase der Sitzung ${i} ${"p".repeat(4)}`,
+        translated: `عبارة الجلسة ${i}`,
+      });
+    expect(saved.list()).toHaveLength(300);
+    const stored = localStorage.getItem("lingua.saved.v1") ?? "";
+    expect(stored.length).toBeLessThan(200_000);
+    expect(stored.length).toBeGreaterThan(0);
+  });
+
+  it("does not overwrite phrases another tab saved since this tab's last read", async () => {
+    const { saved } = await import("./saved");
+    await saved.toggle({ source: "de", target: "ar", original: "Meins", translated: "لي" });
+    const otherRow = {
+      id: "other-phrase",
+      source: "de",
+      target: "ar",
+      original: "Andere",
+      translated: "آخر",
+      createdAt: 900,
+      known: 0,
+      reviewedAt: 0,
+    };
+    localStorage.setItem("lingua.saved.v1", JSON.stringify([otherRow]));
+
+    await saved.toggle({ source: "de", target: "ar", original: "Neu", translated: "جديد" });
+
+    const originals = saved.list().map((p) => p.original);
+    expect(originals).toContain("Andere");
+    expect(originals).toContain("Neu");
+    expect(originals).toHaveLength(2);
+  });
 });
 
 describe("history", () => {

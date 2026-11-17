@@ -190,6 +190,18 @@ function StatsPage() {
     () => (prevB ? select(records, prevB, filters) : null),
     [records, prevB, filters],
   );
+  // One pass over the visible archive builds the on-device-estimate counts for every
+  // panel. Each bar list used to walk the whole archive again to answer the same question.
+  const localOrigin = useMemo(() => {
+    const counts = new Map<Dimension, Map<string, number>>();
+    for (const dimension of ["kind", "domain", "intent", "register"] as Dimension[])
+      counts.set(dimension, new Map());
+    for (const record of visible)
+      for (const [dimension, byValue] of counts)
+        if (record.origin[dimension] === "local")
+          byValue.set(record[dimension], (byValue.get(record[dimension]) ?? 0) + 1);
+    return counts;
+  }, [visible]);
   const summary = useMemo(() => summarize(visible), [visible]);
   const prevSummary = useMemo(() => (prevVisible ? summarize(prevVisible) : null), [prevVisible]);
   const gran = granularityFor(bounds?.days ?? 1);
@@ -665,42 +677,57 @@ function StatsPage() {
             {/* Kinds */}
             <Panel title={t("kindsTitle")}>
               <BarList
-                rows={rows("kind", kinds, visible, locale)}
+                rows={rows("kind", kinds, localOrigin.get("kind")!, locale)}
                 selected={filters.kind}
                 onSelect={(id) => openDim("kind", id)}
                 fmt={fmt}
               />
-              <EstimatedNote dim="kind" visible={visible} t={t} fmt={fmt} />
+              <EstimatedNote
+                local={localOrigin.get("kind")!}
+                total={visible.length}
+                t={t}
+                fmt={fmt}
+              />
             </Panel>
 
             {/* Domains */}
             <Panel title={t("domainsTitle")}>
               <Collapsible
-                rows={rows("domain", domains, visible, locale)}
+                rows={rows("domain", domains, localOrigin.get("domain")!, locale)}
                 selected={filters.domain}
                 onSelect={(id) => openDim("domain", id)}
                 fmt={fmt}
                 t={t}
               />
-              <EstimatedNote dim="domain" visible={visible} t={t} fmt={fmt} />
+              <EstimatedNote
+                local={localOrigin.get("domain")!}
+                total={visible.length}
+                t={t}
+                fmt={fmt}
+              />
             </Panel>
 
             {/* Intents */}
             <Panel title={t("intentsTitle")}>
               <Collapsible
-                rows={rows("intent", intents, visible, locale)}
+                rows={rows("intent", intents, localOrigin.get("intent")!, locale)}
                 selected={filters.intent}
                 onSelect={(id) => openDim("intent", id)}
                 fmt={fmt}
                 t={t}
               />
-              <EstimatedNote dim="intent" visible={visible} t={t} fmt={fmt} />
+              <EstimatedNote
+                local={localOrigin.get("intent")!}
+                total={visible.length}
+                t={t}
+                fmt={fmt}
+              />
             </Panel>
 
             {/* Register */}
             <Panel title={t("registerTitle")} className="lg:col-span-2">
               <StackBar
-                rows={rows("register", registers, visible, locale)}
+                rows={rows("register", registers, localOrigin.get("register")!, locale)}
                 selected={filters.register}
                 onSelect={(id) => openDim("register", id)}
                 fmt={fmt}
@@ -881,13 +908,10 @@ function filterName(
 function rows(
   dim: Dimension,
   slices: ReturnType<typeof distribution>,
-  visible: StatRecord[],
+  local: Map<string, number>,
   locale: ReturnType<typeof useI18n>["locale"],
 ): BarRow[] {
   // A category is marked estimated when most of its translations were classified on-device.
-  const local = new Map<string, number>();
-  for (const r of visible)
-    if (r.origin[dim] === "local") local.set(r[dim], (local.get(r[dim]) ?? 0) + 1);
   return slices.map((s) => ({
     id: s.id,
     label: categoryLabel(locale, dim, s.id),
@@ -900,21 +924,21 @@ function rows(
 
 /** One quiet line per panel: how much of it is an on-device estimate (correctable per translation). */
 function EstimatedNote({
-  dim,
-  visible,
+  local,
+  total,
   t,
   fmt,
 }: {
-  dim: Dimension;
-  visible: StatRecord[];
+  local: Map<string, number>;
+  total: number;
   t: ReturnType<typeof statsT>;
   fmt: Fmt;
 }) {
-  const n = visible.filter((r) => r.origin[dim] === "local").length;
+  const n = [...local.values()].reduce((sum, count) => sum + count, 0);
   if (!n) return null;
   return (
     <p className="mt-2 px-1 text-[11.5px] leading-relaxed text-faint">
-      {t("estimatedShare", { n: fmt.num(n), total: fmt.num(visible.length) })}
+      {t("estimatedShare", { n: fmt.num(n), total: fmt.num(total) })}
     </p>
   );
 }

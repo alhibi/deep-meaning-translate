@@ -39,6 +39,8 @@ const result = (translation: string): TranslationResult => ({
 
 const { useTranslator } = await import("./useTranslator");
 const { memoryClear } = await import("./memory");
+const { enqueueEnrichment, enrichmentLoad, resetEnrichmentQueueForTests } =
+  await import("./enrichment");
 const opts = (text: string) => ({ text, source: "de", target: "ar", style: "natural" as const });
 const flush = async (ms: number) => {
   await act(async () => {
@@ -55,8 +57,11 @@ beforeEach(() => {
   // test would answer the next one from storage and the network path would never run.
   memoryClear();
   localStorage.clear();
+  // The quiet review now shares the background door: each test starts from an empty one.
+  resetEnrichmentQueueForTests(0, 250);
 });
 afterEach(() => {
+  resetEnrichmentQueueForTests(0);
   memoryClear();
   localStorage.clear();
   Reflect.deleteProperty(navigator, "onLine");
@@ -587,6 +592,21 @@ describe("interrupted editing sessions", () => {
     expect(h.current.error).toBeNull();
   });
 
+  it("does not pay twice when the same paste arrives in decomposed Unicode", async () => {
+    // macOS clipboards/files deliver "ü" as u + combining diaeresis while every other
+    // platform sends the precomposed character. The same visible sentence has one key.
+    call.mockResolvedValue({ ok: true, result: result("مرحبًا") });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Grüße."),
+    });
+    await flush(500);
+    expect(call).toHaveBeenCalledTimes(1);
+    rerender(opts("Gru\u0308\u00dfe."));
+    await flush(1000);
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(h.current.result?.translation).toBe("مرحبًا");
+  });
+
   it("aborts and retires buffered paints/completions when the translator unmounts", async () => {
     let finish: (value: unknown) => void = () => {};
     const success = vi.fn();
@@ -602,5 +622,173 @@ describe("interrupted editing sessions", () => {
     await flush(100);
     expect(first.signal.aborted).toBe(true);
     expect(success).not.toHaveBeenCalled();
+  });
+});
+
+describe("quiet review lifecycle", () => {
+  it("sends the quiet review through the paced background door instead of beside it", async () => {
+    call.mockResolvedValue({ ok: true, result: result("أولى") });
+    repairCall.mockResolvedValue({ ok: true, result: null });
+    resetEnrichmentQueueForTests(0, 5_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+      { purpose: "dictionary" },
+    );
+    await flush(10); // a dictionary lookup already holds the door
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ich habe 3 Katzen."),
+    });
+    await flush(500);
+    expect(h.current.result?.translation).toBe("أولى");
+    // Deterministic issues were found (the number 3), so a review is wanted — but it is
+    // quiet work and waits at the same door as the dictionary rather than racing it.
+    expect(repairCall).not.toHaveBeenCalled();
+    expect(enrichmentLoad()).toBe(2);
+    releaseBlocker();
+    await blocker;
+    await flush(100);
+    expect(repairCall).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips a review whose draft changed while it waited, before any request", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("أولى") })
+      .mockImplementation(() => new Promise(() => {}));
+    repairCall.mockResolvedValue({ ok: true, result: null });
+    resetEnrichmentQueueForTests(0, 5_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+      { purpose: "shadow" },
+    );
+    await flush(10);
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ich habe 3 Katzen."),
+    });
+    await flush(500);
+    expect(enrichmentLoad()).toBe(2);
+    rerender(opts("Ein ganz neuer Gedanke"));
+    releaseBlocker();
+    await blocker;
+    await flush(200);
+    expect(repairCall).not.toHaveBeenCalled();
+    // The stale reading may stay readable; it is never improved or archived as the new draft.
+    expect(h.current.result?.translation).toBe("أولى");
+    expect(h.current.stale).toBe(true);
+  });
+});
+
+describe("teardown", () => {
+  it("never routes the foreground translation through the background door", async () => {
+    resetEnrichmentQueueForTests(0, 5_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10); // the quiet door is fully occupied
+    call.mockResolvedValue({ ok: true, result: result("مرحبًا") });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Hallo Welt."),
+    });
+    await flush(500);
+    // Foreground translation is immediate: a busy dictionary/shadow queue cannot delay it.
+    expect(h.current.result?.translation).toBe("مرحبًا");
+    expect(h.current.settled).toBe(true);
+    releaseBlocker();
+    await blocker;
+    await flush(50);
+  });
+  it("cancels its request watchdog and pending paint frame on unmount", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const success = vi.fn();
+    const { unmount } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts("Hallo."),
+    });
+    await flush(100);
+    const first = call.mock.calls[0]![0];
+    act(() => first.onText("جزء ظاهر"));
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    unmount();
+    // A dead screen must not keep a 60 s watchdog or a paint frame alive.
+    expect(vi.getTimerCount()).toBe(0);
+    await flush(500);
+    expect(vi.getTimerCount()).toBe(0);
+    // A transport that resolves after the unmount must not reach the archive.
+    expect(success).not.toHaveBeenCalled();
+  });
+
+  it("removes its connectivity listeners on unmount", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const { unmount } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo.") });
+    await flush(100);
+    const before = call.mock.calls.length;
+    unmount();
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    act(() => window.dispatchEvent(new Event("offline")));
+    act(() => window.dispatchEvent(new Event("online")));
+    await flush(1000);
+    expect(call.mock.calls.length).toBe(before);
+  });
+});
+
+describe("long sessions", () => {
+  it("bounds in-flight work across 200 rapid draft changes and commits only the last", async () => {
+    const label = (n: number) => {
+      let rest = n;
+      const letters: string[] = [];
+      for (let i = 0; i < 3; i += 1) {
+        letters.push(String.fromCharCode(97 + (rest % 26)));
+        rest = Math.floor(rest / 26);
+      }
+      return `Satz ${letters.join("")}.`;
+    };
+    const finalText = label(199);
+    let concurrent = 0;
+    let peak = 0;
+    const signals: AbortSignal[] = [];
+    call.mockImplementation(({ data, signal }: { data: { text: string }; signal: AbortSignal }) => {
+      signals.push(signal);
+      concurrent += 1;
+      peak = Math.max(peak, concurrent);
+      return new Promise((resolve) => {
+        let settled = false;
+        const settle = (value: unknown) => {
+          if (settled) return;
+          settled = true;
+          concurrent -= 1;
+          resolve(value);
+        };
+        if (data.text === finalText) {
+          settle({ ok: true, result: result("النهائية") });
+          return;
+        }
+        signal.addEventListener("abort", () => settle({ ok: false, kind: "network" }));
+      });
+    });
+    const success = vi.fn();
+    const {
+      result: h,
+      rerender,
+      unmount,
+    } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts(label(0)),
+    });
+    for (let i = 1; i < 200; i += 1) {
+      rerender(opts(label(i)));
+      await flush(130);
+    }
+    await flush(500);
+    // At most the current request plus one compatible prefix stream may be in flight:
+    // 200 changes must never leave 200 provider calls running.
+    expect(peak).toBeLessThanOrEqual(2);
+    expect(signals.length).toBeGreaterThan(0);
+    expect(signals.length).toBeLessThanOrEqual(200);
+    expect(h.current.result?.translation).toBe("النهائية");
+    expect(success).toHaveBeenCalledTimes(1);
+    expect(h.current.settled).toBe(true);
+    expect(enrichmentLoad()).toBe(0);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

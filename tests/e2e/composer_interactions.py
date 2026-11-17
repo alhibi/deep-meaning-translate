@@ -7,6 +7,7 @@ The fetch boundary is faked, NOT the hook, scheduler, parser or rendering compon
 import asyncio
 import json
 import os
+import platform
 from pathlib import Path
 
 from playwright.async_api import async_playwright
@@ -16,6 +17,8 @@ URL = os.environ.get("E2E_URL", "http://localhost:8080").rstrip("/")
 OUT = Path(os.environ.get("E2E_ARTIFACTS", "output/composer"))
 checks = 0
 errors = []
+# Undo is a platform accelerator, not a portable one: macOS uses Command, others Control.
+UNDO = "Meta+z" if platform.system() == "Darwin" else "Control+z"
 
 
 def check(ok, message):
@@ -119,8 +122,17 @@ async def editing(browser):
     idle_box = await field.bounding_box()
     check(await page.get_by_role("button", name="Translate now", exact=True).count() == 0,
           "automatic translation needs no manual send button")
-    check(await page.get_by_text("Translates as you type", exact=True).is_visible(),
-          "a quiet hint explains that translation is automatic")
+    # The visible caption was removed as noise; the meaning must survive for a screen
+    # reader only, in the composer's own description, and nowhere as painted text.
+    check(await page.get_by_text("Translates as you type", exact=True).count() == 0,
+          "no visible caption claims that translation is automatic")
+    described = await field.get_attribute("aria-describedby")
+    check(described == "composer-help composer-limit", "the composer keeps its described-by contract")
+    help_text = await page.locator("#composer-help").text_content()
+    check("Translates as you type" in (help_text or ""),
+          "the automatic-translation meaning is still announced to screen readers")
+    check(await page.locator("span[aria-hidden='true']").filter(has_text="Translates as you type").count() == 0,
+          "the removed caption is not re-added as a hidden visual element")
     await field.fill("سأحضر غداً.")
     index = await feed_for(page, "سأحضر غداً.", "full")
     # Deliver the JSON string across frames, so partialTranslation and word arrival run.
@@ -178,7 +190,7 @@ async def editing(browser):
     await field.evaluate("e => e.setSelectionRange(6, 10)")
     await page.keyboard.insert_text("delta")
     check(await field.input_value() == "Alpha delta gamma.", "replacement changes only the selected word")
-    await page.keyboard.press("Control+z")
+    await page.keyboard.press(UNDO)
     check(await field.input_value() == "Alpha beta gamma.", "native undo restores the selected word")
     await page.keyboard.press("End")
     await page.keyboard.press("Shift+Enter")
@@ -244,7 +256,7 @@ async def adaptive_canvas(browser):
     await field.evaluate("e => e.setSelectionRange(0, e.value.length)")
     await page.keyboard.insert_text("Kurz")
     check((await field.bounding_box())["height"] == line, "replacing multiline text with a word shrinks the source")
-    await page.keyboard.press("Control+z")
+    await page.keyboard.press(UNDO)
     check(await field.input_value() == multiline and (await field.bounding_box())["height"] == 3 * line,
           "native undo restores both multiline text and its intrinsic height")
 
@@ -330,6 +342,76 @@ async def keyboard_viewport(browser):
     await context.close()
 
 
+async def caret_geometry(browser):
+    """The only caret on screen is the native textarea's, drawn at the inline-start edge of
+    its editable content box. That edge has to coincide with the first glyph's edge in both
+    directions, and the invisible mirror has to measure the same paragraph — a mirror that
+    wraps at a different width or resolves a different direction would size the editor from
+    text the caret is not in, which is exactly the "caret far from where typing starts"
+    defect class. No CSS caret is drawn anywhere in the composer.
+    """
+    for locale in ("en", "ar"):
+        context, page, field = await open_app(browser, locale=locale, motion="no-preference")
+        draft = "Hallo zusammen, schön dich zu sehen." if locale == "en" else "مرحباً بكم، سعيد بلقائكم."
+        await field.fill(draft)
+        await page.wait_for_timeout(150)
+        metrics = await page.evaluate(r"""() => {
+          const ta = document.querySelector('#composer');
+          const mirror = document.querySelector('.composer-mirror');
+          const box = el => {
+            const s = getComputedStyle(el), r = el.getBoundingClientRect();
+            return {
+              left: r.left, right: r.right, width: r.width,
+              padL: parseFloat(s.paddingLeft), padR: parseFloat(s.paddingRight),
+              dir: s.direction, align: s.textAlign, font: s.fontSize, line: s.lineHeight,
+              track: s.letterSpacing, space: s.whiteSpace, wrap: s.overflowWrap,
+              render: s.textRendering,
+            };
+          };
+          const node = [...mirror.childNodes].find(n => n.nodeType === 3);
+          let first = null;
+          if (node && node.data.length > 1) {
+            const range = document.createRange();
+            range.setStart(node, 0); range.setEnd(node, 1);
+            const r = range.getBoundingClientRect();
+            first = {left: r.left, right: r.right};
+          }
+          return {field: box(ta), mirror: box(mirror), first, dir: ta.getAttribute('dir')};
+        }""")
+        rtl = metrics["dir"] == "rtl"
+        for prop in ("dir", "align", "font", "line", "track", "space", "wrap", "render", "padL", "padR"):
+            check(metrics["field"][prop] == metrics["mirror"][prop],
+                  f"{locale}: the mirror and the field agree on {prop} ({metrics['dir']} text)")
+        check(abs(metrics["field"]["width"] - metrics["mirror"]["width"]) < 1,
+              f"{locale}: the mirror wraps at the field's own width")
+        edge = metrics["field"]["right"] - metrics["field"]["padR"] if rtl else metrics["field"]["left"] + metrics["field"]["padL"]
+        glyph = metrics["first"]["right"] if rtl else metrics["first"]["left"]
+        check(abs(glyph - edge) < 1.5,
+              f"{locale}: the first glyph starts exactly at the caret's inline-start edge ({metrics['dir']})")
+        check(metrics["field"]["left"] <= edge <= metrics["field"]["right"],
+              f"{locale}: the caret's start edge is inside the field")
+        # Nothing is painted under the reserved inline-end padding: that strip belongs to
+        # the clear control, and text (or a caret) there would sit under the button.
+        if rtl:
+            check(metrics["first"]["left"] >= metrics["field"]["left"] + metrics["field"]["padL"] - 1.5,
+                  f"{locale}: RTL text never starts under the clear control's reserved strip")
+        else:
+            check(metrics["first"]["right"] <= metrics["field"]["right"] - metrics["field"]["padR"] + 1.5,
+                  f"{locale}: LTR text never runs under the clear control's reserved strip")
+        await field.fill("")
+        await field.focus()
+        home = await page.evaluate("""() => {
+          const ta = document.querySelector('#composer');
+          const s = getComputedStyle(ta), r = ta.getBoundingClientRect();
+          return {dir: ta.getAttribute('dir'), start: ta.selectionStart, end: ta.selectionEnd,
+                  left: r.left, right: r.right, padL: parseFloat(s.paddingLeft), padR: parseFloat(s.paddingRight)};
+        }""")
+        home_edge = home["right"] - home["padR"] if home["dir"] == "rtl" else home["left"] + home["padL"]
+        check(home["start"] == 0 and home["end"] == 0 and home["left"] <= home_edge <= home["right"],
+              f"{locale}: an empty focused field puts the caret at the inline-start edge")
+        await context.close()
+
+
 async def responsive(browser):
     cases = [(320, 568), (390, 844), (768, 1024), (1440, 900), (844, 390)]
     for i, (width, height) in enumerate(cases):
@@ -382,6 +464,7 @@ async def main():
         await editing(browser)
         await adaptive_canvas(browser)
         await keyboard_viewport(browser)
+        await caret_geometry(browser)
         await responsive(browser)
         await browser.close()
     check(not errors, "zero browser runtime errors: " + repr(errors))

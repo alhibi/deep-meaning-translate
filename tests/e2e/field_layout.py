@@ -111,6 +111,10 @@ async def main():
             viewport={"width": 390, "height": 844}, reduced_motion="reduce"
         )
         page = await context.new_page()
+        # Focus styles (:focus / :focus-visible) only match while the document itself has
+        # focus; a headless page is not guaranteed to be the front document. Bring it to the
+        # front once, so the focus-marker assertion runs in the state a real user is in.
+        await page.bring_to_front()
         page.on("pageerror", lambda e: errors.append(str(e)))
 
         async def reply(route):
@@ -181,6 +185,10 @@ async def main():
             parseFloat(cs.borderTopWidth) === 0 && r.width >= 44 && r.height >= 44;
         }"""), "bare swap retains a 44px accessible touch target")
         before_focus = await page.locator(".source-stage").evaluate("e => getComputedStyle(e).backgroundColor")
+        # A headless page is not guaranteed to be the front document, and :focus / :focus-visible
+        # only match while it is. Make that state explicit instead of depending on the runner.
+        await page.bring_to_front()
+        await page.wait_for_timeout(120)
         await field.focus()
         await page.wait_for_timeout(220)  # Check the final style, not the first frame of a fading placeholder.
         focus = await page.locator(".composer-editor").evaluate("""e => {

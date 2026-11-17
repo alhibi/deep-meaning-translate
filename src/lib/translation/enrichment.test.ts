@@ -11,6 +11,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const flush = async (ms: number) => {
+  await vi.advanceTimersByTimeAsync(ms);
+};
+
 describe("background enrichment queue", () => {
   it("never runs two quiet requests at the same time", async () => {
     let running = 0;
@@ -64,7 +68,7 @@ describe("background enrichment queue", () => {
       });
     void task();
     void task();
-    await vi.advanceTimersByTimeAsync(200);
+    await flush(200);
     expect(startedAt).toHaveLength(2);
     expect(startedAt[1]! - startedAt[0]!).toBeGreaterThanOrEqual(50);
     expect(ENRICHMENT_GAP_MS).toBeGreaterThan(0);
@@ -78,19 +82,251 @@ describe("background enrichment queue", () => {
     void enqueueEnrichment(async () => {
       ran = true;
     });
-    await vi.advanceTimersByTimeAsync(100);
+    await flush(100);
     expect(ran).toBe(false);
-    await vi.advanceTimersByTimeAsync(250);
+    await flush(250);
     expect(ran).toBe(true);
     // The caller still owns its own promise: a hang is not silently reported as success.
     let settled = false;
     void never.then(() => (settled = true));
-    await vi.advanceTimersByTimeAsync(1);
+    await flush(1);
     expect(settled).toBe(false);
   });
 
   it("drains to zero, so the counter can never leak", async () => {
     await Promise.all([enqueueEnrichment(async () => 1), enqueueEnrichment(async () => 2)]);
+    expect(enrichmentLoad()).toBe(0);
+  });
+
+  it("does not count a hung task as pending once its turn was given up", async () => {
+    // The old queue raced a release promise against the hang timeout but only decremented
+    // the pending counter when the task itself settled — one lost request leaked the
+    // counter for the rest of the session.
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 100);
+    const never = enqueueEnrichment(() => new Promise<never>(() => {}));
+    void never.catch(() => {});
+    await flush(150);
+    expect(enrichmentLoad()).toBe(0);
+  });
+});
+
+describe("obsolete and cancelled quiet work", () => {
+  it("skips queued tasks whose result is already irrelevant, before any network", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10); // the blocker holds the door
+    const calls = vi.fn();
+    let stale = true;
+    const queued = Array.from({ length: 10 }, (_, i) =>
+      enqueueEnrichment(
+        async () => {
+          calls(i);
+          return i;
+        },
+        { purpose: "shadow", isValid: () => !stale },
+      ),
+    );
+    await flush(10);
+    expect(calls).not.toHaveBeenCalled(); // still queued behind the blocker
+    stale = false;
+    releaseBlocker();
+    await flush(100);
+    await Promise.allSettled(queued);
+    await blocker;
+    // Every obsolete task was skipped where it was queued: no provider call, no gap spent.
+    expect(calls).not.toHaveBeenCalled();
+    expect(enrichmentLoad()).toBe(0);
+  });
+
+  it("skips a task whose signal was aborted while it waited", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const calls = vi.fn();
+    const ctrl = new AbortController();
+    const queued = enqueueEnrichment(async () => calls(), { signal: ctrl.signal });
+    await flush(10);
+    expect(calls).not.toHaveBeenCalled();
+    ctrl.abort();
+    await expect(queued).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    releaseBlocker();
+    await blocker;
+    await flush(50);
+    expect(calls).not.toHaveBeenCalled();
+  });
+
+  it("aborts an in-flight obsolete task and lets the queue move on", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    const order: string[] = [];
+    const ctrl = new AbortController();
+    const running = enqueueEnrichment(
+      (signal) =>
+        new Promise<never>((_resolve, reject) => {
+          order.push("old-started");
+          signal.addEventListener("abort", () => {
+            order.push("old-aborted");
+            reject(new Error("aborted"));
+          });
+        }),
+      { purpose: "dictionary", signal: ctrl.signal },
+    );
+    await flush(10);
+    const next = enqueueEnrichment(
+      async () => {
+        order.push("next");
+        return "done";
+      },
+      { purpose: "dictionary" },
+    );
+    ctrl.abort();
+    await expect(running).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    await flush(50);
+    await expect(next).resolves.toBe("done");
+    expect(order).toEqual(["old-started", "old-aborted", "next"]);
+  });
+
+  it("leaves no drain timer behind when all queued work is cancelled", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const ctrls = Array.from({ length: 5 }, () => new AbortController());
+    const queued = ctrls.map((ctrl) => enqueueEnrichment(async () => 1, { signal: ctrl.signal }));
+    await flush(10);
+    for (const ctrl of ctrls) ctrl.abort();
+    await Promise.allSettled(queued);
+    expect(enrichmentLoad()).toBe(1); // only the running blocker is left
+    releaseBlocker();
+    await blocker;
+    await flush(10);
+    expect(enrichmentLoad()).toBe(0);
+    // A cancelled queue must not leave a wake-up timer running after everything is gone.
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("removes its abort listener once the task has finished", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0);
+    const ctrl = new AbortController();
+    const add = vi.spyOn(ctrl.signal, "addEventListener");
+    const remove = vi.spyOn(ctrl.signal, "removeEventListener");
+    const done = enqueueEnrichment(async () => "ok", { signal: ctrl.signal });
+    await flush(10);
+    await expect(done).resolves.toBe("ok");
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("priority and bounds", () => {
+  it("puts a settled review ahead of queued dictionary and shadow work", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const order: string[] = [];
+    const job = (name: string, purpose: "review" | "dictionary" | "shadow") =>
+      enqueueEnrichment(
+        async () => {
+          order.push(name);
+          return name;
+        },
+        { purpose },
+      );
+    const dictionary = job("dictionary", "dictionary");
+    const shadow = job("shadow", "shadow");
+    const review = job("review", "review");
+    releaseBlocker();
+    await flush(100);
+    await Promise.all([dictionary, shadow, review, blocker]);
+    expect(order).toEqual(["review", "dictionary", "shadow"]);
+  });
+
+  it("keeps same-purpose work in FIFO order", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const order: number[] = [];
+    const jobs = [0, 1, 2, 3].map((i) =>
+      enqueueEnrichment(
+        async () => {
+          order.push(i);
+          return i;
+        },
+        { purpose: "shadow" },
+      ),
+    );
+    releaseBlocker();
+    await flush(100);
+    await Promise.all([...jobs, blocker]);
+    expect(order).toEqual([0, 1, 2, 3]);
+  });
+
+  it("bounds the queue by dropping the least important queued tasks", async () => {
+    vi.useFakeTimers();
+    resetEnrichmentQueueForTests(0, 8_000, 3);
+    let releaseBlocker: () => void = () => {};
+    const blocker = enqueueEnrichment(
+      () => new Promise<void>((resolve) => (releaseBlocker = resolve)),
+    );
+    await flush(10);
+    const dropped = vi.fn();
+    const shadowJob = () =>
+      enqueueEnrichment(
+        async () => {
+          dropped("shadow");
+        },
+        { purpose: "shadow" },
+      );
+    const dictionaryJob = () =>
+      enqueueEnrichment(
+        async () => {
+          dropped("dictionary");
+        },
+        { purpose: "dictionary" },
+      );
+    const shadow1 = shadowJob();
+    const shadow2 = shadowJob();
+    const dictionary1 = dictionaryJob();
+    const review = enqueueEnrichment(
+      async () => {
+        dropped("review");
+      },
+      { purpose: "review" },
+    );
+    const dictionary2 = dictionaryJob();
+    // The two oldest, lowest-priority tasks are dropped to hold the bound of three.
+    await expect(shadow1).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    await expect(shadow2).rejects.toMatchObject({ name: "EnrichmentCancelled" });
+    void dictionary1.catch(() => {});
+    void review.catch(() => {});
+    void dictionary2.catch(() => {});
+    // One running blocker + the three jobs the bound keeps; the two drops are gone.
+    expect(enrichmentLoad()).toBe(4);
+    releaseBlocker();
+    await flush(100);
+    expect(dropped).not.toHaveBeenCalledWith("shadow");
+    await Promise.all([dictionary1, review, dictionary2, blocker]);
     expect(enrichmentLoad()).toBe(0);
   });
 });

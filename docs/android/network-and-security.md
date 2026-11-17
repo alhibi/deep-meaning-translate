@@ -1,8 +1,10 @@
 # Network and security (Android)
 
-Status: **Implemented and partly device-verified** (2026-11-16, emulator API 35). CORS/allowlist
-behaviour is covered by `src/lib/native/gate.server.test.ts` (10 cases). HTTPS/TLS on a device,
-edge behaviour and abuse at scale remain **NOT_VERIFIED**.
+Status: **Implemented and partly device-verified** (2026-11-16, emulator API 35; the packaged
+2026-11-17 build was also exercised on emulator-5554 for boot, restore, composer geometry and the
+About entry — TD42). CORS/allowlist behaviour is covered by
+`src/lib/native/gate.server.test.ts` (10 cases), and the shared analysis paths by their unit tests.
+HTTPS/TLS on a device, edge behaviour and abuse at scale remain **NOT_VERIFIED**.
 
 ## Endpoints
 
@@ -20,7 +22,13 @@ The installed app calls the same engine as the website through a versioned nativ
 
 Each native route reuses the web handler and its validation, providers, throttles and
 prompts. There is no second implementation and no secret in the APK: provider keys stay
-in the Worker environment.
+in the Worker environment. The two analysis routes are the same domain functions as the web
+surfaces — `analyzeLexiconFor` and `analyzeShadowFor` with `crossOrigin: true`, because the native
+origin gate already authorized the exact origin — so the candidate gate, the enrichment admission,
+the long-text window plan and the provider-agnostic `runAnalysis` call are identical on both
+transports; they are not a second provider call. Bodies are bounded before schema validation and
+admission (`parseAdmittedJson`/`boundedJson`), so an oversized request is a 400 that spends no
+token.
 
 ## Origin gate
 
@@ -46,10 +54,14 @@ control is per-purpose throttling plus server-side keys.
   and is never used in a release build.
 - Cleartext HTTP is disabled in `network_security_config.xml` and
   `android:usesCleartextTraffic="false"`. Only system trust anchors are accepted.
-- Streaming uses the same SSE reader as the web; a dropped stream surfaces the existing
-  retry/cancel behaviour. Leaving the foreground dispatches `lingua:flush`, which now stops
-  cloud/device speech and cancels an in-flight dictation session before flushing storage
-  (device observation limited; see TD28).
+- Streaming and non-streaming replies share the web completion contract: a reply that ends without
+  its protocol completion event, or with a cut reason, is a provider error and is never committed
+  or cached. In direct personal-key mode `direct.ts` enforces the same rule — both the SSE reader
+  `directDeltas` and the buffered CapacitorHttp fallback require completion — and that path bridges
+  a caller abort only until response headers; after hand-off the upstream body keeps reading until
+  its own timeout (TD40). A dropped stream surfaces the existing retry/cancel behaviour. Leaving
+  the foreground dispatches `lingua:flush`, which now stops cloud/device speech and cancels an
+  in-flight dictation session before flushing storage (device observation limited; see TD28).
 - The packaged WebView shell carries a **meta Content-Security-Policy** injected by
   `scripts/prepare-native-web.mjs` (self, inline boot scripts, the product Worker, the
   AssemblyAI WebSocket, blob AudioWorklet). The web deployment's HTTP CSP cannot reach the
@@ -86,7 +98,8 @@ Storage Access Framework, so the app never receives broad file access.
 
 ## Optional personal provider key (BYOK)
 
-The installed app can hold one device-only DeepSeek key (Privacy → Advanced). It is saved in
+The installed app can hold one device-only DeepSeek key (the About page's **Advanced** section).
+It is saved in
 app-private DataStore, excluded from the backup whitelist, never logged and never sent to the
 Worker. When present, the WebView calls `https://api.deepseek.com/chat/completions` directly;
 the native CSP allows that origin and the same prompts/parsers/verifiers are used. Without a
@@ -106,8 +119,8 @@ APK (TD18). "Release" in build logs always names the signer.
 - Kotlin rejects with short, fixed messages ("device storage unavailable"); no SQL,
   values, URLs or stack traces reach the WebView console or logcat.
 - The app has no analytics, ads, crash reporter or third-party SDK beyond Capacitor.
-- The privacy page lists exactly what leaves the device; the installed app uses the same
-  page, and Data settings states that uninstalling deletes the device copy.
+- The About page (`/about`) lists exactly what leaves the device; the installed app renders the
+  same page, and its Data settings state that uninstalling deletes the device copy.
 
 ## Threat notes
 

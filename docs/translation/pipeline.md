@@ -1,11 +1,14 @@
 # Translation Pipeline
 
 Status: **Verified** by source inspection, unit tests and live DeepSeek calls on 2026-11-16.
-Editing/request ownership was rechecked with unit tests and mocked browser streams on 2026-11-17.
-Live model output on `deepseek-flash` is verified for the sample set in §11 (accuracy is sampled, not
-a corpus claim); Luna and the cloud-voice providers remain **NOT_VERIFIED** (no key in this
-environment). Prompt text lives only in `src/lib/translation/prompt.ts`; this document describes its
-structure, not a second copy.
+Editing/request ownership and the enrichment queue were rechecked with unit tests and mocked browser
+streams on 2026-11-17; the same day's upgrade rechecked provider task profiles and the
+dictionary/shadow analysis paths in source and unit tests, with live capability probes (synthetic
+input, key not printed). Live model output on `deepseek-flash` is verified for the sample set in
+§11 (accuracy is sampled, not a corpus claim); Luna and the cloud-voice providers remain
+**NOT_VERIFIED** (no key in this environment). Translation prompt text lives only in
+`src/lib/translation/prompt.ts`; enrichment prompts live beside their parsers
+(`lexicon.ts`, `shadow.ts`), as `AGENTS.md` requires.
 
 ## 1. Input and source resolution
 
@@ -21,7 +24,10 @@ structure, not a second copy.
 
 `useTranslator` is the single owner of request identity and phase. The scheduler:
 
-- normalizes text (`scheduler.ts`) and refuses text that is not worth a request;
+- normalizes text (`scheduler.ts`) and refuses text that is not worth a request; the
+  normalization composes Unicode to **NFC** before collapsing whitespace, so canonically equivalent
+  input (decomposed German umlauts, Arabic hamza forms) is one request key and one translation-memory
+  row rather than two paid requests;
 - learns from typing intervals to decide whether the current text is provisional;
 - waits for a pause, but flushes deliberately on paste/share/restore and after a maximum wait while
   typing never stops;
@@ -95,8 +101,11 @@ model is also asked to classify situation and source tags; those are optional me
 
 A settled result with deterministic issues triggers **one** quiet repair pass. The repaired result
 is shown only if it clears more issues than it creates. With no deterministic issue, a second brain
-may review the sentence; DeepSeek never reviews its own writing, and with Luna paused the review
-path is effectively inactive. Repair is not a loop and is not exposed as machinery to the person.
+may review the sentence; DeepSeek never reviews its own writing, and with Luna paused a clean
+DeepSeek result makes no review round trip at all, so the review path is effectively inactive. The
+second-pass review is quiet background work: it waits in the same paced queue as the dictionary and
+the shadow (§8), with the highest priority because its result can replace the visible sentence.
+Repair is not a loop and is not exposed as machinery to the person.
 
 ## 7. Memory and archive
 
@@ -110,15 +119,92 @@ path is effectively inactive. Repair is not a loop and is not exposed as machine
 
 ## 8. Enrichment
 
-Dictionary lookup, Sentence Shadow and second-pass review are background work. They pass through
-one queue (`enrichment.ts`): one request at a time, a short gap, a hang timeout, and a rejection
-that never blocks the queue. Foreground translation never waits for enrichment.
+Dictionary lookup, Sentence Shadow and second-pass review are quiet background work. They pass
+through one queue (`enrichment.ts`): at most one queued task runs at a time, a short (140 ms) gap
+only after work that actually reached the network, an 8 s hang timeout that releases the door, and
+failure isolation. It is a **bounded priority queue** (review > dictionary > shadow, at most 12 queued):
+queued work whose screen or text is gone is skipped **before** any request, running work is
+logically aborted, and the second-pass review is in this queue too. Foreground translation never
+goes through it, and a hung task cannot block the sentence on screen.
+
+Cancellation is logical, not over the wire: the RPC/native transport functions carry no
+`AbortSignal` yet, so a superseded enrichment request can still complete server-side (TD38). Each
+analysis call is also bounded by a 45 s provider timeout on the server.
+
+### Dictionary (lexicon v2)
+
+The dictionary is a context-aware lexical reference for the word or short fixed expression the
+person wrote. It is model-generated and labelled as such: `source: "model"` is written by the
+parser, never by the model, and the UI says "Model reading — not a verified dictionary". It is not
+a verified lexicon.
+
+- **Local candidate gate** (`isLexiconCandidate`): at most 96 code points and 10 words; terminal
+  punctuation, a newline or a sentence separator refuses the input; beyond four words, a
+  pronoun/demonstrative scaffold refuses it. Inner commas, apostrophes and hyphens are allowed
+  because idioms contain them. The gate is deliberately conservative, but not perfect: a 5–10-word
+  prose string without such a pronoun can pass, costing one quiet request whose model reply is the
+  literal `null` (TD43).
+- **Data model and parser:** term, lemma, part of speech, up to 10 entries each with up to 6
+  ranked readings (the in-context reading first), a one-sentence definition, labelled forms (up to
+  8), synonyms (up to 8),
+  collocations (up to 6), labelled nuances (up to 6; `shift | near_synonym | double | idiom |
+false_friend`), up to 2 example pairs, pronunciation only when the model is confident, register
+  and variety. The parser accepts the older flat shape, drops malformed entries and never throws.
+- **Ranking is deterministic, not model order:** the model's short translation of the term selects
+  the entry (term/lemma/synonym exact match first, then a reading), then the model's `primary`
+  flag, then everyday frequency; inside an entry the reading matching that translation comes first.
+- **Server:** `analyzeLexiconFor` is the one path shared by the browser server function and the
+  native route. It applies the gate, the enrichment admission bucket and
+  `engine.server.runAnalysis` (analysis profile), then echoes the request's register, variety and
+  sentence. `lexicon.ts` owns the prompt, schema and parser together; any failure is a quiet
+  `null`.
+- **Client:** `useLexicon` waits 260 ms after the translation settles, then sends the term,
+  direction, style, dialect, UI locale, the model's translation and — when it adds information —
+  the full sentence as ranking context. Cache version 2 is keyed by all of those, bounded to 40
+  entries with least-recently-used eviction; a stale lookup can never overwrite a newer one.
+
+### Sentence Shadow (v2)
+
+The shadow is a precision pass over a settled translation: what meaning may not have survived. It
+must never point at the wrong words and never invent a loss to look active.
+
+- **Vocabulary:** eight categories (`warmth, intensity, respect, humor, ambiguity, culture,
+rhythm, implied`) and a `kind` of `loss` (meaning lost) or `weakened` (tone or intensity
+  survived, softer). The model may also judge `style`, `normal` or `unclear`; those are filtered out
+  before a finding exists, so a reply that mentions only them is the honest, common answer
+  "nothing essential lost", which the interface shows.
+- **Thresholds and volume:** at least 0.6 confidence for a loss (0.75 for a severity-1 finding)
+  and 0.7 for a weakened tone (capped at severity 2); at most 4 findings are shown, strongest
+  first, with overlapping target spans deduplicated.
+- **Anchoring:** the model only quotes fragments; every offset is recomputed locally. Matching is
+  tolerant of case, whitespace and newlines, Arabic harakat and tatweel, Arabic versus Western
+  digits, composed versus decomposed German (NFC) and edge punctuation, but never of different
+  words. Quote occurrences are paired to target occurrences using the model's occurrence hints,
+  relative position in the two texts, and a monotonic filter; a finding that cannot be anchored in
+  both texts is dropped.
+- **Long text:** the whole 5,000-unit source is accepted and split into sentence-aligned,
+  overlapping windows with absolute offsets and ±240 characters of neighbouring context — at most
+  four windows (`SHADOW_MAX_WINDOWS`), analysed in parallel, each a deep analysis call with a 45 s
+  timeout. Findings from overlapping windows are merged by strength and target span; one unusable
+  window makes the whole result `null` rather than an empty "nothing lost" claim. The translation
+  side is bounded at 15,000 units.
+- **Restores:** an alternative is shown only if it keeps every number, URL and emoji of the current
+  translation, uses the target language's script, changes only part of the sentence (never a full
+  rewrite) and actually touches the lost words; the smallest changes are offered first (at most
+  3). Apply previews a word-level diff before changing anything, keeps the untouched findings
+  visible while the edited sentence is re-checked, updates history and a saved phrase, and offers
+  Undo until the draft or the checked translation changes.
+- **Server:** `analyzeShadowFor` is the one path shared by the browser server function and the
+  native route; the prompt, window plan and parser live together in `shadow.ts`, and the text is
+  produced by `runAnalysis` with the analysis profile. Every failure is a quiet `null`.
 
 ## 9. Failure states
 
 Offline, timeout, rate limit, auth/quota, provider and validation failures map to distinct phases.
 The draft and the last good result stay on screen. A rate-limited live request is silent while
-typing. Cancellation is a quiet end, not an error.
+typing. Cancellation is a quiet end, not an error: the client's abort also cancels the response
+reader, so a body that never sends another chunk cannot keep a dead request alive, and a cancelled
+request is never retried or salvaged.
 
 Two retry layers, both bounded:
 
@@ -144,15 +230,27 @@ a truncated sentence or an invented repetition loop must never become a settled 
   still bounded. These are admission limits, not model throttles.
 - The warm-up request preloads both provider modules and opens the TLS connection **without text or
   credentials**. The first keystroke therefore does not also pay for module resolution.
-- `max_tokens` is a **runaway ceiling, not a target** (`budget.ts`): structured replies use floor
-  512, factor 2.6 and ceiling 16,384; live replies use floor 256, factor 1.5 and ceiling 8,192. A
-  short sentence always has room to finish, while a pathological generation for a long paste stops
-  at a finite ceiling. The provider accepts 16,384 on `deepseek-flash` (probed 2026-11-16), and a
-  5,000-character source now produces a complete structured answer (verified end-to-end).
-- The stream is only settled by a **protocol completion**: OpenAI `finish_reason` `stop`, or
-  Responses `response.completed`. `finish_reason: "length"`, `content_filter`, an unknown reason,
-  `response.incomplete` and a premature EOF are provider failures; `[DONE]` can no longer turn a
-  cut answer into a success.
+- `max_tokens` is a **runaway ceiling, not a target**, and it is set **per task class** in
+  `providers/capabilities.ts`: live streams 8,192 / settled full 16,384 / repair and review 32,768 /
+  analysis 65,536, all under the documented 384K provider output bound. `budget.ts` still supplies
+  the plain-answer floor and factor (structured floor 512, factor 2.6; live floor 256, factor 1.5),
+  and a reasoning class only raises that ceiling. Thinking is explicit per class because the API
+  defaults it **on** with high effort: live and full keep it off for latency, repair, review and
+  analysis opt in (effort high/max). A live probe on 2026-11-17 showed reasoning tokens are charged
+  against `max_tokens` (with `max_tokens: 10` and thinking on, the provider returned
+  `finish_reason: "length"`, ten completion tokens all as reasoning, and an empty answer), so the
+  reasoning ceilings sit well above the plain answer they must also contain.
+- The provider's **protocol completion is the contract for streaming and non-streaming replies**
+  (`providers/completion.ts`): OpenAI `finish_reason` (`stop` is the only success; `length`,
+  `content_filter`, `tool_calls`, an unknown reason and a missing reason are provider errors) and
+  Responses `response.completed` / `response.incomplete`. `[DONE]` cannot turn a cut answer into a
+  success, a truncated non-streaming reply is classified as a provider error instead of a parse
+  accident, and the server chat path, the native buffered fallback and the direct repair path all
+  call the same check; `direct.ts` mirrors the streaming rule for the personal-key path.
+- Long input never splits. `assertContextFits` compares a pessimistic three-tokens-per-character
+  source plus prompt overhead and the output ceiling with the documented 1M-token context **before**
+  any fetch; the app's own 5,000-character schema leaves large headroom, and an input that could not
+  fit is a loud `input` error rather than a truncation or a chunker.
 - When the writer is DeepSeek and the sentence has no deterministic issue, no repair round trip is
   made: with Luna paused there is no second brain that could change the result. A result with a lost
   number or link still gets its repair.
@@ -165,6 +263,19 @@ a truncated sentence or an invented repetition loop must never become a settled 
   cut full answer is salvaged once as verified plain text, never shown as half-JSON.
 - Deterministic verification cannot detect a fluent but semantically wrong sentence.
 - Language pairs other than Arabic ⇄ German have no specialized checks or product guarantees.
+- Dictionary readings and shadow findings are model-generated estimates, not a reviewed corpus: the
+  tests pin parsing, ranking, anchoring, windowing and restore validation, but linguistic accuracy
+  remains sampled (TD1).
+- The dictionary gate is conservative but not perfect: a short prose string without a
+  pronoun/demonstrative can pass it, costing one quiet request whose model reply is the literal
+  `null` (TD43).
+- Long-text shadow issues up to four analysis calls (`SHADOW_MAX_WINDOWS`) per settled translation,
+  in parallel, each with a 45 s provider timeout; the long-text path's live cost and finding quality
+  are **NOT_VERIFIED** (TD41).
+- Enrichment cancellation is logical, not over the wire: a superseded dictionary/shadow/review
+  request can still complete on the server because the native transport functions carry no
+  `AbortSignal` (TD38). On the Android personal-key path, an abort is bridged only until response
+  headers; after hand-off the body keeps reading until its own timeout (TD40).
 - Live DeepSeek observations on 2026-11-16 (dev server, real key, no synthetic mocks): two live
   Arabic→German streams returned their first byte in 0.29–0.36 s and completed in 0.68–0.90 s; a
   formal German→Arabic full reply completed in 1.34 s with correct register and tags; a

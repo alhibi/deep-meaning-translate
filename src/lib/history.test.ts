@@ -148,4 +148,125 @@ describe("history archive", () => {
     expect(list[0]?.fix?.kind).toBe("idiom");
     expect(list[0]?.translated).toBe("جملة 001");
   });
+
+  it("counts only the rows the device holds after the archive overflows its limit", async () => {
+    // A full archive must not make the reported total grow with every new sentence; the
+    // number is shown on the data screen and drives the "archive is full" copy.
+    const seed = Array.from({ length: 2000 }, (_, i) => ({
+      id: `seed-${i}`,
+      source: "de",
+      target: "ar",
+      original: `Seed ${"s".repeat(4)} ${i}`,
+      translated: "بذرة",
+      createdAt: 1_000_000 - i,
+    }));
+    localStorage.setItem(KEY, JSON.stringify(seed));
+    history.reload();
+    expect(history.count()).toBe(2000);
+
+    await history.add(entry(1));
+    expect(history.list()).toHaveLength(2000);
+    expect(history.count()).toBe(2000);
+  });
+
+  it("keeps the stored document bounded over a long session loop", async () => {
+    // A session that translates all day must not make the stored archive grow: the
+    // device holds a bounded newest-first window, and every save drops the oldest row.
+    const seed = Array.from({ length: 2000 }, (_, i) => ({
+      id: `loop-${i}`,
+      source: "de",
+      target: "ar",
+      original: `Schleife ${i} ${"s".repeat(6)}`,
+      translated: "حلقة",
+      createdAt: 1_000_000 - i,
+    }));
+    localStorage.setItem(KEY, JSON.stringify(seed));
+    history.reload();
+    const seededLength = (localStorage.getItem(KEY) ?? "").length;
+
+    for (let i = 0; i < 25; i++)
+      await history.add({
+        source: "de",
+        target: "ar",
+        original: `Langsame Sitzung ${i} ${"l".repeat(6)}`,
+        translated: `جلسة طويلة ${i}`,
+      });
+
+    expect(history.list()).toHaveLength(2000);
+    expect(history.count()).toBe(2000);
+    const stored = localStorage.getItem(KEY) ?? "";
+    expect(stored.length).toBeLessThan(seededLength * 1.5);
+  });
+
+  it("does not overwrite rows another tab wrote since this tab's last read", async () => {
+    // A storage event is asynchronous. If this tab saves before it is delivered, writing
+    // its stale snapshot would erase the other tab's translations.
+    await history.add(entry(1));
+    const otherRows = [
+      {
+        id: "other-1",
+        source: "de",
+        target: "ar",
+        original: "Anderer Satz eins",
+        translated: "جملة أخرى",
+        createdAt: 900,
+      },
+      {
+        id: "other-2",
+        source: "de",
+        target: "ar",
+        original: "Anderer Satz zwei",
+        translated: "جملة ثانية",
+        createdAt: 950,
+      },
+    ];
+    localStorage.setItem(KEY, JSON.stringify(otherRows));
+
+    await history.add(entry(2));
+
+    const ids = history.list().map((e) => e.id);
+    expect(ids).toContain("other-1");
+    expect(ids).toContain("other-2");
+    expect(history.list().some((e) => e.original === "Satz 002")).toBe(true);
+  });
+
+  it("does not resurrect a stale snapshot when deleting one row", async () => {
+    await history.add(entry(1));
+    const mine = history.list()[0]!;
+    const otherRow = {
+      id: "other-9",
+      source: "de",
+      target: "ar",
+      original: "Anderer Satz neun",
+      translated: "جملة تاسعة",
+      createdAt: 900,
+    };
+    localStorage.setItem(KEY, JSON.stringify([otherRow, mine]));
+
+    await history.remove(mine.id);
+
+    expect(history.list().map((e) => e.id)).toEqual(["other-9"]);
+    expect(JSON.parse(localStorage.getItem(KEY) ?? "[]")).toHaveLength(1);
+  });
+
+  it("does not resurrect a stale snapshot when correcting a row", async () => {
+    await history.add(entry(1));
+    const mine = history.list()[0]!;
+    const otherRow = {
+      id: "other-7",
+      source: "de",
+      target: "ar",
+      original: "Anderer Satz sieben",
+      translated: "جملة سابعة",
+      createdAt: 900,
+    };
+    localStorage.setItem(KEY, JSON.stringify([otherRow, mine]));
+
+    await history.retag(mine.id, { kind: "idiom" });
+
+    const ids = history.list().map((e) => e.id);
+    expect(ids).toHaveLength(2);
+    expect(ids).toContain("other-7");
+    expect(history.list().find((e) => e.id === mine.id)?.fix?.kind).toBe("idiom");
+  });
 });

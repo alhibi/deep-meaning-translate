@@ -1,12 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import type { Key } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { isRtl, languageLabel } from "@/lib/translation/languages";
+import type { Dialect } from "@/lib/translation/types";
 import type { LexiconResult } from "@/lib/translation/lexicon";
 import { LexiconPanel } from "./LexiconPanel";
 
-/** Mini dictionary window: opens from the result toolbar, never pushes the page around. */
+const DIALECT_LABEL: Record<Exclude<Dialect, "auto">, Key> = {
+  msa: "d_msa",
+  levant: "d_levant",
+  egypt: "d_egypt",
+  gulf: "d_gulf",
+  iraq: "d_iraq",
+  maghreb: "d_maghreb",
+};
+
+/**
+ * Mini dictionary window: opens from the result toolbar, never pushes the page around.
+ * The header carries the identity of the lookup (term, direction, Arabic variety) so the
+ * reading is never shown detached from the word and context it was ranked for.
+ */
 export function LexiconSheet({
   open,
   value,
@@ -64,10 +80,17 @@ export function LexiconSheet({
   useFocusTrap(open, sheetRef);
   if (!open || typeof document === "undefined") return null;
 
+  const sourceRtl = value ? isRtl(value.sourceLanguage) : false;
+  const dialect =
+    value?.targetLanguage === "ar" && value.dialect && value.dialect !== "auto"
+      ? DIALECT_LABEL[value.dialect]
+      : null;
+
   return createPortal(
     <div
       ref={sheetRef}
       tabIndex={-1}
+      data-testid="lexicon-sheet"
       className="fixed inset-0 z-50 outline-none"
       dir={rtl ? "rtl" : "ltr"}
       role="dialog"
@@ -90,15 +113,33 @@ export function LexiconSheet({
         >
           <span aria-hidden className="h-1.5 w-10 rounded-full bg-border-strong" />
         </div>
-        <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-1">
-          <h2 className="min-w-0 truncate text-[15px] font-semibold text-foreground">
-            {t("lexTitle")}
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-1 pt-1">
+          <div className="min-w-0">
+            <h2 className="truncate text-[15px] font-semibold text-foreground">
+              {t("lexTitle")}
+              {value ? (
+                <span
+                  lang={value.sourceLanguage}
+                  dir={sourceRtl ? "rtl" : "ltr"}
+                  className={`ms-2 font-normal text-muted-foreground ${sourceRtl ? "font-arabic" : ""}`}
+                >
+                  {value.sourceTerm}
+                </span>
+              ) : null}
+            </h2>
             {value ? (
-              <span dir="auto" className="ms-2 font-normal text-muted-foreground">
-                {value.sourceTerm}
-              </span>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-faint">
+                {/* A language pair is directional, not prose: forcing LTR keeps the arrow
+                    pointing from source to target in the Arabic interface too. */}
+                <span dir="ltr" data-testid="lexicon-direction">
+                  <bdi>{languageLabel(value.sourceLanguage)}</bdi>
+                  <span aria-hidden> → </span>
+                  <bdi>{languageLabel(value.targetLanguage)}</bdi>
+                </span>
+                {dialect ? <span className="text-signal-text">· {t(dialect)}</span> : null}
+              </p>
             ) : null}
-          </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}

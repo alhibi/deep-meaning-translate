@@ -22,9 +22,9 @@ installable APKs are published with the repository:
 - Android evidence: [ANDROID_TEST_EVIDENCE.md](ANDROID_TEST_EVIDENCE.md),
   [ANDROID_RELEASE_REPORT.md](ANDROID_RELEASE_REPORT.md), and
   [docs/android/build-and-release.md](docs/android/build-and-release.md).
-- **Optional personal key:** in the installed app, Privacy → Advanced lets you paste your own
-  DeepSeek key. It stays in the app's private storage, is excluded from backups, never goes to
-  the today server, and is used for direct DeepSeek calls with your own quota (ADR 0009). This
+- **Optional personal key:** in the installed app, the About page's Advanced section lets you paste
+  your own DeepSeek key. It stays in the app's private storage, is excluded from backups, never goes
+  to the today server, and is used for direct DeepSeek calls with your own quota (ADR 0009). This
   is the fallback when a phone's network cannot reach the deployed service.
 
 ## What the product actually does
@@ -52,9 +52,11 @@ installable APKs are published with the repository:
 - **A web app that feels installed**: the streamed answer arrives word by word on a deliberate
   "whirlwind" while a caret marks live generation; provider deltas are coalesced to one paint per
   animation frame; a dismissible update pill appears when a new service worker takes over; storage
-  health (quota, durability, archive rows, failed/trimmed writes) is visible on the privacy page.
-- **Public pages** (`/privacy`, `/arabic-german-translation`), a sitemap, an offline shell, and a
-  first-run introduction that is server-rendered so it never covers a painted translator.
+  health (quota, durability, archive rows, failed/trimmed writes) is visible on the About page.
+- **One public page** (`/about`): product explanation, the meaning-first philosophy, the data
+  disclosure and the controls; `/privacy` and `/arabic-german-translation` are permanent redirects
+  into its sections, the sitemap lists only `/` and `/about`, and a first-run introduction is
+  server-rendered so it never covers a painted translator.
 
 The default and only active writer is **DeepSeek**. The OpenCode/Luna provider is implemented but
 paused (`LUNA_ENABLED = false`); no request silently switches providers while it is paused.

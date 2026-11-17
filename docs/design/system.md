@@ -44,6 +44,19 @@ animation is paint-only, scoped to the fresh tail of a live stream, and reduced 
 `prefers-reduced-motion`. Settled answers keep no promoted layers. The full rule and its measured
 cost live in `docs/design/motion-and-accessibility.md`.
 
+## Reading behind the words
+
+The dictionary and the sentence shadow are reading surfaces, not more translation. The dictionary
+sheet leads with the in-context reading for the sentence that was written and puts the model-source
+line on the surface; forms, synonyms, collocations, nuances and example pairs stay behind one
+disclosure, so a word lookup does not become a page or a card grid. The shadow is drawn as a
+relationship: the translation carries a quiet offset echo over the parts that may have lost meaning,
+a one-line summary beneath it says how many findings there are or that nothing essential was lost,
+and the map shows both texts in full with the same numbered marks — side by side on a wide screen,
+stacked in reading order on a phone — where a mark reveals its counterpart. Strength and confidence
+are separate measures, never merged into one score. These surfaces reuse the existing fade/sheet
+motion, and the map scrolls a counterpart into view instantly under `prefers-reduced-motion`.
+
 ## Translation Statistics: the practice map
 
 The statistics page is a private, editorial reading of the local archive, not a dashboard. Its
@@ -72,7 +85,14 @@ header. Its quiet surface has no border, inset highlight or white focus fill; de
 the surface/background contrast. The source starts at one complete line. A CSS-grid mirror of the
 exact draft (hidden from accessibility, pointer input and selection) supplies intrinsic size; a
 zero-width sentinel keeps trailing blank lines intact. The native textarea still owns the caret,
-selection, undo, composition and scrolling. No DOM measurement writes or resize observers are used.
+selection, undo, composition and scrolling. There is **one** caret and it is the textarea's, painted
+at the inline-start edge of the first glyph (left in LTR, right in RTL) — never a CSS caret, never a
+pixel offset. The mirror repeats the field's direction, padding and text rendering, and
+`.composer-editor` pins `text-rendering: auto` because Chromium draws a textarea with `auto`
+whatever it inherits, so a document-wide `optimizeLegibility` made the mirror measure different
+lines than the field drew. `tests/e2e/composer_interactions.py` (`caret_geometry`) asserts the
+mirror/field agreement and the first-glyph-at-caret-edge invariant in both directions. No DOM
+measurement writes or resize observers are used.
 
 The source grows and shrinks with actual wrapping/newlines, up to **six whole lines**, **four** on
 viewports ≤640 px high, **three** at ≤480 px or with the keyboard open. Beyond the cap it scrolls
@@ -113,6 +133,7 @@ stay restrained; depth comes from surface contrast and spacing rather than heavy
 | `BrainPicker`                                                | model selection; Luna shows as paused                             |
 | `ComposerField` / `DictationText`                            | native editing, IME/Enter/limit handling, exact dictation echo    |
 | `ResultPanel`                                                | translation, copy, listen, save, shadow, current/stale states     |
+| `LexiconPanel`, `SentenceShadow`                             | model-sourced readings; shadow ink, summary and two-text map      |
 | `LanguageSheet`, `ShadowSheet`, `LexiconSheet`, `SavedSheet` | lazy dialogs                                                      |
 | `Intro`                                                      | server-rendered first-run gate                                    |
 | `FailureScreen`                                              | translated error and not-found surfaces                           |

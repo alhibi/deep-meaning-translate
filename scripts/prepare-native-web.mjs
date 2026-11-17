@@ -83,6 +83,49 @@ if (!withCsp.includes('http-equiv="Content-Security-Policy"')) {
   process.exit(1);
 }
 
+/**
+ * CSS lowering guard.
+ *
+ * The native target compiles CSS for a Chrome 80 WebView, and Lightning CSS lowers
+ * logical properties for it. A logical property inside `@keyframes` is lowered by
+ * hoisting the physical left/right declaration OUT of the keyframe and scoping it to the
+ * next rule in the sheet. One dead keyframe once did exactly that to `.composer-editor`
+ * and pushed the whole editing box — and therefore the native caret — hundreds of pixels
+ * off its field in the installed app only. The source no longer uses logical properties
+ * inside keyframes, and this assertion makes the artefact a build failure instead of a
+ * device-only visual bug.
+ */
+async function assertCssLoweringSafe() {
+  const assets = path.join(target, "assets");
+  const names = existsSync(assets) ? await readdir(assets) : [];
+  const sheets = names.filter((name) => name.endsWith(".css"));
+  if (!sheets.length) {
+    console.error("prepare-native-web: no CSS asset found; the guard cannot run.");
+    process.exit(1);
+  }
+  for (const name of sheets) {
+    const css = await readFile(path.join(assets, name), "utf8");
+    for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = rule[1].trim();
+      if (!selector.includes(".composer-editor")) continue;
+      // A focus marker pseudo-element may legitimately carry a physical edge.
+      if (/::?after\b/.test(selector)) continue;
+      if (!/(?:^|;)\s*(?:left|right)\s*:/.test(rule[2])) continue;
+      console.error(
+        `prepare-native-web: ${name} offsets the editor itself: "${selector.slice(0, 90)}". ` +
+          "That is the Lightning CSS keyframe-lowering artefact that moves the composer " +
+          "and its caret off the field; keep logical properties out of @keyframes.",
+      );
+      process.exit(1);
+    }
+  }
+  console.log(
+    `prepare-native-web: ${sheets.length} stylesheet(s) free of the composer offset artefact`,
+  );
+}
+
+await assertCssLoweringSafe();
+
 const files = await readdir(target);
 const index = await stat(indexPath);
 console.log(

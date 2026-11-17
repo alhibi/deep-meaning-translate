@@ -8,7 +8,7 @@ import {
   type EntryTags,
   type HistoryEntry,
 } from "./persistence/contracts";
-import { readHistory, webPort, writeHistorySync } from "./persistence/web";
+import { readHistoryRaw, readHistorySnapshot, webPort, writeHistorySync } from "./persistence/web";
 
 export { HISTORY_LIMIT, isEntry, sanitizeEntry } from "./persistence/contracts";
 export type { EntryTags, HistoryEntry } from "./persistence/contracts";
@@ -37,6 +37,14 @@ const native = isNativeApp();
 /** Newest-first window; on Android this is the recent page, not the whole archive. */
 let cache: HistoryEntry[] | null = null;
 let total = 0;
+/**
+ * The exact `lingua.history.v1` document the cache was read from or last wrote. A
+ * `storage` event is asynchronous, so comparing this token with storage before a
+ * whole-array write is what stops a stale snapshot from erasing another tab's rows.
+ */
+let cacheToken: string | null = null;
+/** Native only: the cache holds the whole archive, not just the recent boot window. */
+let complete = false;
 /** Changes only when archive content changes, not when a native screen refreshes its view. */
 let revision = 0;
 const listeners = new Set<() => void>();
@@ -48,16 +56,45 @@ function emit(contentChanged = true) {
 
 function current(): HistoryEntry[] {
   if (cache === null) {
-    cache = native ? [] : readHistory();
+    if (native) {
+      cache = [];
+    } else {
+      const snapshot = readHistorySnapshot();
+      cache = snapshot.rows;
+      cacheToken = snapshot.raw;
+    }
     total = cache.length;
   }
   return cache;
 }
 
-/** Called once by the platform boot with the validated native snapshot. */
+/**
+ * Re-read the archive when the stored document is not the one this tab last read/wrote.
+ * Only the web backend needs it: it is the only one whose archive is a single JSON array,
+ * so a save rewrites every row and a stale snapshot would drop the rows another tab added
+ * while this tab was translating.
+ */
+function refreshIfStorageChanged(): void {
+  if (native || typeof window === "undefined" || cache === null) return;
+  // The string comparison is the cheap path; parsing 2,000 rows happens only when another
+  // tab actually wrote, never on an ordinary save.
+  if (readHistoryRaw() === cacheToken) return;
+  const snapshot = readHistorySnapshot();
+  cache = snapshot.rows;
+  cacheToken = snapshot.raw;
+  total = snapshot.rows.length;
+}
+
+/**
+ * Called once by the platform boot with the validated native snapshot. When the window
+ * already holds every stored row (the boot page is at least the whole archive), the
+ * statistics screen can skip its full-archive fetch; otherwise `all()` fetches once.
+ */
 export function hydrateHistory(rows: HistoryEntry[], totalRows: number) {
   cache = rows;
   total = totalRows;
+  cacheToken = null;
+  complete = native && rows.length === totalRows && totalRows <= HISTORY_LIMIT;
   emit();
 }
 
@@ -77,6 +114,8 @@ if (typeof window !== "undefined" && !native) {
   window.addEventListener("storage", (e) => {
     if (e.key === "lingua.history.v1" || e.key === null) {
       cache = null;
+      cacheToken = null;
+      complete = false;
       emit();
     }
   });
@@ -104,7 +143,7 @@ export const history = {
   /** Rows dropped from the oldest end by the most recent save to fit the device quota. */
   lastEvicted: () => lastEvicted,
   /** Total rows held by the device, including ones older than the hydrated window. */
-  count: (): number => (current(), Math.max(total, cache?.length ?? 0)),
+  count: (): number => (current(), Math.min(HISTORY_LIMIT, Math.max(total, cache?.length ?? 0))),
   /** Monotonic content revision for views that maintain a separate full-archive snapshot. */
   revision: (): number => revision,
   subscribe(fn: () => void) {
@@ -116,19 +155,28 @@ export const history = {
     cache = null;
     emit();
   },
-  /** The whole archive, for statistics and search — requested by those screens only. */
+  /**
+   * The whole archive, for statistics and search — requested by those screens only.
+   * A cache known to hold every row is reused: a tag correction or an exact
+   * re-translation changes one row, not the archive, and refetching up to 2,000 rows
+   * over the bridge for that would be the statistics screen's largest read.
+   */
   async all(): Promise<HistoryEntry[]> {
     if (!native) return current();
+    if (complete) return current();
     try {
       const rows = await port.historyAll();
       cache = rows.slice(0, HISTORY_LIMIT);
       total = rows.length;
+      cacheToken = null;
+      complete = rows.length <= HISTORY_LIMIT;
       // Fetching the full archive changes the window, not the archive itself. In
       // particular, it must not make useFullArchive fetch the same 2,000 rows again.
       emit(false);
       return rows;
     } catch {
       status = "unavailable";
+      complete = false;
       return current();
     }
   },
@@ -152,13 +200,18 @@ export const history = {
     const now = Date.now();
     const original = entry.original.slice(0, MAX_TEXT);
     const key = norm(original);
+    refreshIfStorageChanged();
     const rows = current();
     // Room needs a query, which is a real await. A browser's localStorage write is
     // synchronous, so the web path performs the merge and the write in one turn —
     // exactly the behaviour this archive had before the port existed.
     const pool = native ? await candidates(entry, now, key) : rows;
+    // Another save may have committed while the Room query was in flight; merge into the
+    // cache as it is now, not the window captured before the await.
+    const baseRows = native ? current() : rows;
+    const totalBefore = total;
     const merged: HistoryEntry[] = [];
-    const rest: HistoryEntry[] = [...rows];
+    const rest: HistoryEntry[] = [...baseRows];
     for (const e of pool) {
       if (e.target !== entry.target) continue;
       const ek = norm(e.original);
@@ -196,11 +249,15 @@ export const history = {
     // made the native badge/stats total drift upward on every later use.
     const existed = merged.some((e) => e.id === row.id);
     cache = [row, ...rest].slice(0, HISTORY_LIMIT);
-    total = Math.max(total + (existed ? 0 : 1) - removed.length, cache.length);
+    total = Math.max(totalBefore + (existed ? 0 : 1) - removed.length, cache.length);
     emit();
     if (!native) {
       const written = writeHistorySync(cache);
       cache = written.rows;
+      // The document is the truth: a full archive that shed its oldest row holds fewer
+      // rows than the session has seen, and the reported total must not keep climbing.
+      total = cache.length;
+      if (written.ok) cacheToken = written.raw;
       lastWriteOk = written.ok;
       lastEvicted = webPort.lastEvicted();
     } else {
@@ -215,6 +272,7 @@ export const history = {
       } catch {
         // Keep the in-memory row: the person sees their translation, and the next save
         // retries. A silent "saved" would be the actual failure.
+        complete = false;
         lastWriteOk = false;
       }
     }
@@ -225,6 +283,7 @@ export const history = {
     id: string,
     fix: { [K in keyof EntryTags]?: EntryTags[K] | null },
   ): Promise<HistoryEntry[]> {
+    refreshIfStorageChanged();
     const next = current().map((e) => {
       if (e.id !== id) return e;
       const patch: Record<string, unknown> = { ...e.fix };
@@ -240,6 +299,8 @@ export const history = {
     if (!native) {
       const written = writeHistorySync(next);
       cache = written.rows;
+      total = cache.length;
+      if (written.ok) cacheToken = written.raw;
       lastWriteOk = written.ok;
     } else if (row) {
       try {
@@ -247,12 +308,14 @@ export const history = {
         lastWriteOk = true;
         emit();
       } catch {
+        complete = false;
         lastWriteOk = false;
       }
     }
     return next;
   },
   async remove(id: string): Promise<HistoryEntry[]> {
+    refreshIfStorageChanged();
     const next = current().filter((e) => e.id !== id);
     cache = next;
     total = Math.max(0, total - 1);
@@ -260,6 +323,8 @@ export const history = {
     if (!native) {
       const written = writeHistorySync(next);
       cache = written.rows;
+      total = cache.length;
+      if (written.ok) cacheToken = written.raw;
       lastWriteOk = written.ok;
     } else {
       try {
@@ -267,6 +332,7 @@ export const history = {
         lastWriteOk = true;
         emit();
       } catch {
+        complete = false;
         lastWriteOk = false;
       }
     }
@@ -277,13 +343,17 @@ export const history = {
     total = 0;
     emit();
     if (!native) {
-      lastWriteOk = writeHistorySync([]).ok;
+      const written = writeHistorySync([]);
+      if (written.ok) cacheToken = written.raw;
+      lastWriteOk = written.ok;
     } else {
       try {
         await port.historyClear();
+        complete = true;
         lastWriteOk = true;
         emit();
       } catch {
+        complete = false;
         lastWriteOk = false;
       }
     }

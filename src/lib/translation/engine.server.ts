@@ -19,6 +19,29 @@ async function deepseek(): Promise<TranslationProvider | null> {
   return key ? createDeepSeekProvider(key) : null;
 }
 
+/**
+ * One-shot quiet analysis against the active provider: dictionary readings, the sentence
+ * shadow, and any future semantic task that is pure text-in / JSON-out.
+ *
+ * This is the single place that knows which model answers an analysis request, so the
+ * dictionary and shadow modules own a prompt and a parser and nothing about a provider.
+ * When the second brain is re-enabled, only this function changes.
+ */
+export async function runAnalysis(
+  system: string,
+  user: string,
+  opts: { signal?: AbortSignal | undefined; chars?: number | undefined } = {},
+): Promise<string> {
+  const { chat, deepseekKey } = await import("./providers/deepseek.server");
+  const key = deepseekKey();
+  if (!key) throw new TranslationError("auth", "The analysis provider is not configured.");
+  return chat(key, system, user, {
+    profile: "analysis",
+    signal: opts.signal,
+    chars: opts.chars ?? user.length,
+  });
+}
+
 /** Failures where the other brain can help; bad input or cancellation never fall back. */
 export const shouldFallBack = (err: unknown) =>
   err instanceof TranslationError && err.kind !== "input";

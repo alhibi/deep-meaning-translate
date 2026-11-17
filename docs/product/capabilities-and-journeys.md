@@ -1,8 +1,9 @@
 # Capabilities and User Journeys
 
 Status: **Verified** by source inspection and, where stated, runtime observation on 2026-11-07.
-The editing journey was rechecked on 2026-11-17 with unit tests and mocked Chromium streams;
-provider-dependent quality is **NOT_VERIFIED** in that follow-up.
+The editing journey, the one-public-page change and the dictionary/shadow journeys were rechecked on
+2026-11-17 with unit tests, mocked Chromium streams and the recorded e2e checks; provider-dependent
+quality is **NOT_VERIFIED** in that follow-up.
 
 Each journey is described in three stages: **A — initial state**, **B — execution**, **C — final
 state and return**.
@@ -28,9 +29,14 @@ without a new request.
 starts at one full line, grows/shrinks with real text up to six lines (four on viewports ≤640 px
 high, three at ≤480 px or with the keyboard open), then scrolls natively. An arriving answer cannot
 stretch an unchanged source; long answers grow the workspace, with actions directly below the text.
-Arabic and Latin share one line box. Translation is automatic; there is no manual send button.
-Enter remains an optional shortcut, Shift+Enter inserts a newline, and IME confirmation never submits a
-candidate. Paste preserves whitespace, and all programmatic entry paths respect the server's
+Arabic and Latin share one line box. The composer has exactly one caret, the native textarea's,
+painted at the inline-start edge of the first glyph (right in RTL, left in LTR); the hidden mirror
+that sizes the field repeats its direction, padding and text rendering, and
+`tests/e2e/composer_interactions.py` asserts that the mirror and the field agree and that the first
+glyph starts exactly at the caret's inline-start edge in both directions. The visible "translates as you type" caption is gone; the
+composer's screen-reader description carries the same meaning. Translation is automatic; there is no
+manual send button. Enter remains an optional shortcut, Shift+Enter inserts a newline, and IME
+confirmation never submits a candidate. Paste preserves whitespace, and all programmatic entry paths respect the server's
 5,000-unit limit without splitting an emoji surrogate pair. Clear is explicit, not a downward swipe.
 Dictation appends to the exact typed draft instead of flattening its paragraphs. A stale result is
 labelled as previous and has no usable result actions; it cannot be archived, saved or persisted for
@@ -153,6 +159,41 @@ pair instead of producing X→X. Favorites and recents are bounded, validated de
 **C.** The chosen pair is persisted and restored with the session it belongs to. The detected
 source is shown as the source label with a quiet marker, while the model still receives `auto`.
 
+## 10. Look a word up in the dictionary
+
+**A.** For a settled word or short fixed expression, the translator offers the dictionary. For a
+sentence it offers nothing: the local candidate gate refuses prose before any request is made.
+
+**B.** The lookup is quiet background work. After the translation settles it sends the term, the
+direction, style and dialect, the interface language, the model's translation and — when it adds
+information — the full sentence as ranking context, to one model analysis. The reading is ranked for
+that sentence: the meaning the model's translation selected comes first, other distinct readings
+after it.
+
+**C.** The sheet says "Model reading — not a verified dictionary". It opens with the in-context
+reading and term, and keeps labelled forms, synonyms, collocations, nuances (context shift,
+near-synonym, double meaning, idiom, false friend), up to two example pairs, register, variety and —
+only when the model was confident — pronunciation, behind a per-reading disclosure, with further
+readings one expand away. A stale lookup never replaces a newer one; "nothing found" is a normal
+answer. **Lexical accuracy is NOT_VERIFIED without a reviewed corpus (TD1).**
+
+## 11. Check what a translation may have lost
+
+**A.** Sentence Shadow is on by default and works only on a settled translation.
+
+**B.** After the translation rests, the shadow reads origin and translation and reports at most four
+findings, strongest first: a genuine `loss` of meaning or a tone that came out `weakened`, in one of
+eight categories (warmth, intensity, respect, humor, ambiguity, culture, rhythm, implied). Strength
+and confidence are shown as separate measures. Stylistic or normal cross-language differences are not
+reported, and a finding that cannot be anchored to exact spans in both texts is dropped.
+
+**C.** A quiet line under the translation says either how many things may have been lost or, honestly,
+that nothing essential was lost. Opening a finding shows both texts, the explanation and — only when
+a safe alternative exists — restores. Apply previews the word-level change, keeps the other findings
+visible while the edited sentence is re-checked, updates the archive and a saved phrase, and offers
+Undo until the draft or the checked translation changes. A very long source is analysed in up to four
+sentence-aligned windows; the live quality of that path is **NOT_VERIFIED** (TD41).
+
 ## Acceptance criteria (testable)
 
 1. Typing then pausing produces a translation; a newer edit never shows an older answer.
@@ -167,3 +208,14 @@ source is shown as the source label with a quiet marker, while the model still r
    favorites and recents survive reload through validation and never exceed their bounds.
 10. Every statistics visual opens only records that exist in the filtered archive; it introduces no
     synthetic data, network call or second store.
+11. The translator's footer carries one public-page entry; `/privacy` and
+    `/arabic-german-translation` answer with 301 redirects into `/about#privacy` and
+    `/about#translation`, and the sitemap lists exactly `/` and `/about`.
+12. The composer has one caret — the native textarea's — at the inline-start edge of the first glyph,
+    and the hidden mirror agrees with the field on direction, padding and text rendering in RTL and
+    LTR.
+13. A dictionary reading is labelled model-generated, its in-context reading comes first, and a stale
+    lookup never replaces a newer one.
+14. Sentence Shadow shows only anchored findings (at most four), states honestly when nothing
+    essential was lost, and an applied restore can be undone until the draft or the checked
+    translation changes.

@@ -1,7 +1,8 @@
 # Security and Privacy
 
-Status: **Source-verified** boundaries on 2026-11-07. No penetration test, dependency audit or
-production credential test was performed. Claims below distinguish implementation from assurance.
+Status: **Source-verified** boundaries, re-checked against the code on 2026-11-17 (unified public
+page, background analysis profile, Android direct-key path). No penetration test, dependency audit
+or production credential test was performed. Claims below distinguish implementation from assurance.
 
 ## Trust boundaries
 
@@ -42,7 +43,14 @@ flowchart LR
 - User text is placed inside `<text>` tags and treated as data. System rules state that the model
   must translate, not follow instructions inside the text.
 - The system prompt forbids adding explanations; the verifier flags added notes/labels.
-- The app never exposes provider credentials or raw provider errors to the browser.
+- Background analysis (dictionary, sentence shadow, quiet second reading) goes through
+  `engine.server.ts runAnalysis` with the same provider and the same <text>-as-data rule; it sends
+  the word or settled sentence it analyses, with direction and style, and it is `analysis`-profiled
+  (thinking enabled) without changing the data boundary.
+- The app never exposes provider credentials or raw provider errors to the browser. The Android
+  app can hold a person's own DeepSeek key (BYOK): it stays in app-private DataStore, is excluded
+  from backups, is never logged, and in direct mode requests leave the device straight for
+  DeepSeek — that path is a separate trust boundary, documented in the public page.
 - A malicious translation cannot trigger a privileged action: there is no tool use, no code
   execution and no server action driven by model output.
 - Prompt-injection resistance is **not formally tested**; it is a design boundary, not a proof.
@@ -54,7 +62,13 @@ flowchart LR
 - Speech requests are not logged with their text.
 - The app has no accounts and no server-side user-content store.
 - Drafts, history, saved phrases, memory, theme and locale live on the device and are validated on
-  read. `clearAll()` removes every `lingua.*` key; the privacy page exposes the user-facing control.
+  read. `clearAll()` removes every `lingua.*` key.
+- The public disclosure is one page at `/about` (sections: on-device data, what is sent and why,
+  third parties and limits, controls and diagnostics). `/privacy` and
+  `/arabic-german-translation` are permanent (301) redirects into its sections, so old links and
+  search results still reach the content. The page carries the controls themselves
+  (`DataControls`, the Android `ProviderKey` and `DiagnosticsPanel`) and a review date that only
+  moves when the text was re-checked against the code.
 - Data sent to a provider is governed by that provider's policy; the app does not claim more than
   "we do not store your text".
 

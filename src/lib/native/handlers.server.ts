@@ -8,11 +8,11 @@
  */
 import { z } from "zod";
 import { InputSchema } from "../translation/translate.functions";
-import { LexiconInput } from "../translation/lexicon.functions";
-import { ShadowInput } from "../translation/shadow.functions";
+import { analyzeLexiconFor, LexiconInput } from "../translation/lexicon.functions";
+import { analyzeShadowFor, ShadowInput } from "../translation/shadow.functions";
 import { isResult } from "../translation/result";
 import type { TranslationResult } from "../translation/types";
-import { takeDictationToken, takeEnrichmentToken, takeRepairToken } from "../translation/throttle";
+import { takeDictationToken, takeRepairToken } from "../translation/throttle";
 import { boundedJson, clientAddress, parseAdmittedJson } from "../requestSafety";
 
 const badRequest = (kind = "input") =>
@@ -61,16 +61,10 @@ export async function nativeLexicon(request: Request): Promise<Response> {
   }
   const parsed = LexiconInput.safeParse(body);
   if (!parsed.success) return badRequest();
-  const data = parsed.data;
-  const { isLexiconCandidate } = await import("../translation/lexicon");
-  if (!isLexiconCandidate(data.text) || !takeEnrichmentToken(clientAddress(request)))
-    return Response.json({ ok: true, lexicon: null }, { headers: { "Cache-Control": "no-store" } });
-  const ds = await import("../translation/providers/deepseek.server");
-  const key = ds.deepseekKey();
-  if (!key)
-    return Response.json({ ok: true, lexicon: null }, { headers: { "Cache-Control": "no-store" } });
-  const { analyzeLexiconWith } = await import("../translation/providers/opencode.server");
-  const lexicon = await analyzeLexiconWith((s, u) => ds.call(key, s, u), data).catch(() => null);
+  // Reuse the one domain path: cheap candidate gate, enrichment admission, provider-agnostic
+  // analysis and request-context echo stay identical to the web surface. This transport was
+  // already authorized by its exact origin allowlist, so the second same-origin check is skipped.
+  const lexicon = await analyzeLexiconFor(parsed.data, { request, crossOrigin: true });
   return Response.json({ ok: true, lexicon }, { headers: { "Cache-Control": "no-store" } });
 }
 
@@ -83,27 +77,11 @@ export async function nativeShadow(request: Request): Promise<Response> {
   }
   const parsed = ShadowInput.safeParse(body);
   if (!parsed.success) return badRequest();
-  const data = parsed.data;
-  const sh = await import("../translation/shadow");
-  if (!sh.isShadowCandidate(data.text) || !takeEnrichmentToken(clientAddress(request)))
-    return Response.json({ shadow: null }, { headers: { "Cache-Control": "no-store" } });
-  const ds = await import("../translation/providers/deepseek.server");
-  const key = ds.deepseekKey();
-  if (!key) return Response.json({ shadow: null }, { headers: { "Cache-Control": "no-store" } });
-  try {
-    const raw = await ds.call(
-      key,
-      sh.SHADOW_SYSTEM,
-      sh.shadowUserPrompt(data),
-      AbortSignal.timeout(15000),
-    );
-    return Response.json(
-      { shadow: sh.readShadowReply(raw, data.text, data.translation) },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  } catch {
-    return Response.json({ shadow: null }, { headers: { "Cache-Control": "no-store" } });
-  }
+  // Reuse the one domain path: windowing, enrichment admission and the provider-agnostic
+  // analysis call stay identical to the web surface. This transport was already authorized
+  // by its exact origin allowlist, so the second same-origin check is skipped.
+  const shadow = await analyzeShadowFor(parsed.data, { request, crossOrigin: true });
+  return Response.json({ shadow }, { headers: { "Cache-Control": "no-store" } });
 }
 
 /** Issues a short-lived AssemblyAI token. The permanent key never leaves the server. */

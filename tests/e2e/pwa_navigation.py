@@ -18,6 +18,7 @@ Exit code 1 on any failure.
 """
 import asyncio
 import sys
+import time
 
 from playwright.async_api import async_playwright
 
@@ -88,11 +89,14 @@ async def main():
         await app_screen(page, "back to /")
 
         # Removing the cached document and cutting the network must still reach the offline shell:
-        # the fallback belongs to a failed fetch, not to a successful navigation.
+        # the fallback belongs to a failed fetch, not to a successful navigation. Navigate to a
+        # path this context has never loaded: reusing "/" can be satisfied by the browser's HTTP
+        # cache even when the worker's own cache was deleted, which would test the HTTP cache
+        # instead of the fallback.
         await page.evaluate("async () => { await caches.delete('lingua-shell') }")
         await context.set_offline(True)
         try:
-            await page.goto(URL + "/", wait_until="domcontentloaded", timeout=60000)
+            await page.goto(URL + "/offline-probe-" + str(int(time.time())), wait_until="domcontentloaded", timeout=60000)
             offline_title = await page.title()
             check(is_offline(offline_title), f"offline with no cached document: offline page is served ('{offline_title}')")
         except Exception as exc:
