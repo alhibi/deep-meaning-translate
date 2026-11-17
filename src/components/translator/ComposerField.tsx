@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, type RefObject } from "react";
+import { memo, useCallback, useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { limitDraft, MAX_DRAFT_LENGTH } from "@/lib/composer";
 import { useI18n } from "@/lib/i18n";
 
@@ -18,6 +18,7 @@ export const ComposerField = memo(function ComposerField({
   lang,
   dictating = false,
   dictationStarting = false,
+  children,
 }: {
   inputRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
@@ -30,6 +31,8 @@ export const ComposerField = memo(function ComposerField({
   dictating?: boolean;
   /** Lock editing during permission/connection setup, but keep the native draft visible. */
   dictationStarting?: boolean;
+  /** Dictation overlay shares the editor's actual content-sized bounds. */
+  children?: ReactNode;
 }) {
   const { t } = useI18n();
   const composing = useRef(false);
@@ -77,47 +80,61 @@ export const ComposerField = memo(function ComposerField({
 
   return (
     <>
-      <textarea
-        id="composer"
-        ref={inputRef}
-        value={value}
-        onChange={(event) => accept(event.currentTarget.value)}
-        onPaste={(event) => {
-          if (!composing.current && event.clipboardData.getData("text/plain")) onPaste();
-        }}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter" || event.shiftKey || event.altKey) return;
-          // Safari/Android may report Enter/229 while confirming an IME candidate.
-          if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229) return;
-          event.preventDefault();
-          if (!event.repeat && !dictating && !dictationStarting)
-            onSubmit(limitDraft(event.currentTarget.value));
-        }}
-        onCompositionStart={() => {
-          composing.current = true;
-          onComposingChange(true);
-        }}
-        onCompositionEnd={(event) => finishComposition(event.currentTarget)}
-        onBlur={(event) => finishComposition(event.currentTarget)}
+      <div
         dir={rtl ? "rtl" : "ltr"}
         lang={lang}
-        rows={3}
-        maxLength={MAX_DRAFT_LENGTH}
-        readOnly={dictating || dictationStarting}
-        autoCapitalize="sentences"
-        autoComplete="off"
-        enterKeyHint="done"
-        spellCheck
-        placeholder={t("placeholder")}
-        aria-label={t("inputLabel")}
-        aria-describedby="composer-help composer-limit"
-        aria-keyshortcuts="Enter Control+Enter Meta+Enter"
-        className={`composer-field block w-full resize-none bg-transparent pe-14 outline-none ${
+        className={`composer-editor relative min-w-0 ${
           rtl ? "font-arabic text-[24px]" : "text-[22px] tracking-[-0.015em]"
-        } ${dictating ? "text-transparent caret-transparent" : ""}`}
-      />
+        }`}
+      >
+        {/* Pure CSS intrinsic sizing: no scrollHeight writes or resize feedback. The
+            sentinel keeps a trailing newline/empty line as tall as the native field. */}
+        <div aria-hidden="true" className="composer-mirror pe-14">
+          {`${value}\u200b`}
+        </div>
+        <textarea
+          id="composer"
+          ref={inputRef}
+          value={value}
+          onChange={(event) => accept(event.currentTarget.value)}
+          onPaste={(event) => {
+            if (!composing.current && event.clipboardData.getData("text/plain")) onPaste();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.altKey) return;
+            // Safari/Android may report Enter/229 while confirming an IME candidate.
+            if (composing.current || event.nativeEvent.isComposing || event.keyCode === 229) return;
+            event.preventDefault();
+            if (!event.repeat && !dictating && !dictationStarting)
+              onSubmit(limitDraft(event.currentTarget.value));
+          }}
+          onCompositionStart={() => {
+            composing.current = true;
+            onComposingChange(true);
+          }}
+          onCompositionEnd={(event) => finishComposition(event.currentTarget)}
+          onBlur={(event) => finishComposition(event.currentTarget)}
+          dir={rtl ? "rtl" : "ltr"}
+          lang={lang}
+          rows={1}
+          maxLength={MAX_DRAFT_LENGTH}
+          readOnly={dictating || dictationStarting}
+          autoCapitalize="sentences"
+          autoComplete="off"
+          enterKeyHint="done"
+          spellCheck
+          placeholder={t("placeholder")}
+          aria-label={t("inputLabel")}
+          aria-describedby="composer-help composer-limit"
+          aria-keyshortcuts="Enter Control+Enter Meta+Enter"
+          className={`composer-field block w-full resize-none bg-transparent pe-14 outline-none ${
+            dictating ? "text-transparent caret-transparent" : ""
+          }`}
+        />
+        {children}
+      </div>
       <span id="composer-help" className="sr-only">
-        {t("inputHelp")}
+        {t("automaticTranslation")}. {t("inputHelp")}
       </span>
       <span id="composer-limit" className="sr-only">
         {t("inputLimit")}

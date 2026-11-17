@@ -24,9 +24,12 @@ session (draft, pair, style, result) is written to device storage after 400 ms a
 page is hidden. On return to `/`, the draft and translation paint from the remembered session
 without a new request.
 
-**Editing contract.** The source has three stable, complete lines (two above the keyboard); long
-text scrolls natively inside it, while a long answer grows the workspace. Arabic and Latin share one
-line box. Enter translates, Shift+Enter inserts a newline, and IME confirmation never submits a
+**Editing contract.** The borderless canvas hugs the draft and answer, not the viewport. The source
+starts at one full line, grows/shrinks with real text up to six lines (four on viewports ≤640 px
+high, three at ≤480 px or with the keyboard open), then scrolls natively. An arriving answer cannot
+stretch an unchanged source; long answers grow the workspace, with actions directly below the text.
+Arabic and Latin share one line box. Translation is automatic; there is no manual send button.
+Enter remains an optional shortcut, Shift+Enter inserts a newline, and IME confirmation never submits a
 candidate. Paste preserves whitespace, and all programmatic entry paths respect the server's
 5,000-unit limit without splitting an emoji surrogate pair. Clear is explicit, not a downward swipe.
 Dictation appends to the exact typed draft instead of flattening its paragraphs. A stale result is

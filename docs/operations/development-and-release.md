@@ -27,7 +27,7 @@ relaxing production response headers or browser-facing API origins.
 Focused editor checks (Python Playwright + Chromium required, no provider key):
 
 ```sh
-npm run test:e2e:fields    # fixed geometry + incremental streams, editing, IME, responsive matrix
+npm run test:e2e:fields    # content-led geometry + incremental streams, editing, IME, responsive matrix
 npm run test:e2e:nav       # restore, route cycles and background continuity
 ```
 

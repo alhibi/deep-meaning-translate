@@ -612,22 +612,15 @@ html.theme-fade *::after {
     transform 220ms var(--ease-out);
 }
 
-/* Input becomes the active centre: surface lifts from paper to white,
- * and a hairline of signal draws in from the reading edge. No glow. */
+/* A borderless writing surface: keep its tone on focus, without a white rectangle
+ * or an unreadably faded placeholder. A short solid stroke marks the active editor. */
 @utility input-shell {
-  transition: background-color 220ms var(--ease-soft);
-  &:focus-within {
-    background-color: var(--focus-surface);
-  }
   & textarea {
     caret-color: var(--signal-text);
   }
   & textarea::placeholder {
     color: var(--faint);
-    transition: opacity 180ms var(--ease-soft);
-  }
-  &:focus-within textarea::placeholder {
-    opacity: 0.6;
+    opacity: 1;
   }
 }
 
@@ -652,14 +645,46 @@ html.theme-fade *::after {
   }
 }
 
-/* Three whole lines (two above a keyboard). One line box for both scripts keeps the
- * seam still when the first strong letter changes direction. The native field owns
- * selection, undo and its own scroll; no content measurement or height animation. */
-@utility composer-field {
+/* The hidden, non-interactive mirror contributes intrinsic line height to one grid
+ * cell. The native textarea fills that cell, capped at a few lines before it scrolls.
+ * No ResizeObserver, scrollHeight read/write loop, or request-state geometry. */
+.composer-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   line-height: 40px;
-  height: calc(var(--composer-lines, 3) * 1lh);
-  min-height: 0;
-  max-height: none;
+}
+.composer-editor:has(textarea:focus-visible)::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: -2px;
+  width: 24px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ring);
+  pointer-events: none;
+}
+.composer-mirror {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+  min-block-size: 1lh;
+  max-block-size: calc(var(--composer-max-lines, 6) * 1lh);
+  visibility: hidden;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  unicode-bidi: plaintext;
+  pointer-events: none;
+  user-select: none;
+}
+@utility composer-field {
+  grid-area: 1 / 1;
+  line-height: inherit;
+  height: 100%;
+  min-height: 1lh;
+  max-height: calc(var(--composer-max-lines, 6) * 1lh);
+  min-width: 0;
+  padding-block: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   overscroll-behavior: contain;
@@ -1497,51 +1522,53 @@ html.vivid {
   }
 }
 
-/* Stable editing geometry, independent of request state and text length. A short
- * answer uses the remaining room; a long one grows the workspace without clipping.
- * In particular, no resize observer or height transition can feed back into layout. */
+/* Content, not viewport leftovers, sets the canvas height. Source and result are
+ * independent: only real source wrapping/newlines resize the editor; arriving words
+ * cannot stretch it or feed a resize loop. No ornamental frame or inset highlight. */
 .canvas-shell {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   min-inline-size: 0;
-  --composer-lines: 3;
-  --result-floor: clamp(168px, 20dvh, 240px);
-  box-shadow: inset 0 0 0 1px var(--border);
+  --composer-max-lines: 6;
 }
 .canvas-shell .source-stage {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
 }
-.canvas-shell .source-stage textarea {
-  flex: 0 0 auto;
-  min-height: 0;
-  max-height: none;
-}
 .canvas-shell .result-stage {
   display: flex;
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   min-inline-size: 0;
-  min-height: var(--result-floor);
+  min-height: 0;
   overflow-anchor: none;
 }
 .canvas-shell .result-panel {
   display: flex;
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
 }
+@media (max-height: 640px) {
+  .canvas-shell {
+    --composer-max-lines: 4;
+  }
+}
+@media (max-height: 480px) {
+  .canvas-shell {
+    --composer-max-lines: 3;
+  }
+}
 .canvas-shell[data-keyboard="open"] {
-  --composer-lines: 2;
-  --result-floor: 96px;
+  --composer-max-lines: 3;
 }
 
-/* The dictation overlay has exactly the field's line boxes and cannot cover its tools. */
+/* Dictation stays inside the editor's actual height, never over its tools/result. */
 .speech-echo {
-  line-height: 40px;
+  line-height: inherit;
+  height: 100%;
   overflow-wrap: anywhere;
-  height: calc(var(--composer-lines, 3) * 1lh);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;

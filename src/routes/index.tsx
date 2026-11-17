@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ClipboardPaste,
   ChartNoAxesCombined,
-  ArrowUp,
   Mic,
   X,
 } from "lucide-react";
@@ -22,7 +21,6 @@ import { DictationText } from "@/components/translator/DictationText";
 import { ComposerField } from "@/components/translator/ComposerField";
 import { appendDictation, draftDirection, limitDraft, MAX_DRAFT_LENGTH } from "@/lib/composer";
 import { isRtl } from "@/lib/translation/languages";
-import { normalize, worthTranslating } from "@/lib/translation/scheduler";
 import { LanguageBar } from "@/components/translator/LanguageBar";
 import { StyleToggle } from "@/components/translator/StyleToggle";
 import { ResultPanel } from "@/components/translator/ResultPanel";
@@ -715,8 +713,8 @@ function Translator() {
     },
     onDone: () => inputRef.current?.focus({ preventScroll: true }),
   });
-  // The echo is its own scroller (the composer is a fixed strip): keep the newest words
-  // visible, exactly where the caret would be in the transparent field underneath.
+  // The echo shares the content-sized editor, then scrolls at the same cap: keep the
+  // newest words visible without covering the toolbar or the result underneath.
   useEffect(() => {
     if (!speech.listening) return;
     const el = speechEcho.current;
@@ -977,7 +975,7 @@ function Translator() {
             <section
               dir={uiRtl ? "rtl" : "ltr"}
               aria-label={t("sourceLang")}
-              className="source-stage input-shell relative rounded-t-[22px] px-5 pb-2 pt-5"
+              className="source-stage input-shell relative rounded-t-[22px] px-5 pb-2 pt-4"
             >
               <ComposerField
                 inputRef={inputRef}
@@ -990,21 +988,20 @@ function Translator() {
                 lang={requestSource === "auto" ? undefined : requestSource}
                 dictating={speech.listening}
                 dictationStarting={speech.starting}
-              />
-              {speech.listening ? (
-                /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
-                <div
-                  ref={speechEcho}
-                  aria-hidden
-                  dir={rtlInput ? "rtl" : "ltr"}
-                  className={`speech-echo pointer-events-none absolute inset-x-5 top-5 whitespace-pre-wrap break-words pe-14 ${
-                    rtlInput ? "font-arabic text-[24px]" : "text-[22px] tracking-[-0.015em]"
-                  }`}
-                >
-                  {/* eslint-disable-next-line react-hooks/refs -- fixed dictation base is captured on Mic; it only changes between sessions, never while rendering */}
-                  <DictationText text={text} baseLength={speechBase.current.length} />
-                </div>
-              ) : null}
+              >
+                {speech.listening ? (
+                  /* Spoken words surface softly: each new word condenses out of a blur instead of popping in. */
+                  <div
+                    ref={speechEcho}
+                    aria-hidden
+                    dir={rtlInput ? "rtl" : "ltr"}
+                    className="speech-echo pointer-events-none absolute inset-0 whitespace-pre-wrap break-words pe-14"
+                  >
+                    {/* eslint-disable-next-line react-hooks/refs -- fixed dictation base is captured on Mic; it only changes between sessions, never while rendering */}
+                    <DictationText text={text} baseLength={speechBase.current.length} />
+                  </div>
+                ) : null}
+              </ComposerField>
               <button
                 type="button"
                 onClick={() => {
@@ -1017,13 +1014,13 @@ function Translator() {
                 disabled={!hasText}
                 aria-hidden={!hasText}
                 tabIndex={hasText ? 0 : -1}
-                className={`press absolute top-4 grid size-11 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${rtlInput ? "left-3" : "right-3"} ${
+                className={`press absolute top-3.5 grid size-11 place-items-center rounded-full text-faint transition-[opacity,transform] duration-200 hover:text-foreground ${rtlInput ? "left-3" : "right-3"} ${
                   hasText ? "opacity-100" : "pointer-events-none scale-90 opacity-0"
                 }`}
               >
                 <X className="size-[18px]" strokeWidth={1.6} />
               </button>
-              <div className="composer-toolbar flex min-h-11 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <div className="composer-toolbar mt-1 flex min-h-8 flex-wrap items-center justify-between gap-x-2 gap-y-1">
                 <div className="flex min-w-0 items-center gap-2">
                   {speech.supported ? (
                     <button
@@ -1046,8 +1043,8 @@ function Translator() {
                     </button>
                   ) : null}
                   {!speech.listening && !speech.error ? (
-                    <span aria-hidden className="hidden text-[11px] text-faint sm:inline">
-                      {t("inputHelp")}
+                    <span aria-hidden className="text-[11px] text-faint">
+                      {t("automaticTranslation")}
                     </span>
                   ) : null}
                   {speech.listening ? (
@@ -1092,18 +1089,6 @@ function Translator() {
                     >
                       {Math.min(text.length, MAX_CHARS)}/{MAX_CHARS}
                     </span>
-                  ) : null}
-                  {!speech.listening ? (
-                    <button
-                      type="button"
-                      onClick={() => submitDraft(limitDraft(inputRef.current?.value ?? text))}
-                      onMouseDown={(event) => event.preventDefault()}
-                      disabled={composing || !worthTranslating(normalize(text)) || speech.starting}
-                      aria-label={t("translateNow")}
-                      className="press grid size-11 place-items-center rounded-full bg-signal text-signal-foreground transition-opacity disabled:opacity-40"
-                    >
-                      <ArrowUp className="size-4" strokeWidth={2} />
-                    </button>
                   ) : null}
                   {!hasText && canReadClipboard && hasClip && !speech.listening ? (
                     <button

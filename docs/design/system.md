@@ -66,24 +66,35 @@ tracking). Components use the same scale rather than arbitrary values.
 
 ## Layout and surfaces
 
-The translator is a fixed, phone-first workspace with safe-area padding and a viewport-aware height
-(`--vvh`) so the keyboard lifts the canvas instead of covering it. The canvas itself takes the
-height the screen leaves below the header and gives the composer a **fixed three-line strip**
-(`calc(3lh)`; two whole lines with the keyboard up) while the result owns every pixel below it, with a
-floor in `dvh` for small phones. The composer never grows and never animates its height: a long
-draft scrolls inside the field, and a long answer scrolls the workspace. The split is deliberately
-not a function of typing or streaming state — an earlier design divided the canvas by moment and
-transitioned the composer's and result's `min-height`, which moved the field under the thumb on
-every request (dozens of layout frames per sentence). When a short answer leaves room in the
-result, the action row settles at its foot, so the translation reads as a composed page instead of
-a paragraph floating above dead space. Nothing in the canvas measures its children or animates an
-inline height: a measured grow box fed its own stretched content back through `ResizeObserver` and
-clipped the panel (2,300 callbacks while typing), so the geometry is one flex tree, and
-`tests/e2e/field_layout.py` asserts that it holds still, stays three lines, and never overlaps.
-The source uses the same 40 px line box for Arabic and Latin; language names use a 32 px line
-box, so changing script or detecting Arabic cannot move the editing surface. Result typography is
-also constant through streaming and settlement (24 px, 26 px at the wider breakpoint), rather than
-jumping between length thresholds. Long animated words/URLs are bounded to the paragraph width.
+The translator keeps a phone-first, viewport-aware workspace (`--vvh`) with safe-area padding,
+but the **canvas itself hugs the content**, rather than stretching into the space below the
+header. Its quiet surface has no border, inset highlight or white focus fill; depth is supplied by
+the surface/background contrast. The source starts at one complete line. A CSS-grid mirror of the
+exact draft (hidden from accessibility, pointer input and selection) supplies intrinsic size; a
+zero-width sentinel keeps trailing blank lines intact. The native textarea still owns the caret,
+selection, undo, composition and scrolling. No DOM measurement writes or resize observers are used.
+
+The source grows and shrinks with actual wrapping/newlines, up to **six whole lines**, **four** on
+viewports ≤640 px high, **three** at ≤480 px or with the keyboard open. Beyond the cap it scrolls
+natively. The result has no viewport-based minimum height, and actions follow the answer instead of
+being pushed down to a distant foot. Long answers grow the canvas and scroll the workspace without
+being clipped. Dictation's echo is contained by the same content-sized editor, never its toolbar.
+
+This deliberately supersedes the fixed-three-line, screen-filling design: that design held still,
+but created an oversized rectangle and dead space for short text. The stability invariant is now
+**an unchanged source never resizes because a request starts, streams or settles**. Real text may
+change its height; request state may not. No height animation, inline pixel sizing or self-observing
+grow box is permitted (the historical box fed ~2,300 callbacks into itself).
+`tests/e2e/field_layout.py` covers growth, deletion, whitespace, stream/settle stillness and overlap.
+
+Arabic and Latin use the same 40 px source line box; language names a 32 px box, so switching script
+alone or detecting a language cannot move the editing surface. Result typography stays constant
+from the first chunk through settlement (24 px, 26 px at the wider breakpoint). Long words and URLs
+wrap inside both fields. A short solid `--ring` stroke marks input focus without drawing a frame;
+the placeholder keeps its full token contrast on focus. The language-swap icon has no fill, border
+or shadow, but retains a 44 px touch target and keyboard focus outline. There is no send button:
+a quiet localized hint explains automatic translation; Enter remains an optional shortcut.
+
 The clear control is placed by the **input's** direction (not the interface's) so mixed-direction
 text can never run under it. Digits and punctuation cannot choose that direction. Keyboard opening
 only brings an occluded composer back into view; streamed results never force-scroll to the bottom,

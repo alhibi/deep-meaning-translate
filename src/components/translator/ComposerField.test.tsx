@@ -1,10 +1,18 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { createRef, useState } from "react";
+import { createRef, useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { MAX_DRAFT_LENGTH } from "@/lib/composer";
 import { ComposerField } from "./ComposerField";
+import { DictationText } from "./DictationText";
 
-function setup(state: { dictating?: boolean; dictationStarting?: boolean } = {}, initial = "") {
+type Options = Partial<
+  Pick<
+    ComponentProps<typeof ComposerField>,
+    "dictating" | "dictationStarting" | "rtl" | "lang" | "children"
+  >
+>;
+
+function setup(state: Options = {}, initial = "") {
   const change = vi.fn();
   const submit = vi.fn();
   const paste = vi.fn();
@@ -34,6 +42,43 @@ function setup(state: { dictating?: boolean; dictationStarting?: boolean } = {},
 }
 
 describe("ComposerField editing contract", () => {
+  it("sizes from an inaccessible exact-whitespace mirror, not a fixed textarea strip", () => {
+    const draft = "  Hallo\n\nمرحباً  \n";
+    const { field, container } = setup({}, draft);
+    const mirror = container.querySelector(".composer-mirror");
+    expect(field.rows).toBe(1);
+    expect(mirror).not.toBeNull();
+    expect(mirror).toHaveAttribute("aria-hidden", "true");
+    expect(mirror?.textContent).toBe(`${draft}\u200b`);
+    expect(screen.getAllByRole("textbox")).toHaveLength(1);
+    fireEvent.input(field, { target: { value: "Short" } });
+    expect(mirror?.textContent).toBe("Short\u200b");
+  });
+
+  it("bounds dictation inside the same content-sized editor and reading direction", () => {
+    const draft = "نص مكتوب\n\nوكلمات منطوقة";
+    const { field, container } = setup(
+      {
+        dictating: true,
+        rtl: true,
+        lang: "ar",
+        children: (
+          <div aria-hidden="true" className="speech-echo">
+            <DictationText text={draft} baseLength={8} />
+          </div>
+        ),
+      },
+      draft,
+    );
+    const editor = field.closest(".composer-editor");
+    expect(editor).toHaveAttribute("dir", "rtl");
+    expect(editor).toHaveAttribute("lang", "ar");
+    expect(editor).toContainElement(container.querySelector(".speech-echo"));
+    expect(container.querySelector(".speech-echo")?.textContent).toBe(draft);
+    expect(field).toHaveAttribute("readonly");
+    expect(field).toHaveClass("text-transparent");
+  });
+
   it("mirrors exact text once, leaving selection and multiline editing to the browser", async () => {
     const { field, change } = setup();
     const value = "  Guten  Morgen\n\nمرحباً 🙂  ";
@@ -45,6 +90,7 @@ describe("ComposerField editing contract", () => {
     expect(change).toHaveBeenCalledExactlyOnceWith(value);
     expect(field.maxLength).toBe(MAX_DRAFT_LENGTH);
     expect(field.getAttribute("aria-describedby")).toBe("composer-help composer-limit");
+    expect(field).toHaveAccessibleDescription(/Translates as you type/);
   });
 
   it("submits Enter, but preserves Shift/Alt+Enter and ignores key repeat", () => {
