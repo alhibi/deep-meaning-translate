@@ -222,10 +222,11 @@ Two retry layers, both bounded:
 - **Provider boundary (server):** one retry for a transient HTTP status (429/500/502/503/504) or a
   network failure **before the response body is handed off**, with `Retry-After` clamped to 2.5 s
   and 200–600 ms full-jitter otherwise. A caller abort, a 401/402, or a stream that has already
-  started is never retried (a started stream cannot be replayed). **When both writers are
-  configured, the foreground stream route makes one attempt per provider and fails over
-  immediately** instead of sleeping through `Retry-After` for a provider that is already refusing
-  the request (`maxAttempts: 1`); a single-writer deployment keeps the retry.
+  started is never retried (a started stream cannot be replayed). **On the foreground stream route,
+  the writer that starts makes one attempt when a usable alternate waits behind it**
+  (`maxAttempts: 1`) instead of sleeping through `Retry-After` for a provider that is already
+  refusing the request; the last usable writer keeps the bounded retry, and a single-writer
+  deployment always keeps it.
 - **Provider cooldown:** a writer that just failed is skipped for a bounded window — rate 30 s,
   network 10 s, provider 15 s, auth/quota 5 min — while the other writer can answer; a success
   clears the record. The response reports the actual writer and, when a rescue happened, the

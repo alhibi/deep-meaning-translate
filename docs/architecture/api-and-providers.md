@@ -90,10 +90,11 @@ chosen. Both brains are active:
 - the stream response reports the brain that actually wrote the answer (`X-Translation-Writer`) and
   the client sends it back as `writer` on the quiet review, so a DeepSeek fallback that rescued a
   failed Luna request is never reviewed as Luna's writing;
-- with both writers configured, a failing writer is replaced **immediately**: the foreground route
-  sends one attempt per provider (`maxAttempts: 1`) instead of sleeping through the provider's
-  clamped `Retry-After` before falling back. A writer that just failed is skipped for a bounded
-  cooldown (rate 30 s, network 10 s, provider 15 s, auth/quota 5 min; success clears it) while the
+- with both writers configured, a failing writer is replaced **immediately**: the writer that starts
+  makes one attempt (`maxAttempts: 1`) instead of sleeping through the provider's clamped
+  `Retry-After` before falling back. The last usable writer keeps the bounded retry — the
+  failover does not strip resilience from the only healthy provider — and a writer that just failed
+  is skipped for a bounded cooldown (rate 30 s, network 10 s, provider 15 s, auth/quota 5 min; success clears it) while the
   other can answer. The diagnostic `X-Translation-Fallback` header names the failure class, and
   the server log records `requested`, `fallback` and `upstreamMs` with no text. State is two
   process-local entries (`providers/health.server.ts`), not a deployment-wide breaker — TD5/TD54.

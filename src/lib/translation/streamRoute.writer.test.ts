@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TranslationError } from "./types";
-import { resetProviderHealthForTests } from "./providers/health.server";
+import { providerHealth, resetProviderHealthForTests } from "./providers/health.server";
 
 /**
  * The response must name the brain that actually wrote the answer, not the one the person
@@ -73,11 +73,12 @@ describe("writer attribution on the stream response", () => {
     deepseek.live.mockImplementation(() => textStream("من الخادم"));
     const response = await handleTranslateStream(request("luna"));
 
-    // Both brains are configured: each provider call is told to make a single attempt so
-    // the fallback starts immediately instead of sleeping through Retry-After (the
-    // deployed Sona path spent 2.5 s there).
+    // The requested writer makes one attempt so the fallback starts immediately instead
+    // of sleeping through Retry-After (the deployed Sona path spent 2.5 s there). The
+    // fallback keeps the bounded retry: it is the last usable writer and a transient
+    // failure there must still heal.
     expect((opencode.live.mock.calls[0] as unknown[])[3]).toEqual({ maxAttempts: 1 });
-    expect((deepseek.live.mock.calls[0] as unknown[])[3]).toEqual({ maxAttempts: 1 });
+    expect((deepseek.live.mock.calls[0] as unknown[])[3]).toBeUndefined();
     expect(response.headers.get("x-translation-fallback")).toBe("rate");
     expect(await response.text()).toBe("من الخادم");
   });
@@ -90,6 +91,29 @@ describe("writer attribution on the stream response", () => {
     expect(response.headers.get("x-translation-writer")).toBe("luna");
     expect((opencode.live.mock.calls[0] as unknown[])[3]).toBeUndefined();
     expect(await response.text()).toBe("من لونا");
+  });
+
+  it("keeps the retry for the requested writer when the alternative is cooling", async () => {
+    // First sentence: Luna fails, so it is in a cooldown.
+    opencode.live.mockRejectedValue(new TranslationError("rate", "busy"));
+    deepseek.live.mockImplementation(() => textStream("من الخادم"));
+    await (await handleTranslateStream(request("luna"))).text();
+
+    // A Velo sentence now has no usable alternative: DeepSeek must keep its own retry.
+    deepseek.live.mockImplementation(() => textStream("من الخادم"));
+    const response = await handleTranslateStream(request("deepseek"));
+    expect(response.headers.get("x-translation-writer")).toBe("deepseek");
+    expect((deepseek.live.mock.calls.at(-1) as unknown[])[3]).toBeUndefined();
+    expect(await response.text()).toBe("من الخادم");
+  });
+
+  it("records a failed fallback too, so the next request does not route into it blindly", async () => {
+    opencode.live.mockRejectedValue(new TranslationError("rate", "busy"));
+    deepseek.live.mockRejectedValue(new TranslationError("network", "down"));
+    const response = await handleTranslateStream(request("luna"));
+    expect(response.status).toBe(502);
+    const health = providerHealth();
+    expect(health.map((entry) => entry.brain).sort()).toEqual(["deepseek", "luna"]);
   });
 
   it("skips a writer that just failed instead of paying its failure again", async () => {

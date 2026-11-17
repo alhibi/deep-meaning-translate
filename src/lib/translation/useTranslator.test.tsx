@@ -569,6 +569,24 @@ describe("composition and settled identity", () => {
     expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(1);
   });
 
+  it("does not start a second settled reading while one is already in flight", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo Welt") });
+    await flush(300);
+    act(() => h.current.translateNow("Hallo Welt"));
+    await flush(1_300);
+    // The explicit full reading owns the draft; the pause timer must not duplicate it.
+    expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(1);
+  });
+
+  it("does not add a settled request for text that already ends a thought", async () => {
+    call.mockResolvedValue({ ok: true, result: result("نهائية") });
+    renderHook((p) => useTranslator(p), { initialProps: opts("Hallo Welt.") });
+    await flush(2_500);
+    expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(1);
+    expect(call.mock.calls.filter((c) => c[0].data.partial === true)).toHaveLength(0);
+  });
+
   it("treats a transport that resolves after abort as a timeout, not a retryable network error", async () => {
     call.mockImplementation(
       ({ signal }: { signal: AbortSignal }) =>
