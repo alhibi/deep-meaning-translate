@@ -1,6 +1,6 @@
 # Project Map
 
-Status: **Verified** against the repository on 2026-11-16. This is a map, not a specification;
+Status: **Verified** against the repository on 2026-11-17. This is a map, not a specification;
 behaviour is documented in the linked files.
 
 ## Runtime shape
@@ -56,8 +56,9 @@ today.fluently.app (Capacitor 8, minSdk 24, targetSdk 36)
 | `android/app/src/main/java/today/fluently/app/bridge/`    | `LinguaStore`, `LinguaFiles`, `LinguaTts` plugins                                                                                                     | repository, SAF, TextToSpeech                   |
 | `android/app/src/test/`                                   | Repository and migration tests (Robolectric)                                                                                                          | Room testing                                    |
 | `docs/android/`                                           | Architecture, persistence, import/export, network, compatibility, build                                                                               | —                                               |
-| `src/components/translator/`                              | Language bar, style, result (whirlwind arrival), sheets, header, wordmark                                                                             | lib + design tokens                             |
+| `src/components/translator/`                              | ComposerField (native editing/IME), DictationText, language bar, style, result (whirlwind arrival), sheets, header, wordmark                          | lib + design tokens                             |
 | `src/components/stats/`                                   | Practice map, rhythm, records, language flow, charts, record/filter sheets                                                                            | lib/stats, design tokens                        |
+| `src/lib/composer.ts`                                     | Safe draft limit/direction and paragraph-preserving dictation joins                                                                                   | persistence text limit                          |
 | `src/lib/pwa.ts`, `src/components/UpdateNotice.tsx`       | The only service-worker registrar and the dismissible update pill                                                                                     | build output, i18n                              |
 | `src/styles.css`                                          | Tokens, themes, base layer, transitions, utilities                                                                                                    | —                                               |
 | `scripts/`                                                | Headers, PWA integrity, contrast, docs, OG card, production preview                                                                                   | build output                                    |

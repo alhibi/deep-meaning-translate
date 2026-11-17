@@ -32,6 +32,7 @@ dist-ssr
 *.sw?
 
 # Test and preview artefacts
+__pycache__/
 coverage
 /output
 /playwright-report

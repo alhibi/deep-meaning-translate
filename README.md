@@ -32,8 +32,9 @@ installable APKs are published with the repository:
 - **Meaning-first translation** into Arabic or German, with Natural / Formal / Casual register.
   Arabic output can follow Modern Standard Arabic or a regional variety (Levantine, Egyptian,
   Gulf, Iraqi, Maghrebi).
-- **Live mode**: plain text streams while you type; a finished sentence gets the structured,
-  verified result.
+- **Live mode**: plain text streams while you type; a finished sentence or settled pause gets a
+  structured, checked result. The stable source field preserves native editing and IME confirmation;
+  a previous translation cannot be saved or copied as the result of a new draft.
 - **Source detection with a local sanity check**: a strong writing-system mismatch is sent to the
   model as `auto` instead of a false source; same-script guesses only produce a dismissible hint.
 - **Reliability layer**: deterministic checks for numbers (both numeral systems), URLs, emojis,

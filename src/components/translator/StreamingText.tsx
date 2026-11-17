@@ -30,7 +30,18 @@ export const StreamingText = memo(function StreamingText({
   // the classes of the render that actually introduced the words. Recomputing the
   // stable prefix here would mark everything stable and strip the animation immediately.
   if (lastText.current !== text || animated.current.length !== tokens.length) {
-    const keep = stableTokens(previous.current, tokens);
+    let keep = stableTokens(previous.current, tokens);
+    // Providers often send one letter at a time. Growing the same last word must not
+    // restart its blur/spin on every chunk and keep it unreadable until the stream ends.
+    const tail = previous.current[keep];
+    if (
+      live &&
+      keep === previous.current.length - 1 &&
+      tail &&
+      /\S/.test(tail) &&
+      tokens[keep]?.startsWith(tail)
+    )
+      keep++;
     if (keep < tokens.length || tokens.length !== previous.current.length) gen.current += 1;
     const nextKeys = tokens.map((_, i) => {
       if (i < keep) return keys.current[i]!;
@@ -42,7 +53,7 @@ export const StreamingText = memo(function StreamingText({
       // A word that is already whirling keeps its class when the next chunk arrives, so
       // a fast stream cannot cut its animation short mid-flight.
       if (i < keep) return before[i] ?? false;
-      if (/^\s+$/.test(tok)) return false;
+      if (!live || /^\s+$/.test(tok)) return false;
       if (fresh >= ANIMATE_LIMIT) {
         fresh += 1;
         return false;
@@ -62,7 +73,17 @@ export const StreamingText = memo(function StreamingText({
         if (!animated.current[i]) return <span key={keys.current[i]}>{tok}</span>;
         const delay = Math.min(fresh++, 8) * 16;
         return (
-          <span key={keys.current[i]} className="word-in" style={{ animationDelay: `${delay}ms` }}>
+          <span
+            key={keys.current[i]}
+            className="word-in"
+            style={{ animationDelay: `${delay}ms` }}
+            onAnimationEnd={(event) => {
+              // Retire the layer without a React commit per word. The next text render
+              // reads the same flag, so it cannot revive a completed animation.
+              event.currentTarget.classList.remove("word-in");
+              animated.current[i] = false;
+            }}
+          >
             {tok}
           </span>
         );

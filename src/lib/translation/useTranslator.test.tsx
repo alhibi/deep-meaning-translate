@@ -18,7 +18,7 @@ vi.mock("./stream", () => ({
     onText: (t: string) => void,
     mode: string,
   ) => {
-    const r = await call({ data, signal });
+    const r = await call({ data, signal, onText });
     if (!r.ok) return r;
     onText(r.result.translation);
     return { ok: true, text: mode === "full" ? JSON.stringify(r.result) : r.result.translation };
@@ -59,6 +59,7 @@ beforeEach(() => {
 afterEach(() => {
   memoryClear();
   localStorage.clear();
+  Reflect.deleteProperty(navigator, "onLine");
   vi.useRealTimers();
 });
 
@@ -311,5 +312,295 @@ describe("useTranslator", () => {
     await flush(1500);
     expect(call).not.toHaveBeenCalled();
     expect(h.current.result?.translation).toBe("محفوظة");
+  });
+});
+
+describe("draft/result ownership", () => {
+  it("cancels an obsolete request as soon as the draft changes, before debounce", async () => {
+    let finish: (value: unknown) => void = () => {};
+    const success = vi.fn();
+    call.mockImplementation(() => new Promise((resolve) => (finish = resolve)));
+    const { result: h, rerender } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts("Ein alter Satz."),
+    });
+    await flush(50);
+    const signal = call.mock.calls[0]![0].signal as AbortSignal;
+    rerender(opts("Ein anderer Gedanke"));
+    expect(signal.aborted).toBe(true);
+    finish({ ok: true, result: result("إجابة قديمة") });
+    await flush(20);
+    expect(h.current.result).toBeNull();
+    expect(success).not.toHaveBeenCalled();
+  });
+
+  it("cancels a newer request when undo returns to the answer already on screen", async () => {
+    let finish: (value: unknown) => void = () => {};
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("الأصل") })
+      .mockImplementation(() => new Promise((resolve) => (finish = resolve)));
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Original."),
+    });
+    await flush(100);
+    rerender(opts("Bearbeitet."));
+    await flush(100);
+    const signal = call.mock.calls[1]![0].signal as AbortSignal;
+    rerender(opts("Original."));
+    expect(signal.aborted).toBe(true);
+    finish({ ok: true, result: result("لا تخص النص المستعاد") });
+    await flush(500);
+    expect(h.current.result?.translation).toBe("الأصل");
+    expect(h.current.pending).toBe(false);
+  });
+
+  it("shows a shorter replacement stream immediately after deleting words", async () => {
+    call
+      .mockResolvedValueOnce({
+        ok: true,
+        result: result("هذه ترجمة سابقة أطول بكثير من البديل الجديد"),
+      })
+      .mockImplementation(() => new Promise(() => {}));
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Ein sehr langer ursprünglicher Satz."),
+    });
+    await flush(100);
+    rerender(opts("Kurz"));
+    await flush(400);
+    act(() => call.mock.calls[1]![0].onText("قصير"));
+    await flush(20);
+    expect(h.current.result?.translation).toBe("قصير");
+    expect(h.current.provisional).toBe(true);
+  });
+
+  it("does not duplicate an explicit submission while the same full request is running", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo.") });
+    await flush(100);
+    act(() => {
+      h.current.translateNow("Hallo.");
+      h.current.translateNow("Hallo.");
+    });
+    await flush(100);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("composition and settled identity", () => {
+  it("does not translate an IME buffer, retry it, or let the watchdog submit it", async () => {
+    call.mockResolvedValue({ ok: true, result: result("日本語") });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("にほん"), composing: true },
+    });
+    await flush(5000);
+    expect(call).not.toHaveBeenCalled();
+    act(() => {
+      h.current.translateNow("にほん");
+      h.current.retry();
+    });
+    await flush(2000);
+    expect(call).not.toHaveBeenCalled();
+    rerender({ ...opts("日本語"), composing: false });
+    await flush(500);
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(call.mock.calls[0]![0].data.text).toBe("日本語");
+  });
+
+  it("cancels a scheduled retry when composition starts without changing text", async () => {
+    call.mockResolvedValue({ ok: false, kind: "network" });
+    const { rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("Hallo."), composing: false },
+    });
+    await flush(100);
+    rerender({ ...opts("Hallo."), composing: true });
+    await flush(5000);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the old answer unusable immediately, including while waiting to schedule", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("الترجمة الأصلية") })
+      .mockImplementation(() => new Promise(() => {}));
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Original."),
+    });
+    await flush(100);
+    expect(h.current.settled).toBe(true);
+    rerender(opts("New draft"));
+    expect(h.current.stale).toBe(true);
+    expect(h.current.settled).toBe(false);
+    expect(h.current.pending).toBe(false);
+    expect(h.current.result?.translation).toBe("الترجمة الأصلية");
+    rerender(opts("Original."));
+    expect(h.current.stale).toBe(false);
+    expect(h.current.settled).toBe(true);
+  });
+
+  it.each([
+    { source: "auto" },
+    { target: "de" },
+    { style: "formal" as const },
+    { dialect: "levant" as const },
+    { brain: "luna" as const },
+  ])("invalidates the request immediately on a parameter change: %j", async (change) => {
+    call.mockImplementation(() => new Promise(() => {}));
+    const initial = { ...opts("Ein Satz."), dialect: "auto" as const, brain: DEFAULT_BRAIN };
+    const { rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: initial as Parameters<typeof useTranslator>[0],
+    });
+    await flush(50);
+    const signal = call.mock.calls[0]![0].signal as AbortSignal;
+    rerender({ ...initial, ...change });
+    expect(signal.aborted).toBe(true);
+  });
+
+  it("gets a full verified reading after a pause instead of relabelling a live guess", async () => {
+    let finish: (value: unknown) => void = () => {};
+    const success = vi.fn();
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("مبدئية") })
+      .mockImplementation(() => new Promise((resolve) => (finish = resolve)));
+    const { result: h } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts("Hallo Welt"),
+    });
+    await flush(100); // commit the live response and install its idle timer
+    await flush(1500);
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(call.mock.calls[1]![0].data.partial).toBe(false);
+    expect(h.current.settled).toBe(false);
+    expect(success.mock.calls.filter((c) => c[2] === false)).toHaveLength(0);
+    finish({ ok: true, result: result("نهائية") });
+    await flush(30);
+    expect(h.current.settled).toBe(true);
+    expect(h.current.streaming).toBe(false);
+    expect(success.mock.calls.filter((c) => c[2] === false)).toHaveLength(1);
+  });
+
+  it("treats a transport that resolves after abort as a timeout, not a retryable network error", async () => {
+    call.mockImplementation(
+      ({ signal }: { signal: AbortSignal }) =>
+        new Promise((resolve) => {
+          signal.addEventListener("abort", () => resolve({ ok: false, kind: "network" }));
+        }),
+    );
+    const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo.") });
+    await flush(60_100);
+    expect(h.current.error).toBe("timeout");
+    expect(h.current.pending).toBe(false);
+    await flush(3000);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("foreground recovery", () => {
+  it("upgrades a rate-limited live request after the pause even when an old answer exists", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("سابقة") })
+      .mockResolvedValueOnce({ ok: false, kind: "rate" })
+      .mockResolvedValue({ ok: true, result: result("جديدة") });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Original."),
+    });
+    await flush(100);
+    rerender(opts("Neuer Gedanke"));
+    await flush(400);
+    expect(h.current.error).toBeNull();
+    await flush(1300);
+    expect(call).toHaveBeenCalledTimes(3);
+    expect(call.mock.calls[2]![0].data.partial).toBe(false);
+    expect(h.current.result?.translation).toBe("جديدة");
+    expect(h.current.settled).toBe(true);
+  });
+
+  it("streams a shorter explicitly recovered DOM value before it completes", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("نتيجة أطول بكثير من البديل الجديد") })
+      .mockImplementation(() => new Promise(() => {}));
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Langer alter Satz."),
+    });
+    await flush(100);
+    act(() => h.current.translateNow("Kurz"));
+    act(() => call.mock.calls[1]![0].onText("قصير"));
+    await flush(20);
+    expect(h.current.result?.translation).toBe("قصير");
+  });
+
+  it("never carries a previous draft's detected source into a fresh auto-source live answer", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: { ...result("أولى"), sourceLanguage: "de" } })
+      .mockResolvedValue({ ok: true, result: result("جديدة") });
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("Original."), source: "auto" },
+    });
+    await flush(100);
+    rerender({ ...opts("Nouveau texte"), source: "auto" });
+    await flush(400);
+    expect(h.current.result?.sourceLanguage).toBe("auto");
+    expect(h.current.provisional).toBe(true);
+  });
+});
+
+describe("interrupted editing sessions", () => {
+  it("keeps a current settled answer usable and persistable when connectivity drops", async () => {
+    call.mockResolvedValue({ ok: true, result: result("ترجمة محفوظة") });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: opts("Guten Morgen."),
+    });
+    await flush(100);
+    expect(h.current.settled).toBe(true);
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    act(() => window.dispatchEvent(new Event("offline")));
+    // Connectivity is reported by OfflinePill. It cannot invalidate a reading that
+    // is already complete, or the route would overwrite its session with result:null.
+    expect(h.current.settled).toBe(true);
+    expect(h.current.error).toBeNull();
+    expect(h.current.result?.translation).toBe("ترجمة محفوظة");
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    act(() => window.dispatchEvent(new Event("online")));
+    await flush(100);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops streaming cues offline, ignores late chunks, and resumes the current draft online", async () => {
+    call
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockResolvedValue({ ok: true, result: result("عادت الترجمة") });
+    const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo.") });
+    await flush(100);
+    const first = call.mock.calls[0]![0];
+    act(() => first.onText("جزء ظاهر"));
+    await flush(20);
+    expect(h.current.streaming).toBe(true);
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    act(() => window.dispatchEvent(new Event("offline")));
+    expect(first.signal.aborted).toBe(true);
+    expect(h.current.streaming).toBe(false);
+    expect(h.current.error).toBe("offline");
+    act(() => first.onText("وصول متأخر"));
+    await flush(30);
+    expect(h.current.result?.translation).toBe("جزء ظاهر");
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    act(() => window.dispatchEvent(new Event("online")));
+    await flush(50);
+    expect(h.current.result?.translation).toBe("عادت الترجمة");
+    expect(h.current.settled).toBe(true);
+    expect(h.current.error).toBeNull();
+  });
+
+  it("aborts and retires buffered paints/completions when the translator unmounts", async () => {
+    let finish: (value: unknown) => void = () => {};
+    const success = vi.fn();
+    call.mockImplementation(() => new Promise((resolve) => (finish = resolve)));
+    const { unmount } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
+      initialProps: opts("Hallo."),
+    });
+    await flush(100);
+    const first = call.mock.calls[0]![0];
+    act(() => first.onText("جزء مخزن للرسم"));
+    unmount();
+    finish({ ok: true, result: result("لا تعرضني") });
+    await flush(100);
+    expect(first.signal.aborted).toBe(true);
+    expect(success).not.toHaveBeenCalled();
   });
 });

@@ -17,32 +17,26 @@ import { SpokenText } from "./SpokenText";
 import { estimateChar, tokenAt, tokenize } from "./streamingTokens";
 import { ELEVEN_VOICES } from "@/lib/voice/elevenVoice";
 
-/** Scale the hero text by length so short phrases feel weighty and long text stays readable. */
-function sizeFor(len: number, rtl: boolean) {
-  if (len < 60)
-    return rtl ? "text-[32px] leading-[1.6]" : "text-[30px] leading-[1.25] tracking-[-0.02em]";
-  if (len < 220)
-    return rtl ? "text-[26px] leading-[1.7]" : "text-[24px] leading-[1.35] tracking-[-0.015em]";
-  return rtl ? "text-[21px] leading-[1.8]" : "text-[19px] leading-[1.5]";
-}
-
 function Action({
   label,
   onClick,
   onLongPress,
   active,
+  disabled,
   children,
 }: {
   label: string;
   onClick: () => void;
   onLongPress?: () => void;
   active?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       onContextMenu={
         onLongPress
           ? (e) => {
@@ -73,6 +67,8 @@ export const ResultPanel = memo(function ResultPanel({
   result,
   pending,
   provisional,
+  stale = false,
+  streaming = provisional,
   error,
   target,
   onRetry,
@@ -90,6 +86,10 @@ export const ResultPanel = memo(function ResultPanel({
   result: TranslationResult | null;
   pending: boolean;
   provisional: boolean;
+  /** The visible reading belongs to an earlier draft, not the current source. */
+  stale?: boolean;
+  /** True only while provider words are actually arriving (not the settling pause). */
+  streaming?: boolean;
   error: ErrorKind | null;
   target: string;
   onRetry: () => void;
@@ -130,6 +130,7 @@ export const ResultPanel = memo(function ResultPanel({
   };
   const [announce, setAnnounce] = useState("");
   const text = result?.translation ?? "";
+  const unavailable = provisional || pending || stale;
   const textRef = useRef(text);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   textRef.current = text;
@@ -142,7 +143,10 @@ export const ResultPanel = memo(function ResultPanel({
     stopSpeaking();
     stopSync();
     setSpeaking(false);
-  }, [text, voiceLang]);
+    setNoVoice(false);
+    setVoiceStarted(false);
+    setEngineNote(null);
+  }, [text, voiceLang, unavailable]);
   useEffect(
     () => () => {
       playback.current++;
@@ -155,12 +159,12 @@ export const ResultPanel = memo(function ResultPanel({
   // A settled translation may be listened to: warm the free connection path, but never
   // synthesize audio or spend a provider request until the person presses Listen.
   useEffect(() => {
-    if (!text || provisional || pending || voicePrefs.engine === "device") return;
+    if (!text || unavailable || voicePrefs.engine === "device") return;
     // Never synthesize before the person has touched this page: a restored session
     // would otherwise spend a speech request on audio nobody asked to hear.
     if (!navigator.userActivation?.hasBeenActive) return;
     if (voicePrefs.engine === "gemini") warmVoice();
-  }, [text, provisional, pending, voiceLang, voicePrefs]);
+  }, [text, unavailable, voiceLang, voicePrefs]);
 
   /**
    * The signature moment: a live stream becoming a settled answer.
@@ -173,20 +177,20 @@ export const ResultPanel = memo(function ResultPanel({
    */
   const wasLive = useRef(false);
   useEffect(() => {
-    const live = !text || provisional || pending;
+    const live = !text || unavailable || !!error;
     if (wasLive.current && !live) feel.arrive();
     wasLive.current = live;
-  }, [text, provisional, pending]);
+  }, [text, unavailable, error]);
 
   // Screen readers hear settled results only — never every realtime refinement.
   useEffect(() => {
-    if (!text || provisional || pending) return;
+    if (!text || unavailable || error) return;
     const id = setTimeout(() => setAnnounce(t("ready")), 1200);
     return () => {
       clearTimeout(id);
       setAnnounce("");
     };
-  }, [text, provisional, pending, t]);
+  }, [text, unavailable, error, t]);
 
   useEffect(() => {
     if (!copied) return;
@@ -196,21 +200,31 @@ export const ResultPanel = memo(function ResultPanel({
 
   const copy = useCallback(() => {
     const value = textRef.current;
+    const generation = playback.current;
     const done = () => {
+      if (generation !== playback.current || textRef.current !== value) return;
       setCopied(true);
       notifyCopied();
       feel.confirm();
     };
     const fallback = () => {
       // Plain-text fallback: exact characters and line breaks, no formatting.
+      const active = document.activeElement as HTMLElement | null;
       const ta = document.createElement("textarea");
       ta.value = value;
       ta.setAttribute("readonly", "");
       ta.style.cssText = "position:fixed;opacity:0;top:0";
       document.body.appendChild(ta);
-      ta.select();
-      if (document.execCommand("copy")) done();
-      ta.remove();
+      try {
+        ta.focus({ preventScroll: true });
+        ta.select();
+        if (document.execCommand("copy")) done();
+      } catch {
+        // A denied legacy clipboard must not disturb the draft or claim success.
+      } finally {
+        ta.remove();
+        active?.focus({ preventScroll: true });
+      }
     };
     if (navigator.clipboard?.writeText) {
       void navigator.clipboard.writeText(value).then(done, fallback);
@@ -307,16 +321,25 @@ export const ResultPanel = memo(function ResultPanel({
 
   const rtl = isRtl(lang);
 
-  // While words stream in, keep one display size so the answer does not reflow mid-arrival;
-  // the settled length chooses its final size once, as the answer lands.
-  const sizeLen = provisional ? 120 : text.length;
-  const textCls = `${rtl ? "font-arabic font-medium" : "font-medium"} ${sizeFor(sizeLen, rtl)}`;
-  const showShadow =
-    !!shadow && shadow.losses.length > 0 && !provisional && !pending && !speaking ? true : false;
+  // One readable scale per script, from the first chunk through the final answer.
+  // Length thresholds (including the old provisional=120 shortcut) resized the whole
+  // paragraph when it settled, and again when deleting across a threshold.
+  const textCls = rtl
+    ? "font-arabic font-medium text-[24px] leading-[1.75] sm:text-[26px]"
+    : "font-medium text-[24px] leading-[1.45] tracking-[-0.015em] sm:text-[26px]";
+  const showShadow = !!shadow && shadow.losses.length > 0 && !unavailable && !speaking;
   let body: React.ReactNode;
   if (result) {
     body = (
-      <div key="result" className="animate-reveal flex flex-1 flex-col">
+      <div key="result" className="animate-reveal relative flex min-w-0 flex-1 flex-col">
+        {stale ? (
+          <p
+            aria-hidden
+            className="absolute inset-x-0 -top-6 truncate text-[11px] text-muted-foreground"
+          >
+            {error ? t("previousTranslation") : t("updatingTranslation")}
+          </p>
+        ) : null}
         <div className="result-wrap relative">
           {showShadow && shadow ? (
             <ShadowInk
@@ -331,13 +354,13 @@ export const ResultPanel = memo(function ResultPanel({
           <p
             dir={rtl ? "rtl" : "ltr"}
             lang={lang}
-            data-streaming={provisional ? "true" : undefined}
-            className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${textCls} ${pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
+            data-streaming={streaming ? "true" : undefined}
+            className={`result-text whitespace-pre-wrap text-start transition-opacity duration-300 ${textCls} ${stale || pending ? "opacity-60" : provisional ? "opacity-80" : "opacity-100"}`}
           >
             {speaking && voiceStarted ? (
               <SpokenText text={text} current={spokenWord} />
             ) : (
-              <StreamingText text={text} live={provisional} />
+              <StreamingText text={text} live={streaming} />
             )}
           </p>
           {showShadow && shadow ? (
@@ -352,9 +375,9 @@ export const ResultPanel = memo(function ResultPanel({
             />
           ) : null}
         </div>
-        {!provisional && !pending && !speaking ? shadowSummary : null}
+        {!unavailable && !speaking ? shadowSummary : null}
 
-        {result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
+        {!unavailable && result.isAmbiguous && result.alternativeTranslations.length > 0 ? (
           <div className="mt-4">
             <button
               type="button"
@@ -381,7 +404,7 @@ export const ResultPanel = memo(function ResultPanel({
           </div>
         ) : null}
 
-        {suggestion && !provisional && !pending ? (
+        {suggestion && !unavailable ? (
           <div className="animate-fade mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
             <span className="flex items-center gap-2 text-muted-foreground">
               <span aria-hidden className="size-1 rotate-45 bg-signal" />
@@ -400,11 +423,11 @@ export const ResultPanel = memo(function ResultPanel({
           </div>
         ) : null}
 
-        {result.notes && result.confidence < 0.75 ? (
+        {!unavailable && result.notes && result.confidence < 0.75 ? (
           <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{result.notes}</p>
         ) : null}
 
-        {error && !pending && !provisional ? (
+        {error && !pending ? (
           <p
             role="alert"
             className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-relaxed text-muted-foreground"
@@ -427,8 +450,10 @@ export const ResultPanel = memo(function ResultPanel({
         ) : null}
 
         <div
-          className={`-ms-0.5 mt-auto flex items-center pt-3 sm:pt-3.5 transition-[opacity,transform] duration-[420ms] ease-[var(--ease-spring)] ${
-            provisional || pending
+          inert={unavailable}
+          aria-hidden={unavailable}
+          className={`result-actions -ms-0.5 mt-auto flex flex-wrap items-center pt-3 sm:pt-3.5 transition-[opacity,transform] duration-200 ease-[var(--ease-soft)] ${
+            unavailable
               ? "pointer-events-none translate-y-2 opacity-0"
               : "translate-y-0 opacity-100"
           }`}
@@ -436,6 +461,7 @@ export const ResultPanel = memo(function ResultPanel({
           <button
             type="button"
             onClick={copy}
+            disabled={unavailable}
             aria-label={copied ? t("copied") : t("copy")}
             className={`press-soft me-1.5 inline-flex h-9 items-center gap-1.5 rounded-full border border-signal/15 bg-signal-soft px-3 text-[12px] font-medium transition-colors duration-200 ${
               copied ? "text-success" : "text-signal-text"
@@ -454,6 +480,7 @@ export const ResultPanel = memo(function ResultPanel({
             {copied ? t("copied") : t("copyShort")}
           </button>
           <Action
+            disabled={unavailable}
             label={speaking ? t("stop") : t("listen")}
             onClick={speak}
             onLongPress={() => setVoiceOpen(true)}
@@ -466,6 +493,7 @@ export const ResultPanel = memo(function ResultPanel({
           </Action>
           {onSave ? (
             <Action
+              disabled={unavailable}
               label={isSaved ? t("unsave") : t("save")}
               onClick={() => {
                 onSave();
@@ -480,7 +508,7 @@ export const ResultPanel = memo(function ResultPanel({
             </Action>
           ) : null}
           {onDictionary ? (
-            <Action label={t("lexOpen")} onClick={onDictionary}>
+            <Action disabled={unavailable} label={t("lexOpen")} onClick={onDictionary}>
               <BookOpen className="size-[18px]" strokeWidth={1.75} />
               {dictionaryReady ? (
                 <span
@@ -492,6 +520,7 @@ export const ResultPanel = memo(function ResultPanel({
           ) : null}
           {onToggleShadow ? (
             <Action
+              disabled={unavailable}
               label={shadowOn ? t("shOff") : t("shOn")}
               onClick={onToggleShadow}
               active={!!shadowOn}
@@ -501,17 +530,6 @@ export const ResultPanel = memo(function ResultPanel({
                 strokeWidth={1.75}
               />
             </Action>
-          ) : null}
-          {error ? (
-            <button
-              type="button"
-              onClick={onRetry}
-              title={error === "offline" ? t("err_offline") : undefined}
-              className="press-soft animate-fade ms-auto inline-flex whitespace-nowrap items-center gap-1.5 text-[12px] text-muted-foreground"
-            >
-              <RotateCw className="size-3" strokeWidth={1.75} />
-              {error === "offline" ? t("offline") : t("retry")}
-            </button>
           ) : null}
         </div>
         <p
@@ -555,7 +573,10 @@ export const ResultPanel = memo(function ResultPanel({
   } else if (error) {
     body = (
       <div key="error" className="animate-rise">
-        <p className="flex items-start gap-2.5 text-[15px] leading-relaxed text-muted-foreground">
+        <p
+          role="alert"
+          className="flex items-start gap-2.5 text-[15px] leading-relaxed text-muted-foreground"
+        >
           <span
             aria-hidden
             className={`mt-[0.6em] size-1.5 shrink-0 rounded-full ${error === "offline" || error === "rate" || error === "timeout" ? "bg-warning" : "bg-destructive"}`}
@@ -588,7 +609,13 @@ export const ResultPanel = memo(function ResultPanel({
   }
 
   return (
-    <div className="result-panel relative px-4 sm:px-5 py-3 sm:py-3.5" aria-busy={pending}>
+    <div
+      className="result-panel relative px-5 pb-4 pt-9"
+      data-stale={stale || undefined}
+      aria-busy={!error && (pending || provisional || stale)}
+      aria-label={t("translationResult")}
+      role="region"
+    >
       {body}
       <span className="sr-only" aria-live="polite">
         {announce}

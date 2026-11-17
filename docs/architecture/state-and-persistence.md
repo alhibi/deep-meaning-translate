@@ -1,6 +1,6 @@
 # State and Persistence
 
-Status: **Verified** against source and tests on 2026-11-16. Keys below were read from the
+Status: **Verified** against source and tests on 2026-11-17. Keys below were read from the
 implementation, not invented. The web session race fix, cross-tab sync and storage-health surface
 were added in the web upgrade audit; the native adapter was not changed and is device-NOT_VERIFIED
 for those specific behaviours.
@@ -61,8 +61,12 @@ translator uses the values as **initial state only**:
 - Preferences are written after the boot restore completes and whenever a choice changes.
 - The session is written on a 400 ms debounce after text/result/pair changes, and flushed on
   `visibilitychange` (hidden) and `pagehide`, so the last keystrokes are not lost to the debounce.
-- A provisional result is stored as `null` in the session; provisional text is never treated as a
-  permanent translation.
+- A result is stored in the session only when `useTranslator.settled` proves it belongs to the
+  current normalized text and request parameters and is non-provisional/complete. An older settled
+  reading kept visible during a new draft is also stored as `null`, not paired with the new text.
+  Connectivity loss alone does not invalidate a current settled answer or discard it from the session.
+- IME candidate text is bounded safely for a session snapshot without truncating the active native
+  composition buffer. Input limits use the same 5,000 UTF-16-unit contract as storage/server input.
 - **Session recency (TD14):** each web write records `at` (epoch ms) and a per-tab `origin`. A tab
   that has seen a newer `at` must refuse its own whole-session write (`refused-stale`), so closing
   an old/empty tab cannot erase a draft written since in another tab. The first boot read counts as

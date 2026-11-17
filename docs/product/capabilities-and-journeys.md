@@ -1,7 +1,8 @@
 # Capabilities and User Journeys
 
 Status: **Verified** by source inspection and, where stated, runtime observation on 2026-11-07.
-Provider-dependent quality is **NOT_VERIFIED** (no keys in the audit environment).
+The editing journey was rechecked on 2026-11-17 with unit tests and mocked Chromium streams;
+provider-dependent quality is **NOT_VERIFIED** in that follow-up.
 
 Each journey is described in three stages: **A — initial state**, **B — execution**, **C — final
 state and return**.
@@ -23,17 +24,27 @@ session (draft, pair, style, result) is written to device storage after 400 ms a
 page is hidden. On return to `/`, the draft and translation paint from the remembered session
 without a new request.
 
+**Editing contract.** The source has three stable, complete lines (two above the keyboard); long
+text scrolls natively inside it, while a long answer grows the workspace. Arabic and Latin share one
+line box. Enter translates, Shift+Enter inserts a newline, and IME confirmation never submits a
+candidate. Paste preserves whitespace, and all programmatic entry paths respect the server's
+5,000-unit limit without splitting an emoji surrogate pair. Clear is explicit, not a downward swipe.
+Dictation appends to the exact typed draft instead of flattening its paragraphs. A stale result is
+labelled as previous and has no usable result actions; it cannot be archived, saved or persisted for
+a newer source. Editing also stops its read-along.
+
 **Failure.** Offline, timeout, rate limit and provider errors produce a calm, translated state and
 keep the previous good result and the draft. Transient failures retry once. A rate-limited _live_
 request stays silent while typing.
 
 ## 2. Hold a conversation in Live mode
 
-**A.** Live mode is enabled in the composer; the pair and register are already chosen.
+**A.** Live output is automatic while typing; the pair and register are already chosen.
 
 **B.** Each pause streams plain text for the current prefix. Provisional text is never written to
-device memory, never verified and never archived. When typing stops, the finished sentence is
-translated structurally and verified.
+device memory, never verified and never archived. A 1,200 ms pause requests one full reading of
+the unchanged thought, even without final punctuation; it is translated structurally and checked,
+not simply relabelled as final. Composition candidates are excluded from this schedule.
 
 **C.** The settled translation replaces the provisional text, actions become available, and the
 result is eligible for memory. The provisional text never becomes a permanent answer.

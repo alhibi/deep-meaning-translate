@@ -7,7 +7,7 @@ export function tokenize(text: string): string[] {
 export function stableTokens(prev: string[], next: string[]): number {
   let i = 0;
   while (i < prev.length && i < next.length && prev[i] === next[i]) i++;
-  // The last shown word may still be growing ("Hal" → "Hallo"): it re-animates, the rest stay.
+  // Exact common prefix. StreamingText also preserves a growing last word ("Hal" → "Hallo").
   return i;
 }
 
