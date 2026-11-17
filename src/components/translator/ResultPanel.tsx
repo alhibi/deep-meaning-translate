@@ -331,7 +331,7 @@ export const ResultPanel = memo(function ResultPanel({
   let body: React.ReactNode;
   if (result) {
     body = (
-      <div key="result" className="animate-reveal relative flex min-w-0 flex-1 flex-col">
+      <div key="result" className="animate-reveal relative flex min-w-0 flex-col">
         {stale ? (
           <p
             aria-hidden
@@ -452,7 +452,7 @@ export const ResultPanel = memo(function ResultPanel({
         <div
           inert={unavailable}
           aria-hidden={unavailable}
-          className={`result-actions -ms-0.5 mt-auto flex flex-wrap items-center pt-3 sm:pt-3.5 transition-[opacity,transform] duration-200 ease-[var(--ease-soft)] ${
+          className={`result-actions -ms-0.5 flex flex-wrap items-center pt-3 sm:pt-3.5 transition-[opacity,transform] duration-200 ease-[var(--ease-soft)] ${
             unavailable
               ? "pointer-events-none translate-y-2 opacity-0"
               : "translate-y-0 opacity-100"
@@ -610,7 +610,7 @@ export const ResultPanel = memo(function ResultPanel({
 
   return (
     <div
-      className="result-panel relative px-5 pb-4 pt-9"
+      className="result-panel relative px-5 pb-4 pt-8"
       data-stale={stale || undefined}
       aria-busy={!error && (pending || provisional || stale)}
       aria-label={t("translationResult")}

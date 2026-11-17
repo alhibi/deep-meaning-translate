@@ -164,7 +164,7 @@ export const LanguageBar = memo(function LanguageBar({
         type="button"
         onClick={swap}
         aria-label={t("swap")}
-        className="press-soft grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-200 hover:border-border-strong hover:text-foreground active:border-border-strong active:bg-muted active:text-foreground"
+        className="press-soft grid size-11 shrink-0 place-items-center rounded-full bg-transparent text-muted-foreground transition-colors duration-200 hover:text-foreground"
       >
         <ArrowLeftRight
           key={swapped}

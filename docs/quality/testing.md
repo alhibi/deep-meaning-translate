@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Status: **Verified** web/editor follow-up on 2026-11-17. Counts below are from executed commands,
+Status: **Verified** content-led canvas/editor follow-up on 2026-11-17. Counts below are from executed commands,
 not estimates. The Android table retains its dated 2026-11-16 evidence; Gradle and devices were not
 rerun in this follow-up.
 
@@ -10,19 +10,19 @@ rerun in this follow-up.
 | ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | `npm run typecheck`                | TypeScript consistency                                       | PASS, 0 errors                                                                        |
 | `npm run lint -- --max-warnings 0` | ESLint + Prettier                                            | PASS, 0 warnings                                                                      |
-| `npm run test`                     | Vitest unit/integration suite with coverage                  | **511 passed, 4 skipped, 78 files**                                                   |
+| `npm run test`                     | Vitest unit/integration suite with coverage                  | **514 passed, 4 skipped, 79 files**                                                   |
 | `npm run check:contrast`           | WCAG AA for theme token pairs                                | **51/51 pairs**                                                                       |
 | `npm run check:docs`               | Documentation links and inventory                            | PASS, all current documents indexed                                                   |
 | `npm run build`                    | Worker bundle + headers + PWA generation                     | PASS; **56 precached files**                                                          |
 | `npm run check:pwa`                | Non-empty precache with hashed assets                        | PASS; **54 hashed assets**                                                            |
 | `npm run build:native:web`         | Prerendered native web assets and CSP preparation            | PASS; **11 entries**; no APK/device claim                                             |
-| `npm run test:e2e:fields`          | Native editing, stream ownership and field geometry          | **23 geometry + 44 interaction/matrix checks**, Chromium 153, final production bundle |
+| `npm run test:e2e:fields`          | Native editing, stream ownership and field geometry          | **39 geometry + 76 interaction/matrix checks**, Chromium 153, final production bundle |
 | `npm run test:e2e:nav`             | Session restore, SPA navigation, background/theme continuity | **15 checks**, Chromium 153, final production bundle                                  |
 | `npm run test:e2e`                 | General Python Playwright smoke script                       | Not rerun in this editor follow-up                                                    |
 
 `npm run verify` ran types, zero-warning lint, coverage tests, contrast and docs together.
 Coverage floors in `vitest.config.ts` (statements/branches/functions/lines: **46/39/39/48**) are a
-regression guard, not a quality score. This run measured **52.74/44.90/45.72/55.19** respectively.
+regression guard, not a quality score. This run measured **53.03/45.43/46.03/55.51** respectively.
 The 2026-11-14 baseline measured 51.79/41.86/42.92/53.74. Four explicitly skipped tests remain
 skipped, not passed.
 
@@ -78,15 +78,20 @@ because the headless browser closed (see `docs/audits/2026-11-14-task2-request-l
 an active worker serves the app for online navigations and `/offline.html` only when a fetch fails.
 The navigation scenario is documented in `docs/quality/navigation-regression.md`.
 
-### Executed editor follow-up (2026-11-17)
+### Executed content-led canvas follow-up (2026-11-17)
 
-- `field_layout.py`: 23 checks, stable 120 px/three-line source, independent source scrolling,
-  streaming/settled stillness, reserved RTL clear-control space, no overlap, clipping or resize loop.
-- `composer_interactions.py`: 44 checks using controllable `ReadableStream` responses at the fetch
-  boundary. The real scheduler, parser and components run; no paid provider is called. Covers stale
-  actions/session eligibility, shorter replacement streams, exact Copy, selected-word replacement
-  and native undo, newline/IME guards, 5,000-unit emoji-safe limits (including Swap), delayed
-  clipboard permissions and simulated keyboard/pinch transitions. An already-settled result remains
+- `field_layout.py`: **39 checks**. Compact borderless idle canvas; a one-line source that grows
+  and shrinks with exact whitespace/newlines to its whole-line cap; independent native scrolling;
+  stream/settle stillness for an unchanged source; close-following result actions; reserved RTL
+  clear-control space; no overlap, clipping, inline-height writes or resize loop. The focused
+  placeholder keeps its opacity and focus is a short stroke, not a white frame.
+- `composer_interactions.py`: **76 checks** using controllable `ReadableStream` responses at the
+  fetch boundary. The real scheduler, parser and components run; no paid provider is called. Covers
+  automatic submission without a send button, source/result growth and shrinkage during real chunks,
+  native multiline replacement/undo, stale actions/session eligibility, shorter replacement streams,
+  exact Copy, newline/IME guards, 5,000-unit emoji-safe limits (including Swap), delayed clipboard
+  permissions and simulated keyboard/pinch transitions. Source caps are 6/4/3 whole lines for tall,
+  short/landscape and keyboard layouts, not fixed empty space. An already-settled result remains
   saveable and present in the device session when connectivity drops.
 - Responsive coverage is **15 combinations**: five viewports (320×568, 390×844, 768×1024,
   1440×900, 844×390) × three interface locales, with light/dark/vivid rotated between cases and the
@@ -94,10 +99,16 @@ The navigation scenario is documented in `docs/quality/navigation-regression.md`
 - `navigation_stability.py`: 15 checks, seeded before the first boot, deterministic refused
   provider transport, cold and route-return restore, repeated/rapid cycles, one document and no
   translation POST on return.
-- These scripts passed on the final production bundle served locally. A sandbox-only adapter
+- All **130 checks** (39 + 76 + 15) passed on the final production bundle served locally. The
+  interaction fixture waits for the actual SSR `.intro-screen` to unmount after boot, not merely
+  the absent pre-paint `data-intro` flag; Clear waits for the hook's result reset before measuring
+  geometry. A new URL fixture trims the space before its newline to match request normalization.
+  These repair test readiness/fixtures, not production persistence or the security policy.
+- A sandbox-only adapter
   permits preview embedding; shipped `_headers` are unchanged, and `script-src` is not relaxed.
   Playwright wait predicates are functions, not string expressions that need CSP `unsafe-eval`.
-- Final idle/result/updating/offline screenshots were inspected after finite transitions. No new
+- Final compact idle/settled screenshots in all three themes and a stale/offline result were
+  inspected after finite transitions. No new
   physical-device frame-rate claim or automated pixel-diff baseline is made.
 
 Activate a Python environment with Playwright/Chromium before running the npm E2E commands.

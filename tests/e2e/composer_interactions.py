@@ -42,7 +42,7 @@ FEED = r"""() => {
     if (!options.method || options.method === 'GET') return new Response(null, {status: 204});
     const data = JSON.parse(options.body);
     let controller;
-    const entry = {data, aborted: false, closed: false};
+    const entry = {data, at: performance.now(), aborted: false, closed: false};
     const stream = new ReadableStream({ start(c) { controller = c; } });
     const abort = () => {
       entry.aborted = true;
@@ -85,9 +85,10 @@ async def open_app(browser, width=390, height=844, locale="en", theme="light", t
     }""")
     await page.wait_for_function("() => document.documentElement.lang === " + json.dumps(locale))
     await page.wait_for_function("() => document.documentElement.classList.contains(" + json.dumps(theme) + ")")
+    # The pre-paint html[data-intro] flag is absent for returning visitors even BEFORE
+    # restoration. Wait for the actual SSR intro component to unmount in the boot effect.
+    await page.wait_for_function("() => document.querySelector('main') && !document.querySelector('.intro-screen')")
     await page.evaluate("document.fonts.ready")
-    # Wait for boot restoration, not an arbitrary opportunity to type before hydration.
-    await page.wait_for_function("() => document.querySelector('main') && !document.querySelector('[data-intro]')")
     return context, page, page.locator("#composer")
 
 
@@ -116,7 +117,10 @@ async def answer(page, index, text, target="de"):
 async def editing(browser):
     context, page, field = await open_app(browser, motion="no-preference")
     idle_box = await field.bounding_box()
-    check(await page.get_by_role("button", name="Translate now").is_disabled(), "empty submit is disabled")
+    check(await page.get_by_role("button", name="Translate now", exact=True).count() == 0,
+          "automatic translation needs no manual send button")
+    check(await page.get_by_text("Translates as you type", exact=True).is_visible(),
+          "a quiet hint explains that translation is automatic")
     await field.fill("سأحضر غداً.")
     index = await feed_for(page, "سأحضر غداً.", "full")
     # Deliver the JSON string across frames, so partialTranslation and word arrival run.
@@ -179,6 +183,8 @@ async def editing(browser):
     await page.keyboard.press("End")
     await page.keyboard.press("Shift+Enter")
     check("\n" in await field.input_value(), "Shift+Enter inserts a real newline")
+    check(await field.evaluate("e => e.clientHeight === 2 * parseFloat(getComputedStyle(e).lineHeight) && e.scrollHeight <= e.clientHeight + 1"),
+          "native newline expands the source by one full line without internal scrolling")
     await field.fill("١٢٣ Hallo")
     check(await field.get_attribute("dir") == "ltr", "Arabic numerals do not override the first Latin letter")
     await field.fill("123 مرحباً")
@@ -227,6 +233,65 @@ async def editing(browser):
     await context.close()
 
 
+async def adaptive_canvas(browser):
+    context, page, field = await open_app(browser, motion="no-preference")
+    idle = await page.locator(".canvas-shell").bounding_box()
+    # Growing/shrinking must leave native undo in charge, without rewriting the textarea.
+    multiline = "Erste\nZweite\nDritte"
+    await field.fill(multiline)
+    line = await field.evaluate("e => parseFloat(getComputedStyle(e).lineHeight)")
+    check((await field.bounding_box())["height"] == 3 * line, "three real lines grow the source, not the viewport")
+    await field.evaluate("e => e.setSelectionRange(0, e.value.length)")
+    await page.keyboard.insert_text("Kurz")
+    check((await field.bounding_box())["height"] == line, "replacing multiline text with a word shrinks the source")
+    await page.keyboard.press("Control+z")
+    check(await field.input_value() == multiline and (await field.bounding_box())["height"] == 3 * line,
+          "native undo restores both multiline text and its intrinsic height")
+
+    draft = "أحتاج إلى التأكد من الموعد."
+    await page.evaluate("window.__typedAt = performance.now()")
+    await field.fill(draft)
+    index = await feed_for(page, draft, "full")
+    scheduled = await page.evaluate("i => window.__feeds[i].at - window.__typedAt", index)
+    check(scheduled < 1000, f"complete sentence starts automatically without Enter ({scheduled:.0f}ms client scheduling; mocked network)")
+    check(await page.evaluate("text => window.__feeds.filter(f => f.data.text === text && f.data.mode === 'full').length", draft) == 1,
+          "automatic full sentence is scheduled once, without a competing send action")
+    source = await field.bounding_box()
+    scroll_top = await page.locator(".translator-workspace").evaluate("e => e.scrollTop")
+    translation = "Guten Morgen. " + "Wir sehen uns morgen zum vereinbarten Termin. " * 24
+    payload = json.dumps(result_for(translation), ensure_ascii=False)
+    first = payload.index("Morgen.") + len("Morgen.")
+    await page.evaluate("({i,s}) => window.__feeds[i].push(s)", {"i": index, "s": payload[:first]})
+    await page.wait_for_function("() => document.querySelector('.result-text')?.textContent === 'Guten Morgen.'")
+    small = await page.locator(".canvas-shell").bounding_box()
+    check(await field.bounding_box() == source, "first short stream chunk cannot stretch the source")
+    middle = first + 240
+    await page.evaluate("({i,s}) => window.__feeds[i].push(s)", {"i": index, "s": payload[first:middle]})
+    await page.wait_for_function("() => document.querySelector('.result-text')?.textContent.length > 200")
+    grown = await page.locator(".canvas-shell").bounding_box()
+    check(grown["height"] > small["height"] + 40, "new streamed lines grow the canvas only as content arrives")
+    check(await field.bounding_box() == source, "a longer stream leaves the source's bounds unchanged")
+    await page.evaluate("({i,s}) => { window.__feeds[i].push(s); window.__feeds[i].end(); }", {"i": index, "s": payload[middle:]})
+    await page.get_by_role("button", name="Copy translation", exact=True).wait_for()
+    check(await field.bounding_box() == source, "settling a long answer never resizes the source")
+    check(await page.locator(".translator-workspace").evaluate("e => e.scrollTop") == scroll_top,
+          "stream growth never forces the active writer to the answer's bottom")
+    long = await page.locator(".canvas-shell").bounding_box()
+    await field.fill("صباح الخير.")
+    index = await feed_for(page, "صباح الخير.", "full")
+    await answer(page, index, "Hallo.")
+    await page.get_by_role("button", name="Copy translation", exact=True).wait_for()
+    short = await page.locator(".canvas-shell").bounding_box()
+    check(short["height"] < long["height"] - 80, "shorter automatic answer releases the long result's empty space")
+    await page.get_by_role("button", name="Clear text", exact=True).click()
+    # The hook clears its external request/result snapshot in an effect. Observe that
+    # completion before reading layout; a click resolving is not a React commit barrier.
+    await page.wait_for_function("() => !document.querySelector('.result-text') && document.querySelector('#composer').value === ''")
+    cleared = await page.locator(".canvas-shell").bounding_box()
+    check(abs(cleared["height"] - idle["height"]) < 1, "clearing restores the original compact surface")
+    await context.close()
+
+
 async def keyboard_viewport(browser):
     context, page, field = await open_app(browser)
     await field.focus()
@@ -239,9 +304,13 @@ async def keyboard_viewport(browser):
       visualViewport.dispatchEvent(new Event('resize'));
     }""")
     await page.wait_for_selector('.canvas-shell[data-keyboard="open"]')
-    check(await field.evaluate("e => Math.abs(e.clientHeight - 2 * parseFloat(getComputedStyle(e).lineHeight)) < 1"), "keyboard layout uses two whole lines, never a clipped half-line")
-    await field.fill("نص طويل للاختبار.")
-    index = await feed_for(page, "نص طويل للاختبار.", "full")
+    check(await field.evaluate("e => Math.abs(e.clientHeight - parseFloat(getComputedStyle(e).lineHeight)) < 1"),
+          "keyboard opening does not inflate a short or empty source")
+    draft = "سطر طويل للاختبار.\n" * 12
+    await field.fill(draft)
+    check(await field.evaluate("e => Math.abs(e.clientHeight - 3 * parseFloat(getComputedStyle(e).lineHeight)) < 1 && e.scrollHeight > e.clientHeight"),
+          "keyboard caps long source at three whole lines, with native scrolling")
+    index = await feed_for(page, draft, "full")
     await answer(page, index, "Ein langer übersetzter Absatz. " * 70)
     await page.get_by_role("button", name="Copy translation").wait_for(state="attached")
     visible = await field.evaluate("""e => {
@@ -251,6 +320,11 @@ async def keyboard_viewport(browser):
     check(visible, "a growing answer never scrolls the active composer off screen")
     await page.evaluate("window.__height = innerHeight; visualViewport.dispatchEvent(new Event('resize'))")
     await page.wait_for_selector('.canvas-shell:not([data-keyboard])')
+    check(await field.evaluate("e => Math.abs(e.clientHeight - 6 * parseFloat(getComputedStyle(e).lineHeight)) < 1"),
+          "closing keyboard restores the bounded six-line space for a long draft")
+    await field.fill("قصير")
+    check(await field.evaluate("e => Math.abs(e.clientHeight - parseFloat(getComputedStyle(e).lineHeight)) < 1"),
+          "deleting after keyboard closing returns to one content-sized line")
     await page.evaluate("window.__scale = 2; window.__height = 300; visualViewport.dispatchEvent(new Event('resize'))")
     check(await page.locator('.canvas-shell[data-keyboard="open"]').count() == 0, "pinch zoom is not mistaken for a keyboard")
     await context.close()
@@ -263,7 +337,14 @@ async def responsive(browser):
             theme = ["light", "dark", "vivid"][(i + j) % 3]
             target = "ar" if j == 1 else "de"
             context, page, field = await open_app(browser, width, height, locale, theme, target)
-            draft = "Ein langer Text. " * 80 if target == "ar" else "هذا نص طويل. " * 80
+            compact = await field.evaluate("""e => {
+              const c = document.querySelector('.canvas-shell'), cs = getComputedStyle(c);
+              return e.clientHeight === parseFloat(getComputedStyle(e).lineHeight) && c.getBoundingClientRect().height < 320 &&
+                cs.boxShadow === 'none' && parseFloat(cs.borderTopWidth) === 0;
+            }""")
+            check(compact, f"{width}×{height} / {locale} / {theme}: empty canvas is compact and borderless")
+            draft = ("Ein langer Text. " * 80 if target == "ar" else "هذا نص طويل. " * 80)
+            draft = draft.rstrip() + "\nhttps://example.invalid/" + "source-path-" * 55
             await field.fill(draft)
             index = await feed_for(page, draft)
             # A single enormous token also covers URLs and German compounds in word-in spans.
@@ -280,14 +361,15 @@ async def responsive(browser):
               return {
                 overlap: s.bottom > r.top + 1,
                 clipped: t.bottom > p.bottom + 1 || a.bottom > p.bottom + 1,
-                overflow: text.scrollWidth > text.clientWidth + 1 || document.documentElement.scrollWidth > innerWidth,
+                overflow: text.scrollWidth > text.clientWidth + 1 || field.scrollWidth > field.clientWidth + 1 || document.documentElement.scrollWidth > innerWidth,
                 inside: p.left >= c.left && p.right <= c.right,
                 scrolls: field.scrollHeight > field.clientHeight,
-                lines: Math.abs(field.getBoundingClientRect().height - 3 * parseFloat(getComputedStyle(field).lineHeight)) < 1,
+                lines: Math.abs(field.getBoundingClientRect().height -
+                  (innerHeight <= 480 ? 3 : innerHeight <= 640 ? 4 : 6) * parseFloat(getComputedStyle(field).lineHeight)) < 1,
               };
             }""")
             check(not shape["overlap"] and not shape["clipped"] and not shape["overflow"] and shape["inside"] and shape["scrolls"] and shape["lines"],
-                  f"{width}×{height} / {locale} / {theme}: long RTL/LTR text, URL, actions stay inside; source scrolls in three lines")
+                  f"{width}×{height} / {locale} / {theme}: long RTL/LTR text, URL, actions stay inside; source scrolls only at its viewport cap")
             if width == 390:
                 OUT.mkdir(parents=True, exist_ok=True)
                 await page.screenshot(path=str(OUT / f"{locale}-{theme}.png"))
@@ -298,6 +380,7 @@ async def main():
     async with async_playwright() as p:
         browser = await launch_chromium(p)
         await editing(browser)
+        await adaptive_canvas(browser)
         await keyboard_viewport(browser)
         await responsive(browser)
         await browser.close()

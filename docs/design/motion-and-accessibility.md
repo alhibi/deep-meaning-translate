@@ -70,15 +70,19 @@ the whole layer off.
 - Streaming smoothness: 390×844 headless Chromium, 2026-11-16 — 60 fps and zero long tasks
   unthrottled; 6× CPU throttle averaged ~44 fps with 10–13 long tasks ≤73 ms. Disabling the arrival
   effect produced the same long-task count (React + text layout dominate, not the blur); the
-  composer held one 122.4 px height and the result never overlapped it.
+  then-fixed composer held one 122.4 px height and the result never overlapped it. This is historical
+  performance evidence, before the content-led layout; it is not a measurement of the new sizing.
 - Reduced motion: emulated in Chromium; the `word-in` animations resolve to a fade and the caret is
   static. Screen-reader announcement quality and real-device reduced-motion behavior:
   **NOT_VERIFIED** in this environment.
-- Editing follow-up, 2026-11-17: Chromium 153, 15 viewport/locale/theme combinations; no source/result
-  overlap or URL overflow, a common 120 px three-line composer, two full lines under simulated
-  keyboard opening, no forced scroll of the active field, and no font-size change on stream settle.
-  `field_layout.py` passed 23 checks and `composer_interactions.py` passed 44. These are geometry and
-  interaction observations, **not** a new physical-device frame-rate measurement.
+- Content-led follow-up, 2026-11-17: Chromium 153, 15 viewport/locale/theme combinations on the dev
+  server and final production bundle. The source grows/shrinks from one whole line to its 6/4/3-line cap; opening a simulated
+  keyboard caps it at three without inflating a short draft. No source/result overlap, source or
+  result URL overflow, forced scroll of the active field, or font-size change on stream settle.
+  Native multiline replacement/undo restores the correct height. A short solid focus marker and
+  an unfaded placeholder preserve orientation without adding a frame. `field_layout.py` passed
+  39 checks and `composer_interactions.py` passed 76. These are geometry/interaction observations,
+  **not** a new physical-device frame-rate measurement.
 
 ## Adding motion
 

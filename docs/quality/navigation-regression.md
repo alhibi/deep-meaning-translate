@@ -69,8 +69,10 @@ old build failed this test because the offline page answered every navigation.
   repeated/rapid cycles; light-theme browser chrome matches the active background token on `/stats`.
 - The fixture is seeded before boot. This resolves the two failures in the historical 2026-11-14
   script run, where an already-open page's `pagehide` flush overwrote the newly seeded fixture.
-- Repeated on the final locally served production bundle with the same checks. No new timing,
-  frame-rate or physical-device measurement was made.
+- Repeated after the content-led canvas change on the final locally served production bundle with
+  the same checks: intrinsic source sizing does not change the restore pair, lose the result or
+  issue a new request on route return. No new navigation timing, frame-rate or physical-device
+  measurement was made.
 
 ## Historical measured evidence (2026-11-14 production bundle)
 

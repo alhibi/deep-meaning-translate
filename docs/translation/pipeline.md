@@ -35,6 +35,13 @@ structure, not a second copy.
 - shows a loading state only after 260 ms; a request times out after 60 s; the in-memory cache holds
   60 entries for 30 minutes.
 
+The canvas has **no manual send button**: typing alone reaches this path. The adaptive debounce
+remains 40 ms at a sentence/newline boundary, 90 ms at a soft boundary, 110 ms after whitespace and
+240 ms mid-word, with additional patience for fast typing, an initial fragment, long text or a slow
+connection. These are client scheduling delays, **not** provider latency promises. Paste and the
+IME-safe Enter shortcut can still request a full reading immediately. Removing the button does not
+remove composition guards, cancellation, deduplication, retry or the full-reading pause upgrade.
+
 `translationKey(text, source, target, style, dialect, brain)` is the one definition of request
 identity; cache, device memory and session priming all use it.
 
