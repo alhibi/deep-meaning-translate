@@ -20,6 +20,25 @@ export const SavedSheet = memo(function SavedSheet({
   const { t } = useI18n();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<"list" | "review">("list");
+  const [drag, setDrag] = useState(0);
+  const startY = useRef<number | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0]?.clientY ?? null;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (startY.current === null) return;
+    const dy = (e.touches[0]?.clientY ?? 0) - startY.current;
+    if (dy > 0) setDrag(dy);
+  };
+
+  const onTouchEnd = () => {
+    if (drag > 75) onClose();
+    setDrag(0);
+    startY.current = null;
+  };
+
   // Closed sheet reopens in list mode. Adjusted while rendering (React's own pattern)
   // instead of in an effect, so the review screen is never painted for a closed sheet.
   if (!open && mode !== "list") setMode("list");
@@ -37,8 +56,22 @@ export const SavedSheet = memo(function SavedSheet({
       className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/20 outline-none"
     >
       <button type="button" aria-label={t("close")} className="flex-1" onClick={onClose} />
-      <div className="animate-rise max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pad-safe-bottom">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-3">
+      <div
+        style={{
+          transform: drag ? `translateY(${drag}px)` : undefined,
+          transition: drag ? "none" : undefined,
+        }}
+        className="animate-sheet-in max-h-[82dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+      >
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="flex shrink-0 touch-none cursor-grab justify-center py-2.5 active:cursor-grabbing"
+        >
+          <span aria-hidden className="h-1.5 w-10 rounded-full bg-border-strong" />
+        </div>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-2">
           <div className="flex items-center gap-4 text-[13px]">
             <button
               type="button"
@@ -172,6 +205,28 @@ function SavedRow({ e, onPick }: { e: SavedPhrase; onPick: (p: SavedPhrase) => v
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(e.translated);
   const rtl = isRtl(e.target);
+  const [swipeX, setSwipeX] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  const onRowTouchStart = (ev: React.TouchEvent) => {
+    touchStartX.current = ev.touches[0]?.clientX ?? null;
+  };
+  const onRowTouchMove = (ev: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = (ev.touches[0]?.clientX ?? 0) - touchStartX.current;
+    if (dx < 0) {
+      setSwipeX(Math.max(dx, -80));
+    } else {
+      setSwipeX(0);
+    }
+  };
+  const onRowTouchEnd = () => {
+    if (swipeX < -65) {
+      void saved.remove(e.id);
+    }
+    setSwipeX(0);
+    touchStartX.current = null;
+  };
 
   if (editing) {
     const commit = () => {
@@ -212,7 +267,16 @@ function SavedRow({ e, onPick }: { e: SavedPhrase; onPick: (p: SavedPhrase) => v
   }
 
   return (
-    <li className="flex items-start border-b border-border">
+    <li
+      onTouchStart={onRowTouchStart}
+      onTouchMove={onRowTouchMove}
+      onTouchEnd={onRowTouchEnd}
+      style={{
+        transform: swipeX ? `translateX(${swipeX}px)` : undefined,
+        transition: swipeX ? "none" : "transform 200ms ease",
+      }}
+      className="flex items-start border-b border-border touch-pan-y"
+    >
       <button
         type="button"
         onClick={() => onPick(e)}

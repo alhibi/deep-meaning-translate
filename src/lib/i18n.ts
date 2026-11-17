@@ -199,6 +199,16 @@ const en = {
   sc_culture: "Culture",
   sc_rhythm: "Rhythm",
   sc_implied: "Subtext",
+  installIosTitle: "Install today on iPhone / iPad",
+  installIosStep1: "Tap the Share button in Safari",
+  installIosStep2: "Scroll down and choose 'Add to Home Screen'",
+  installIosStep3: "Tap 'Add' in the top-right corner",
+  installIosDone: "Got it",
+  offlinePill: "Offline · Cached phrases ready",
+  onlinePill: "Back online",
+  pullToClear: "Pull down to clear",
+  releaseToClear: "Release to clear",
+  swipeSwapHint: "Swipe to swap languages",
 };
 export type Key = keyof typeof en;
 
@@ -394,6 +404,16 @@ const ar: Record<Key, string> = {
   sc_culture: "الثقافة",
   sc_rhythm: "الإيقاع",
   sc_implied: "المعنى الضمني",
+  installIosTitle: "تثبيت today على iPhone أو iPad",
+  installIosStep1: "اضغط على زر المشاركة في متصفح Safari",
+  installIosStep2: "مرر للأسفل واختر «إضافة إلى الشاشة الرئيسية»",
+  installIosStep3: "اضغط «إضافة» في الزاوية العلوية",
+  installIosDone: "فهمت",
+  offlinePill: "دون اتصال · العبارات المحفوظة متوفرة",
+  onlinePill: "متصل مجدداً",
+  pullToClear: "اسحب للأسفل للمسح",
+  releaseToClear: "أفلت للمسح",
+  swipeSwapHint: "اسحب لتبديل اللغات",
 };
 
 const de: Record<Key, string> = {
@@ -592,6 +612,16 @@ const de: Record<Key, string> = {
   sc_culture: "Kultur",
   sc_rhythm: "Rhythmus",
   sc_implied: "Subtext",
+  installIosTitle: "today auf dem iPhone oder iPad installieren",
+  installIosStep1: "Tippe auf das Teilen-Symbol in Safari",
+  installIosStep2: "Wähle «Zum Home-Bildschirm»",
+  installIosStep3: "Tippe oben rechts auf «Hinzufügen»",
+  installIosDone: "Verstanden",
+  offlinePill: "Offline · Gespeicherte Phrasen verfügbar",
+  onlinePill: "Wieder online",
+  pullToClear: "Nach unten ziehen zum Leeren",
+  releaseToClear: "Loslassen zum Leeren",
+  swipeSwapHint: "Wischen zum Tauschen",
 };
 
 export const DICT: Record<Locale, Record<Key, string>> = { en, ar, de };

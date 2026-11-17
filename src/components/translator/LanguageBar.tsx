@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import {
   LANGUAGES,
@@ -123,11 +123,35 @@ export const LanguageBar = memo(function LanguageBar({
     onSwap();
   }, [onSwap]);
 
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+    touchStartY.current = e.touches[0]?.clientY ?? null;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+    const deltaY = (e.changedTouches[0]?.clientY ?? 0) - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    if (Math.abs(deltaX) > 38 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      swap();
+    }
+  };
+
   const sourceCaption = source === "auto" ? `${t("from")} · ${t("auto")}` : t("from");
   const suggestions = useMemo(() => partnerCandidates(source), [source]);
 
   return (
-    <div className="flex items-center gap-3 px-6 pb-4 pt-2">
+    <div
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      title={t("swipeSwapHint")}
+      className="flex select-none items-center gap-3 px-6 pb-3.5 pt-2 touch-pan-y"
+    >
       <Side
         value={source}
         options={LANGUAGES}
