@@ -4,6 +4,8 @@ import { DEFAULT_BRAIN, type TranslationResult } from "./types";
 
 const call = vi.fn();
 const repairCall = vi.fn();
+/** What the stream says actually wrote the answer; production reads this from the response. */
+const streamState = vi.hoisted(() => ({ writer: undefined as "luna" | "deepseek" | undefined }));
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: (fn: { kind?: string }) => (fn.kind === "repair" ? repairCall : call),
 }));
@@ -21,7 +23,13 @@ vi.mock("./stream", () => ({
     const r = await call({ data, signal, onText });
     if (!r.ok) return r;
     onText(r.result.translation);
-    return { ok: true, text: mode === "full" ? JSON.stringify(r.result) : r.result.translation };
+    const brain = (data as { brain?: string }).brain;
+    const writer = streamState.writer ?? (brain === "luna" ? "luna" : "deepseek");
+    return {
+      ok: true,
+      text: mode === "full" ? JSON.stringify(r.result) : r.result.translation,
+      writer,
+    };
   },
 }));
 
@@ -52,6 +60,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   call.mockReset();
   repairCall.mockReset();
+  streamState.writer = undefined;
   // Device memory outlives a render on purpose — that is the feature. jsdom shares
   // localStorage across tests in a file, so without this a sentence settled by one
   // test would answer the next one from storage and the network path would never run.
@@ -283,7 +292,35 @@ describe("useTranslator", () => {
     await flush(600);
     expect(h.current.result?.translation).toBe("أهلاً");
     expect(h.current.phase).toBe("COMPLETE");
-    // DeepSeek wrote a clean sentence while Luna is paused: there is nobody to review it.
+    // DeepSeek wrote a clean sentence: DeepSeek never reviews its own writing, so there is
+    // nothing to send — even with Luna enabled.
+    expect(repairCall).not.toHaveBeenCalled();
+  });
+
+  it("spends one quiet review on a clean Luna-written sentence", async () => {
+    call.mockResolvedValue({ ok: true, result: result("أهلاً") });
+    repairCall.mockResolvedValue({ ok: true, result: null });
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("Hallo."), brain: "luna" as const },
+    });
+    await flush(600);
+    expect(h.current.result?.translation).toBe("أهلاً");
+    expect(h.current.phase).toBe("COMPLETE");
+    // DeepSeek is the independent reviewer of Luna's writing, and the request records who
+    // actually wrote the shown sentence so a fallback is never reviewed as Luna's.
+    expect(repairCall).toHaveBeenCalledTimes(1);
+    expect(repairCall.mock.calls[0]![0].data.request.writer).toBe("luna");
+  });
+
+  it("does not review a clean answer DeepSeek wrote after Luna failed", async () => {
+    call.mockResolvedValue({ ok: true, result: result("أهلاً") });
+    streamState.writer = "deepseek";
+    const { result: h } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("Hallo."), brain: "luna" as const },
+    });
+    await flush(600);
+    expect(h.current.result?.translation).toBe("أهلاً");
+    expect(h.current.phase).toBe("COMPLETE");
     expect(repairCall).not.toHaveBeenCalled();
   });
 

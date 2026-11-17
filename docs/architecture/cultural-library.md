@@ -3,6 +3,10 @@
 Status: **Phase II correction, 2026-11-17**. Scope: how written cultural knowledge is modelled,
 produced, validated, stored and displayed below the translator.
 
+**Release visibility (2026-11-17):** the translator does not compose this section in the current
+release (`SHOW_CULTURE = false` in `src/lib/features.ts`). The module, corpus, routes, stores and
+tests remain; this document describes the built module, not its current placement.
+
 ## Product
 
 The library is **Cultures, people and everyday life across the world** (Arabic identity:

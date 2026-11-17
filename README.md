@@ -63,8 +63,14 @@ installable APKs are published with the repository:
   into its sections, the sitemap lists only `/` and `/about`, and a first-run introduction is
   server-rendered so it never covers a painted translator.
 
-The default and only active writer is **DeepSeek**. The OpenCode/Luna provider is implemented but
-paused (`LUNA_ENABLED = false`); no request silently switches providers while it is paused.
+Two brains are active: **DeepSeek** is the default writer and independent reviewer, and
+**Luna** (OpenCode) is selectable as the expressive writer. The other model is the automatic
+fallback, DeepSeek reviews Luna-written sentences, and the app still works with only one provider
+key. Provider routing lives only in `engine.server.ts` / the translate-stream route.
+
+The contextual weather strip and the cultural library are built, tested and still routed, but they
+are **switched off in the translator in this release** (`src/lib/features.ts`); their components,
+hooks, data, routes and tests remain in the tree.
 
 ## Stack
 
@@ -78,7 +84,7 @@ Requires Node.js 22.12 or newer.
 
 ```sh
 npm ci
-cp .env.example .env   # at least DEEPSEEK_API_KEY for real translations
+cp .env.example .env   # DEEPSEEK_API_KEY and/or OPENCODE_API_KEY for real translations
 npm run dev            # http://localhost:8080
 ```
 

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranslationRequest, TranslationResult } from "./types";
-import { LUNA_ENABLED, TranslationError } from "./types";
+import { TranslationError } from "./types";
 
-/** Luna-only behaviour; skipped while Luna is paused ("soon"). */
-const lunaIt = it.skipIf(!LUNA_ENABLED);
+/** Both brains are active; every two-brain contract below runs against the real flag. */
+const lunaIt = it;
 
 const lunaTranslate = vi.fn();
 const dsTranslate = vi.fn();
@@ -110,6 +110,24 @@ describe("model choice", () => {
     expect(await (await engine()).runRepair(dsReq, res("عندي 3 قط."))).toBeNull();
     expect(review).not.toHaveBeenCalled();
   });
+
+  it("does not review a DeepSeek-written fallback even when Luna was requested", async () => {
+    // The stream route records who actually wrote the answer; a failed Luna request that
+    // DeepSeek rescued must not be sent back to DeepSeek as a "Luna" sentence.
+    const fallback = { ...req, writer: "deepseek" as const };
+    expect(await (await engine()).runRepair(fallback, res("عندي 3 قط."))).toBeNull();
+    expect(review).not.toHaveBeenCalled();
+  });
+
+  it("reviews a Luna-written answer even when DeepSeek was the requested writer", async () => {
+    review.mockResolvedValue(res("عندي 3 قطط."));
+    const { brain: _b, ...noBrain } = req;
+    const out = await (
+      await engine()
+    ).runRepair({ ...noBrain, writer: "luna" as const }, res("عندي 3 قط."));
+    expect(out?.translation).toBe("عندي 3 قطط.");
+    expect(review).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("parseReview", () => {
@@ -119,22 +137,5 @@ describe("parseReview", () => {
     expect(parseReview('{"translation":"عندي 3 قطط."}', req)?.translation).toBe("عندي 3 قطط.");
     expect(parseReview("not json", req)).toBeNull();
     expect(parseReview('{"translation":""}', req)).toBeNull();
-  });
-});
-
-describe("Luna paused", () => {
-  it.runIf(!LUNA_ENABLED)(
-    "an old Luna choice is written by DeepSeek; Luna is never called",
-    async () => {
-      dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
-      const { result } = await (await engine()).runTranslation(req);
-      expect(result.translation).toBe("لدي 3 قطط.");
-      expect(lunaTranslate).not.toHaveBeenCalled();
-    },
-  );
-  it.runIf(!LUNA_ENABLED)("a DeepSeek failure is reported, never handed to Luna", async () => {
-    dsTranslate.mockRejectedValue(new TranslationError("rate", "busy"));
-    await expect((await engine()).runTranslation(req)).rejects.toMatchObject({ kind: "rate" });
-    expect(lunaTranslate).not.toHaveBeenCalled();
   });
 });

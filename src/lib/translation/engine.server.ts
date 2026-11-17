@@ -5,9 +5,10 @@ import { verifyTranslation } from "./verify";
 
 /**
  * Two brains:
- * - Luna (OpenCode) writes every translation — fastest first words.
- * - DeepSeek V4.1 Flash reviews each finished sentence and takes over when Luna fails.
- * Without DEEPSEEK_API_KEY the app runs on Luna alone, exactly as before.
+ * - The request's `brain` picks the writer — DeepSeek by default, Luna when selected —
+ *   and the other model is the automatic fallback.
+ * - DeepSeek reviews Luna-written settled sentences; it never reviews its own writing.
+ * The app still works when only one provider key is configured.
  */
 function luna(): TranslationProvider | null {
   const apiKey = process.env["OPENCODE_API_KEY"];
@@ -25,7 +26,11 @@ async function deepseek(): Promise<TranslationProvider | null> {
  *
  * This is the single place that knows which model answers an analysis request, so the
  * dictionary and shadow modules own a prompt and a parser and nothing about a provider.
- * When the second brain is re-enabled, only this function changes.
+ *
+ * Analysis deliberately stays on DeepSeek while Luna is enabled: its capability profile
+ * (thinking at max effort, JSON mode, 65,536-token ceiling) is verified against DeepSeek
+ * only, and enrichment must not gain a second, unverified provider path. Luna is the
+ * translation/review brain.
  */
 export async function runAnalysis(
   system: string,
@@ -117,14 +122,11 @@ export async function runReview(
 ): Promise<TranslationResult | null> {
   const { deepseekKey, reviewTranslation } = await import("./providers/deepseek.server");
   const key = deepseekKey();
-  // DeepSeek never reviews its own writing.
-  if (
-    !key ||
-    req.partial ||
-    effectiveBrain(req.brain ?? DEFAULT_BRAIN) === "deepseek" ||
-    !req.text.trim()
-  )
-    return null;
+  // DeepSeek never reviews its own writing. Prefer the recorded writer: a Luna request that
+  // DeepSeek rescued is DeepSeek's writing, and a Luna-written answer is reviewed even when
+  // the request named DeepSeek as the requested brain.
+  const writer = req.writer ?? effectiveBrain(req.brain ?? DEFAULT_BRAIN);
+  if (!key || req.partial || writer === "deepseek" || !req.text.trim()) return null;
   try {
     const reviewed = await reviewTranslation(key, req, previous, opts.signal);
     if (!reviewed || norm(reviewed.translation) === norm(previous.translation)) return null;

@@ -5,6 +5,10 @@ Status: **Researched and decided** on 2026-11-17 from the providers' official do
 This is an architecture decision record for the phase-II weather surface; it is not product code.
 Provider uptime, behaviour under load, DST-transition output and Android/WebView runtime behaviour are
 **NOT_VERIFIED**; raw probe evidence is kept in `artifacts/phase2/task-12.md` (gitignored).
+
+**Release visibility (2026-11-17):** the translator does not compose the weather surface in the
+current release (`SHOW_WEATHER = false` in `src/lib/features.ts`); its adapter, routes, hooks,
+cache and tests remain. This decision record still governs the module when the surface is turned on.
 Classifications follow [testing](../quality/testing.md).
 
 ## Decision
