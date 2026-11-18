@@ -70,7 +70,15 @@ export function speakNative(
       return h.onFail?.("unsupported");
     }
     try {
-      const ready = await tts.available();
+      // The Android engine initialises asynchronously after load(); a first tap during that
+      // window used to fail with "unsupported" and never retry. Wait briefly for readiness
+      // (bounded, ~1.8 s) before giving up, and stop waiting the moment the person cancels.
+      let ready = await tts.available().catch(() => ({ ready: false }));
+      for (let attempt = 0; !ready.ready && attempt < 12 && !stopped; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        if (stopped) return;
+        ready = await tts.available().catch(() => ({ ready: false }));
+      }
       if (!ready.ready) {
         finish();
         return h.onFail?.("unsupported");
