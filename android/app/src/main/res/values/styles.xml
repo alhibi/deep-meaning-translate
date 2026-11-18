@@ -2,13 +2,14 @@
 <resources>
 
     <!-- The translator's canvas is the app. No action bar, no title, no default white
-         window behind the WebView. -->
+         window behind the WebView. The launch surfaces follow the phone's day/night mode
+         (values/values-night) so a light phone no longer gets a clay splash. -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:background">#12100F</item>
-        <item name="android:windowBackground">#12100F</item>
+        <item name="android:background">@color/splash_background</item>
+        <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">@bool/splash_light_status_bar</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowSoftInputMode">adjustResize</item>
     </style>
@@ -18,10 +19,10 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <!-- Android 12+ splash: the product's clay background and mark, no white flash.
-         The web layer hides it after restoring the saved state. -->
+    <!-- Android 12+ splash: the canvas colour and the mark, no flash. The web layer hides
+         it after restoring the saved state. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#12100F</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>

@@ -159,13 +159,7 @@ async function syncSystemBars(): Promise<void> {
       return;
     }
   } catch {
-    /* fall through to the legacy status-bar plugin */
-  }
-  try {
-    const { StatusBar, Style } = await import("@capacitor/status-bar");
-    await StatusBar.setStyle({ style: light ? Style.Light : Style.Dark });
-  } catch {
-    /* not fatal: the canvas still owns its own colours */
+    /* SystemBars is the supported API; if it is missing the canvas colours still apply. */
   }
 }
 
