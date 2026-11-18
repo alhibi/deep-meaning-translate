@@ -2,8 +2,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android") version "2.1.21"
-    id("com.google.devtools.ksp") version "2.1.21-2.0.1"
+    // Kotlin 2.3 is the stable line supported by AGP 8.13 and Gradle 8.14; the previous
+    // 2.1.21 pair was outside the official support window (TD69). KSP versions independently
+    // from 2.3.0 and must move with Kotlin.
+    id("org.jetbrains.kotlin.android") version "2.3.21"
+    id("com.google.devtools.ksp") version "2.3.14"
 }
 
 /**

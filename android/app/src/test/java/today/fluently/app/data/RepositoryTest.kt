@@ -69,12 +69,15 @@ class RepositoryTest {
     }
 
     @Test
-    fun `history trim keeps the newest rows`() = runTest {
+    fun `history upsert never trims the archive`() = runTest {
+        // Device-verified requirement: the archive is unlimited on the phone, so a new
+        // settled sentence must never delete the oldest one. This is the regression guard
+        // for the 2,000-row trim that silently changed a person's statistics.
         repo.historyUpsert((1..5).map { row("id$it", "Satz $it", it.toLong()) })
-        repo.historyTrim(2)
+        repo.historyUpsert(listOf(row("id6", "Satz 6", 6)))
         val rows = repo.historyAll()
-        assertThat(rows).hasSize(2)
-        assertThat(rows.map { it.id }).containsExactly("id5", "id4")
+        assertThat(rows).hasSize(6)
+        assertThat(rows.map { it.id }).contains("id1")
     }
 
     @Test
@@ -91,7 +94,7 @@ class RepositoryTest {
     }
 
     @Test
-    fun `history upsert updates in place and keeps the archive bounded`() = runTest {
+    fun `history upsert updates in place and keeps every row`() = runTest {
         repo.historyUpsert(listOf(row("same", "Hallo", 100)))
         repo.historyUpsert(listOf(row("same", "Hallo", 100, translated = "مرحبا")))
         val rows = repo.historyAll()
