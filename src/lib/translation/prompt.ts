@@ -99,24 +99,3 @@ Problems:
 Return the corrected translation, same meaning, tone and register, as minified JSON:
 ${SCHEMA_SHAPE}`;
 }
-
-/**
- * Second brain: an independent reviewer that only intervenes for real errors,
- * so a correct translation never flickers into a merely different one.
- */
-export function buildReviewPrompt(req: TranslationRequest, previous: TranslationResult): string {
-  return `You are a second, independent native-level reviewer. Check this translation against the source.
-${req.source === "auto" ? "auto" : req.source}→${req.target}; style: ${STYLE_GUIDANCE[req.style]}.${dialectClause(req)}
-Source:
-<text>
-${req.text}
-</text>
-Translation:
-<text>
-${previous.translation}
-</text>
-Change it ONLY for a real error: wrong or lost meaning, added/dropped content, wrong register or du/Sie, wrong dialect, wrong gender agreement, broken grammar, or clearly unnatural phrasing a native would never write. Never rewrite for taste or synonyms.
-If it is correct, reply exactly {"verdict":"keep"}.
-Otherwise reply ONLY the corrected result as minified JSON:
-${SCHEMA_SHAPE}`;
-}

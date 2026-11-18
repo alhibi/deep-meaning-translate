@@ -58,9 +58,9 @@ Arabic–German guidance pages; offline shell; installable PWA.
 
 | Term | Meaning in this project |
 | --- | --- |
-| **Brain** | The model that writes a translation. `deepseek` is the default and the independent reviewer; `luna` (OpenCode) is selectable, and the other model is the automatic fallback. |
-| **Live** | Provisional plain-text stream while the person is still typing. |
-| **Full / settled** | Structured translation of a finished sentence, verified and eligible for repair. |
+| **Brain** | The model that writes a translation. `deepseek` is the default; `luna` (OpenCode/Sona) is selectable. Selection is strict: the other model is never used for that translation. |
+| **Immediate** | The first input of a draft is sent at once; later typing is coalesced only by the typing delay. |
+| **Full / settled** | The structured translation every foreground request returns; verified and eligible for same-model repair. |
 | **Register / style** | Natural, Formal or Casual. A semantic instruction, not a label. |
 | **Dialect** | Arabic output variety: MSA or a regional variety; `auto` follows the source. |
 | **Repair** | One quiet second pass, shown only if it clears more deterministic issues than it creates. |

@@ -37,8 +37,8 @@ describe("documented deepseek-flash capability profiles", () => {
     expect(request.max_tokens).toBe(outputTokenBudget(5_000, true));
   });
 
-  it("allows deeper documented reasoning for repair and review, without clamping the answer", () => {
-    for (const profile of ["repair", "review"] as const) {
+  it("allows deeper documented reasoning for repair, without clamping the answer", () => {
+    for (const profile of ["repair"] as const) {
       const request = capabilityRequest(profile, 5_000);
       expect(request.thinking).toEqual({ type: "enabled" });
       expect(request.reasoning_effort).toBe("high");
@@ -63,7 +63,7 @@ describe("documented deepseek-flash capability profiles", () => {
   });
 
   it("never lowers a translation ceiling and never exceeds the documented provider bound", () => {
-    const profiles: TaskProfile[] = ["live", "full", "repair", "review", "analysis"];
+    const profiles: TaskProfile[] = ["live", "full", "repair", "analysis"];
     for (const profile of profiles) {
       for (let chars = 0; chars <= 7_000; chars += 251) {
         const request = capabilityRequest(profile, chars);

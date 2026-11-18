@@ -244,7 +244,7 @@ describe("priority and bounds", () => {
     );
     await flush(10);
     const order: string[] = [];
-    const job = (name: string, purpose: "review" | "dictionary" | "shadow") =>
+    const job = (name: string, purpose: "repair" | "dictionary" | "shadow") =>
       enqueueEnrichment(
         async () => {
           order.push(name);
@@ -254,11 +254,11 @@ describe("priority and bounds", () => {
       );
     const dictionary = job("dictionary", "dictionary");
     const shadow = job("shadow", "shadow");
-    const review = job("review", "review");
+    const repair = job("repair", "repair");
     releaseBlocker();
     await flush(100);
-    await Promise.all([dictionary, shadow, review, blocker]);
-    expect(order).toEqual(["review", "dictionary", "shadow"]);
+    await Promise.all([dictionary, shadow, repair, blocker]);
+    expect(order).toEqual(["repair", "dictionary", "shadow"]);
   });
 
   it("keeps same-purpose work in FIFO order", async () => {
@@ -306,7 +306,7 @@ describe("priority and bounds", () => {
       async () => {
         order.push("review");
       },
-      { purpose: "review" },
+      { purpose: "repair" },
     );
     releaseBlocker();
     await flush(200);
@@ -328,7 +328,7 @@ describe("priority and bounds", () => {
     for (let i = 0; i < 3; i += 1) {
       dictionary.push(enqueueEnrichment(async () => i, { purpose: "dictionary" }));
     }
-    const review = enqueueEnrichment(async () => "review", { purpose: "review" });
+    const review = enqueueEnrichment(async () => "review", { purpose: "repair" });
     // The per-purpose cap drops the oldest dictionary task, never the review.
     await expect(dictionary[0]).rejects.toMatchObject({ name: "EnrichmentCancelled" });
     releaseBlocker();
@@ -367,7 +367,7 @@ describe("priority and bounds", () => {
       async () => {
         dropped("review");
       },
-      { purpose: "review" },
+      { purpose: "repair" },
     );
     const dictionary2 = dictionaryJob();
     // The two oldest, lowest-priority tasks are dropped to hold the bound of three.

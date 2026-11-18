@@ -2,20 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranslationRequest, TranslationResult } from "./types";
 import { TranslationError } from "./types";
 
-/** Both brains are active; every two-brain contract below runs against the real flag. */
-const lunaIt = it;
-
 const lunaTranslate = vi.fn();
 const dsTranslate = vi.fn();
-const review = vi.fn();
+const lunaRepair = vi.fn();
+const dsRepair = vi.fn();
 
 vi.mock("./providers/opencode.server", () => ({
-  createOpenCodeLunaProvider: () => ({ id: "opencode", translate: lunaTranslate, repair: vi.fn() }),
+  createOpenCodeLunaProvider: () => ({
+    id: "opencode",
+    translate: lunaTranslate,
+    repair: lunaRepair,
+  }),
 }));
 vi.mock("./providers/deepseek.server", async (orig) => ({
   ...(await orig<typeof import("./providers/deepseek.server")>()),
-  createDeepSeekProvider: () => ({ id: "deepseek", translate: dsTranslate, repair: vi.fn() }),
-  reviewTranslation: review,
+  createDeepSeekProvider: () => ({ id: "deepseek", translate: dsTranslate, repair: dsRepair }),
 }));
 
 const req: TranslationRequest = {
@@ -42,100 +43,71 @@ beforeEach(() => {
   vi.stubEnv("DEEPSEEK_API_KEY", "ds");
   lunaTranslate.mockReset();
   dsTranslate.mockReset();
-  review.mockReset();
+  lunaRepair.mockReset();
+  dsRepair.mockReset();
 });
 afterEach(() => vi.unstubAllEnvs());
 
 const engine = () => import("./engine.server");
 
-describe("two brains", () => {
-  lunaIt("Luna translates; DeepSeek is not called when Luna succeeds", async () => {
+describe("strict model choice", () => {
+  it("Luna writes the answer and DeepSeek is never called", async () => {
     lunaTranslate.mockResolvedValue(res("عندي 3 قطط."));
     const { result } = await (await engine()).runTranslation(req);
     expect(result.translation).toBe("عندي 3 قطط.");
     expect(dsTranslate).not.toHaveBeenCalled();
   });
 
-  it("DeepSeek takes over when Luna is out of credit", async () => {
-    lunaTranslate.mockRejectedValue(new TranslationError("quota", "empty"));
-    dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
-    const { result } = await (await engine()).runTranslation(req);
-    expect(result.translation).toBe("لدي 3 قطط.");
-  });
-
-  lunaIt("without a DeepSeek key, Luna's error is reported as before", async () => {
-    vi.stubEnv("DEEPSEEK_API_KEY", "");
+  it("a Luna failure is reported instead of being handed to DeepSeek", async () => {
     lunaTranslate.mockRejectedValue(new TranslationError("quota", "empty"));
     await expect((await engine()).runTranslation(req)).rejects.toMatchObject({ kind: "quota" });
+    expect(dsTranslate).not.toHaveBeenCalled();
   });
 
-  it("review keeps a correct translation (no flicker)", async () => {
-    review.mockResolvedValue(null);
-    expect(await (await engine()).runRepair(req, res("عندي 3 قطط."))).toBeNull();
-  });
-
-  lunaIt("review swaps in a real correction", async () => {
-    review.mockResolvedValue(res("عندي ثلاث 3 قطط."));
-    const out = await (await engine()).runRepair(req, res("عندي 3 قط."));
-    expect(out?.translation).toBe("عندي ثلاث 3 قطط.");
-  });
-
-  it("review is refused when it drops a number the original kept", async () => {
-    review.mockResolvedValue(res("عندي قطط."));
-    expect(await (await engine()).runRepair(req, res("عندي 3 قط."))).toBeNull();
-  });
-
-  it("review is skipped entirely without a DeepSeek key", async () => {
-    vi.stubEnv("DEEPSEEK_API_KEY", "");
-    expect(await (await engine()).runRepair(req, res("عندي 3 قط."))).toBeNull();
-    expect(review).not.toHaveBeenCalled();
-  });
-});
-
-describe("model choice", () => {
-  const { brain: _b, ...dsReq } = req;
-  it("DeepSeek is the default writer; Luna is not called when it succeeds", async () => {
+  it("DeepSeek is the default writer and Luna is never called", async () => {
     dsTranslate.mockResolvedValue(res("لدي 3 قطط."));
+    const { brain: _b, ...dsReq } = req;
     const { result } = await (await engine()).runTranslation(dsReq);
     expect(result.translation).toBe("لدي 3 قطط.");
     expect(lunaTranslate).not.toHaveBeenCalled();
   });
-  lunaIt("Luna takes over when DeepSeek fails", async () => {
+
+  it("a DeepSeek failure is not rescued by Luna", async () => {
     dsTranslate.mockRejectedValue(new TranslationError("rate", "busy"));
-    lunaTranslate.mockResolvedValue(res("عندي 3 قطط."));
-    const { result } = await (await engine()).runTranslation(dsReq);
-    expect(result.translation).toBe("عندي 3 قطط.");
-  });
-  it("DeepSeek never reviews its own translation", async () => {
-    expect(await (await engine()).runRepair(dsReq, res("عندي 3 قط."))).toBeNull();
-    expect(review).not.toHaveBeenCalled();
+    const { brain: _b, ...dsReq } = req;
+    await expect((await engine()).runTranslation(dsReq)).rejects.toMatchObject({ kind: "rate" });
+    expect(lunaTranslate).not.toHaveBeenCalled();
   });
 
-  it("does not review a DeepSeek-written fallback even when Luna was requested", async () => {
-    // The stream route records who actually wrote the answer; a failed Luna request that
-    // DeepSeek rescued must not be sent back to DeepSeek as a "Luna" sentence.
-    const fallback = { ...req, writer: "deepseek" as const };
-    expect(await (await engine()).runRepair(fallback, res("عندي 3 قط."))).toBeNull();
-    expect(review).not.toHaveBeenCalled();
-  });
-
-  it("reviews a Luna-written answer even when DeepSeek was the requested writer", async () => {
-    review.mockResolvedValue(res("عندي 3 قطط."));
-    const { brain: _b, ...noBrain } = req;
-    const out = await (
-      await engine()
-    ).runRepair({ ...noBrain, writer: "luna" as const }, res("عندي 3 قط."));
-    expect(out?.translation).toBe("عندي 3 قطط.");
-    expect(review).toHaveBeenCalledTimes(1);
+  it("reports a clear auth error when the selected model has no key", async () => {
+    vi.stubEnv("OPENCODE_API_KEY", "");
+    await expect((await engine()).runTranslation(req)).rejects.toMatchObject({ kind: "auth" });
+    expect(dsTranslate).not.toHaveBeenCalled();
   });
 });
 
-describe("parseReview", () => {
-  it("reads keep, corrections and garbage safely", async () => {
-    const { parseReview } = await import("./providers/deepseek.server");
-    expect(parseReview('{"verdict":"keep"}', req)).toBeNull();
-    expect(parseReview('{"translation":"عندي 3 قطط."}', req)?.translation).toBe("عندي 3 قطط.");
-    expect(parseReview("not json", req)).toBeNull();
-    expect(parseReview('{"translation":""}', req)).toBeNull();
+describe("same-model quiet repair only", () => {
+  it("does nothing when deterministic checks found no issue", async () => {
+    expect(await (await engine()).runRepair(req, res("عندي 3 قطط."))).toBeNull();
+    expect(lunaRepair).not.toHaveBeenCalled();
+  });
+
+  it("repairs a lost number through the selected model", async () => {
+    lunaRepair.mockResolvedValue(res("عندي 3 قطط."));
+    const out = await (await engine()).runRepair(req, res("عندي قطط."));
+    expect(out?.translation).toBe("عندي 3 قطط.");
+    expect(lunaRepair).toHaveBeenCalledTimes(1);
+  });
+
+  it("never calls the other model when the selected repair fails", async () => {
+    lunaRepair.mockRejectedValue(new TranslationError("rate", "busy"));
+    expect(await (await engine()).runRepair(req, res("عندي قطط."))).toBeNull();
+    expect(dsRepair).not.toHaveBeenCalled();
+  });
+
+  it("never calls the other model when the selected repair makes it worse", async () => {
+    lunaRepair.mockResolvedValue(res("نص مختلف تماماً"));
+    expect(await (await engine()).runRepair(req, res("عندي قطط."))).toBeNull();
+    expect(dsRepair).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,7 @@
  * One door for all quiet background work.
  *
  * When a translation settles, three things would like to run at the same moment: the
- * dictionary lookup, the second-brain review, and the sentence shadow. Each one costs a
+ * dictionary lookup, the same-model deterministic repair, and the sentence shadow. Each one costs a
  * model call, and a burst of three at once is exactly what a small serverless function
  * dislikes. Since none of them is urgent — a dictionary entry that arrives 200 ms later
  * is not a loss — they all pass through this queue:
@@ -37,8 +37,8 @@
  * cancellation is the caller's own AbortSignal.
  */
 
-/** Highest first. A review is the only quiet task whose result can replace visible text. */
-export const ENRICHMENT_PRIORITY = { review: 0, dictionary: 1, shadow: 2 } as const;
+/** Highest first. A repair is the only quiet task whose result can replace visible text. */
+export const ENRICHMENT_PRIORITY = { repair: 0, dictionary: 1, shadow: 2 } as const;
 export type EnrichmentPurpose = keyof typeof ENRICHMENT_PRIORITY;
 
 export const ENRICHMENT_GAP_MS = 140;

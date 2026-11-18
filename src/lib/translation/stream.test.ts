@@ -38,6 +38,15 @@ describe("streamTranslate", () => {
     expect(res).toEqual({ ok: false, kind: "rate" });
   });
 
+  it("keeps the server's kind for a non-429 failure (auth is not misreported as provider)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ ok: false, kind: "auth" }, { status: 502 })),
+    );
+    const res = await streamTranslate({}, new AbortController().signal, () => {}, "full");
+    expect(res).toEqual({ ok: false, kind: "auth" });
+  });
+
   it("gives the caller's signal to the upstream fetch", async () => {
     const ctrl = new AbortController();
     const fetchMock = vi.fn(
@@ -167,24 +176,27 @@ describe("streamTranslate", () => {
     expect(res).toMatchObject({ ok: true, writer: "luna" });
   });
 
-  it("releases the response body of a failed request nobody reads", async () => {
-    const cancel = vi.fn();
+  it("reads and releases the small error body so the server's kind is kept", async () => {
+    let reads = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
         const body = new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode("{}"));
+          pull(controller) {
+            reads += 1;
+            controller.enqueue(new TextEncoder().encode('{"ok":false,"kind":"quota"}'));
+            controller.close();
           },
-          cancel,
         });
         return new Response(body, {
-          status: 429,
+          status: 502,
           headers: { "content-type": "application/json" },
         });
       }),
     );
-    await streamTranslate({}, new AbortController().signal, () => {}, "live");
-    expect(cancel).toHaveBeenCalled();
+    const res = await streamTranslate({}, new AbortController().signal, () => {}, "full");
+    // The body is consumed (not left open) and its classification survives.
+    expect(reads).toBeGreaterThan(0);
+    expect(res).toEqual({ ok: false, kind: "quota" });
   });
 });

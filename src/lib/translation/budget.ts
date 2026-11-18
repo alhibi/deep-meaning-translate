@@ -17,7 +17,7 @@
  * - live (plain provisional text): floor 256, factor 1.5, ceiling 8,192 — it is superseded
  *   quickly, so a tighter ceiling is enough, but it must still cover a long paste.
  *
- * Task classes that reason before answering (repair/review/analysis) cannot use these
+ * Task classes that reason before answering (repair/analysis) cannot use these
  * plain-answer ceilings directly: reasoning tokens share the generation, so
  * `providers/capabilities.ts` raises their ceilings above these values. Nothing here is
  * ever lowered by a profile.

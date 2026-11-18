@@ -269,7 +269,7 @@ export function judgeSummary(records: CaseRecord[], production: CaseRecord[]): J
 
 function budgetAudit(): BudgetAudit {
   const profiles: BudgetAudit["profilesAtMaxInput"] = {};
-  for (const profile of ["live", "full", "repair", "review", "analysis"] as const) {
+  for (const profile of ["live", "full", "repair", "analysis"] as const) {
     const capability = capabilityRequest(profile, 5_000);
     let fitsContext = true;
     try {

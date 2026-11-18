@@ -40,10 +40,11 @@ const fetchMock = vi.fn(async (_url: string, init: RequestInit = {}) => {
   if (init.method !== "POST") return new Response(null, { status: 204 });
   posts.push({ signal: init.signal ?? undefined });
   if (posts.length === 1) {
-    firstBody = openBody("أ");
+    // A partial structured stream: the translation field is already arriving.
+    firstBody = openBody('{"translation":"أ');
     return new Response(firstBody.body, { status: 200 });
   }
-  return new Response(enc.encode("أهلاً بك"), { status: 200 });
+  return new Response(enc.encode(JSON.stringify({ translation: "أهلاً بك" })), { status: 200 });
 });
 
 beforeEach(() => {

@@ -39,7 +39,7 @@ import { TranslationError } from "../types";
  */
 
 /** Task classes the app makes provider calls for. */
-export type TaskProfile = "live" | "full" | "repair" | "review" | "analysis";
+export type TaskProfile = "live" | "full" | "repair" | "analysis";
 
 /** Documented `reasoning_effort` values; `none` is expressed as thinking disabled here. */
 export type ReasoningEffort = "low" | "high" | "max";
@@ -71,7 +71,7 @@ interface ProfileSpec {
   temperature?: number;
   json: boolean;
   /**
-   * Lowest ceiling this task class may use. Repair, review and analysis reason before
+   * Lowest ceiling this task class may use. Repair and analysis reason before
    * answering, so their runaway ceiling must cover reasoning plus the structured answer;
    * the plain-answer budget alone would clamp them below what the model can answer.
    */
@@ -91,8 +91,6 @@ const PROFILES: Record<TaskProfile, ProfileSpec> = {
   // number, link or emoji). Correcting that benefits from reasoning, and nothing is
   // waiting on the result, so reasoning is allowed here.
   repair: { thinking: true, effort: "high", json: true, minCeiling: 32_768 },
-  // Independent review of a shown translation: same trade-off as repair.
-  review: { thinking: true, effort: "high", json: true, minCeiling: 32_768 },
   // Dictionary/shadow analysis is short input with a rich structured answer (readings,
   // forms, examples, offsets) in the background: the deepest documented effort. No higher
   // temperature is sent because the docs say thinking mode ignores temperature.

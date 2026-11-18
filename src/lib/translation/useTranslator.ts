@@ -4,7 +4,7 @@ import { parseResult } from "./parse";
 import { verifyTranslation } from "./verify";
 import type { Dialect, StyleOverride, TranslationResult } from "./types";
 import { DEFAULT_BRAIN, type Brain } from "./types";
-import { delayFor, isProvisional, normalize, worthTranslating } from "./scheduler";
+import { delayFor, normalize, worthTranslating } from "./scheduler";
 import { metrics } from "./metrics";
 import { streamTranslate, warmTranslation } from "./stream";
 import { memoryGet, memorySet } from "./memory";
@@ -27,8 +27,7 @@ export type Phase =
   | "TIMEOUT"
   | "RATE_LIMITED"
   | "PROVIDER_ERROR"
-  | "VALIDATION_ERROR"
-  | "RETRYING";
+  | "VALIDATION_ERROR";
 
 const PHASE_ERROR: Partial<Record<Phase, ErrorKind>> = {
   OFFLINE: "offline",
@@ -49,13 +48,6 @@ function phaseFor(kind: ErrorKind): Phase {
 const PENDING_DELAY_MS = 260;
 /** Generous safety net for a hung connection — not a cap on normal model thinking. */
 const REQUEST_TIMEOUT_MS = 60_000;
-/**
- * How long an unchanged, still-provisional draft waits before its full reading starts.
- * Measured from the last text change, never from the live answer's arrival: anchoring the
- * clock to the live commit added the entire live round trip (0.7–2.0 s measured) to every
- * settled sentence.
- */
-const FULL_READING_PAUSE_MS = 1_200;
 const CACHE_LIMIT = 60;
 /** Longest the screen goes without a fresh request while someone types non-stop. */
 const MAX_WAIT_MS = 650;
@@ -186,7 +178,6 @@ export function useTranslator(opts: {
     lingering.current = null;
   };
   const committedKey = useRef<string | null>(restoredKey);
-  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cache = useRef(new Map<string, Cached>());
   /** Paint frames and request watchdogs, so an unmount can cancel every one of them. */
   const frames = useRef(new Set<number>());
@@ -196,6 +187,8 @@ export function useTranslator(opts: {
   /** After unmount a late transport callback must not schedule paint or write state. */
   const disposed = useRef(false);
   const deliberate = useRef(false);
+  /** The first meaningful request of a draft is sent with no debounce; later typing is coalesced. */
+  const immediateNext = useRef(true);
   const lastRaw = useRef("");
   const lastKeyAt = useRef(0);
   const lastSentAt = useRef(0);
@@ -205,53 +198,38 @@ export function useTranslator(opts: {
   const hasResult = useRef(false);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   hasResult.current = !!result;
-  /** Whether the reading on screen is still a provisional live guess. Read by the pause timer. */
-  const provisionalRef = useRef(false);
-  // eslint-disable-next-line react-hooks/refs -- latest-value ref, read only from the pause timer — not rendered
-  provisionalRef.current = provisional;
   const successRef = useRef(onSuccess);
   // eslint-disable-next-line react-hooks/refs -- latest-value/generation ref, read only from async callbacks — not rendered
   successRef.current = onSuccess;
 
-  const clearRetry = () => {
-    if (retryTimer.current) clearTimeout(retryTimer.current);
-    retryTimer.current = null;
-  };
-
-  const commit = useCallback(
-    (key: string, value: TranslationResult, prov: boolean, norm: string) => {
-      committedKey.current = key;
-      shownLen.current = value.translation.length;
-      // The answer is final: an older prefix stream has nothing left to contribute and
-      // must stop spending provider work on a sentence nobody is waiting for.
-      lingering.current?.abort();
-      lingering.current = null;
-      displayedKeyRef.current = key;
-      setDisplayedKey(key);
-      setResult(value);
-      setProvisional(prov);
-      setStreaming(false);
-      setError(null);
-      setPhase("COMPLETE");
-      successRef.current?.(value, norm, prov);
-    },
-    [],
-  );
+  const commit = useCallback((key: string, value: TranslationResult, norm: string) => {
+    committedKey.current = key;
+    shownLen.current = value.translation.length;
+    lingering.current?.abort();
+    lingering.current = null;
+    displayedKeyRef.current = key;
+    setDisplayedKey(key);
+    setResult(value);
+    setProvisional(false);
+    setStreaming(false);
+    setError(null);
+    setPhase("COMPLETE");
+    successRef.current?.(value, norm, false);
+  }, []);
 
   const run = useCallback(
-    async (norm: string, key: string, prov: boolean, attempt = 0) => {
+    async (norm: string, key: string) => {
       if (current.current.composing || current.current.key !== key) return;
       const active = inflight.current;
-      if (active?.key === key && (!active.prov || prov)) {
+      if (active?.key === key) {
         metrics.deduped();
         return;
       }
-      clearRetry();
       setError(null);
 
       const hit = cache.current.get(key);
-      // An explicit submission upgrades a cached live reading to a verified full one.
-      if (hit && (hit.full || prov) && Date.now() - hit.at < CACHE_TTL_MS) {
+      // Every cached reading is a completed, verified full answer.
+      if (hit && hit.full && Date.now() - hit.at < CACHE_TTL_MS) {
         cache.current.delete(key);
         cache.current.set(key, hit); // LRU touch
         shown.current = ++latest.current;
@@ -262,7 +240,7 @@ export function useTranslator(opts: {
           metrics.cancel();
         }
         metrics.cacheHit();
-        commit(key, hit.result, hit.provisional, norm);
+        commit(key, hit.result, norm);
         return;
       }
       if (hit) cache.current.delete(key); // expired
@@ -271,7 +249,12 @@ export function useTranslator(opts: {
       // request at all. Only settled text is ever stored, so a hit is a final answer.
       const stored = memoryGet(key);
       if (stored) {
-        cache.current.set(key, { result: stored, at: Date.now(), provisional: false, full: true });
+        cache.current.set(key, {
+          result: stored,
+          at: Date.now(),
+          provisional: false,
+          full: true,
+        });
         shown.current = ++latest.current;
         dropLingering();
         if (inflight.current) {
@@ -280,7 +263,7 @@ export function useTranslator(opts: {
           metrics.cancel();
         }
         metrics.cacheHit();
-        commit(key, stored, false, norm);
+        commit(key, stored, norm);
         return;
       }
 
@@ -292,18 +275,13 @@ export function useTranslator(opts: {
 
       const prev = inflight.current;
       if (prev) {
-        if (prev.prov && prov && norm.startsWith(prev.norm)) {
-          dropLingering();
-          lingering.current = prev.ctrl; // still useful: its text is a prefix of what's typed now
-        } else {
-          prev.ctrl.abort();
-          dropLingering();
-          metrics.cancel();
-        }
+        prev.ctrl.abort();
+        dropLingering();
+        metrics.cancel();
       }
       const token = ++latest.current;
       const ctrl = new AbortController();
-      inflight.current = { ctrl, key, norm, prov };
+      inflight.current = { ctrl, key, norm, prov: false };
       let timedOut = false;
       const timer = setTimeout(() => {
         timedOut = true;
@@ -312,45 +290,25 @@ export function useTranslator(opts: {
       requestTimers.current.add(timer);
 
       setStreaming(false);
-      setPhase(attempt > 0 ? "RETRYING" : hasResult.current ? "UPDATING" : "TRANSLATING");
+      setPhase(hasResult.current ? "UPDATING" : "TRANSLATING");
       metrics.request();
       lastSentAt.current = Date.now();
       const started = performance.now();
 
-      const fail = (kind: ErrorKind, allowRetry = true) => {
+      /**
+       * A strict failure is shown at once. No other model is consulted, no Retry-After is
+       * slept through and no automatic retry is scheduled: the person chose this model and
+       * gets either its answer or a calm, retryable error.
+       */
+      const fail = (kind: ErrorKind) => {
         metrics.error(kind);
-        // A throttled *live* request is not the user's problem: they are mid-word, and
-        // the settled sentence will be translated on its own pause. Never interrupt typing
-        // with a rate message — keep what is on screen and stay quiet.
-        if (kind === "rate" && prov) {
-          setPhase("READY");
-          retryTimer.current = setTimeout(() => {
-            if (token !== latest.current || current.current.key !== key) return;
-            current.current.provisional = false;
-            // eslint-disable-next-line react-hooks/immutability -- deferred self-call after initialization, guarded by the draft generation
-            void run(norm, key, false);
-          }, 1200);
-          return;
-        }
-        const transient = kind === "rate" || kind === "network" || kind === "provider";
-        if (allowRetry && transient && attempt === 0) {
-          metrics.retry();
-          setPhase("RETRYING");
-          retryTimer.current = setTimeout(
-            () => {
-              if (token === latest.current) void run(norm, key, prov, 1);
-            },
-            kind === "rate" ? 2500 : 1200,
-          );
-          return;
-        }
-        // Keep the previous good result on screen; only the error state changes.
+        // A new keystroke after an error gets the same immediate first attempt.
+        immediateNext.current = true;
         setError(kind);
         setPhase(phaseFor(kind));
       };
 
-      // Streaming paint coalescing: one commit per displayed frame. Declared outside the
-      // try so an error or a superseded stream can always cancel the pending frame.
+      // Streaming paint coalescing: one commit per displayed frame.
       let frame = 0;
       let pendingText = "";
       const paint = () => {
@@ -360,15 +318,8 @@ export function useTranslator(opts: {
           return;
         const draft = current.current;
         const ownsDraft = token === latest.current && draft.key === key;
-        const usefulPrefix =
-          prov &&
-          draft.provisional &&
-          draft.norm.startsWith(norm) &&
-          draft.params === `${source}|${target}|${styleKey}`;
-        if (draft.composing || (!ownsDraft && !usefulPrefix)) return;
+        if (draft.composing || !ownsDraft) return;
         if (token > shown.current && partialText.length < shownLen.current) return;
-        // A newer stream has caught up with what is on screen: the older prefix stream
-        // has done its job, so cancel it instead of letting two providers finish.
         if (lingering.current && lingering.current !== ctrl) {
           lingering.current.abort();
           lingering.current = null;
@@ -403,14 +354,12 @@ export function useTranslator(opts: {
       };
 
       try {
-        const data = { text: norm, source, target, style, dialect, brain, partial: prov };
-        // Live typing streams plain text so words appear as they are generated;
-        // a finished sentence gets the full structured, verified translation.
+        // One immediate full, structured request: the translation streams out of the JSON
+        // while it is generated, and the committed answer is verified in the same pass.
+        const data = { text: norm, source, target, style, dialect, brain, partial: false };
         /**
          * A structured answer that failed to parse or that the provider cut at its token
-         * ceiling is salvaged as plain live text once. A very long pasted sentence then
-         * still produces a readable translation instead of a provider error, and the
-         * person never has to understand why the JSON was incomplete.
+         * ceiling is salvaged as plain live text once, through the same selected model.
          */
         let salvaged = false;
         const salvage = async (): Promise<TranslationResult | null> => {
@@ -430,58 +379,37 @@ export function useTranslator(opts: {
           return verifyTranslation(data, value).length ? null : value;
         };
         type Settled =
-          | {
-              ok: true;
-              result: TranslationResult;
-              needsRepair: boolean;
-              salvaged?: true;
-              /** Who actually wrote it; absent when the transport cannot say. */
-              writer?: Brain;
-            }
+          | { ok: true; result: TranslationResult; needsRepair: boolean; salvaged?: true }
           | { ok: false; kind: ErrorKind; cancelled?: true };
         let res: Settled;
-        if (prov) {
-          const r = await streamTranslate(data, ctrl.signal, onText, "live");
-          res = r.ok
-            ? {
-                ok: true,
-                result: liveResult(r.text, source, target),
-                needsRepair: false,
-              }
-            : r;
+        const r = await streamTranslate(data, ctrl.signal, onText, "full");
+        // This run was superseded while the full request was finishing.
+        if (token !== latest.current || current.current.key !== key) return;
+        dropFrame();
+        if (!r.ok) {
+          res = r;
+          // A provider error may be a cut-off answer; one plain request can still
+          // salvage a readable translation through the same model.
+          if (r.kind === "provider") {
+            const value = await salvage();
+            if (value) res = { ok: true, result: value, needsRepair: false, salvaged: true };
+          }
         } else {
-          const r = await streamTranslate(data, ctrl.signal, onText, "full");
-          // This run was superseded while the full request was finishing. Its buffered
-          // live paint may still be the newest text on screen, so leave it to land and
-          // never spend a salvage request nobody is waiting for.
-          if (token !== latest.current || current.current.key !== key) return;
-          dropFrame();
-          if (!r.ok) {
-            res = r;
-            // A provider error may be a cut-off answer or a transport failure; one plain
-            // live request can still salvage a readable translation.
-            if (r.kind === "provider" && attempt === 0) {
-              const value = await salvage();
-              if (value) res = { ok: true, result: value, needsRepair: false, salvaged: true };
-            }
-          } else {
-            try {
-              const parsed = parseResult(r.text, data);
-              res = {
-                ok: true,
-                result: parsed,
-                needsRepair: verifyTranslation(data, parsed).length > 0,
-                ...(r.writer ? { writer: r.writer } : {}),
-              };
-            } catch {
-              const value = attempt === 0 ? await salvage() : null;
-              res = value
-                ? { ok: true, result: value, needsRepair: false, salvaged: true }
-                : { ok: false, kind: "provider" };
-            }
+          try {
+            const parsed = parseResult(r.text, data);
+            res = {
+              ok: true,
+              result: parsed,
+              needsRepair: verifyTranslation(data, parsed).length > 0,
+            };
+          } catch {
+            const value = await salvage();
+            res = value
+              ? { ok: true, result: value, needsRepair: false, salvaged: true }
+              : { ok: false, kind: "provider" };
           }
         }
-        if (token !== latest.current || current.current.key !== key) return; // superseded — shown live at most, never committed
+        if (token !== latest.current || current.current.key !== key) return;
         dropFrame();
         if (timedOut) {
           metrics.timeout();
@@ -495,44 +423,31 @@ export function useTranslator(opts: {
           cache.current.set(key, {
             result: res.result,
             at: Date.now(),
-            provisional: prov,
-            full: !prov,
+            provisional: false,
+            full: true,
           });
           if (cache.current.size > CACHE_LIMIT)
             cache.current.delete(cache.current.keys().next().value as string);
           shown.current = token;
-          commit(key, res.result, prov, norm);
-          // Only a settled, verified answer is remembered. A provisional stream — and a
-          // salvaged plain-text answer that never went through `verify` — must not
-          // answer for this sentence forever after from device memory.
-          const verified = !prov && !res.salvaged;
+          commit(key, res.result, norm);
+          // Only a settled, verified answer is remembered; salvaged plain text is not.
+          const verified = !res.salvaged;
           if (verified) memorySet(key, res.result);
-          if (verified && (res.needsRepair || res.writer === "luna")) {
-            // Shown already. Finished sentences get a quiet second look only when it can
-            // change something: deterministic issues need a repair, and DeepSeek only
-            // reviews sentences Luna actually wrote. A clean DeepSeek result — including
-            // one that rescued a failed Luna request — would make a guaranteed-null round
-            // trip, so it is not sent at all.
-            //
-            // The review is quiet background work, so it waits at the same paced door as
-            // the dictionary and the shadow — with the highest priority, because its
-            // result can replace the sentence already on screen. Its own signal makes a
-            // superseded review cancel before it spends a request.
+          if (verified && res.needsRepair) {
+            // Shown already. Deterministic issues (a lost number, link or emoji) get a
+            // quiet repair through the same selected model; no other model may rewrite it.
             repairAbort.current?.abort();
-            const review = new AbortController();
-            repairAbort.current = review;
+            const repair = new AbortController();
+            repairAbort.current = repair;
             void enqueueEnrichment(
               (signal) =>
                 callRepair({
-                  data: {
-                    request: { ...data, ...(res.writer ? { writer: res.writer } : {}) },
-                    previous: res.result,
-                  },
+                  data: { request: data, previous: res.result },
                   signal,
                 }),
               {
-                purpose: "review",
-                signal: review.signal,
+                purpose: "repair",
+                signal: repair.signal,
                 key,
                 isValid: () =>
                   committedKey.current === key &&
@@ -543,7 +458,7 @@ export function useTranslator(opts: {
               .then((r) => {
                 if (
                   !r?.result ||
-                  review.signal.aborted ||
+                  repair.signal.aborted ||
                   committedKey.current !== key ||
                   current.current.key !== key ||
                   token !== latest.current
@@ -551,25 +466,18 @@ export function useTranslator(opts: {
                   return;
                 const c = cache.current.get(key);
                 if (c) c.result = r.result;
-                // The repaired reading supersedes the stored one, so a later session
-                // gets the corrected text rather than the pre-repair draft.
                 memorySet(key, r.result);
                 setResult(r.result);
-                successRef.current?.(r.result, norm, prov);
+                successRef.current?.(r.result, norm, false);
               })
               .catch(() => {});
           }
         } else if (res.cancelled) {
-          // The server ended an outdated stream quietly: not an error, never a retry.
           setPhase(hasResult.current ? "COMPLETE" : "READY");
         } else {
-          // If salvage was already attempted, repeating the same expensive full request
-          // would only delay the honest error.
-          fail(res.kind, !salvaged);
+          fail(res.kind);
         }
       } catch {
-        // A paint scheduled by the failed stream must not land after the error state.
-        // A superseded prefix stream is not an error for the screen: let its frame land.
         if (token === latest.current) dropFrame();
         if (token !== latest.current || current.current.key !== key) return;
         if (timedOut) {
@@ -595,7 +503,7 @@ export function useTranslator(opts: {
         if (lingering.current === ctrl) lingering.current = null;
       }
     },
-    [commit, source, target, style, dialect, brain, styleKey],
+    [commit, source, target, style, dialect, brain],
   );
 
   // Warm the path to the translation service on the first keystroke, once per visit.
@@ -606,7 +514,9 @@ export function useTranslator(opts: {
     warmTranslation();
   }, [text]);
 
-  // The scheduler: react to every change, but only spend a request when it is worthwhile.
+  // The scheduler: one full, verified request per draft. The first meaningful input,
+  // a model/parameter change and a paste/share are sent immediately; only updates while
+  // the person keeps typing are coalesced by the typing-aware delay.
   useEffect(() => {
     const now = Date.now();
     if (text !== lastRaw.current) {
@@ -621,7 +531,6 @@ export function useTranslator(opts: {
       shown.current = ++latest.current;
       shownLen.current = 0;
       dropLingering();
-      clearRetry();
       repairAbort.current?.abort();
       repairAbort.current = null;
       inflight.current?.ctrl.abort();
@@ -629,6 +538,7 @@ export function useTranslator(opts: {
       committedKey.current = null;
       current.current = { norm: "", key: "", provisional: false, params: "", composing };
       deliberate.current = false;
+      immediateNext.current = true;
       displayedKeyRef.current = null;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the external request/stream snapshot when the draft becomes empty
       setDisplayedKey(null);
@@ -646,45 +556,25 @@ export function useTranslator(opts: {
 
     const isDeliberate = deliberate.current;
     if (!composing) deliberate.current = false;
-    const prov = isProvisional(norm, text, isDeliberate);
     const key = keyOf(norm, source, target, styleKey);
     const previous = current.current;
 
     if (key !== previous.key || composing !== previous.composing) {
-      // Invalidate NOW, not when the debounced replacement eventually starts. Otherwise
-      // an old completion/retry can land during the pause and be archived for a new draft.
-      clearRetry();
+      // Invalidate NOW, not when the replacement eventually starts: an old completion
+      // must never land for a new draft.
       latest.current++;
-      // A quiet review belongs to the sentence that asked for it; a new draft must not be
-      // improved, archived or repeated by it.
       repairAbort.current?.abort();
       repairAbort.current = null;
-      const append =
-        !composing &&
-        !paramsChanged &&
-        prov &&
-        previous.norm &&
-        norm.length > previous.norm.length &&
-        norm.startsWith(previous.norm);
-      const active = inflight.current;
-      if (append && active?.prov) {
-        dropLingering();
-        lingering.current = active.ctrl;
-        inflight.current = null;
-      } else if (!append || active) {
-        active?.ctrl.abort();
-        inflight.current = null;
-        dropLingering();
-        shown.current = latest.current;
-        // Catch-up is useful only for an append. Deleting/replacing words must be able
-        // to show a shorter translation from its very first chunk.
-        shownLen.current = 0;
-        setStreaming(false);
-      }
+      inflight.current?.ctrl.abort();
+      inflight.current = null;
+      dropLingering();
+      shown.current = latest.current;
+      shownLen.current = 0;
+      setStreaming(false);
       setError(null);
       setShowPending(false);
     }
-    current.current = { norm, key, provisional: prov, params, composing };
+    current.current = { norm, key, provisional: false, params, composing };
 
     if (composing) {
       setPhase("TYPING");
@@ -704,17 +594,21 @@ export function useTranslator(opts: {
     // Continuous typing never pauses long enough for the debounce, so after
     // MAX_WAIT_MS without a request, each finished word goes out immediately.
     const starved = now - lastSentAt.current > MAX_WAIT_MS && /\s$/.test(text);
-    const delay =
-      isDeliberate || paramsChanged || starved
-        ? 0
-        : delayFor({
-            normalized: norm,
-            raw: text,
-            intervals: intervals.current,
-            hasResult: hasResult.current,
-          });
+    // The first content of a draft is never made to wait for a pause; the latch means
+    // only that first request is uncoalesced, so later keystrokes cannot each spend a
+    // full provider call.
+    const immediate = isDeliberate || paramsChanged || starved || immediateNext.current;
+    if (immediate) immediateNext.current = false;
+    const delay = immediate
+      ? 0
+      : delayFor({
+          normalized: norm,
+          raw: text,
+          intervals: intervals.current,
+          hasResult: hasResult.current,
+        });
     setPhase(delay === 0 ? "READY" : "SCHEDULED");
-    const id = setTimeout(() => void run(norm, key, prov), delay);
+    const id = setTimeout(() => void run(norm, key), delay);
     return () => clearTimeout(id);
   }, [text, source, target, styleKey, run, composing]);
 
@@ -727,41 +621,36 @@ export function useTranslator(opts: {
     const key = keyOf(norm, source, target, styleKey);
     const id = setTimeout(() => {
       if (inflight.current || committedKey.current === key) return;
-      void run(norm, key, isProvisional(norm, text, false));
+      void run(norm, key);
     }, 1_800);
     return () => clearTimeout(id);
   }, [text, phase, source, target, styleKey, run, composing]);
 
-  // A pause finishes the thought, not the verification. Request one full reading even
-  // without punctuation; never relabel unchecked live text as a settled/archiveable one.
-  //
-  // The clock starts at the last text change. Waiting for the provisional live answer to
-  // arrive before starting it serialised two provider round trips: measured on the
-  // deployed route the full request only left 1.2 s AFTER the live stream completed
-  // (≈2.7–3.2 s after the last keystroke), although the full reading itself takes under
-  // a second. The pause is unchanged; only the moment it starts counting is.
+  // A result belongs to the model that wrote it. Selecting another model clears the
+  // displayed answer at once (no text from the other model survives under the new
+  // selection), and the scheduler sends the first full request through the new model.
+  const brainRef = useRef(brain);
   useEffect(() => {
-    if (composing) return;
-    const norm = normalize(text);
-    if (!worthTranslating(norm)) return;
-    // Text that already ends a thought or a line goes straight to the full request from
-    // the scheduler; this pause upgrade exists for text still open mid-thought.
-    if (!isProvisional(norm, text, false)) return;
-    const key = keyOf(norm, source, target, styleKey);
-    const id = setTimeout(() => {
-      if (disposed.current) return;
-      const draft = current.current;
-      if (draft.composing || draft.key !== key) return;
-      // Nothing left to upgrade: a settled reading or a full request already in flight.
-      if (committedKey.current === key && !provisionalRef.current) return;
-      if (inflight.current?.key === key && !inflight.current.prov) return;
-      draft.provisional = false;
-      void run(draft.norm, draft.key, false);
-    }, FULL_READING_PAUSE_MS);
-    return () => clearTimeout(id);
-  }, [text, source, target, styleKey, composing, run]);
+    if (brainRef.current === brain) return;
+    brainRef.current = brain;
+    immediateNext.current = true;
+    shown.current = ++latest.current;
+    inflight.current?.ctrl.abort();
+    inflight.current = null;
+    dropLingering();
+    repairAbort.current?.abort();
+    repairAbort.current = null;
+    committedKey.current = null;
+    displayedKeyRef.current = null;
+    setDisplayedKey(null);
+    setResult(null);
+    setProvisional(false);
+    setStreaming(false);
+    setError(null);
+    setPhase("READY");
+  }, [brain]);
 
-  const busy = phase === "TRANSLATING" || phase === "UPDATING" || phase === "RETRYING";
+  const busy = phase === "TRANSLATING" || phase === "UPDATING";
   useEffect(() => {
     if (!busy) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate sync with an external system (speech, storage, viewport, mount animation)
@@ -773,10 +662,11 @@ export function useTranslator(opts: {
   }, [busy]);
 
   const retry = useCallback(() => {
-    const { norm, key, provisional: prov } = current.current;
+    const { norm, key } = current.current;
     if (!norm || current.current.composing) return;
     committedKey.current = null;
-    void run(norm, key, prov);
+    immediateNext.current = true;
+    void run(norm, key);
   }, [run]);
 
   /** Mark the next text change as a deliberate submission (paste, share, restore). */
@@ -815,7 +705,7 @@ export function useTranslator(opts: {
         composing: false,
       };
       committedKey.current = null;
-      void run(norm, key, false);
+      void run(norm, key);
     },
     [run, source, target, styleKey, composing],
   );
@@ -873,7 +763,6 @@ export function useTranslator(opts: {
         inflight.current.ctrl.abort();
         inflight.current = null;
       }
-      clearRetry();
       if (phaseRef.current !== "EMPTY" && !settledRef.current) {
         setError("offline");
         setPhase("OFFLINE");
@@ -906,7 +795,6 @@ export function useTranslator(opts: {
       committedKey.current = null;
       inflight.current?.ctrl.abort();
       dropLingering();
-      clearRetry();
       repairAbort.current?.abort();
       repairAbort.current = null;
       for (const frame of frames.current) cancelFrame(frame);

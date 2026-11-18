@@ -19,7 +19,34 @@ import { fetchWithRetry, type RetryOptions } from "./retry.server";
 
 const BASE = "https://opencode.ai/zen/go/v1";
 const DEFAULT_MODEL = "gpt-6-luna";
-const SESSION = "lingua-translator";
+/** Stable prefix cache key: the prompt is identical across users, so it can be cached. */
+const PROMPT_CACHE_KEY = "lingua-translator";
+
+const SESSION_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+/**
+ * OpenCode routes a request by an OpenCode session id and validates its `ses_` shape
+ * (12 hex digits + 14 base62 characters). The previous static value ("lingua-translator")
+ * had an invalid shape and the gateway's own error describes such a request as something
+ * that "cannot be routed efficiently"; the documented companion header is also sent.
+ *
+ * A translation is an independent task, not a continuing chat, so each provider request
+ * gets its own random session id. The prompt cache key stays stable, so caching is not
+ * tied to the session.
+ */
+export function openCodeSessionId(random: () => number = Math.random): string {
+  let hex = "";
+  for (let i = 0; i < 6; i += 1) {
+    hex += Math.floor(random() * 256)
+      .toString(16)
+      .padStart(2, "0");
+  }
+  let tail = "";
+  for (let i = 0; i < 14; i += 1) {
+    tail += SESSION_ALPHABET[Math.floor(random() * SESSION_ALPHABET.length)];
+  }
+  return `ses_${hex}${tail}`;
+}
 
 function extractText(payload: unknown): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped provider JSON, narrowed below
@@ -52,12 +79,13 @@ async function send(
   options: RetryOptions = {},
 ): Promise<Response> {
   // Luna runs on the Responses endpoint: no hidden thinking, terse output, cached system prompt.
+  const session = openCodeSessionId();
   const body = {
     model: DEFAULT_MODEL,
     stream,
     reasoning: { effort: "none" },
     text: { verbosity: "low" },
-    prompt_cache_key: SESSION,
+    prompt_cache_key: PROMPT_CACHE_KEY,
     store: false,
     input: [
       { role: "system", content: system },
@@ -77,7 +105,9 @@ async function send(
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
-          "x-opencode-session": SESSION,
+          // The documented routing session plus its companion header, both a valid `ses_` id.
+          "x-opencode-session": session,
+          "x-opencode-session-id": session,
         },
         body: JSON.stringify(body),
       },

@@ -149,14 +149,16 @@ describe("useTranslator", () => {
     expect(h.current.result?.translation).toBe("أولى");
     expect(success).toHaveBeenCalledTimes(1);
   });
-  it("settles a live result once typing pauses (action buttons appear)", async () => {
+  it("settles from the first full request without a second pause", async () => {
     call.mockResolvedValue({ ok: true, result: result("مرحبا") });
     const { result: h } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo Welt") });
-    await flush(1000);
+    await flush(10);
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(call.mock.calls[0]![0].data.partial).toBe(false);
+    await flush(300);
     expect(h.current.result?.translation).toBe("مرحبا");
-    expect(h.current.provisional).toBe(true);
-    await flush(1500);
     expect(h.current.provisional).toBe(false);
+    expect(h.current.settled).toBe(true);
   });
 
   it("ignores stale replies and never duplicates requests", async () => {
@@ -297,19 +299,16 @@ describe("useTranslator", () => {
     expect(repairCall).not.toHaveBeenCalled();
   });
 
-  it("spends one quiet review on a clean Luna-written sentence", async () => {
+  it("never sends a clean sentence to a second model for review", async () => {
     call.mockResolvedValue({ ok: true, result: result("أهلاً") });
-    repairCall.mockResolvedValue({ ok: true, result: null });
     const { result: h } = renderHook((p) => useTranslator(p), {
       initialProps: { ...opts("Hallo."), brain: "luna" as const },
     });
-    await flush(600);
+    await flush(300);
     expect(h.current.result?.translation).toBe("أهلاً");
     expect(h.current.phase).toBe("COMPLETE");
-    // DeepSeek is the independent reviewer of Luna's writing, and the request records who
-    // actually wrote the shown sentence so a fallback is never reviewed as Luna's.
-    expect(repairCall).toHaveBeenCalledTimes(1);
-    expect(repairCall.mock.calls[0]![0].data.request.writer).toBe("luna");
+    // The selected model is the only writer: another model never rewrites its answer.
+    expect(repairCall).not.toHaveBeenCalled();
   });
 
   it("does not review a clean answer DeepSeek wrote after Luna failed", async () => {
@@ -324,7 +323,7 @@ describe("useTranslator", () => {
     expect(repairCall).not.toHaveBeenCalled();
   });
 
-  it("keeps an earlier live stream flowing while typing continues", async () => {
+  it("aborts the previous request when typing continues and only the newest may commit", async () => {
     const signals: AbortSignal[] = [];
     let resolveFirst: (v: unknown) => void = () => {};
     call
@@ -339,14 +338,14 @@ describe("useTranslator", () => {
     const { result: h, rerender } = renderHook((p) => useTranslator(p), {
       initialProps: opts("Ich wollte "),
     });
-    await flush(600);
+    await flush(10);
     rerender(opts("Ich wollte dir "));
     await flush(600);
-    expect(signals).toHaveLength(2);
-    expect(signals[0]!.aborted).toBe(false);
+    expect(signals.length).toBeGreaterThanOrEqual(2);
+    expect(signals[0]!.aborted).toBe(true);
     resolveFirst({ ok: true, result: result("كنت أريد") });
     await flush(20);
-    expect(h.current.result?.translation).toBe("كنت أريد");
+    expect(h.current.result).toBeNull();
     rerender(opts("Etwas anderes"));
     await flush(600);
     expect(signals[1]!.aborted).toBe(true);
@@ -517,56 +516,43 @@ describe("composition and settled identity", () => {
     expect(signal.aborted).toBe(true);
   });
 
-  it("gets a full verified reading after a pause instead of relabelling a live guess", async () => {
-    let finish: (value: unknown) => void = () => {};
+  it("uses the full structured profile from the first request", async () => {
+    call.mockResolvedValue({ ok: true, result: result("نهائية") });
     const success = vi.fn();
-    call
-      .mockResolvedValueOnce({ ok: true, result: result("مبدئية") })
-      .mockImplementation(() => new Promise((resolve) => (finish = resolve)));
     const { result: h } = renderHook((p) => useTranslator({ ...p, onSuccess: success }), {
       initialProps: opts("Hallo Welt"),
     });
-    await flush(100); // commit the live response and install its idle timer
-    await flush(1500);
-    expect(call).toHaveBeenCalledTimes(2);
-    expect(call.mock.calls[1]![0].data.partial).toBe(false);
-    expect(h.current.settled).toBe(false);
-    expect(success.mock.calls.filter((c) => c[2] === false)).toHaveLength(0);
-    finish({ ok: true, result: result("نهائية") });
-    await flush(30);
+    await flush(10);
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(call.mock.calls[0]![0].data.partial).toBe(false);
+    await flush(100);
     expect(h.current.settled).toBe(true);
-    expect(h.current.streaming).toBe(false);
     expect(success.mock.calls.filter((c) => c[2] === false)).toHaveLength(1);
   });
 
-  it("starts the settled reading from the typing pause, not from the live answer's arrival", async () => {
-    let finishLive: (value: unknown) => void = () => {};
-    call.mockImplementationOnce(() => new Promise((resolve) => (finishLive = resolve)));
-    const { result: h } = renderHook((p) => useTranslator(p), {
-      initialProps: opts("Hallo Welt"),
-    });
-    await flush(1_100);
-    // The live stream is still open; the pause is measured from the text, not from it.
+  it("sends the first meaningful input immediately, without waiting for a pause", async () => {
+    call.mockImplementation(() => new Promise(() => {}));
+    renderHook((p) => useTranslator(p), { initialProps: opts("Hallo Welt") });
+    await flush(1);
     expect(call).toHaveBeenCalledTimes(1);
-    await flush(200);
-    expect(call).toHaveBeenCalledTimes(2);
-    expect(call.mock.calls[1]![0].data.partial).toBe(false);
-    // A late live answer for the same draft can never turn into the settled one.
-    finishLive({ ok: true, result: result("مبدئية") });
-    await flush(20);
-    expect(h.current.settled).toBe(false);
+    expect(call.mock.calls[0]![0].data.partial).toBe(false);
   });
 
-  it("restarts the pause when typing resumes before the settled reading starts", async () => {
-    call.mockResolvedValue({ ok: true, result: result("حيّة") });
-    const { rerender } = renderHook((p) => useTranslator(p), { initialProps: opts("Hallo") });
-    await flush(700);
-    rerender(opts("Hallo Welt"));
-    await flush(700);
-    // 1.4 s after the first draft but only 0.7 s after the edit: no settled request yet.
-    expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(0);
-    await flush(600);
-    expect(call.mock.calls.filter((c) => c[0].data.partial === false)).toHaveLength(1);
+  it("switching the model clears the old answer and asks the new model at once", async () => {
+    call
+      .mockResolvedValueOnce({ ok: true, result: result("قديمة") })
+      .mockImplementation(() => new Promise(() => {}));
+    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+      initialProps: { ...opts("Hallo Welt"), brain: "deepseek" as "deepseek" | "luna" },
+    });
+    await flush(100);
+    expect(h.current.result?.translation).toBe("قديمة");
+    rerender({ ...opts("Hallo Welt"), brain: "luna" as const });
+    await flush(1);
+    expect(h.current.result).toBeNull();
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(call.mock.calls[1]![0].data.brain).toBe("luna");
+    expect(call.mock.calls[1]![0].data.partial).toBe(false);
   });
 
   it("does not start a second settled reading while one is already in flight", async () => {
@@ -604,23 +590,17 @@ describe("composition and settled identity", () => {
 });
 
 describe("foreground recovery", () => {
-  it("upgrades a rate-limited live request after the pause even when an old answer exists", async () => {
-    call
-      .mockResolvedValueOnce({ ok: true, result: result("سابقة") })
-      .mockResolvedValueOnce({ ok: false, kind: "rate" })
-      .mockResolvedValue({ ok: true, result: result("جديدة") });
-    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+  it("shows a strict rate error at once and never retries automatically", async () => {
+    call.mockResolvedValueOnce({ ok: false, kind: "rate" });
+    const { result: h } = renderHook((p) => useTranslator(p), {
       initialProps: opts("Original."),
     });
-    await flush(100);
-    rerender(opts("Neuer Gedanke"));
-    await flush(400);
-    expect(h.current.error).toBeNull();
-    await flush(1300);
-    expect(call).toHaveBeenCalledTimes(3);
-    expect(call.mock.calls[2]![0].data.partial).toBe(false);
-    expect(h.current.result?.translation).toBe("جديدة");
-    expect(h.current.settled).toBe(true);
+    await flush(10);
+    expect(h.current.error).toBe("rate");
+    expect(call).toHaveBeenCalledTimes(1);
+    await flush(5_000);
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(h.current.error).toBe("rate");
   });
 
   it("streams a shorter explicitly recovered DOM value before it completes", async () => {
@@ -637,18 +617,17 @@ describe("foreground recovery", () => {
     expect(h.current.result?.translation).toBe("قصير");
   });
 
-  it("never carries a previous draft's detected source into a fresh auto-source live answer", async () => {
-    call
-      .mockResolvedValueOnce({ ok: true, result: { ...result("أولى"), sourceLanguage: "de" } })
-      .mockResolvedValue({ ok: true, result: result("جديدة") });
-    const { result: h, rerender } = renderHook((p) => useTranslator(p), {
+  it("sends a fresh auto-source draft as auto, never as the previous detected source", async () => {
+    call.mockResolvedValue({ ok: true, result: result("جديدة") });
+    const { rerender } = renderHook((p) => useTranslator(p), {
       initialProps: { ...opts("Original."), source: "auto" },
     });
     await flush(100);
     rerender({ ...opts("Nouveau texte"), source: "auto" });
-    await flush(400);
-    expect(h.current.result?.sourceLanguage).toBe("auto");
-    expect(h.current.provisional).toBe(true);
+    await flush(200);
+    const last = call.mock.calls.at(-1)![0];
+    expect(last.data.source).toBe("auto");
+    expect(last.data.partial).toBe(false);
   });
 });
 

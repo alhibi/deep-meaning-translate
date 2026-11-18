@@ -1,17 +1,15 @@
 /**
  * The one live-translation handler, shared by the web route and the versioned native
  * route. Prompts, provider routing, admission and cancellation live here and only here.
+ *
+ * Model choice is strict: the selected writer is the only provider a request is sent to.
+ * There is no automatic second-model fallback and no cooldown rerouting — an unavailable
+ * model fails its own request, visibly, instead of silently answering with the other one.
  */
 import { InputSchema } from "./translate.functions";
 import { takeLiveToken, takeToken, takeWarmToken } from "./throttle";
 import { z } from "zod";
 import { clientAddress, parseAdmittedJson } from "../requestSafety";
-import {
-  noteProviderFailure,
-  noteProviderSuccess,
-  providerCooling,
-  type BrainId,
-} from "./providers/health.server";
 
 export const StreamInput = InputSchema.extend({
   mode: z.enum(["live", "full"]).optional().default("live"),
@@ -19,9 +17,7 @@ export const StreamInput = InputSchema.extend({
 
 /**
  * Warm-up: resolve every module the first request needs and open the provider connection
- * before the first keystroke. The imports run together: they used to load one after the
- * other inside the request handler, so the first sentence paid for four serial module
- * resolutions on a cold instance.
+ * before the first keystroke. The imports run together instead of one after the other.
  */
 export async function warmTranslateStream(request: Request): Promise<Response> {
   const noContent = new Response(null, {
@@ -72,101 +68,43 @@ export async function handleTranslateStream(request: Request): Promise<Response>
   const cleanup = () => request.signal.removeEventListener("abort", abort);
 
   const started = Date.now();
-  // Resolve the hot path once, in parallel. These modules used to be loaded one after
-  // the other before a single provider byte could leave the server.
-  const [opencode, types, ds, engine] = await Promise.all([
+  // Resolve the hot path once, in parallel.
+  const [opencode, types, ds] = await Promise.all([
     import("./providers/opencode.server"),
     import("./types"),
     import("./providers/deepseek.server"),
-    import("./engine.server"),
   ]);
   const { streamLiveTranslation, streamFullTranslation } = opencode;
   const { TranslationError, LUNA_ENABLED, effectiveBrain } = types;
-  const { shouldFallBack } = engine;
   const lunaKey = process.env["OPENCODE_API_KEY"];
   const deepseekKey = ds.deepseekKey();
-  const configured: Record<BrainId, boolean> = {
-    luna: Boolean(lunaKey && LUNA_ENABLED),
-    deepseek: Boolean(deepseekKey),
-  };
-  const other = (brain: BrainId): BrainId => (brain === "luna" ? "deepseek" : "luna");
 
   const { mode, ...rest } = data;
   const req = { ...rest, partial: mode !== "full" };
-  const streamFrom = (
-    brain: BrainId,
-    options?: { maxAttempts: number },
-  ): Promise<AsyncGenerator<string>> => {
-    if (brain === "luna") {
-      if (!lunaKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
-      return mode === "full"
-        ? streamFullTranslation(lunaKey, req, upstream.signal, options)
-        : streamLiveTranslation(lunaKey, req, upstream.signal, options);
-    }
-    if (!deepseekKey) throw new TranslationError("auth", "DeepSeek is not configured.");
-    return mode === "full"
-      ? ds.streamDeepSeekFull(deepseekKey, req, upstream.signal, options)
-      : ds.streamDeepSeekLive(deepseekKey, req, upstream.signal, options);
-  };
-
-  const requested = effectiveBrain(data.brain);
-  const otherBrain = other(requested);
+  const brain = effectiveBrain(data.brain);
   /**
-   * Who goes first, and with how many attempts.
-   *
-   * A writer that just refused a request is skipped when the other writer can answer, so
-   * a degraded Sona selection does not pay the same failure for every sentence. The writer
-   * that starts gets one attempt only when a *usable* fallback waits behind it — fail over
-   * now, not after a clamped Retry-After. The last usable writer keeps the bounded retry,
-   * so a transient DeepSeek failure is still healed instead of being replaced by a known
-   * failing writer. A cooling writer never gets the retry.
+   * One attempt on the selected provider. Waiting out a provider Retry-After would make
+   * the person wait for a model they did not choose to fail; a strict selection must
+   * answer (or fail) now, and the same model is the only thing ever asked again.
    */
-  let first = requested;
-  let second: BrainId | null = configured[otherBrain] ? otherBrain : null;
-  /** Why the writer is not the requested one; null when the requested brain answered. */
-  let fallbackReason: string | null = null;
-  if (providerCooling(requested) && configured[otherBrain] && !providerCooling(otherBrain)) {
-    first = otherBrain;
-    second = requested;
-    fallbackReason = "cooldown";
-  }
-  const firstOptions =
-    providerCooling(first) || (second !== null && !providerCooling(second))
-      ? { maxAttempts: 1 }
-      : undefined;
-
-  let brain: BrainId = first;
+  const options = { maxAttempts: 1 };
   let deltas: AsyncGenerator<string>;
   let upstreamMs = 0;
   try {
-    try {
-      deltas = await streamFrom(first, firstOptions);
-    } catch (err) {
-      // The other brain takes over when the chosen one is down, out of credit or rate
-      // limited. A cancellation is never replayed.
-      if (request.signal.aborted || !shouldFallBack(err)) throw err;
-      const kind = err instanceof TranslationError ? err.kind : "provider";
-      noteProviderFailure(first, kind);
-      if (!second) throw err;
-      if (first === requested) fallbackReason = kind;
-      // The fallback is the last usable writer, so it keeps the bounded retry unless it
-      // is itself cooling. Its own failure is recorded as well.
-      const secondOptions = providerCooling(second) ? { maxAttempts: 1 } : undefined;
-      try {
-        deltas = await streamFrom(second, secondOptions);
-      } catch (fallbackErr) {
-        if (request.signal.aborted || !shouldFallBack(fallbackErr)) throw fallbackErr;
-        const fallbackKind =
-          fallbackErr instanceof TranslationError ? fallbackErr.kind : "provider";
-        noteProviderFailure(second, fallbackKind);
-        throw fallbackErr;
-      }
-      brain = second;
+    if (brain === "luna") {
+      if (!lunaKey || !LUNA_ENABLED) throw new TranslationError("auth", "Luna is not configured.");
+      deltas =
+        mode === "full"
+          ? await streamFullTranslation(lunaKey, req, upstream.signal, options)
+          : await streamLiveTranslation(lunaKey, req, upstream.signal, options);
+    } else {
+      if (!deepseekKey) throw new TranslationError("auth", "DeepSeek is not configured.");
+      deltas =
+        mode === "full"
+          ? await ds.streamDeepSeekFull(deepseekKey, req, upstream.signal, options)
+          : await ds.streamDeepSeekLive(deepseekKey, req, upstream.signal, options);
     }
     upstreamMs = Date.now() - started;
-    noteProviderSuccess(brain);
-    // The requested writer answered after all (for example after a cooldown skip).
-    if (brain === requested) fallbackReason = null;
   } catch (err) {
     cleanup();
     // Cancelled by the app (newer text typed): end quietly, not an error.
@@ -200,15 +138,12 @@ export async function handleTranslateStream(request: Request): Promise<Response>
         } else controller.error(err);
       } finally {
         cleanup();
-        // Privacy: metrics only — never the text. `upstreamMs` separates provider time
-        // from the total, and `fallback` names the failure class that caused a rescue.
+        // Privacy: metrics only — never the text.
         console.info(
           JSON.stringify({
             event: "translate_stream",
             mode: data.mode,
             brain,
-            requested,
-            fallback: fallbackReason,
             upstreamMs,
             outcome,
             ms: Date.now() - started,
@@ -228,12 +163,8 @@ export async function handleTranslateStream(request: Request): Promise<Response>
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store, no-transform",
       "X-Accel-Buffering": "no",
-      // The brain that actually wrote it (after any fallback), so the quiet review is
-      // never sent as if the requested model had written a rescued answer.
+      // The selected (and only) writer. Never rewritten by a rescue.
       "X-Translation-Writer": brain,
-      // Diagnostic only, content-free: the requested writer answered unless a failure
-      // class (or a short cooldown) made the other brain take over.
-      ...(fallbackReason ? { "X-Translation-Fallback": fallbackReason } : {}),
     },
   });
 }

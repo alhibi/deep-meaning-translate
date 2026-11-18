@@ -108,9 +108,8 @@ They explain why the deterministic pass rate is a conservative floor, not a qual
   kept verbatim, Arabic month-name dates `14 أكتوبر 2025` vs a numeric date expectation).
 - **Judge ceiling**: `deepseek-v4-pro` scored nearly every row 5/5 on this corpus, so the judge
   delta is not discriminative here; it stays a secondary signal by design.
-- **Review-profile live coverage**: the production review path is inactive (DeepSeek never reviews
-  its own writing and Luna is paused), so `review` is unit-tested and signal-tested but not
-  live-verified; only a live repair and analysis profile were exercised.
+- **Cross-model review is not part of the product any more**: model selection is strict, so there
+  is no review profile to exercise. Only the live repair and analysis profiles are exercised.
 
 v2 should fold dates/times before number comparison, use a broader "acceptable equivalents" list
 per terminology row, and add rows that a judge can actually distinguish (subtle register or

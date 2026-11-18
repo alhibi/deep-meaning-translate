@@ -85,17 +85,18 @@ tests remain in place — hiding is not deletion — and turning a switch on res
 
 - Route-level: `ErrorScreen` and `NotFoundScreen` are product surfaces; no stack traces to people.
 - Translation-level: `useTranslator` maps error kinds to phases, preserves the last good result,
-  retries transient failures once, and stays quiet for live-rate limits.
+  makes one attempt on the selected model and shows a failure immediately.
 - Server-level: same-origin rejection, rate limit, bounded JSON, provider error classification,
   cancellation treated as a quiet end rather than an error.
 - Last resort: a standalone offline/error page generated for the service worker.
 
 ## External boundaries
 
-- **DeepSeek** is the default writer, the independent reviewer of Luna-written sentences, and the
-  repair/analysis provider. Active.
-- **OpenCode / Luna** is a selectable writer and the automatic fallback when DeepSeek fails. Active;
-  routing lives in `engine.server.ts` and the translate-stream route, and both keys stay server-side.
+- **DeepSeek** is the default writer and the analysis provider; it no longer reviews another
+  model's answer. Active.
+- **OpenCode / Luna** is a selectable writer. Selection is strict: the other model is never called
+  for the same translation, never takes over and never rewrites it. Active; routing lives in
+  `engine.server.ts` and the translate-stream route, and both keys stay server-side.
 - **Speech providers** are called only by server routes; keys never reach the browser.
 - **Google Fonts** are self-hosted; there is no font CDN in the critical path.
 

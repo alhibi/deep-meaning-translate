@@ -78,8 +78,8 @@ describe("rate admission", () => {
 
   it("keeps translation and enrichment budgets separate", () => {
     const client = `separate-${Math.random()}`;
-    for (let i = 0; i < 90; i++) expect(takeToken(client)).toBe(true);
-    expect(takeToken(client)).toBe(false); // the settled budget is spent …
+    for (let i = 0; i < 180; i++) expect(takeToken(client)).toBe(true);
+    expect(takeToken(client)).toBe(false); // the translation budget is spent …
     expect(takeEnrichmentToken(client)).toBe(true); // … the dictionary still answers
     expect(takeRepairToken(client)).toBe(true); // … and the quiet repair still runs
   });

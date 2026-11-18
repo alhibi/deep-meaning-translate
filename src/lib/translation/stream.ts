@@ -80,10 +80,10 @@ export async function streamTranslate(
       return { ok: false, kind: "provider", cancelled: true };
     }
     if (!res.ok || !res.body) {
-      // Nobody will read this body. Release the connection instead of leaving it open for
-      // a response that is already classified; a burst of rate-limit replies otherwise
-      // keeps sockets alive until the browser reaps them.
-      void res.body?.cancel().catch(() => {});
+      // The small JSON error body is the server's classification (auth, quota, rate,
+      // provider). Read it first: cancelling the body and then calling res.json() made
+      // every non-429 failure look like a generic provider error and triggered a pointless
+      // salvage stream on a strictly selected, unavailable model.
       const payload = (await res.json().catch(() => null)) as { kind?: ErrorKind } | null;
       const detail = classifyStatus(res.status);
       diagnostics.finish({

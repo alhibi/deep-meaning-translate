@@ -57,11 +57,13 @@ export function createLimiter(capacity = 30, refillPerSecond = 0.8) {
 export const takeLiveToken = createLimiter(120, 4);
 
 /**
- * Settled translations: one full request per finished sentence, plus its repair when one
- * is actually needed. A burst of provisional typing must never spend this budget.
- * 90/2 per second is far above anything a person produces by writing sentences.
+ * Translation requests: one full, verified request per draft change. Since the immediate
+ * path always sends the structured request (there is no separate provisional stream), the
+ * budget must match a very fast human typist — four requests per second sustained — and
+ * still bound a scripted client. 180 burst / 4 per second leaves a long dictation or a
+ * continuous typist admitted indefinitely while keeping the endpoint bounded.
  */
-export const takeToken = createLimiter(90, 2);
+export const takeToken = createLimiter(180, 4);
 
 /**
  * Optional enrichment: the mini dictionary and the Sentence Shadow. Both are quiet

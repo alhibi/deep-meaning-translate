@@ -1,20 +1,20 @@
 # API and Provider Boundaries
 
-Status: **Verified** by source inspection and unit tests on 2026-11-17, plus live DeepSeek
-`deepseek-flash` capability probes (one per task class, synthetic input, key not printed) and
-calls from the dev server (latency, structured JSON, long input). Provider uptime, Luna/OpenCode,
-cloud voice and dictation remain **NOT_VERIFIED** in this environment.
+Status: **Verified** by source inspection and unit tests on 2026-11-18 (strict model selection and
+the immediate full request), plus live DeepSeek `deepseek-flash` capability probes and calls from
+the dev server. Provider uptime, the Luna/OpenCode account, cloud voice and dictation remain
+**NOT_VERIFIED** in this environment.
 
 ## Endpoints
 
 | Endpoint                      | Method | Purpose                                                         | Protection                                         |
 | ----------------------------- | ------ | --------------------------------------------------------------- | -------------------------------------------------- |
 | `/api/translate-stream`       | `GET`  | Preload provider modules and open the connection; sends no text | `takeWarmToken` per client                         |
-| `/api/translate-stream`       | `POST` | Stream live plain text or a full structured translation         | same-origin, `takeToken`, bounded JSON, Zod schema |
+| `/api/translate-stream`       | `POST` | Stream a full structured translation (live text only for salvage) | same-origin, `takeToken`, bounded JSON, Zod schema |
 | `/api/speak`                  | `POST` | Cloud speech (Gemini PCM)                                       | same-origin, speech throttle, server key           |
 | `/api/eleven-speak`           | `POST` | Cloud speech with timestamps                                    | same-origin, speech throttle, server key           |
 | server fn `translate`         | `POST` | Non-streaming structured translation                            | same-origin, `takeToken`, `InputSchema`            |
-| server fn `repairTranslation` | `POST` | Quiet repair/review of a shown result                           | same-origin, `takeRepairToken`                     |
+| server fn `repairTranslation` | `POST` | Quiet same-model repair of a shown result                           | same-origin, `takeRepairToken`                     |
 | server fn `analyzeShadow`     | `POST` | Sentence Shadow analysis                                        | same-origin, enrichment throttle                   |
 | server fn lexicon             | `POST` | Dictionary enrichment                                           | same-origin, enrichment throttle                   |
 
@@ -47,14 +47,17 @@ quotes stay exact. Bounds are checked before admission, so an oversized body spe
 
 ## Streaming contract
 
-- **Live**: `Content-Type: text/plain; charset=utf-8`, incremental text, no JSON. The client wraps it
-  as a provisional result for display only.
-- **Full**: the stream carries the model's structured JSON, parsed and verified client-side.
+- **Full**: the stream carries the selected model's structured JSON; translation text streams out of
+  the JSON while it is generated and the committed answer is parsed and verified client-side. This is
+  the only mode normal scheduling uses.
+- **Live**: `text/plain` incremental text, used **only** for the one salvage request after a cut or
+  unreadable structured answer, still through the same selected model.
 - `Cache-Control: no-store, no-transform`; the response is not cached by the service worker.
 - Client cancellation aborts the upstream request **and** the client's response reader, so a body
-  that never sends another chunk cannot keep a dead request alive; an unread error body is
-  cancelled instead of holding the connection. A cancelled stream ends quietly (204 / closed
-  stream), not as a provider error, and is never retried.
+  that never sends another chunk cannot keep a dead request alive. A cancelled stream ends quietly
+  (204 / closed stream), not as a provider error, and is never retried. The small JSON error body is
+  read before returning so the server's `kind` (auth/quota/rate/provider) reaches the UI instead of
+  collapsing into a generic provider error.
 - The provider's protocol completion is required before a stream is committed: OpenAI
   `finish_reason: "stop"` or Responses `response.completed`. `finish_reason: "length"` /
   `content_filter` / an unknown reason, `response.incomplete` and a premature EOF raise a provider
@@ -65,10 +68,11 @@ quotes stay exact. Bounds are checked before admission, so an oversized body spe
   surfacing later as "malformed model output". The server chat path, the native buffered fallback
   and the direct repair path call it, and `direct.ts` `directDeltas` mirrors the streaming rule
   (including EOF without a completion) for the personal-key path.
-- A full-answer failure is salvaged **once** by the client as a plain live stream; the salvage text
-  runs through the deterministic verifier and is never stored in translation memory.
+- A full-answer failure is salvaged **once** by the client as a plain live stream through the
+  **same selected model**; the salvage text runs through the deterministic verifier and is never
+  stored in translation memory.
 - Output ceilings are a runaway guard and are set per task class in `providers/capabilities.ts`:
-  live 8,192, settled full 16,384, repair and review ≥32,768, analysis 65,536, none above the
+  live salvage 8,192, full 16,384, same-model repair 32,768, analysis 65,536, none above the
   documented 384K provider bound. `budget.ts` supplies the plain-answer floor/factor beneath that,
   and a reasoning class only raises the ceiling. A 5,000-character full request sends 13,000 tokens
   and is verified end-to-end.
@@ -76,34 +80,28 @@ quotes stay exact. Bounds are checked before admission, so an oversized body spe
 ## Provider selection
 
 `src/lib/translation/types.ts` defines `DEFAULT_BRAIN = "deepseek"` and **`LUNA_ENABLED = true`**.
-`effectiveBrain()` returns the selected or saved brain, falling back to DeepSeek when none was
-chosen. Both brains are active:
+`effectiveBrain()` returns the selected or saved brain, falling back to DeepSeek only when none was
+chosen. Selection is **strict**:
 
-- the request's `brain` picks the writer (`deepseek` default, `luna` when selected);
-- when the chosen writer fails — quota, rate, network or provider error — the other model takes
-  over; an `input` error and a caller cancellation never fall back;
-- DeepSeek reviews Luna-written settled sentences; it never reviews its own writing, so a clean
-  DeepSeek result makes no review round trip;
-- the OpenCode/Luna path covers live streaming, settled streaming, buffered translation and repair;
+- the request's `brain` is the only writer (`deepseek` default, `luna` when selected); the other
+  model is never called for that translation, never takes over after a failure, and never reviews or
+  corrects the answer;
+- the foreground stream route makes **one attempt** on the selected provider (`maxAttempts: 1`) and
+  never sleeps through `Retry-After`, retries automatically or switches model. A selected model that
+  is unavailable or refuses the request produces a calm, retryable error — the result of the other
+  model never appears under its name;
+- the stream response names the one writer (`X-Translation-Writer`); the server log records the
+  model, `upstreamMs`, outcome, duration and character count, never text;
+- the OpenCode/Luna path covers live and full streaming plus buffered repair, all on the selected
+  model; its routing header now carries a valid, per-request `ses_` session id and the documented
+  companion header (the previous static, invalid-shaped value is corrected);
 - dictionary and Sentence Shadow analysis deliberately stays on DeepSeek: its capability profile is
-  verified only there, and enrichment must not gain a second, unverified provider path;
-- the stream response reports the brain that actually wrote the answer (`X-Translation-Writer`) and
-  the client sends it back as `writer` on the quiet review, so a DeepSeek fallback that rescued a
-  failed Luna request is never reviewed as Luna's writing;
-- with both writers configured, a failing writer is replaced **immediately**: the writer that starts
-  makes one attempt (`maxAttempts: 1`) instead of sleeping through the provider's clamped
-  `Retry-After` before falling back. The last usable writer keeps the bounded retry — the
-  failover does not strip resilience from the only healthy provider — and a writer that just failed
-  is skipped for a bounded cooldown (rate 30 s, network 10 s, provider 15 s, auth/quota 5 min; success clears it) while the
-  other can answer. The diagnostic `X-Translation-Fallback` header names the failure class, and
-  the server log records `requested`, `fallback` and `upstreamMs` with no text. State is two
-  process-local entries (`providers/health.server.ts`), not a deployment-wide breaker — TD5/TD54.
-  Why: on the deployed route every Sona request paid 2.5 s of retry for a refusing provider before
-  the healthy one answered (measured 3.36–4.36 s; see the 2026-11-17 latency audit).
+  verified only there, it is an optional reading, and it never edits the selected model's
+  translation;
+- a single configured key yields a working translator **for that model only**; selecting the
+  unconfigured model returns its own auth error instead of silently using the other one.
 
-Provider keys are read only in server modules (`process.env`), never in client code. A single
-configured key still yields a working translator: the other brain's paths simply report the
-configured provider's error when neither is available.
+Provider keys are read only in server modules (`process.env`), never in client code.
 
 ## Task capability profiles
 
@@ -111,41 +109,32 @@ configured provider's error when neither is available.
 verified against the official DeepSeek API documentation on 2026-11-17. A provider-doc change edits
 this table, never a call site:
 
-| Profile    | Used by                                                 | Thinking / effort | JSON mode | `max_tokens` ceiling |
-| ---------- | ------------------------------------------------------- | ----------------- | --------- | -------------------- |
-| `live`     | provisional streams while typing                        | off               | no        | 8,192                |
-| `full`     | settled structured translation                          | off               | yes       | 16,384               |
-| `repair`   | quiet second pass after deterministic issues            | on, high          | yes       | 32,768               |
-| `review`   | independent review of a shown translation               | on, high          | yes       | 32,768               |
-| `analysis` | dictionary, Sentence Shadow and future text-in/JSON-out | on, max           | yes       | 65,536               |
+| Profile    | Used by                                                  | Thinking / effort | JSON mode | `max_tokens` ceiling |
+| ---------- | -------------------------------------------------------- | ----------------- | --------- | -------------------- |
+| `live`     | salvage stream only after a cut/unreadable full answer   | off               | no        | 8,192                |
+| `full`     | every foreground translation (immediate, structured)     | off               | yes       | 16,384               |
+| `repair`   | quiet same-model correction after deterministic issues   | off               | yes       | 32,768               |
+| `analysis` | dictionary, Sentence Shadow and future text-in/JSON-out  | on, max           | yes       | 65,536               |
 
-Thinking is **explicit per class** because the API defaults it on with high effort: an omitted
-toggle silently turns a fast live request into a reasoning one. The reasoning classes carry a much
-higher ceiling because a live probe on 2026-11-17 showed reasoning tokens are charged against
-`max_tokens` (with `max_tokens: 10` and thinking on, the reply was `finish_reason: "length"` with
-an empty answer and ten reasoning tokens); a ceiling that only fits the plain answer would truncate
-it. All ceilings are runaway bounds, never targets, and none can exceed the documented 384K output
-bound.
-
-Long input has one rule: `assertContextFits` sizes source, prompt overhead and output ceiling
-against the documented 1M-token context **before** any fetch. The app's own schemas cap a
-translation at 5,000 characters and every analysis prompt far below that, so one request always fits
-and **no splitting exists**; a theoretically impossible input is a loud `input` error instead of a
-truncation or a chunked translation that could lose order or term consistency.
+The 8,192 live profile is not part of normal scheduling: there is no provisional live request.
+Thinking is **explicit per class** because the API defaults it on with high effort: an omitted toggle
+silently turns a fast request into a reasoning one. The analysis class carries a much higher ceiling
+because a live probe on 2026-11-17 showed reasoning tokens are charged against `max_tokens`; a
+ceiling that only fits the plain answer would truncate it. All ceilings are runaway bounds, never
+targets, and none can exceed the documented 384K output bound.
 
 ## Failure classification
 
 `TranslationError.kind` ∈ `auth | quota | rate | network | provider | input`.
 
-- `auth` / `quota`: configuration or account problem; the user sees a calm provider state.
-- `rate`: 429 with `Retry-After`; a live request stays silent while typing, a settled request shows
-  a rate state.
-- `network` / `provider`: transient. The provider boundary retries once **only before** the
-  response body is handed off (transient status, or network failure; `Retry-After` clamped to
-  2.5 s, 200–600 ms jitter otherwise) and the client may retry once more. A caller abort, a
-  401/402, and an already-started stream are never retried. A **truncated reply** — streaming or
-  non-streaming, a cut stream, or EOF before the protocol completion — is a `provider` error, never
-  a success that a later parser misreports.
+- `auth` / `quota`: configuration or account problem for the **selected** model; the user sees a
+  calm provider state and a retry, never the other model.
+- `rate`: the selected provider is rate limiting; the foreground route returns it immediately and
+  the client shows the rate state at once.
+- `network` / `provider`: shown immediately by the foreground route (one attempt, no retry, no
+  model switch). Background repair/analysis keeps its bounded retry because nothing is waiting on
+  it. A **truncated reply** — streaming or non-streaming, a cut stream, or EOF before the protocol
+  completion — is a `provider` error, never a success that a later parser misreports.
 - `input`: invalid body or cross-origin request; 400/403, never retried.
 - Cancellation (`AbortError`, client abort) is not an error and produces no failure state. A
   cancelled stream is never salvaged or retried. On the Android personal-key path, the abort is
@@ -161,19 +150,17 @@ does not spend the client's token. Only a schema-valid body reaches the rate lim
 
 ## Rate limiting
 
-Process-local bounded token buckets, one per purpose: **live typing** (120 burst / 4 per second),
-**settled translation** (90 / 2), warm-up (20 / 0.5), repair (60 / 1), enrichment (60 / 1.5),
-speech (40 / 1.2) and dictation token minting (20 / 0.5). The browser and native surfaces share
-these buckets through their domain functions — dictionary and shadow analysis spend the enrichment
-budget, the native repair route spends the repair budget — so a second transport cannot mint a
-second allowance. These are admission limits sized above human typing, not a
-model throttle: a fast typist's provisional streams are never refused mid-sentence, while a
-scripted client is still bounded. The live and settled budgets are deliberate separate buckets: a
-person typing continuously can spend the provisional allowance without ever touching the allowance
-their finished sentence needs. Background work cannot spend either, and a hidden repair is the
-first thing to shed under load. Admission is chosen from the validated `mode` after the body is
-parsed. This protects a single instance; it is not a
-deployment-wide abuse defence, and the documentation says so rather than implying otherwise.
+Process-local bounded token buckets, one per purpose: **foreground translation** (180 burst / 4 per
+second: every coalesced typing update is a full request), **live salvage** (120 / 4), warm-up
+(20 / 0.5), repair (60 / 1), enrichment (60 / 1.5), speech (40 / 1.2) and dictation token minting
+(20 / 0.5). The browser and native surfaces share these buckets through their domain functions —
+dictionary and shadow analysis spend the enrichment budget, the native repair route spends the
+repair budget — so a second transport cannot mint a second allowance. These are admission limits
+sized above a continuous fast typist, not a model throttle: the foreground full-request bucket is
+not shared with background work, and a hidden repair is the first thing to shed under load.
+Admission is chosen from the validated `mode` after the body is parsed. This protects a single
+instance; it is not a deployment-wide abuse defence, and the documentation says so rather than
+implying otherwise.
 
 ## Provider failure UX
 

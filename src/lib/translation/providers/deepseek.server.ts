@@ -2,7 +2,6 @@ import {
   buildLiveSystemPrompt,
   buildLiveUserPrompt,
   buildRepairPrompt,
-  buildReviewPrompt,
   buildSystemPrompt,
   buildUserPrompt,
 } from "../prompt";
@@ -205,38 +204,4 @@ export function createDeepSeekProvider(apiKey: string): TranslationProvider {
       return parseResult(raw, req);
     },
   };
-}
-
-/**
- * Independent review of a finished translation. Returns an improved result,
- * or null when the reviewer judges the original correct.
- */
-export async function reviewTranslation(
-  apiKey: string,
-  req: TranslationRequest,
-  previous: TranslationResult,
-  signal?: AbortSignal,
-): Promise<TranslationResult | null> {
-  const raw = await chat(apiKey, buildSystemPrompt(), buildReviewPrompt(req, previous), {
-    profile: "review",
-    signal,
-    chars: req.text.length,
-  });
-  return parseReview(raw, req);
-}
-
-export function parseReview(raw: string, req: TranslationRequest): TranslationResult | null {
-  try {
-    const obj = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as {
-      verdict?: unknown;
-    };
-    if (obj.verdict === "keep") return null;
-  } catch {
-    return null;
-  }
-  try {
-    return parseResult(raw, req);
-  } catch {
-    return null;
-  }
 }

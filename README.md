@@ -63,10 +63,13 @@ installable APKs are published with the repository:
   into its sections, the sitemap lists only `/` and `/about`, and a first-run introduction is
   server-rendered so it never covers a painted translator.
 
-Two brains are active: **DeepSeek** is the default writer and independent reviewer, and
-**Luna** (OpenCode) is selectable as the expressive writer. The other model is the automatic
-fallback, DeepSeek reviews Luna-written sentences, and the app still works with only one provider
-key. Provider routing lives only in `engine.server.ts` / the translate-stream route.
+Two models are selectable: **DeepSeek** (presented as Velo) is the default writer, and
+**Luna** (OpenCode, presented as Sona) is the expressive writer. Selection is **strict**: the chosen
+model is the only writer, there is no automatic fallback or cross-model review, and an unavailable
+model fails visibly with a retry instead of being answered by the other one. The first input and any
+model change start a full, verified request immediately — there is no provisional-then-settled
+second request or artificial pause. Provider routing lives only in `engine.server.ts` / the
+translate-stream route.
 
 The interface presents those brains under their product names: `deepseek` is **Velo** and
 `luna` is **Sona**. Internal ids, provider endpoints, environment keys and routing keep their

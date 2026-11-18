@@ -1,12 +1,11 @@
 # Translation Pipeline
 
-Status: **Verified** by source inspection, unit tests and live DeepSeek calls on 2026-11-16.
-Editing/request ownership and the enrichment queue were rechecked with unit tests and mocked browser
-streams on 2026-11-17; the same day's upgrade rechecked provider task profiles and the
-dictionary/shadow analysis paths in source and unit tests, with live capability probes (synthetic
-input, key not printed). Live model output on `deepseek-flash` is verified for the sample set in
-§11 (accuracy is sampled, not a corpus claim); Luna and the cloud-voice providers remain
-**NOT_VERIFIED** (no key in this environment). Translation prompt text lives only in
+Status: **Verified** by source inspection, unit tests and live DeepSeek calls on 2026-11-16;
+reverified for strict model selection and the immediate full request on 2026-11-18 (unit tests,
+production-bundle browser traces, live capability probes). Live model output on `deepseek-flash` is
+verified for the sample set in §11 (accuracy is sampled, not a corpus claim); Luna and the
+cloud-voice providers remain **NOT_VERIFIED** (no working key in this environment). Translation
+prompt text lives only in
 `src/lib/translation/prompt.ts`; enrichment prompts live beside their parsers
 (`lexicon.ts`, `shadow.ts`), as `AGENTS.md` requires.
 
@@ -28,12 +27,10 @@ input, key not printed). Live model output on `deepseek-flash` is verified for t
   normalization composes Unicode to **NFC** before collapsing whitespace, so canonically equivalent
   input (decomposed German umlauts, Arabic hamza forms) is one request key and one translation-memory
   row rather than two paid requests;
-- learns from typing intervals to decide whether the current text is provisional;
-- waits for a pause, but flushes deliberately on paste/share/restore and after a maximum wait while
-  typing never stops;
-- invalidates obsolete completions, retries and repairs as soon as draft identity changes, **before**
-  waiting for the replacement debounce; an append-only compatible live prefix may keep painting,
-  but cannot commit/archive for the newer draft;
+- sends the first meaningful input of a draft immediately, plus paste/share/restore and any model or
+  parameter change; only updates while the person keeps typing wait for the adaptive delay;
+- invalidates obsolete completions and repairs as soon as draft identity changes, **before** waiting
+  for the replacement debounce; a newer request aborts the older one and only the newest may commit;
 - resets the length catch-up guard on deletion, replacement or parameter changes, so a shorter answer
   can paint from its first chunk; returning to a committed draft cancels the intervening request;
 - pauses scheduling, the watchdog and explicit submission during IME composition;
@@ -41,38 +38,37 @@ input, key not printed). Live model output on `deepseek-flash` is verified for t
 - shows a loading state only after 260 ms; a request times out after 60 s; the in-memory cache holds
   60 entries for 30 minutes.
 
-The canvas has **no manual send button**: typing alone reaches this path. The adaptive debounce
-remains 40 ms at a sentence/newline boundary, 90 ms at a soft boundary, 110 ms after whitespace and
-240 ms mid-word, with additional patience for fast typing, an initial fragment, long text or a slow
-connection. These are client scheduling delays, **not** provider latency promises. Paste and the
-IME-safe Enter shortcut can still request a full reading immediately. Removing the button does not
-remove composition guards, cancellation, deduplication, retry or the full-reading pause upgrade.
+The canvas has **no manual send button**: typing alone reaches this path. The first meaningful input
+of a draft, a paste/share and any model or parameter change are requested **immediately** (0 ms);
+only updates while the person keeps typing are coalesced (40 ms at a sentence/newline boundary,
+90 ms at a soft boundary, 110 ms after whitespace, 240 ms mid-word, with additional patience for
+fast typing, long text or a slow connection). These are client scheduling delays, **not** provider
+latency promises. Removing the button does not remove composition guards, cancellation or
+deduplication.
 
 `translationKey(text, source, target, style, dialect, brain)` is the one definition of request
 identity; cache, device memory and session priming all use it.
 
-## 3. Two response modes
+## 3. One request, one verified answer
 
-| Mode             | Request           | Response          | Commitment                                        |
-| ---------------- | ----------------- | ----------------- | ------------------------------------------------- |
-| Live (`partial`) | while typing      | plain text stream | display only; never verified, stored or archived  |
-| Full             | finished sentence | structured JSON   | parsed, verified; eligible for memory and archive |
+Every foreground translation is a **single full structured request** with the selected model:
+translation text streams out of the JSON while it is generated, and the committed answer is parsed
+and verified in the same pass. There is no separate provisional live request and no
+pause-then-upgrade second request: the request that starts is already the settled one, so actions
+become available as soon as its JSON completes. The first input of a draft and a model/parameter
+change are sent immediately; later typing is coalesced by the adaptive delay.
 
-After 1,200 ms with no text change, a still-provisional draft requests **one full reading**. The
-clock starts at the last text change, not when the live answer arrives: the live request is a
-transport detail, and anchoring the pause to it serialised a whole provider round trip into every
-settled sentence (measured on the deployed route: the full request left ≈3.2 s after the last
-keystroke instead of 1.2 s; see [the latency audit](../audits/2026-11-17-latency.md)). A full
-reading is not made final by flipping a flag: only that full response can settle it and expose
-actions. The in-memory cache records whether a result came from full mode, so an explicit
-submission cannot be answered by an unchecked live reading. A throttled live request stays quiet
-and tries the separate full-mode path after the pause; further editing cancels it.
+A model selection is **strict**. The chosen model is the only provider a request is sent to; the
+other model is never consulted, never takes over and never reviews or corrects the answer. If the
+selected model is unavailable or refuses the request, the error is shown at once with a retry — the
+result of another model never appears under the selected model's name. Selecting a different model
+clears the previous answer immediately and starts a full request through the new model.
 
-The displayed result has its own request key. `stale` means it belongs to another draft (or an IME is
-composing); `settled` requires the current key, a non-provisional result and a complete phase.
-Session writes, save/swap, dictionary and sentence shadow use that eligibility. A previous result can
-stay readable, but its actions are inert, its voice playback stops, and it is never persisted for the
-new source. Live metadata starts fresh instead of inheriting an earlier draft's detected language.
+The displayed result has its own request key. `stale` means it belongs to another draft (or an IME
+is composing); `settled` requires the current key, a committed result and a complete phase. Session
+writes, save/swap, dictionary and sentence shadow use that eligibility. A previous result can stay
+readable, but its actions are inert, its voice playback stops, and it is never persisted for the new
+source.
 
 ## 4. Prompt architecture
 
@@ -83,7 +79,8 @@ gender; keep genuine ambiguity; understand Arabic dialects. It then gives the ex
 
 `buildUserPrompt()` adds the pair, the register guidance and an optional Arabic-variety clause,
 then the text inside `<text>` tags. `buildLiveSystemPrompt()` and `buildLiveUserPrompt()` are the
-plain-text variants: translation only, no JSON, no completion of a half-typed thought.
+plain-text variants used **only when a cut or unreadable structured answer is salvaged through the
+same selected model**; they are not part of normal scheduling.
 
 The three registers are not labels over one voice: `STYLE_GUIDANCE` gives different German and
 Arabic behavior for each (for example `du`/`Sie`, contractions, MSA versus spoken Arabic). The
@@ -101,23 +98,20 @@ model is also asked to classify situation and source tags; those are optional me
 - These checks are intentionally conservative. They cannot judge style or nuance; they catch
   silent factual losses. Human review remains necessary for linguistic quality.
 
-## 6. Repair and review
+## 6. Repair, never a second writer
 
-A settled result with deterministic issues triggers **one** quiet repair pass. The repaired result
-is shown only if it clears more issues than it creates. With no deterministic issue, DeepSeek may
-review a Luna-written sentence; it never reviews its own writing. The stream response reports the
-brain that actually wrote the answer (`X-Translation-Writer`) and the client passes it back as
-`writer` on the review, so a DeepSeek fallback that rescued a failed Luna request is not reviewed as
-Luna's. A clean DeepSeek result makes no review round trip at all. The
-second-pass review is quiet background work: it waits in the same paced queue as the dictionary and
-the shadow (§8), with the highest priority because its result can replace the visible sentence.
-Repair is not a loop and is not exposed as machinery to the person.
+A settled result with deterministic issues (a lost number, link, emoji or name, a broken paragraph
+or question mark) triggers **one** quiet repair pass through the **same selected model**. The
+repaired result is shown only if it clears more issues than it creates, and it is never sent to the
+other model. Cross-model review is disabled: the selected model's answer is the answer. The stream
+response still names the one writer (`X-Translation-Writer`) and the server log records it without
+text. Repair is not a loop and is not exposed as machinery to the person.
 
 ## 7. Memory and archive
 
 - A settled, verified result is written to device translation memory (bounded by rows and bytes,
   with a TTL, validated on read). A later session answers the same key locally with no request.
-- Provisional text is never stored.
+- Salvaged plain text is never stored.
 - History/statistics and saved phrases are separate local stores; statistics are derived, not
   duplicated.
 - On boot, a session's result is primed under the session's own pair (ADR 0002), so the first paint
@@ -125,13 +119,13 @@ Repair is not a loop and is not exposed as machinery to the person.
 
 ## 8. Enrichment
 
-Dictionary lookup, Sentence Shadow and second-pass review are quiet background work. They pass
-through one queue (`enrichment.ts`): at most one queued task runs at a time, a short (140 ms) gap
-only after work that actually reached the network, an 8 s hang timeout that releases the door, and
-failure isolation. It is a **bounded priority queue** (review > dictionary > shadow, at most 12 queued):
-queued work whose screen or text is gone is skipped **before** any request, running work is
-logically aborted, and the second-pass review is in this queue too. Foreground translation never
-goes through it, and a hung task cannot block the sentence on screen.
+Dictionary lookup, Sentence Shadow and same-model deterministic repair are quiet background work.
+They pass through one queue (`enrichment.ts`): at most one queued task runs at a time, a short
+(140 ms) gap only after work that actually reached the network, an 8 s hang timeout that releases
+the door, and failure isolation. It is a **bounded priority queue** (repair > dictionary > shadow,
+at most 12 queued): queued work whose screen or text is gone is skipped **before** any request,
+running work is logically aborted. Foreground translation never goes through it, and a hung task
+cannot block the sentence on screen.
 
 Cancellation is logical, not over the wire: the RPC/native transport functions carry no
 `AbortSignal` yet, so a superseded enrichment request can still complete server-side (TD38). Each
@@ -212,74 +206,46 @@ rhythm, implied`) and a `kind` of `loss` (meaning lost) or `weakened` (tone or i
 ## 9. Failure states
 
 Offline, timeout, rate limit, auth/quota, provider and validation failures map to distinct phases.
-The draft and the last good result stay on screen. A rate-limited live request is silent while
-typing. Cancellation is a quiet end, not an error: the client's abort also cancels the response
-reader, so a body that never sends another chunk cannot keep a dead request alive, and a cancelled
-request is never retried or salvaged.
+The draft and the last good result stay on screen. Failures are **immediate**: the foreground route
+makes one attempt on the selected provider and never sleeps through `Retry-After`, switches model or
+retries automatically; the person sees a calm, retryable error and decides. Cancellation is a quiet
+end, not an error: the client's abort also cancels the response reader, so a body that never sends
+another chunk cannot keep a dead request alive, and a cancelled request is never retried or
+salvaged.
 
-Two retry layers, both bounded:
-
-- **Provider boundary (server):** one retry for a transient HTTP status (429/500/502/503/504) or a
-  network failure **before the response body is handed off**, with `Retry-After` clamped to 2.5 s
-  and 200–600 ms full-jitter otherwise. A caller abort, a 401/402, or a stream that has already
-  started is never retried (a started stream cannot be replayed). **On the foreground stream route,
-  the writer that starts makes one attempt when a usable alternate waits behind it**
-  (`maxAttempts: 1`) instead of sleeping through `Retry-After` for a provider that is already
-  refusing the request; the last usable writer keeps the bounded retry, and a single-writer
-  deployment always keeps it.
-- **Provider cooldown:** a writer that just failed is skipped for a bounded window — rate 30 s,
-  network 10 s, provider 15 s, auth/quota 5 min — while the other writer can answer; a success
-  clears the record. The response reports the actual writer and, when a rescue happened, the
-  failure class in `X-Translation-Fallback`; the server log records `requested`, `fallback` and
-  `upstreamMs` without any text. State is two bounded process-local entries, like the admission
-  buckets.
-- **Client (session):** one retry after a transient `rate`/`network`/`provider` failure, as
-  before; a live rate limit stays silent while typing.
-
-If a **full structured** request still fails (the provider cut it, or the JSON cannot be parsed),
-the client makes **one** plain live request as a salvage and passes the resulting text through the
-deterministic verifier before showing it. Salvaged text is never written to translation memory. If
-even the salvage cannot be verified, the calm provider error is shown instead. A silent half-JSON,
-a truncated sentence or an invented repetition loop must never become a settled answer.
-
+If a **full structured** request still fails because the provider cut it or the JSON cannot be
+parsed, the client makes **one** plain-text request through the **same selected model** as a
+salvage and passes the text through the deterministic verifier before showing it. Salvaged text is
+never written to translation memory. If even the salvage cannot be verified, the calm provider error
+is shown instead. A silent half-JSON, a truncated sentence or an invented repetition loop must never
+become a settled answer.
 ## 10. Throughput and admission
 
-- Live typing and settled sentences spend **separate** per-client admission buckets. A burst of
-  provisional streams cannot starve the finished sentence that follows it, and background repair
-  remains a third budget. The buckets are sized so a fast human typist is never admitted-then-refused
-  mid-sentence (live 120 / 4 per second sustained; settled 90 / 2 per second); a scripted client is
-  still bounded. These are admission limits, not model throttles.
+- The immediate foreground path spends one per-client admission bucket (`takeToken`), sized for a
+  continuous fast typist — 180 burst / 4 per second sustained — because every coalesced update is a
+  full request; a scripted client is still bounded. The salvage stream keeps the wide live bucket,
+  and dictionary/shadow/repair each have their own. These are admission limits, not model throttles.
 - The warm-up request preloads both provider modules, the shared engine and the request types, in
-  parallel, and opens the TLS connection **without text or credentials**. The first keystroke
-  therefore does not also pay for serial module resolution. The same four imports inside the
-  request handler load together rather than one after the other.
+  parallel, and opens the TLS connection **without text or credentials**. The same imports inside
+  the request handler load together rather than one after the other.
 - `max_tokens` is a **runaway ceiling, not a target**, and it is set **per task class** in
-  `providers/capabilities.ts`: live streams 8,192 / settled full 16,384 / repair and review 32,768 /
-  analysis 65,536, all under the documented 384K provider output bound. `budget.ts` still supplies
-  the plain-answer floor and factor (structured floor 512, factor 2.6; live floor 256, factor 1.5),
-  and a reasoning class only raises that ceiling. Thinking is explicit per class because the API
-  defaults it **on** with high effort: live and full keep it off for latency, repair, review and
-  analysis opt in (effort high/max). A live probe on 2026-11-17 showed reasoning tokens are charged
-  against `max_tokens` (with `max_tokens: 10` and thinking on, the provider returned
-  `finish_reason: "length"`, ten completion tokens all as reasoning, and an empty answer), so the
-  reasoning ceilings sit well above the plain answer they must also contain.
+  `providers/capabilities.ts`: full structured 16,384 / same-model repair 32,768 / analysis 65,536,
+  under the documented 384K provider output bound; the 8,192 live profile remains only for the
+  salvage stream. `budget.ts` still supplies the plain-answer floor and factor. Thinking is explicit
+  per class because the API defaults it **on** with high effort: full and repair keep it off for
+  latency, analysis opts in (effort max). A live probe on 2026-11-17 showed reasoning tokens are
+  charged against `max_tokens`, so the analysis ceiling sits above the answer it must contain.
 - The provider's **protocol completion is the contract for streaming and non-streaming replies**
   (`providers/completion.ts`): OpenAI `finish_reason` (`stop` is the only success; `length`,
   `content_filter`, `tool_calls`, an unknown reason and a missing reason are provider errors) and
-  Responses `response.completed` / `response.incomplete`. `[DONE]` cannot turn a cut answer into a
-  success, a truncated non-streaming reply is classified as a provider error instead of a parse
-  accident, and the server chat path, the native buffered fallback and the direct repair path all
-  call the same check; `direct.ts` mirrors the streaming rule for the personal-key path.
+  Responses `response.completed` / `response.incomplete`. `[DONE]` cannot turn a cut answer into
+  a success; a truncated non-streaming reply is a provider error. Every path calls the same check.
 - Long input never splits. `assertContextFits` compares a pessimistic three-tokens-per-character
   source plus prompt overhead and the output ceiling with the documented 1M-token context **before**
   any fetch; the app's own 5,000-character schema leaves large headroom, and an input that could not
   fit is a loud `input` error rather than a truncation or a chunker.
-- When the writer is DeepSeek and the sentence has no deterministic issue, no repair round trip is
-  made: DeepSeek never reviews its own writing. A clean Luna-written sentence gets exactly one
-  DeepSeek review. A result with a lost number or link still gets its repair either way.
-- A newer stream cancels the older prefix stream as soon as it has caught up on screen, and a
-  committed result cancels it immediately; two providers never finish the same sentence.
-
+- A newer request cancels the older one; a committed result cancels remaining work immediately. Two
+  requests never finish for the same draft, and no second model ever participates.
 ## 11. Known limits and audit evidence
 
 - Streaming providers may emit partial JSON; only a complete protocol completion is committed. A
@@ -309,11 +275,11 @@ a truncated sentence or an invented repetition loop must never become a settled 
   that exhausted the old ceiling. The prompt now mirrors source length and repetition explicitly,
   the ceiling leaves room for a legitimate long answer, and a degenerate loop that still occurs is
   rejected by the verifier before it can be shown.
-- Luna is enabled (`LUNA_ENABLED = true`); its live/settled streaming, DeepSeek fallback, DeepSeek
-  review and the Android direct-key guard are unit-tested. **Deployed observation 2026-11-17:** the
-  OpenCode/Luna writer refused requests throughout the audit window — four of four production
-  probes were rescued by DeepSeek after 3.36–4.36 s, and the route named `deepseek` as the actual
-  writer — so a live Luna-written answer, its latency and its linguistic quality remain
-  **NOT_VERIFIED** (TD54; an unavailable provider is not app code). The route now fails over in one
-  attempt and cools the writer down, so a Sona selection cannot queue the person behind a refusing
-  provider. Cloud voice and dictation likewise remain NOT_VERIFIED.
+- Luna/Sona is selectable and strict (`LUNA_ENABLED = true`); its live/full streaming and the
+  Android direct-key guard are unit-tested. **Deployed observation 2026-11-17/18:** the
+  OpenCode/Luna provider refused requests with a `rate` class; before strict mode a probe took
+  3.36–4.36 s and was rescued by DeepSeek, which is no longer allowed. A Sona selection now shows the
+  provider's own calm error and never a Velo answer; its linguistic quality is **NOT_VERIFIED** and
+  the provider availability is TD54. The routing session id was corrected to the documented
+  `ses_` shape, but that must be verified against a working provider account. Cloud voice and
+  dictation likewise remain NOT_VERIFIED.
