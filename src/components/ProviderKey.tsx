@@ -11,7 +11,7 @@ import {
 const COPY = {
   en: {
     title: "Advanced · connect your own Velo key",
-    lead: "Optional. When a key is saved on this device, translations go straight from this device to Velo with your own quota: faster, no shared request limits, and the key never reaches today's server. This is a DeepSeek API key, issued for Velo. Leave it empty to use the built-in translation service.",
+    lead: "Optional. When a key is saved on this device, translations go straight from this device to Velo with your own quota: faster, no shared request limits, and the key never reaches today's server. This is the API key from your account with Velo's provider. Leave it empty to use the built-in translation service.",
     label: "Velo API key",
     placeholder: "sk-…",
     save: "Save key",
@@ -27,7 +27,7 @@ const COPY = {
   },
   ar: {
     title: "متقدم · استخدم مفتاح Velo الخاص بك",
-    lead: "اختياري. عند حفظ مفتاح على هذا الجهاز تُطلب الترجمات مباشرة من Velo بحصتك الخاصة: أسرع، بلا حدود الطلبات المشتركة، ولا يُرسل المفتاح إلى خادم today إطلاقاً. المفتاح صادر من DeepSeek لـVelo. اتركه فارغاً لاستخدام خدمة الترجمة المدمجة.",
+    lead: "اختياري. عند حفظ مفتاح على هذا الجهاز تُطلب الترجمات مباشرة من Velo بحصتك الخاصة: أسرع، بلا حدود الطلبات المشتركة، ولا يُرسل المفتاح إلى خادم today إطلاقاً. هذا مفتاح API من حسابك لدى مزوّد Velo. اتركه فارغاً لاستخدام خدمة الترجمة المدمجة.",
     label: "مفتاح Velo",
     placeholder: "sk-…",
     save: "حفظ المفتاح",
@@ -43,7 +43,7 @@ const COPY = {
   },
   de: {
     title: "Erweitert · eigener Velo-Schlüssel",
-    lead: "Optional. Mit einem auf diesem Gerät gespeicherten Schlüssel werden Übersetzungen direkt beim Anbieter von Velo mit deinem eigenen Kontingent angefragt: schneller, ohne gemeinsame Anfragegrenzen, und der Schlüssel erreicht nie den today-Server. Der Schlüssel stammt von DeepSeek und gilt für Velo. Leer lassen, um den eingebauten Dienst zu nutzen.",
+    lead: "Optional. Mit einem auf diesem Gerät gespeicherten Schlüssel werden Übersetzungen direkt beim Anbieter von Velo mit deinem eigenen Kontingent angefragt: schneller, ohne gemeinsame Anfragegrenzen, und der Schlüssel erreicht nie den today-Server. Der Schlüssel stammt aus deinem Konto beim Anbieter hinter Velo. Leer lassen, um den eingebauten Dienst zu nutzen.",
     label: "Velo-API-Schlüssel",
     placeholder: "sk-…",
     save: "Schlüssel speichern",
