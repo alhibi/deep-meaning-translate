@@ -7,7 +7,6 @@
  * TypeScript while Room still does the searching.
  */
 import {
-  HISTORY_LIMIT,
   MEMORY_MAX_ENTRIES,
   isEntry,
   isMemoryRow,
@@ -146,10 +145,6 @@ export const nativePort: PersistencePort = {
   async historyDelete(ids) {
     if (!ids.length) return;
     await (await store()).historyDelete({ ids: JSON.stringify(ids) });
-  },
-
-  async historyTrim(limit) {
-    await (await store()).historyTrim({ limit: Math.min(limit, HISTORY_LIMIT) });
   },
 
   async historyAll() {

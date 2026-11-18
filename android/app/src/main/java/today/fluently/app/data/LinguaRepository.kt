@@ -109,19 +109,14 @@ class LinguaRepository(
 
     suspend fun historyUpsert(rows: List<HistoryEntity>): Int = withContext(io) {
         if (rows.isEmpty()) return@withContext db.history().count()
-        db.withTransaction {
-            db.history().upsert(rows)
-            db.history().trim(HISTORY_LIMIT)
-        }
+        // The archive is unlimited on the device: a settled sentence is never dropped to
+        // fit a row budget. Statistics must not change because old rows were deleted.
+        db.withTransaction { db.history().upsert(rows) }
         db.history().count()
     }
 
     suspend fun historyDelete(ids: List<String>) = withContext(io) {
         if (ids.isNotEmpty()) db.history().deleteByIds(ids)
-    }
-
-    suspend fun historyTrim(limit: Int) = withContext(io) {
-        db.history().trim(limit.coerceIn(1, HISTORY_LIMIT))
     }
 
     suspend fun historyClear() = withContext(io) { db.history().clear() }
@@ -234,7 +229,6 @@ class LinguaRepository(
                         updatedAt = System.currentTimeMillis(),
                     )
                 )
-                db.history().trim(HISTORY_LIMIT)
             }
             settings.replaceAll(newSettings)
         } catch (error: Throwable) {
@@ -294,7 +288,6 @@ class LinguaRepository(
     }
 
     companion object {
-        const val HISTORY_LIMIT = 2000
         const val SAVED_LIMIT = 300
         const val MEMORY_LIMIT = 120
         const val PREFS_KEY = "lingua.prefs.v1"

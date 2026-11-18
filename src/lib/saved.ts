@@ -80,7 +80,9 @@ function lookup(list: SavedPhrase[], original: string, target: string): SavedPhr
 
 /** Called once by the platform boot with the validated native snapshot. */
 export function hydrateSaved(rows: SavedPhrase[]) {
-  cache = rows.filter(isPhrase).slice(0, SAVED_LIMIT);
+  const phrases = rows.filter(isPhrase);
+  // The device phrasebook is not capped; only the browser keeps its old size budget.
+  cache = native ? phrases : phrases.slice(0, SAVED_LIMIT);
   cacheToken = null;
   listeners.forEach((fn) => fn());
 }
@@ -93,7 +95,7 @@ export function resetSavedCache() {
 }
 
 async function write(next: SavedPhrase[]): Promise<boolean> {
-  cache = next.slice(0, SAVED_LIMIT);
+  cache = native ? next : next.slice(0, SAVED_LIMIT);
   listeners.forEach((fn) => fn());
   if (!native) {
     const written = writeSavedSync(cache);

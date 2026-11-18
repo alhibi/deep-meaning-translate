@@ -39,7 +39,9 @@ const API_ORIGIN = apiOrigin();
 const CSP = [
   "default-src 'self'",
   // Boot scripts and the router's inline hydration payload require inline script.
-  "script-src 'self' 'unsafe-inline'",
+  // blob: is required by AudioWorklet.addModule(): a worklet module is governed by
+  // script-src (not worker-src), and dictation builds its PCM processor from a blob.
+  "script-src 'self' 'unsafe-inline' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

@@ -66,3 +66,15 @@ No API 24/29/36 image and no physical OEM/foldable was available.
 8. Switch the interface to Arabic (RTL) and repeat 3–5.
 9. Test on API 24/29 if a device is available (keyboard + migration from a v1 install).
 10. On a foldable, fold/unfold while typing; the portrait lock must not reset the draft.
+
+## Android 16+ large screens: the portrait lock is not effective (2026-11-18)
+
+Verified on HONOR PNM-N49 (Android 17, API 37, `targetSdk 36`): the unfolded inner display is
+2172x2352 at density 2.55, i.e. **851x922 dp** (smallest width >= 600 dp). Android 16 removes
+orientation/resizability restrictions for apps targeting API 36 on such displays, so
+`android:screenOrientation="portrait"` is ignored there. The app currently renders its
+`max-w-xl` (576 px) phone canvas centred in that window; nothing breaks, but it is not an
+adaptive layout and the previous claim that the portrait lock protects foldables is false on
+this platform. Decision: keep the phone composition for now, record the adaptive two-pane/
+tabletop work as debt, and do **not** re-assert the portrait guarantee in this document until
+the design exists. Explicit tests exist on the folded 1080x2420 display only.

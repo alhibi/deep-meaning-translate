@@ -58,9 +58,30 @@ export function platformError(): string | null {
   return lastError;
 }
 
+let watchingSystemTheme = false;
+/** Follow the phone only while no explicit theme is saved; an explicit choice always wins. */
+function watchSystemTheme() {
+  if (watchingSystemTheme || typeof matchMedia !== "function") return;
+  watchingSystemTheme = true;
+  const query = matchMedia("(prefers-color-scheme: light)");
+  const onChange = () => {
+    if (readDeviceValue(THEME_KEY) === null) applyStoredAppearance();
+  };
+  query.addEventListener?.("change", onChange);
+}
+
 function applyStoredAppearance() {
   if (typeof document === "undefined") return;
-  const theme = parseTheme(readDeviceValue(THEME_KEY));
+  // An explicit saved theme wins; with none saved, follow the phone (the same rule the
+  // web boot script uses). Before this, an unset preference was forced to clay dark even
+  // on a light phone, which contradicted the product rule and the splash.
+  const storedTheme = readDeviceValue(THEME_KEY);
+  const theme =
+    storedTheme === null
+      ? typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: light)").matches
+        ? "light"
+        : "dark"
+      : parseTheme(storedTheme);
   const d = document.documentElement;
   d.classList.remove("dark", "light", "vivid");
   d.classList.add(theme);
@@ -71,6 +92,7 @@ function applyStoredAppearance() {
   if (saved) setLocale(saved, false);
   if (readDeviceValue(INTRO_KEY) === "1") releaseIntroGate();
   syncThemeColor();
+  watchSystemTheme();
 }
 
 export async function hydratePlatform(): Promise<boolean> {

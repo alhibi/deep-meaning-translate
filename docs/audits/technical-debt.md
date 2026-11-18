@@ -171,3 +171,17 @@ hardware/IME/screen-reader matrix (TD1/TD12/TD17/TD25).
 - Include evidence and a concrete remediation; "improve quality" is not an item.
 - Do not delete a closed item in the same release that closed it; move it to “Closed” with evidence.
 - A P1 item blocks a quality claim, not necessarily a release; state that explicitly in release notes.
+
+## Added 2026-11-18 — real-device pass (HONOR PNM-N49, Android 17)
+
+| ID | Severity | Area | State | Why it matters / next step |
+| --- | --- | --- | --- | --- |
+| TD61 | P1 | Foldable large screens | Open | `targetSdk 36` removes the portrait lock on displays with smallest width >= 600 dp; on the unfolded inner display (851x922 dp) the app renders a 576 px phone canvas centred. Needs a deliberate adaptive two-pane/tabletop composition; do not widen blindly. |
+| TD62 | P1 | Predictive back | Open | `enableOnBackInvokedCallback=false` plus a JS back handler means no predictive preview. Needs `OnBackInvokedCallback` per overlay before any `targetSdk 37` move; Android 16 docs treat the opt-out as temporary. |
+| TD63 | P1 | Launch splash colour | Open | The splash/window background is hard-coded clay `#12100F`; a paper-light user sees a dark cover every cold start. The Android 12 starting window is resolved from manifest resources, so the fix is resource qualifiers, not `setTheme()` in `onCreate`. |
+| TD64 | P1 | Status-bar plugin overlap | Open | `@capacitor/status-bar` is still installed and its config-change callback re-applies the device theme after `SystemBars` set the app-theme appearance. A light/vivid app theme on a dark-mode phone can lose status icons after unfolding. Remove the plugin and its legacy fallback. |
+| TD65 | P2 | Durability under MagicOS kill | Open | Session writes are debounced 400 ms and flushed fire-and-forget; a kill inside that window can lose the last keystrokes. Needs a bounded native flush on pause or a shorter debounce while typing. |
+| TD66 | P2 | Dead native config | Open | `resize`/`resizeOnFullScreen` removed (done); `activity_main.xml`, theme `windowSoftInputMode`, and legacy status-bar colour items remain dead and should be deleted. |
+| TD67 | P2 | TTS first-tap race / audio focus | Open | Native TTS `ready` is set asynchronously and the plugin requests no audio focus; the first tap can silently fail and speech does not duck music. |
+| TD68 | P2 | Horizontal safe area in sheets | Open | Full-height sheets use `fixed inset-0` without top/side safe padding; the cutout is on both displays. Bottom-anchored sheets are currently safe; landscape/inner display is not verified. |
+| TD69 | P1 | Kotlin/Gradle support window | Open | Current Kotlin 2.1.21 is outside the officially supported window for Gradle 8.14/AGP 8.13. A tested upgrade to Kotlin 2.3.21 + KSP 2.3.14 + AGP 8.13.2 + Gradle 8.14.7 is the next build-toolchain change (R8 8.13.19 required). |

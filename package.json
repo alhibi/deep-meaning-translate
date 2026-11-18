@@ -31,7 +31,9 @@
     "postinstall": "patch-package",
     "culture:generate": "node scripts/culture/pipeline.mjs generate",
     "culture:build": "node scripts/culture/pipeline.mjs build",
-    "culture:validate": "node scripts/culture/pipeline.mjs validate"
+    "culture:validate": "node scripts/culture/pipeline.mjs validate",
+    "clean:duplicates": "node scripts/clean-sync-duplicates.mjs",
+    "prebuild:native:web": "npm run clean:duplicates"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -70,7 +72,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.5",
-    "eslint": "^10.11.0",
+    "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -81,7 +83,7 @@
     "patch-package": "^8.0.1",
     "prettier": "^3.9.8",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1",
+    "typescript-eslint": "^8.73.0",
     "vite": "^8.3.0",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "^5.0.1",

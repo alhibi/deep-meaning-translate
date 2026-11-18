@@ -10,6 +10,7 @@
  * adapter then writes the result in one Room transaction. That keeps "merge" out of
  * Kotlin, where it would inevitably drift from the app's archive rules.
  */
+import { isNativeApp } from "../native/config";
 import {
   BACKUP_SETTING_KEYS,
   HISTORY_LIMIT,
@@ -87,6 +88,13 @@ function withoutCounts(data: BackupData): BackupData {
 }
 
 /** Drop everything that does not pass the app's own validators. */
+/**
+ * The device archive is unlimited; the browser document still has a quota. These caps
+ * therefore apply only to the web fallback, never to a backup taken on the phone.
+ */
+const historyCap = () => (isNativeApp() ? Number.MAX_SAFE_INTEGER : HISTORY_LIMIT);
+const savedCap = () => (isNativeApp() ? Number.MAX_SAFE_INTEGER : SAVED_LIMIT);
+
 export function cleanData(input: Partial<BackupData>): BackupData {
   const now = Date.now();
   const seenIds = new Set<string>();
@@ -95,10 +103,10 @@ export function cleanData(input: Partial<BackupData>): BackupData {
     .filter((e) => (seenIds.has(e.id) ? false : (seenIds.add(e.id), true)))
     .map(sanitizeEntry)
     .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, HISTORY_LIMIT);
+    .slice(0, historyCap());
   const saved = (Array.isArray(input.saved) ? input.saved : [])
     .filter(isPhrase)
-    .slice(0, SAVED_LIMIT);
+    .slice(0, savedCap());
   const memory = (Array.isArray(input.memory) ? input.memory : [])
     .filter(isMemoryRow)
     .filter((r) => now - r.at <= MEMORY_TTL_MS)
@@ -285,7 +293,7 @@ export function mergeData(
   }
   const history = [...historyById.values()]
     .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, HISTORY_LIMIT);
+    .slice(0, historyCap());
 
   const savedKey = (p: { target: string; original: string }) =>
     `${p.target}|${normalizeText(p.original)}`;
@@ -304,7 +312,7 @@ export function mergeData(
       skippedSaved++;
     }
   }
-  const saved = [...savedMap.values()].slice(0, SAVED_LIMIT);
+  const saved = [...savedMap.values()].slice(0, savedCap());
 
   const memoryMap = new Map(local.memory.map((r) => [r.k, r]));
   let addedMemory = 0;
@@ -366,8 +374,8 @@ export function replaceData(
       settings: incoming.settings,
       prefs: incoming.prefs,
       session: incoming.session,
-      history: incoming.history.slice(0, HISTORY_LIMIT),
-      saved: incoming.saved.slice(0, SAVED_LIMIT),
+      history: incoming.history.slice(0, historyCap()),
+      saved: incoming.saved.slice(0, savedCap()),
       memory: incoming.memory.slice(0, MEMORY_MAX_ENTRIES),
     },
     report: {

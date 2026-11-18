@@ -24,6 +24,8 @@ export type { EntryTags, HistoryEntry } from "./persistence/contracts";
  * refused is reported through `lastWriteOk()`, never hidden.
  */
 const MAX_TEXT = 5000;
+/** Native in-memory window: the newest rows, never the whole archive. */
+const RECENT_WINDOW = 500;
 /** Re-translating the same text sooner than this is the same occasion, not a new use. */
 const NEW_USE_AFTER = 30 * 60_000;
 /** A sentence that grows while typing within this window is the same thought. */
@@ -36,6 +38,12 @@ let lastEvicted = 0;
 const native = isNativeApp();
 /** Newest-first window; on Android this is the recent page, not the whole archive. */
 let cache: HistoryEntry[] | null = null;
+/**
+ * Native only: the complete archive once Statistics has read it. Statistics re-derives on
+ * every archive revision, so the full list is kept here and patched in place by writes
+ * instead of being fetched over the bridge again for each correction.
+ */
+let fullArchive: HistoryEntry[] | null = null;
 let total = 0;
 /**
  * The exact `lingua.history.v1` document the cache was read from or last wrote. A
@@ -48,6 +56,19 @@ let complete = false;
 /** Changes only when archive content changes, not when a native screen refreshes its view. */
 let revision = 0;
 const listeners = new Set<() => void>();
+
+/**
+ * Keep the full-archive snapshot Statistics already paid for consistent with a write.
+ * Without this, a tag correction or an exact re-translation would need another full fetch
+ * (or, worse, Statistics would show the stale list).
+ */
+function patchFullArchive(row: HistoryEntry, removed: string[]) {
+  if (!native || !fullArchive) return;
+  const map = new Map(fullArchive.map((e) => [e.id, e]));
+  map.set(row.id, row);
+  for (const id of removed) map.delete(id);
+  fullArchive = [...map.values()].sort((a, b) => b.createdAt - a.createdAt);
+}
 
 function emit(contentChanged = true) {
   if (contentChanged) revision += 1;
@@ -94,7 +115,8 @@ export function hydrateHistory(rows: HistoryEntry[], totalRows: number) {
   cache = rows;
   total = totalRows;
   cacheToken = null;
-  complete = native && rows.length === totalRows && totalRows <= HISTORY_LIMIT;
+  complete = native && rows.length === totalRows;
+  fullArchive = complete ? rows : null;
   emit();
 }
 
@@ -143,7 +165,12 @@ export const history = {
   /** Rows dropped from the oldest end by the most recent save to fit the device quota. */
   lastEvicted: () => lastEvicted,
   /** Total rows held by the device, including ones older than the hydrated window. */
-  count: (): number => (current(), Math.min(HISTORY_LIMIT, Math.max(total, cache?.length ?? 0))),
+  /** Native archives are not capped; the browser still answers inside its own quota. */
+  count: (): number => {
+    current();
+    const known = Math.max(total, cache?.length ?? 0);
+    return native ? known : Math.min(HISTORY_LIMIT, known);
+  },
   /** Monotonic content revision for views that maintain a separate full-archive snapshot. */
   revision: (): number => revision,
   subscribe(fn: () => void) {
@@ -153,6 +180,7 @@ export const history = {
   /** Forces a fresh read from storage (used by "try again"). */
   reload() {
     cache = null;
+    fullArchive = null;
     emit();
   },
   /**
@@ -164,14 +192,17 @@ export const history = {
   async all(): Promise<HistoryEntry[]> {
     if (!native) return current();
     if (complete) return current();
+    if (complete && fullArchive) return fullArchive;
     try {
+      // Native has no row cap: this is the one full-archive read, cached until a write
+      // changes the archive. The translator keeps only the recent window; the full list is
+      // returned to Statistics, which is the only consumer that needs it.
       const rows = await port.historyAll();
-      cache = rows.slice(0, HISTORY_LIMIT);
+      cache = rows.slice(0, RECENT_WINDOW);
       total = rows.length;
       cacheToken = null;
-      complete = rows.length <= HISTORY_LIMIT;
-      // Fetching the full archive changes the window, not the archive itself. In
-      // particular, it must not make useFullArchive fetch the same 2,000 rows again.
+      complete = true;
+      fullArchive = rows;
       emit(false);
       return rows;
     } catch {
@@ -248,7 +279,8 @@ export const history = {
     // Re-translating it is an update, not a new archive row; counting it as a new row
     // made the native badge/stats total drift upward on every later use.
     const existed = merged.some((e) => e.id === row.id);
-    cache = [row, ...rest].slice(0, HISTORY_LIMIT);
+    patchFullArchive(row, removed);
+    cache = [row, ...rest].slice(0, native ? RECENT_WINDOW : HISTORY_LIMIT);
     total = Math.max(totalBefore + (existed ? 0 : 1) - removed.length, cache.length);
     emit();
     if (!native) {
@@ -264,7 +296,8 @@ export const history = {
       try {
         await port.historyUpsert([row]);
         if (removed.length) await port.historyDelete(removed);
-        await port.historyTrim(HISTORY_LIMIT);
+        // No trim on native: the archive keeps every settled sentence. Only the browser
+        // fallback rewrites a bounded document (see the web branch above).
         lastWriteOk = true;
         // The optimistic emit may have raced the Room transaction. Publish one durable
         // revision once it commits so a mounted full-archive statistics view refetches.
@@ -303,6 +336,7 @@ export const history = {
       if (written.ok) cacheToken = written.raw;
       lastWriteOk = written.ok;
     } else if (row) {
+      patchFullArchive(row, []);
       try {
         await port.historyUpsert([row]);
         lastWriteOk = true;
@@ -327,6 +361,7 @@ export const history = {
       if (written.ok) cacheToken = written.raw;
       lastWriteOk = written.ok;
     } else {
+      if (fullArchive) fullArchive = fullArchive.filter((e) => e.id !== id);
       try {
         await port.historyDelete([id]);
         lastWriteOk = true;
@@ -340,6 +375,8 @@ export const history = {
   },
   async clear(): Promise<HistoryEntry[]> {
     cache = [];
+    fullArchive = [];
+    complete = true;
     total = 0;
     emit();
     if (!native) {

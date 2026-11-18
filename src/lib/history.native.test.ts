@@ -14,7 +14,6 @@ const bridge = vi.hoisted(() => {
     allCalls: 0,
     upsertCalls: 0,
     deleteCalls: 0,
-    trimCalls: 0,
     rows: [] as unknown[],
     deferCandidates: false,
     candidates: [] as { promise: Promise<unknown[]>; resolve: (rows: unknown[]) => void }[],
@@ -51,9 +50,6 @@ vi.mock("./persistence", () => ({
     historyDelete: async () => {
       bridge.state.deleteCalls += 1;
     },
-    historyTrim: async () => {
-      bridge.state.trimCalls += 1;
-    },
     historyClear: async () => {
       bridge.state.rows = [];
     },
@@ -84,7 +80,6 @@ beforeEach(async () => {
   bridge.state.allCalls = 0;
   bridge.state.upsertCalls = 0;
   bridge.state.deleteCalls = 0;
-  bridge.state.trimCalls = 0;
   bridge.state.rows = [];
   bridge.state.candidates.length = 0;
   bridge.state.deferCandidates = false;

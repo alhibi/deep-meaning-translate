@@ -221,12 +221,6 @@ class LinguaStorePlugin : Plugin() {
     }
 
     @PluginMethod
-    fun historyTrim(call: PluginCall) = run(call) { repository ->
-        repository.historyTrim(call.getInt("limit") ?: LinguaRepository.HISTORY_LIMIT)
-        JSObject().put("ok", true)
-    }
-
-    @PluginMethod
     fun historyAll(call: PluginCall) = run(call) { repository ->
         val json = JSONArray()
         repository.historyAll().forEach { json.put(Mapping.historyToJson(it)) }

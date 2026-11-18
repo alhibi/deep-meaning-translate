@@ -25,16 +25,6 @@ interface HistoryDao {
     suspend fun clear()
 
     /**
-     * Keep the newest rows. The archive is bounded at 2,000 rows; trimming happens in
-     * SQLite so a long-lived install never grows without limit.
-     */
-    @Query(
-        "DELETE FROM history_entries WHERE id NOT IN " +
-            "(SELECT id FROM history_entries ORDER BY created_at DESC LIMIT :limit)"
-    )
-    suspend fun trim(limit: Int)
-
-    /**
      * The only rows a new settled translation can merge with: the same sentence, or a
      * row touched inside the typing window. Bounded, indexed by target, and the prefix
      * decision stays in TypeScript where the merge rule is defined once.

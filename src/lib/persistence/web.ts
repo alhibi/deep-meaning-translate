@@ -356,11 +356,6 @@ export const webPort: PersistencePort & { hydrateSync(): Hydrated; lastEvicted()
       throw new Error("history-write-failed");
   },
 
-  async historyTrim(limit) {
-    if (!writeHistorySync(readHistory().slice(0, limit)).ok)
-      throw new Error("history-write-failed");
-  },
-
   async historyAll() {
     return readHistory();
   },

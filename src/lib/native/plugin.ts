@@ -56,7 +56,6 @@ export interface LinguaStorePlugin {
   }): Promise<{ rows: string }>;
   historyUpsert(options: { rows: string }): Promise<{ total: number }>;
   historyDelete(options: { ids: string }): Promise<BridgeResult>;
-  historyTrim(options: { limit: number }): Promise<BridgeResult>;
   historyAll(): Promise<{ rows: string }>;
   historyClear(): Promise<BridgeResult>;
   savedWrite(options: { rows: string }): Promise<BridgeResult>;

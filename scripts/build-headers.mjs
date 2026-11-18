@@ -23,7 +23,9 @@ const CSP = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  // blob: is required by AudioWorklet.addModule(): a worklet module is governed by
+  // script-src (not worker-src), and dictation builds its PCM processor from a blob.
+  "script-src 'self' 'unsafe-inline' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob: data:",

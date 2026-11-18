@@ -49,7 +49,6 @@ export interface PersistencePort {
   historyCandidates(q: HistoryCandidates): Promise<HistoryEntry[]>;
   historyUpsert(rows: HistoryEntry[]): Promise<number>;
   historyDelete(ids: string[]): Promise<void>;
-  historyTrim(limit: number): Promise<void>;
   historyAll(): Promise<HistoryEntry[]>;
   historyClear(): Promise<void>;
 
