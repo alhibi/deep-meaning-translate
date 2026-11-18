@@ -147,8 +147,8 @@ export async function streamDeepSeekLive(
 ): Promise<AsyncGenerator<string>> {
   const res = await send(
     apiKey,
-    buildLiveSystemPrompt(),
-    buildLiveUserPrompt(req),
+    buildLiveSystemPrompt("deepseek"),
+    buildLiveUserPrompt(req, "deepseek"),
     signal,
     true,
     "live",
@@ -167,8 +167,8 @@ export async function streamDeepSeekFull(
 ): Promise<AsyncGenerator<string>> {
   const res = await send(
     apiKey,
-    buildSystemPrompt(),
-    buildUserPrompt(req),
+    buildSystemPrompt("deepseek"),
+    buildUserPrompt(req, "deepseek"),
     signal,
     true,
     "full",
@@ -183,18 +183,23 @@ export function createDeepSeekProvider(apiKey: string): TranslationProvider {
   return {
     id: "deepseek",
     async translate(req, signal) {
-      const raw = await chat(apiKey, buildSystemPrompt(), buildUserPrompt(req), {
-        profile: "full",
-        signal,
-        chars: req.text.length,
-      });
+      const raw = await chat(
+        apiKey,
+        buildSystemPrompt("deepseek"),
+        buildUserPrompt(req, "deepseek"),
+        {
+          profile: "full",
+          signal,
+          chars: req.text.length,
+        },
+      );
       return parseResult(raw, req);
     },
     async repair(req, previous, issues, signal) {
       const raw = await chat(
         apiKey,
-        buildSystemPrompt(),
-        buildRepairPrompt(req, previous, issues),
+        buildSystemPrompt("deepseek"),
+        buildRepairPrompt(req, previous, issues, "deepseek"),
         {
           profile: "repair",
           signal,

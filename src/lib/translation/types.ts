@@ -20,9 +20,9 @@ export interface TranslationRequest {
   source: string;
   target: string;
   style: StyleOverride;
-  /** Arabic variety for Arabic output; "auto" follows the source. */
+  /** Arabic variety for Arabic output; "auto" requests broadly understood neutral Arabic. */
   dialect?: Dialect;
-  /** Which model writes the translation; the other is the automatic backup. */
+  /** Which model alone writes the translation; there is no cross-model fallback. */
   brain?: Brain;
   /** Text still being typed: translate provisionally, skip the repair pass. */
   partial?: boolean;

@@ -232,8 +232,8 @@ export async function streamLiveTranslation(
 ): Promise<AsyncGenerator<string>> {
   const res = await send(
     apiKey,
-    buildLiveSystemPrompt(),
-    buildLiveUserPrompt(req),
+    buildLiveSystemPrompt("luna"),
+    buildLiveUserPrompt(req, "luna"),
     signal,
     true,
     options,
@@ -246,14 +246,19 @@ export function createOpenCodeLunaProvider(apiKey: string): TranslationProvider 
   return {
     id: "opencode",
     async translate(req, signal) {
-      const raw = await call(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal);
+      const raw = await call(
+        apiKey,
+        buildSystemPrompt("luna"),
+        buildUserPrompt(req, "luna"),
+        signal,
+      );
       return parseResult(raw, req);
     },
     async repair(req, previous, issues, signal) {
       const raw = await call(
         apiKey,
-        buildSystemPrompt(),
-        buildRepairPrompt(req, previous, issues),
+        buildSystemPrompt("luna"),
+        buildRepairPrompt(req, previous, issues, "luna"),
         signal,
       );
       return parseResult(raw, req);
@@ -268,7 +273,14 @@ export async function streamFullTranslation(
   signal?: AbortSignal,
   options?: RetryOptions,
 ): Promise<AsyncGenerator<string>> {
-  const res = await send(apiKey, buildSystemPrompt(), buildUserPrompt(req), signal, true, options);
+  const res = await send(
+    apiKey,
+    buildSystemPrompt("luna"),
+    buildUserPrompt(req, "luna"),
+    signal,
+    true,
+    options,
+  );
   if (!res.body) throw new TranslationError("provider", "Empty provider stream.");
   return textDeltas(res.body);
 }

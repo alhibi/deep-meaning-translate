@@ -4,6 +4,7 @@ import {
   STYLE_GUIDANCE,
   buildLiveSystemPrompt,
   buildLiveUserPrompt,
+  buildRepairPrompt,
   buildSystemPrompt,
   buildUserPrompt,
 } from "./prompt";
@@ -32,8 +33,8 @@ describe("prompt", () => {
     expect(buildUserPrompt({ ...base, target: "en", dialect: "levant" })).not.toMatch(
       /Levant|Arabic output/,
     );
-    expect(buildUserPrompt({ ...base, target: "ar", dialect: "auto" })).not.toMatch(
-      /Arabic output/,
+    expect(buildUserPrompt({ ...base, target: "ar", dialect: "auto" })).toContain(
+      "widely understood neutral Arabic",
     );
   });
   it("wraps the text and marks live typing", () => {
@@ -87,6 +88,58 @@ describe("prompt", () => {
     expect(buildSystemPrompt()).toContain("never repeat, pad or summarize");
     expect(buildLiveSystemPrompt()).toContain("never repeat, pad or summarize");
   });
+  it("keeps model-specific guidance on full and salvage paths", () => {
+    for (const build of [buildSystemPrompt, buildLiveSystemPrompt]) {
+      expect(build("luna")).toContain("SONA:");
+      expect(build("luna")).not.toContain("VELO:");
+      expect(build("deepseek")).toContain("VELO:");
+      expect(build("deepseek")).not.toContain("SONA:");
+    }
+  });
+  it("uses neutral Arabic by default without overriding an explicit variety", () => {
+    for (const build of [buildUserPrompt, buildLiveUserPrompt]) {
+      const base = {
+        text: "Danke",
+        source: "de",
+        target: "ar",
+        style: "casual" as const,
+        brain: "luna" as const,
+      };
+      expect(build(base)).toContain("widely understood neutral Arabic");
+      expect(build(base)).toContain("avoid strongly regional markers");
+      expect(build({ ...base, dialect: "egypt" })).toContain("Egyptian Arabic");
+      expect(build({ ...base, dialect: "egypt" })).not.toContain(
+        "widely understood neutral Arabic",
+      );
+      expect(build({ ...base, dialect: "msa" })).toContain("Modern Standard Arabic");
+      expect(build({ ...base, target: "de" })).not.toContain("Arabic output");
+    }
+  });
+  it("preserves the selected style and variety during repair", () => {
+    const req = {
+      text: "Danke",
+      source: "de",
+      target: "ar",
+      style: "formal" as const,
+      dialect: "gulf" as const,
+      brain: "luna" as const,
+    };
+    const previous = {
+      translation: "شكرًا",
+      sourceLanguage: "de",
+      targetLanguage: "ar",
+      tone: "",
+      formality: "formal",
+      confidence: 1,
+      isAmbiguous: false,
+      alternativeTranslations: [],
+      notes: "",
+    };
+    const prompt = buildRepairPrompt(req, previous, ["missing number"]);
+    expect(prompt).toContain(STYLE_GUIDANCE.formal);
+    expect(prompt).toContain("Gulf (Saudi/Emirati/Kuwaiti) Arabic");
+    expect(prompt).toContain("SONA");
+  });
   it("keeps the schema contract exact and the prompts from bloating", () => {
     expect(SCHEMA_SHAPE).toMatch(/^\{"translation":str/);
     expect(SCHEMA_SHAPE).toContain("alternativeTranslations");
@@ -106,5 +159,14 @@ describe("three styles", () => {
     expect(new Set(p).size).toBe(3);
     expect(STYLE_GUIDANCE.formal).toContain("Sie");
     expect(STYLE_GUIDANCE.casual).toContain("du");
+    for (const brain of ["luna", "deepseek"] as const) {
+      const prompts = (["natural", "formal", "casual"] as const).map((style) =>
+        buildUserPrompt({ ...base, style, brain }),
+      );
+      expect(new Set(prompts).size).toBe(3);
+      expect(prompts.every((prompt) => prompt.includes(brain === "luna" ? "SONA" : "VELO"))).toBe(
+        true,
+      );
+    }
   });
 });

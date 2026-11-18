@@ -72,7 +72,7 @@ source.
 
 ## 4. Prompt architecture
 
-`buildSystemPrompt()` establishes the translator's identity and invariants: carry meaning, intent,
+`buildSystemPrompt(brain)` establishes the translator's identity and invariants: carry meaning, intent,
 tone and register; never add, drop, explain or soften; preserve certainty, politeness, negation,
 names, numbers, dates, URLs, emoji and line breaks; render idioms idiomatically; do not invent
 gender; keep genuine ambiguity; understand Arabic dialects. It then gives the exact JSON schema.
@@ -82,9 +82,13 @@ then the text inside `<text>` tags. `buildLiveSystemPrompt()` and `buildLiveUser
 plain-text variants used **only when a cut or unreadable structured answer is salvaged through the
 same selected model**; they are not part of normal scheduling.
 
-The three registers are not labels over one voice: `STYLE_GUIDANCE` gives different German and
-Arabic behavior for each (for example `du`/`Sie`, contractions, MSA versus spoken Arabic). The
-model is also asked to classify situation and source tags; those are optional metadata.
+The three registers are not labels over one voice: `STYLE_GUIDANCE` gives distinct behaviors and
+`MODEL_STYLE` adds per-model, per-register guidance. Sona is directed to restrained, broadly
+understood language; Velo is directed not to compress qualifiers or causes. The automatic Arabic
+variety is neutral, while an explicit variety takes precedence. Full, salvage, repair and the
+personal-key DeepSeek path use their actual writer's guidance. Repair also receives the selected
+style and variety. The model classifies situation and source tags as optional metadata. These
+instructions do not guarantee linguistic quality; the revised prompts have not been compared live.
 
 ## 5. Parsing and verification
 
@@ -111,6 +115,8 @@ text. Repair is not a loop and is not exposed as machinery to the person.
 
 - A settled, verified result is written to device translation memory (bounded by rows and bytes,
   with a TTL, validated on read). A later session answers the same key locally with no request.
+  Prompt changes do not invalidate existing rows, so a saved older answer can remain until expiry
+  or device memory is cleared.
 - Salvaged plain text is never stored.
 - History/statistics and saved phrases are separate local stores; statistics are derived, not
   duplicated.

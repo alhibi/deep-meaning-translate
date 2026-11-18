@@ -20,8 +20,8 @@ export async function repairDirect(
   if (!issues.length) return null;
   try {
     const raw = await callPromptDirect(
-      buildSystemPrompt(),
-      buildRepairPrompt(request, previous, issues),
+      buildSystemPrompt("deepseek"),
+      buildRepairPrompt(request, previous, issues, "deepseek"),
       true,
       request.text.length,
       signal,

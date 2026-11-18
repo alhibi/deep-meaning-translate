@@ -110,6 +110,9 @@ describe("direct request capability shapes", () => {
     expect(bodies[0]?.["temperature"]).toBe(0.3);
     expect(bodies[0]?.["response_format"]).toEqual({ type: "json_object" });
     expect(bodies[0]?.["stream"]).toBe(true);
+    const messages = bodies[0]?.["messages"] as { content: string }[];
+    expect(messages[0]?.content).toContain("VELO:");
+    expect(messages[1]?.content).toContain("VELO natural:");
   });
 
   it("keeps the live request plain text with no JSON envelope", async () => {
