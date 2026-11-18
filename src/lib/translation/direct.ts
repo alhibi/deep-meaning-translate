@@ -51,13 +51,13 @@ function bodyFor(
   const request = data as unknown as TranslationRequest;
   return mode === "full"
     ? {
-        system: buildSystemPrompt(),
-        user: buildUserPrompt(request),
+        system: buildSystemPrompt("deepseek"),
+        user: buildUserPrompt(request, "deepseek"),
         chars: request.text.length,
       }
     : {
-        system: buildLiveSystemPrompt(),
-        user: buildLiveUserPrompt(request),
+        system: buildLiveSystemPrompt("deepseek"),
+        user: buildLiveUserPrompt(request, "deepseek"),
         chars: request.text.length,
       };
 }

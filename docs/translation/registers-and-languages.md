@@ -1,24 +1,27 @@
 # Registers, Dialects and Language Direction
 
-Status: **Verified** in the prompt and request model on 2026-11-07. Linguistic output quality is
-**NOT_VERIFIED** without provider keys and human review.
+Status: guidance and routing are covered by prompt/provider tests; linguistic quality and latency of
+the revised prompts remain **NOT_VERIFIED** without live provider comparisons and human review.
 
 ## Registers
 
 | Register | German behavior (instructed) | Arabic behavior (instructed) |
 | --- | --- | --- |
-| **Natural** | Mirror the source's own register; standard everyday wording; keep the source's `du`/`Sie`; default `du` for chat | Clean modern standard Arabic, light and simple, not stiff |
-| **Formal** | Elevated and courteous: `Sie`, full forms, Konjunktiv courtesy, no contractions | Refined فصحى with courtesy (حضرتك، هل بإمكانكم، أكون ممتنًا، تفضّلوا), no dialect |
-| **Casual** | Relaxed, how friends text: `du`, everyday contractions, short and loose, no crude slang | Spoken dialect, never فصحى; Levantine unless a variety is chosen; short |
+| **Natural** | Clear everyday wording, preserving known `du`/`Sie` and the relationship | Clear, simple everyday wording; neutral Arabic by default |
+| **Formal** | Polished and respectful; full forms and `Sie` when addressing someone | Clear formal wording; a specifically selected variety remains respected |
+| **Casual** | Relaxed language and `du` when addressing someone; contractions where appropriate | Simple conversational wording without forced regional markers by default |
 
-The prompt gives worked examples so the register is audible even in short text. The register is part
-of the request key: changing it produces a different request and a different cached result.
+Each model also receives distinct per-register guidance. Sona is directed toward restrained
+phrasing; Velo is directed to retain qualifiers, reasons and ambiguity without mechanical prose.
+Style must not add courtesy, intensity or details absent from the source. The register is part of
+the request key: changing it produces a different request and a different cached result.
 
 ## Arabic varieties
 
 `dialect` applies only when Arabic is the target:
 
-- `auto` — follow the source; no explicit variety clause.
+- `auto` — prefer widely understood neutral Arabic, avoiding strong regional markers (including
+  concentrated Levantine usage); the selected style still applies.
 - `msa` — Modern Standard Arabic.
 - `levant`, `egypt`, `gulf`, `iraq`, `maghreb` — the named regional variety, in Arabic script, as
   people actually speak and text it; formal style adds politeness rather than switching to MSA.
@@ -39,8 +42,8 @@ The picker is hidden when Arabic is not the target, and the request normalizes t
 
 ## Direction-specific rules
 
-- **German → Arabic**: conversational German should become natural, spoken-leaning Arabic rather
-  than rigid MSA; gender agreement must be correct; German `du`/`Sie` politeness must survive.
+- **German → Arabic**: follow the chosen style and variety without rigid wording; gender agreement
+  must be correct without inventing gender; German `du`/`Sie` politeness must survive.
 - **Arabic → German**: produce German syntax and cases; particles (`mal`, `doch`, `halt`) only where
   natural; do not become over-formal for casual text.
 - Typos, missing letters, hamza/diacritics, swapped letters, Arabizi and `ae/oe/ue/ss` are read as

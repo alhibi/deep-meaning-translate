@@ -84,6 +84,10 @@ describe("DeepSeek request budget", () => {
     expect(body?.["response_format"]).toEqual({ type: "json_object" });
     expect(body?.["model"]).toBe("deepseek-flash");
     expect(body?.["stream"]).toBe(true);
+    const messages = body?.["messages"] as { content: string }[];
+    expect(messages[0]?.content).toContain("VELO:");
+    expect(messages[1]?.content).toContain("VELO natural:");
+    expect(messages[0]?.content).not.toContain("SONA:");
   });
 
   it("gives the live stream a wide but tighter ceiling", async () => {
@@ -91,6 +95,9 @@ describe("DeepSeek request budget", () => {
     await drain(await streamDeepSeekLive("test-key", request));
     expect(sent[0]?.["max_tokens"]).toBe(7_500);
     expect(sent[0]?.["response_format"]).toBeUndefined();
+    const messages = sent[0]?.["messages"] as { content: string }[];
+    expect(messages[0]?.content).toContain("VELO:");
+    expect(messages[1]?.content).toContain("VELO natural:");
   });
 });
 
@@ -122,6 +129,9 @@ describe("documented per-task capability shapes", () => {
     expect(body?.["temperature"]).toBeUndefined();
     expect(body?.["response_format"]).toEqual({ type: "json_object" });
     expect(body?.["max_tokens"]).toBeGreaterThanOrEqual(32_768);
+    const messages = body?.["messages"] as { content: string }[];
+    expect(messages[0]?.content).toContain("VELO:");
+    expect(messages[1]?.content).toContain("VELO natural:");
   });
 
   it("exposes the deepest analysis profile for dictionary and shadow callers", async () => {

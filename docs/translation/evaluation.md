@@ -1,8 +1,8 @@
 # Translation Quality Evaluation
 
 Status: **Partially verified**. The deterministic layer is tested. Linguistic quality is
-**NOT_VERIFIED**: no provider keys were available, and no human-reviewed benchmark was executed in
-this audit.
+**NOT_VERIFIED**: no provider keys were available, and no human-reviewed benchmark was executed in this audit. The model-specific and neutral-Arabic prompt revision has not been tested live or
+compared for latency; deterministic prompt tests do not establish translation quality.
 
 ## What can be automated
 
