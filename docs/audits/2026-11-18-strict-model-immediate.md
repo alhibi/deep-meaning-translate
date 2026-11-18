@@ -1,6 +1,7 @@
 # Strict Model Selection and Immediate Translation — 2026-11-18
 
-Status: **Executed**; production verification recorded in §5 after publication. Classifications follow
+Status: **Executed and production-verified for app behavior** (2026-11-18); the selected model itself
+remains subject to its provider's availability. Classifications follow
 [testing](../quality/testing.md).
 
 ## 0. Request and design decision
@@ -80,9 +81,10 @@ production bundle (provider/edge variance moves these numbers).
 
 ## 4. Limits and remaining risk
 
-- **Sona availability is external**: the provider still refuses requests with a rate class (TD54).
-  Strict mode means a Sona selection now shows that error rather than Velo's answer — the requested
-  behaviour. The corrected session id must be verified against a working OpenCode account.
+- **Sona availability is external**: the provider still refuses requests with a rate class after the
+  corrected `ses_` session was deployed (two production probes, ~527 ms each). Strict mode means a
+  Sona selection shows that error rather than Velo's answer — the requested behaviour. Restoring Sona
+  itself needs the OpenCode account/plan/rate limit fixed (TD54).
 - **Token cost of full-only typing** is higher than the old cheap live previews; the exact delta is
   TD55, and the admission bucket was sized so a human is never refused.
 - **No automatic retry** means a transient network/provider blip shows a retry button instead of
@@ -94,5 +96,20 @@ production bundle (provider/edge variance moves these numbers).
 
 ## 5. Production verification
 
-_Pending publication of this commit. The same probes will be recorded here before the audit is marked
-production-verified._
+Published to `https://fluently.today` and verified on 2026-11-18 01:12–01:20 Europe/Berlin. The
+served assets changed from `index-BPtCvKg6.js`/`routes-Bll3cgn_.js` to
+`index-VH6s2PbH.js`/`routes-JNOkvjwt.js`, the build produced by commit `29dbf7f`.
+
+| deployed probe | result |
+| -------------- | ------ |
+| Velo full request | 200; headers 793 ms, first byte 1,099 ms, total 1,492 ms; `x-translation-writer: deepseek` |
+| Sona full request (×2) | **429 `{ok:false,kind:"rate"}` after ~527 ms** — strict, no Velo answer, no fallback |
+| Model switch in the browser | old Velo answer cleared **48 ms** after selecting Sona; exactly one `luna` full request; **zero Velo requests, zero salvage streams**; chip stayed on Sona; the rate error surfaced |
+| First input / request count | 4 full requests for a typed 44-character sentence (lengths 2 → 18 → 38 → 44); the first request leaves while typing, the final one 0.5 s after the last key |
+| First text / settled | first text **~1.0–1.7 s**, settled **~1.7–2.4 s** depending on the provider window (the same sentence settled at ≈4.7 s before this work) |
+
+The OpenCode provider still refused Sona with a `rate` class after the corrected `ses_` routing
+session, so the remaining Sona failure is an account/plan rate limit at the provider, not app
+routing (TD54). Strict mode behaves exactly as requested: the person gets the selected model's own
+answer or its own error, never the other model's work.
+
