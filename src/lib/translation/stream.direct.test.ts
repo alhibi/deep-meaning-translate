@@ -65,6 +65,6 @@ describe("personal-key routing", () => {
       "live",
     );
     expect(direct).toHaveBeenCalledTimes(1);
-    expect(res).toEqual({ ok: true, text: "مباشر من الجهاز", writer: "deepseek" });
+    expect(res).toEqual({ ok: true, text: "مباشر من الجهاز" });
   });
 });

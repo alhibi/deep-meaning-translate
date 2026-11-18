@@ -5,7 +5,6 @@ import { DEFAULT_BRAIN, type TranslationResult } from "./types";
 const call = vi.fn();
 const repairCall = vi.fn();
 /** What the stream says actually wrote the answer; production reads this from the response. */
-const streamState = vi.hoisted(() => ({ writer: undefined as "luna" | "deepseek" | undefined }));
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: (fn: { kind?: string }) => (fn.kind === "repair" ? repairCall : call),
 }));
@@ -23,12 +22,9 @@ vi.mock("./stream", () => ({
     const r = await call({ data, signal, onText });
     if (!r.ok) return r;
     onText(r.result.translation);
-    const brain = (data as { brain?: string }).brain;
-    const writer = streamState.writer ?? (brain === "luna" ? "luna" : "deepseek");
     return {
       ok: true,
       text: mode === "full" ? JSON.stringify(r.result) : r.result.translation,
-      writer,
     };
   },
 }));
@@ -60,7 +56,6 @@ beforeEach(() => {
   vi.useFakeTimers();
   call.mockReset();
   repairCall.mockReset();
-  streamState.writer = undefined;
   // Device memory outlives a render on purpose — that is the feature. jsdom shares
   // localStorage across tests in a file, so without this a sentence settled by one
   // test would answer the next one from storage and the network path would never run.
@@ -313,7 +308,6 @@ describe("useTranslator", () => {
 
   it("does not review a clean answer DeepSeek wrote after Luna failed", async () => {
     call.mockResolvedValue({ ok: true, result: result("أهلاً") });
-    streamState.writer = "deepseek";
     const { result: h } = renderHook((p) => useTranslator(p), {
       initialProps: { ...opts("Hallo."), brain: "luna" as const },
     });

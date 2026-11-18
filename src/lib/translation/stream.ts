@@ -17,8 +17,7 @@ const streamUrl = () =>
   isNativeApp() ? nativeApiUrl("/api/native/v1/translate-stream") : "/api/translate-stream";
 
 export type StreamResponse =
-  | { ok: true; text: string; /** Actual writer, after any provider fallback. */ writer?: Brain }
-  | { ok: false; kind: ErrorKind; cancelled?: true };
+  { ok: true; text: string } | { ok: false; kind: ErrorKind; cancelled?: true };
 
 function errorKindFor(kind: DiagnosticKind, status?: number): ErrorKind {
   if (status === 401) return "auth";
@@ -50,7 +49,7 @@ export async function streamTranslate(
   if (isNativeApp() && hasProviderKey() && data["brain"] !== "luna") {
     const direct = await streamDirect(data, signal, onText, mode);
     // The device path is DeepSeek by construction.
-    if (direct.ok) return { ...direct, writer: "deepseek" };
+    if (direct.ok) return direct;
     if (direct.cancelled) return direct;
     if (direct.kind !== "network" && direct.kind !== "timeout" && direct.kind !== "provider")
       return direct;
@@ -131,10 +130,7 @@ export async function streamTranslate(
       ...(text ? {} : { kind: "empty" as const }),
     });
     if (!text) return { ok: false, kind: "provider" };
-    const header = res.headers.get("x-translation-writer");
-    const writer: Brain | undefined =
-      header === "luna" || header === "deepseek" ? header : undefined;
-    return { ok: true, text, ...(writer ? { writer } : {}) };
+    return { ok: true, text };
   } catch (error) {
     const name = (error as Error)?.name;
     const cancelled = signal.aborted;

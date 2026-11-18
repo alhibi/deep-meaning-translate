@@ -11,7 +11,7 @@ Android rows are the ones executed for this upgrade. Details and evidence:
 | ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | `npm run typecheck`                | TypeScript consistency                                       | PASS, 0 errors                                                                                   |
 | `npm run lint -- --max-warnings 0` | ESLint + Prettier                                            | PASS, 0 warnings                                                                                 |
-| `npm run test`                     | Vitest unit/integration suite with coverage                  | **1329 passed, 0 skipped, 140 files**                                                            |
+| `npm run test`                     | Vitest unit/integration suite with coverage                  | **1328 passed, 0 skipped, 140 files**                                                            |
 | `npm run check:contrast`           | WCAG AA for theme token pairs                                | **51/51 pairs**                                                                                  |
 | `npm run check:docs`               | Documentation links and inventory                            | PASS, all current documents indexed                                                              |
 | `npm run build`                    | Worker bundle + headers + PWA generation                     | PASS after the upgrade; see "Executed upgrade"                                                   |
@@ -24,7 +24,7 @@ Android rows are the ones executed for this upgrade. Details and evidence:
 `npm run verify` ran types, zero-warning lint, coverage tests, contrast, docs and security
 together on 2026-11-18 (strict model selection and immediate full request). Coverage floors in
 `vitest.config.ts` (statements/branches/functions/lines: **46/39/39/48**) are a regression guard,
-not a quality score. This run measured **70.43/62.95/64.70/73.93** respectively. The 2026-11-14
+not a quality score. This run measured **70.43/62.92/64.70/73.93** respectively. The 2026-11-14
 baseline measured 51.79/41.86/42.92/53.74. No test is skipped in this run.
 
 ## Executed upgrade (2026-11-17)

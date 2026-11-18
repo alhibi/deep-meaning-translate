@@ -18,8 +18,6 @@ export const InputSchema = z.object({
     .optional()
     .default("auto"),
   brain: z.enum(["deepseek", "luna"]).optional().default("deepseek"),
-  /** Actual writer of the shown result; omitted by older clients. */
-  writer: z.enum(["deepseek", "luna"]).optional(),
   partial: z.boolean().optional().default(false),
 });
 

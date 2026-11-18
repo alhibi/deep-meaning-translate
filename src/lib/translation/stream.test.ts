@@ -153,29 +153,6 @@ describe("streamTranslate", () => {
     expect(res).toEqual({ ok: true, text: "تمام" });
   });
 
-  it("reports the brain that actually wrote the answer", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response("نص", {
-            status: 200,
-            headers: {
-              "content-type": "text/plain; charset=utf-8",
-              "x-translation-writer": "luna",
-            },
-          }),
-      ),
-    );
-    const res = await streamTranslate(
-      { brain: "luna" },
-      new AbortController().signal,
-      () => {},
-      "full",
-    );
-    expect(res).toMatchObject({ ok: true, writer: "luna" });
-  });
-
   it("reads and releases the small error body so the server's kind is kept", async () => {
     let reads = 0;
     vi.stubGlobal(

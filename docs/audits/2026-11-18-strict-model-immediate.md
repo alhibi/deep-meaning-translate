@@ -63,7 +63,7 @@ production bundle (provider/edge variance moves these numbers).
 
 ## 3. Verification
 
-- **Unit/integration**: full suite **1329 passed / 140 files** (no skips). Typecheck, zero-warning
+- **Unit/integration**: full suite **1328 passed / 140 files** (no skips). Typecheck, zero-warning
   lint, contrast, docs, security and production build pass.
 - **Strict API, built bundle**: Velo full request streams normally; a Sona request with no local key
   returns `502 {kind:"auth"}` in 6 ms and **never calls Velo**.
