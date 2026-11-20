@@ -1,6 +1,6 @@
 # Documentation Index
 
-Status: **Verified** on 2026-11-17. Every authoritative document is listed here; a document that
+Status: **Verified** on 2026-11-20. Every authoritative document is listed here; a document that
 is not listed is not authoritative. `npm run check:docs` enforces that every file in `docs/` is
 indexed and that relative links resolve.
 
@@ -76,6 +76,7 @@ indexed and that relative links resolve.
 | `docs/quality/navigation-regression.md`      | The navigation/theme acceptance criteria and the automated e2e scenario             | changing navigation, boot or transitions         |
 | `docs/security/privacy-and-threat-model.md`  | Trust boundaries, secrets, input handling, LLM boundaries, logging, retention       | touching server code, prompts, logs or storage   |
 | `docs/operations/development-and-release.md` | Local setup, build, preview, deployment assumptions, incident and dependency policy | building, releasing or diagnosing an environment |
+| `docs/quality/freshness.md`                  | Dependency freshness gate, status budget, current ledger, waivers and rollout staging            | adding/upgrading a dependency, waiving a RED, or wiring the gate |
 
 ## Audits and debt
 

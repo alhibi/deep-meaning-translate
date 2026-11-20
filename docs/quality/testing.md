@@ -27,6 +27,13 @@ together on 2026-11-18 (strict model selection and immediate full request). Cove
 not a quality score. This run measured **70.43/62.92/64.70/73.93** respectively. The 2026-11-14
 baseline measured 51.79/41.86/42.92/53.74. No test is skipped in this run.
 
+### Dependency freshness (2026-11-20)
+
+`npm run freshness` compares resolved dependency versions (`package-lock.json`) with the npm
+registry and writes `artifacts/freshness.json`; `npm run freshness:enforce` fails on RED/ERROR.
+First run: **49 packages, 27 FRONTIER, 13 YELLOW, 9 RED, 0 UNKNOWN/ERROR** — report-only until the
+RED list is fixed or waived. Policy and ledger: [freshness.md](freshness.md).
+
 ## Executed upgrade (2026-11-17)
 
 Every number in this section comes from a command run in this environment; the audit records the

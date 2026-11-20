@@ -109,6 +109,7 @@ npm run check:docs       # links and documentation inventory
 npm run check:security   # cultural content gate; text-first, image-free ≡ CSP (web + native), Permissions-Policy guard
 npm run build            # build + security headers + PWA precache check
 npm run culture:validate # corpus gates: count, countries, continents, categories, extended, locales
+npm run freshness        # dependency versions vs npm registry (report; see docs/quality/freshness.md)
 npm run verify           # typecheck + lint + tests + contrast + docs + security
 ```
 

@@ -39,9 +39,19 @@ browser. These remain local checks, not a claim that the E2E suite runs in CI.
 ```sh
 npm run verify           # typecheck + lint + tests + contrast
 npm run check:docs       # links + documentation inventory
+npm run freshness        # dependency versions vs npm registry (report-only for now)
 npm run build            # Worker bundle, headers, PWA precache
 npm run check:pwa
 ```
+
+## Dependency freshness
+
+Dependencies are held to the newest verified stable release, not to whatever the lockfile last
+resolved. `npm run freshness` compares every resolved dependency with the npm registry, writes
+`artifacts/freshness.json`, and reports RED/YELLOW items; `npm run freshness:enforce` is the same
+check with a non-zero exit on RED or ERROR. The policy, the current ledger and the waiver file
+live in `docs/quality/freshness.md` (`docs/quality/freshness-waivers.json`). The check is
+report-only until the RED list is burned down, then it joins the `verify` chain and CI.
 
 ## Production build and preview
 

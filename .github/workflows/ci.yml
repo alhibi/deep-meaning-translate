@@ -40,6 +40,9 @@ jobs:
       - name: Documentation links and inventory
         run: npm run check:docs
 
+      - name: Dependency freshness (report; enforcing after RED burn-down)
+        run: npm run freshness
+
       - name: Cultural content gate (text-first, image-free, no museum corpus)
         run: npm run check:security
 

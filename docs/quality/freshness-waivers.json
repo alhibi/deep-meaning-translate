@@ -1,0 +1,4 @@
+{
+  "policy": "Each waiver needs package, reason, owner, approved, expires, remediation. An expired waiver is RED again. See docs/quality/freshness.md.",
+  "waivers": []
+}

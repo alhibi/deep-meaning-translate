@@ -21,6 +21,8 @@
     "check:docs": "node scripts/check-docs.mjs",
     "check:security": "node tests/security/culture-content-gate.mjs",
     "verify": "npm run typecheck && npm run lint -- --max-warnings 0 && npm run test && npm run check:contrast && npm run check:docs && npm run check:security",
+    "freshness": "node scripts/freshness.mjs",
+    "freshness:enforce": "node scripts/freshness.mjs --enforce",
     "og": "node scripts/make-og.mjs",
     "format:check": "prettier --check .",
     "build:native:web": "vite build --config vite.native.config.ts && node scripts/prepare-native-web.mjs",
