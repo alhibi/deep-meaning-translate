@@ -91,8 +91,8 @@ jobs:
             exit 1
           fi
           yes | "${SDKM}" --licenses >/dev/null 2>&1 || true
-          yes | "${SDKM}" --install "platforms;android-36" "build-tools;36.0.0" >/dev/null
-          "${SDKM}" --list_installed | grep -E "platforms;android-36|build-tools;36.0.0"
+          yes | "${SDKM}" --install "platforms;android-37.0" "build-tools;37.0.0" >/dev/null
+          "${SDKM}" --list_installed | grep -E "platforms;android-37|build-tools;37.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -115,7 +115,7 @@ jobs:
       - name: Verify the APK's identity, permissions, signing and secrets
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
-          BT=$ANDROID_HOME/build-tools/36.0.0
+          BT=$ANDROID_HOME/build-tools/37.0.0
           $BT/aapt2 dump badging "$APK" | grep -E "package: name='today.fluently.app.debug'|sdkVersion|targetSdkVersion|uses-permission"
           $BT/apksigner verify --verbose --print-certs "$APK"
           unzip -p "$APK" assets/capacitor.config.json | grep -q '"webContentsDebuggingEnabled": false'
