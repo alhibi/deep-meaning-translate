@@ -2,10 +2,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
-    // Kotlin 2.3 is the stable line supported by AGP 8.13 and Gradle 8.14; the previous
-    // 2.1.21 pair was outside the official support window (TD69). KSP versions independently
-    // from 2.3.0 and must move with Kotlin.
-    id("org.jetbrains.kotlin.android") version "2.3.21"
+    // AGP 9 compiles Kotlin through built-in Kotlin support (the kotlin-android plugin is
+    // no longer applied). The Kotlin compiler version comes from the KGP classpath in the
+    // root build file. KSP keeps its independent 2.3.x version line.
     id("com.google.devtools.ksp") version "2.3.14"
 }
 
@@ -36,12 +35,12 @@ android {
         applicationId = "today.fluently.app"
         minSdk = (rootProject.extra["minSdkVersion"] as Int)
         targetSdk = (rootProject.extra["targetSdkVersion"] as Int)
-        versionCode = 10
-        versionName = "1.0.9"
+        versionCode = 11
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The translator is Arabic-first: keep the app usable in RTL and German.
-        resourceConfigurations += listOf("en", "ar", "de")
-        aaptOptions {
+        androidResources {
+            localeFilters.addAll(listOf("en", "ar", "de"))
             ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
         }
         ksp {
@@ -86,6 +85,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    // Built-in Kotlin (AGP 9): compiler options live in the android block, not a top-level
+    // `kotlin { }` block (that one belongs to the Kotlin Gradle Plugin).
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
+        }
+    }
+
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
     }
@@ -96,12 +103,6 @@ android {
 
     sourceSets {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_21)
     }
 }
 
@@ -139,26 +140,26 @@ dependencies {
     implementation(project(":capacitor-cordova-android-plugins"))
 
     // Durable, queryable records. Settings use Preferences DataStore (below).
-    implementation("androidx.room:room-runtime:2.7.2")
-    implementation("androidx.room:room-ktx:2.7.2")
-    ksp("androidx.room:room-compiler:2.7.2")
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.1")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
+    implementation("androidx.datastore:datastore-preferences:1.3.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.1")
 
     testImplementation("junit:junit:${rootProject.extra["junitVersion"]}")
-    testImplementation("org.robolectric:robolectric:4.14.1")
-    testImplementation("androidx.test:core:1.6.1")
-    testImplementation("androidx.room:room-testing:2.7.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-    testImplementation("com.google.truth:truth:1.4.4")
+    testImplementation("org.robolectric:robolectric:4.18.1")
+    testImplementation("androidx.test:core:1.7.0")
+    testImplementation("androidx.room:room-testing:2.8.5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("com.google.truth:truth:1.4.5")
 
     androidTestImplementation("androidx.test.ext:junit:${rootProject.extra["androidxJunitVersion"]}")
     androidTestImplementation("androidx.test.espresso:espresso-core:${rootProject.extra["androidxEspressoCoreVersion"]}")
-    androidTestImplementation("androidx.room:room-testing:2.7.2")
-    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
+    androidTestImplementation("androidx.test:runner:1.7.0")
     // ActivityScenario for the Capacitor bridge test (TD20).
-    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:core:1.7.0")
 }
 
 // Capacitor's generated plugin wiring (Groovy). Applied after our dependencies.

@@ -7,11 +7,13 @@ app.
 
 Live: https://fluently.today/
 
-## Android app (1.0.9)
+## Android app (1.1.0)
 
 The same translator is packaged as an Android app: the React shell runs in a Capacitor WebView,
 while Kotlin/Room/DataStore own device records, settings, backups and the native lifecycle. The
-installable APKs are published with the repository:
+1.1.0 build runs on AGP 9.5.2 + Gradle 9.8.1 + built-in Kotlin 2.4.21, compileSdk/targetSdk 37,
+Room 2.8.5 and DataStore 1.3.0 (see [ANDROID_STACK_UPGRADE_1_1_0.md](ANDROID_STACK_UPGRADE_1_1_0.md)).
+The installable APKs are published with the repository:
 
 - **[Download the latest Android build](https://github.com/alhibi/deep-meaning-translate/releases/latest)**
   — attach the debug APK (package `today.fluently.app.debug`) for daily use or the release-review

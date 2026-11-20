@@ -6,7 +6,10 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.13.2")
+        classpath("com.android.tools.build:gradle:9.5.2")
+        // AGP 9 has built-in Kotlin; a newer KGP on the root classpath selects the Kotlin
+        // compiler version used by built-in Kotlin (Kotlin 2.4 requires AGP 9.1+).
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
     }
 }
 

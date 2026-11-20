@@ -100,6 +100,18 @@ with a row and opens it through Room v2. The dated connected tests above cover r
 trips on the API 35 emulator. They are not evidence that these latest editor changes were exercised on a physical keyboard or WebView;
 that remains a separate device check.
 
+### Android stack upgrade (2026-11-20, 1.1.0)
+
+AGP 8.13.2 -> 9.5.2, Gradle 8.14.7 -> 9.8.1, Kotlin 2.3.21 plugin -> built-in Kotlin 2.4.21,
+compileSdk/targetSdk 36 -> 37, Room 2.8.5, DataStore 1.3.0, lifecycle 2.11.1, coroutines 1.11.0,
+appcompat 1.8.0, activity 1.13.0, core-ktx 1.19.1, webkit 1.18.0, Robolectric 4.18.1.
+Executed: `:app:testDebugUnitTest` **18 passed / 0 failed**; debug APK 8.6 MB and release-review APK
+3.7 MB built (R8); physical HONOR PNM-N49 (API 37) install, cold start 1451 ms debug / 688 ms
+release, DE->AR translations, save, statistics, about, theme cycle, offline error + retry, and a
+release-build translation all passed with **0 fatal exceptions / 0 ANR**; jank 3.42% (legacy 0.95%),
+90th percentile 9 ms. Rotation, foldable posture and audio/dictation remain NOT_VERIFIED for this
+run. Details: [ANDROID_STACK_UPGRADE_1_1_0.md](../../ANDROID_STACK_UPGRADE_1_1_0.md).
+
 ## Test architecture
 
 - **jsdom + Testing Library**, globals off, cleanup registered in `src/test/setup.ts`.
