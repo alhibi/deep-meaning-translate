@@ -413,6 +413,13 @@ function Translator() {
     else if (input.bottom > room.bottom) workspace.scrollTop += input.bottom - room.bottom;
   }, []);
   useEffect(() => {
+    // Native shells already resize the WebView with the IME: Capacitor's SystemBars pads the
+    // WebView by the keyboard height. WebView's visualViewport *also* subtracts the IME, so
+    // writing --vvh here counted the keyboard twice: on keyboard open the canvas max-height
+    // collapsed for a frame (user recording 2026-11-20, frames 57/200: the header clipped and
+    // the composer squashed, then it snapped back). Keep the padded WebView as the single
+    // source of viewport height on native; the browser keeps the visualViewport path.
+    if (isNativeApp()) return;
     const vv = window.visualViewport;
     if (!vv) return;
     // visualViewport fires on every scroll frame on a phone. Writing --vvh or state for a
