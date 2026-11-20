@@ -2,4 +2,10 @@
 <resources>
     <!-- Launch window & splash: the paper canvas for a light phone. -->
     <color name="splash_background">#F6F3ED</color>
+    <!-- The app's single signal colour (the signal token in src/styles.css). Android draws the
+         WebView insertion/selection handles, the text magnifier and ripple/selection tints
+         from the theme accent; without this they fell back to AppCompat teal and looked like
+         a foreign overlay on the clay/paper palettes. -->
+    <color name="brand_accent">#C97A5A</color>
+    <color name="brand_highlight">#33C97A5A</color>
 </resources>

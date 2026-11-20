@@ -25,10 +25,10 @@ class MainActivity : BridgeActivity() {
         registerPlugin(LinguaFilesPlugin::class.java)
         registerPlugin(LinguaChromePlugin::class.java)
         registerPlugin(LinguaTtsPlugin::class.java)
-        super.onCreate(savedInstanceState)
-        // Release builds keep the tracked capacitor config false. Debug builds are
-        // debuggable by Gradle, so allow chrome://inspect there without ever shipping it.
+        // Must run before the Bridge (and its WebView) is created; calling it after
+        // super.onCreate silently left the WebView undebuggable on the device.
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
+        super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
     }
 
@@ -38,6 +38,7 @@ class MainActivity : BridgeActivity() {
         // were away (splash exit, theme recreation, OEM launcher transitions).
         LinguaChromePlugin.lastColor?.let { color ->
             window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(color))
+            bridge?.webView?.setBackgroundColor(color)
         }
     }
 }

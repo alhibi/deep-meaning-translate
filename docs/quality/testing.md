@@ -112,6 +112,15 @@ release-build translation all passed with **0 fatal exceptions / 0 ANR**; jank 3
 90th percentile 9 ms. Rotation, foldable posture and audio/dictation remain NOT_VERIFIED for this
 run. Details: [ANDROID_STACK_UPGRADE_1_1_0.md](../../ANDROID_STACK_UPGRADE_1_1_0.md).
 
+### Android rendering fixes (2026-11-20, 1.1.1)
+
+Root causes fixed: the WebView insertion/selection handle colour came from the default AppCompat
+teal accent (now the app signal `#C97A5A`; verified 70 teal frames -> 0); system-bar icon appearance
+now follows canvas luminance from native code (light theme: dark icons, dark theme: light icons);
+the WebView surface background follows the canvas so an IME resize exposes no white frame; debug
+WebView debugging is enabled before the WebView is created. Evidence:
+[ANDROID_RENDERING_FIX_1_1_1.md](../../ANDROID_RENDERING_FIX_1_1_1.md).
+
 ## Test architecture
 
 - **jsdom + Testing Library**, globals off, cleanup registered in `src/test/setup.ts`.

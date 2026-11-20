@@ -3,6 +3,8 @@ package today.fluently.app.bridge
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import androidx.core.graphics.ColorUtils
+import androidx.core.view.WindowCompat
 import android.view.View
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -75,6 +77,16 @@ class LinguaChromePlugin : Plugin() {
 
     private fun apply(activity: Activity, color: Int) {
         activity.window.setBackgroundDrawable(ColorDrawable(color))
+        // The WebView surface is resized on every IME open/close. Its default background is
+        // white, so a dark-theme resize could flash a white frame; match it to the canvas.
+        bridge?.webView?.setBackgroundColor(color)
+        // The system bars are transparent (edge-to-edge) and their icon appearance must
+        // follow the *app* palette, not the phone's day/night setting. Deriving it from the
+        // canvas luminance keeps the status/navigation icons legible on paper, clay and vivid.
+        val controller = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+        val darkIcons = ColorUtils.calculateLuminance(color) > 0.5
+        controller.isAppearanceLightStatusBars = darkIcons
+        controller.isAppearanceLightNavigationBars = darkIcons
     }
 
     override fun handleOnDestroy() {
