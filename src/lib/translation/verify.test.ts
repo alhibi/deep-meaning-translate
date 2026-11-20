@@ -82,9 +82,9 @@ describe("deterministic checks a native reader would notice", () => {
 
   it("never flags a name merely because Arabic transliterated it", () => {
     // Transliteration is the correct behaviour for ar output, not a loss.
-    expect(
-      verifyTranslation(req("Frau Müller kommt morgen"), res("السيدة مولر تأتي غداً")),
-    ).toEqual([]);
+    expect(verifyTranslation(req("Frau Müller kommt morgen"), res("السيدة مولر تأتي غداً"))).toEqual(
+      [],
+    );
   });
 
   it("flags a question that turned into a statement", () => {

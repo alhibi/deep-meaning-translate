@@ -31,8 +31,10 @@ baseline measured 51.79/41.86/42.92/53.74. No test is skipped in this run.
 
 `npm run freshness` compares resolved dependency versions (`package-lock.json`) with the npm
 registry and writes `artifacts/freshness.json`; `npm run freshness:enforce` fails on RED/ERROR.
-First run: **49 packages, 27 FRONTIER, 13 YELLOW, 9 RED, 0 UNKNOWN/ERROR** — report-only until the
-RED list is fixed or waived. Policy and ledger: [freshness.md](freshness.md).
+After the 2026-11-20 upgrade session: **49 packages, 46 FRONTIER, 0 YELLOW, 3 RED, 0 UNKNOWN/ERROR**
+— the three REDs are one upstream block (TypeScript 7 vs typescript-eslint) and two intentional
+prereleases (nitro v3 has no stable; the native TS alias is a required peer), awaiting an owner
+waiver. Policy and ledger: [freshness.md](freshness.md).
 
 ## Executed upgrade (2026-11-17)
 
